@@ -1,0 +1,13 @@
+.git
+.github
+.vercel
+.idea
+.vscode
+node_modules
+dist
+coverage
+.angular
+*.md
+!README.md
+Dockerfile
+.dockerignore
