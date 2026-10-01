@@ -28,10 +28,15 @@ export function resolveBffBaseUrl(env) {
   if (url.protocol !== 'https:') {
     throw new Error('NG_APP_BFF_BASE_URL must use https');
   }
-  if (url.username || url.password || url.search || url.hash) {
-    throw new Error(
-      'NG_APP_BFF_BASE_URL must be a base URL without credentials, query or fragment',
-    );
+  if (url.username || url.password) {
+    throw new Error('NG_APP_BFF_BASE_URL must be a base URL without credentials');
+  }
+  // The parser reports an empty query or fragment ("/?", "/#") as empty strings: test the raw text.
+  if (raw.includes('?')) {
+    throw new Error('NG_APP_BFF_BASE_URL must be a base URL without a query string');
+  }
+  if (raw.includes('#')) {
+    throw new Error('NG_APP_BFF_BASE_URL must be a base URL without a fragment');
   }
   // href is the normalized form: the URL parser already drops tabs and newlines.
   return url.href.replace(/\/+$/, '');

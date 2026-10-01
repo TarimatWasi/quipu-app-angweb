@@ -5,7 +5,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ESLint } from 'eslint';
 import tseslint from 'typescript-eslint';
-import { createConfig } from '../eslint.config.js';
+import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative, sep } from 'node:path';
+import { MAX_FEATURE_DEPTH, createConfig, discoverFeatures } from '../eslint.config.js';
 
 const config = createConfig(['f', 'g']);
 
@@ -168,6 +171,19 @@ const violations = [
     "import { x } from '../../../core/x';\nexport const a = x;",
     'FE-ANG-ORG-02',
   ],
+  // Fail closed beyond the per-depth scopes: the alias rule has no depth.
+  [
+    'src/app/features/f/a/b/c/d/e/h/i/j/a.ts',
+    "import { x } from '@features/g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/a/b/c/d/e/h/i/j/k/a.ts',
+    "import { x } from '@features/g';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  // Files directly under features/ are not part of a feature but still never use the layout.
+  ['src/app/features/a.ts', "import { x } from '@layout/x';\nexport const a = x;", 'FE-ANG-ORG-02'],
   ['src/app/a.spec.ts', 'export const a = jasmine;', 'FE-ANG-TST-01'],
   // Templates.
   ['src/app/a.html', '<button>x</button>', 'button-has-type'],
@@ -205,6 +221,10 @@ const controls = [
     'src/app/features/f/pages/a.component.ts',
     "import { x } from '@shared/x';\nexport const a = x;",
   ],
+  // FE-ANG-ORG-02 only forbids a feature importing another feature; a file directly under
+  // features/ (for example the routes that lazy-load each feature) is not inside any feature.
+  ['src/app/features/a.ts', "import { x } from '@features/f/x';\nexport const a = x;"],
+  ['src/app/features/a.ts', "import { x } from './f/x';\nexport const a = x;"],
   ['src/app/a.html', '<button type="button">x</button>'],
 ];
 
@@ -213,3 +233,69 @@ for (const [filePath, code] of controls) {
     assert.equal(await messagesFor(filePath, code), '');
   });
 }
+
+// discoverFeatures: an absent features folder means nothing to enforce yet; any other failure
+// must surface instead of silently disabling the cross-feature rule.
+test('discoverFeatures returns [] only when the features folder does not exist', () => {
+  const root = mkdtempSync(join(tmpdir(), 'features-'));
+  try {
+    assert.deepEqual(
+      discoverFeatures(new URL(`file:///${join(root, 'missing').replaceAll(sep, '/')}/`)),
+      [],
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('discoverFeatures lists feature folders and ignores files', () => {
+  const root = mkdtempSync(join(tmpdir(), 'features-'));
+  try {
+    mkdirSync(join(root, 'contracts'));
+    mkdirSync(join(root, 'guests'));
+    writeFileSync(join(root, 'features.routes.ts'), '');
+    const features = discoverFeatures(new URL(`file:///${root.replaceAll(sep, '/')}/`));
+    assert.deepEqual(features.sort(), ['contracts', 'guests']);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('discoverFeatures rethrows errors other than a missing folder', () => {
+  // An invalid argument fails with ERR_INVALID_ARG_TYPE, not ENOENT, on every platform
+  // (reading a file as a folder gives ENOENT on Windows and ENOTDIR elsewhere).
+  assert.throws(() => discoverFeatures(42), { code: 'ERR_INVALID_ARG_TYPE' });
+});
+
+// The relative-import scopes stop at MAX_FEATURE_DEPTH folders below a feature; the alias scope
+// has no limit. Deeper files would silently miss the relative rule, so fail loudly instead.
+function filesTooDeep(featuresDir, files = readdirSync(featuresDir, { recursive: true })) {
+  return files
+    .map((file) => file.split(sep))
+    .filter((parts) => parts.length >= 2 && parts.at(-1).endsWith('.ts'))
+    .filter((parts) => parts.length - 2 > MAX_FEATURE_DEPTH)
+    .map((parts) => join(featuresDir, ...parts));
+}
+
+test('filesTooDeep flags files below the supported depth', () => {
+  const ok = ['f', ...Array.from({ length: MAX_FEATURE_DEPTH }, (_, i) => `d${i}`), 'a.ts'];
+  const deep = ['f', ...Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, i) => `d${i}`), 'a.ts'];
+  assert.deepEqual(filesTooDeep('features', [ok.join(sep), deep.join(sep), 'f']), [
+    join('features', ...deep),
+  ]);
+});
+
+test(`no file under src/app/features is deeper than ${MAX_FEATURE_DEPTH} folders (raise MAX_FEATURE_DEPTH or flatten)`, () => {
+  const dir = new URL('../src/app/features/', import.meta.url);
+  let tooDeep = [];
+  try {
+    tooDeep = filesTooDeep(dir.pathname.replace(/^\/([A-Za-z]:)/, '$1'));
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
+  assert.deepEqual(
+    tooDeep.map((file) => relative(process.cwd(), file)),
+    [],
+    `Files below ${MAX_FEATURE_DEPTH} folders in a feature escape the relative-import rule of FE-ANG-ORG-02`,
+  );
+});

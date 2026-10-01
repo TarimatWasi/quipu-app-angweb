@@ -71,28 +71,38 @@ const forbidFolders = (...folders) =>
   });
 
 const escapeRegex = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-const MAX_FEATURE_DEPTH = 8;
+export const MAX_FEATURE_DEPTH = 8;
 
 // FE-ANG-ORG-02: `shared` imports neither `core` nor `features`; `core` does not import `features`
-// (it may use `shared`); a feature never imports another feature. The last rule needs the feature
-// name, so there is one scope per feature and per folder depth inside it: an import climbing out
-// of the feature (`../` more times than the file's depth) may only re-enter the same feature.
-const featureScopes = (feature) =>
-  Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, depth) => {
-    const name = escapeRegex(feature);
-    const message = restrict(
-      'FE-ANG-ORG-02',
-      `a feature must not import another feature; use @core/ or @shared/ (this file is in ${feature})`,
-    );
-    return {
+// (it may use `shared`); a feature never imports another feature (files directly under features/
+// belong to no feature and may reference any of them). The last rule needs the feature name, so
+// each feature gets: a catch-all scope that bans `@features/<other>` at ANY depth (an alias needs
+// no depth), plus one scope per folder depth up to MAX_FEATURE_DEPTH for relative imports: an
+// import climbing out of the feature (`../` more times than the file's depth) may only re-enter
+// the same feature. Relative imports below MAX_FEATURE_DEPTH are not covered, so the test
+// "no file under src/app/features is deeper than ..." fails instead of letting them slip through.
+const featureScopes = (feature) => {
+  const name = escapeRegex(feature);
+  const message = restrict(
+    'FE-ANG-ORG-02',
+    `a feature must not import another feature; use @core/ or @shared/ (this file is in ${feature})`,
+  );
+  const otherFeatureAlias = { regex: `^@features/(?!${name}(/|$))`, ...message };
+  return [
+    {
+      dir: `src/app/features/${feature}/**`,
+      patterns: [...forbidFolders('layout'), otherFeatureAlias],
+    },
+    ...Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, depth) => ({
       dir: `src/app/features/${feature}${'/*'.repeat(depth)}`,
       patterns: [
         ...forbidFolders('layout'),
-        { regex: `^@features/(?!${name}(/|$))`, ...message },
+        otherFeatureAlias,
         { regex: `^(\\.\\./){${depth + 1},}(?!${name}(/|$))`, ...message },
       ],
-    };
-  });
+    })),
+  ];
+};
 
 const folderScopes = (features) => [
   { dir: 'src/app/shared/**', patterns: forbidFolders('core', 'features', 'layout') },
@@ -101,14 +111,20 @@ const folderScopes = (features) => [
   ...features.flatMap(featureScopes),
 ];
 
-// Features are the folders under src/app/features, discovered each time ESLint loads this file.
-const discoverFeatures = () => {
+// Features are the folders under src/app/features, discovered each time ESLint loads this file
+// (command line, CI). An editor's ESLint server keeps the list it loaded: restart it after adding
+// a feature. A missing folder only means there is nothing to enforce yet; any other error (for
+// example a permissions problem) must surface instead of silently disabling the cross-feature rule.
+export const discoverFeatures = (dir = new URL('./src/app/features/', import.meta.url)) => {
   try {
-    return readdirSync(new URL('./src/app/features/', import.meta.url), { withFileTypes: true })
+    return readdirSync(dir, { withFileTypes: true })
       .filter((entry) => entry.isDirectory())
       .map((entry) => entry.name);
-  } catch {
-    return [];
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
   }
 };
 

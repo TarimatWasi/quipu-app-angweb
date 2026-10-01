@@ -68,8 +68,16 @@ test('a quote or newline in the variable cannot break out of the generated file'
   }
 });
 
-test('rejects credentials, query strings and fragments in the base URL', () => {
-  for (const raw of ['https://u:p@a.example', 'https://a.example/?x=1', 'https://a.example/#f']) {
-    assert.throws(() => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw }), /base URL/);
+test('rejects credentials, query strings and fragments, each with its own message', () => {
+  const cases = [
+    ['https://u:p@a.example', /credentials/],
+    ['https://u@a.example', /credentials/],
+    ['https://a.example/?x=1', /query/],
+    ['https://a.example/?', /query/],
+    ['https://a.example/#f', /fragment/],
+    ['https://a.example/#', /fragment/],
+  ];
+  for (const [raw, message] of cases) {
+    assert.throws(() => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw }), message, raw);
   }
 });
