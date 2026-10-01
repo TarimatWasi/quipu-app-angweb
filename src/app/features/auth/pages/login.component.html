@@ -1,0 +1,73 @@
+<main>
+  <form
+    [formRoot]="loginForm"
+    novalidate
+    [attr.aria-describedby]="serverError() ? 'login-error' : null"
+  >
+    <h1>Iniciar sesión</h1>
+
+    <mat-form-field>
+      <mat-label>Tipo de documento</mat-label>
+      <select
+        matNativeControl
+        id="document-type"
+        autocomplete="off"
+        [formField]="loginForm.documentType"
+        [attr.aria-invalid]="documentTypeError() ? 'true' : null"
+        [attr.aria-describedby]="documentTypeError() ? 'document-type-error' : null"
+      >
+        @for (type of documentTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+    </mat-form-field>
+    @if (documentTypeError(); as message) {
+      <p id="document-type-error" class="error">{{ message }}</p>
+    }
+
+    <mat-form-field>
+      <mat-label>Número de documento</mat-label>
+      <input
+        matInput
+        id="document-number"
+        autocomplete="username"
+        aria-required="true"
+        [formField]="loginForm.documentNumber"
+        [attr.aria-invalid]="documentNumberError() ? 'true' : null"
+        [attr.aria-describedby]="documentNumberError() ? 'document-number-error' : null"
+      />
+    </mat-form-field>
+    @if (documentNumberError(); as message) {
+      <p id="document-number-error" class="error">{{ message }}</p>
+    }
+
+    <mat-form-field>
+      <mat-label>Contraseña</mat-label>
+      <input
+        matInput
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        aria-required="true"
+        [formField]="loginForm.password"
+        [attr.aria-invalid]="passwordError() ? 'true' : null"
+        [attr.aria-describedby]="passwordError() ? 'password-error' : null"
+      />
+    </mat-form-field>
+    @if (passwordError(); as message) {
+      <p id="password-error" class="error">{{ message }}</p>
+    }
+
+    @if (serverError(); as message) {
+      <p id="login-error" class="error" tabindex="-1">{{ message }}</p>
+    }
+
+    @if (slow()) {
+      <p class="hint" role="status">
+        El servidor está despertando; la primera solicitud puede tardar hasta un minuto.
+      </p>
+    }
+
+    <button mat-flat-button type="submit" [disabled]="loginForm().submitting()">Ingresar</button>
+  </form>
+</main>
