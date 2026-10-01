@@ -30,9 +30,8 @@ test('strips a trailing slash', () => {
 });
 
 test('renders the environment file', () => {
-  assert.match(
-    renderEnvironment('https://api.example.org'),
-    /bffBaseUrl: 'https:\/\/api\.example\.org'/,
+  assert.ok(
+    renderEnvironment('https://api.example.org').includes('bffBaseUrl: "https://api.example.org"'),
   );
 });
 
@@ -42,4 +41,35 @@ test('the committed environment file is the generated local default', () => {
     'utf8',
   );
   assert.equal(committed, renderEnvironment(DEFAULT_BFF_BASE_URL));
+});
+
+async function evaluate(source) {
+  // The generated file is plain ES module syntax, so a data URL can load it.
+  const url = `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`;
+  return (await import(url)).environment;
+}
+
+test('the rendered file keeps any value as a single string literal', async () => {
+  const hostile = 'https://a.example/it\'s";process.exit(1);//';
+  assert.equal((await evaluate(renderEnvironment(hostile))).bffBaseUrl, hostile);
+  const multiline = ['https://a.example/a', 'b\\c'].join('\n');
+  assert.equal((await evaluate(renderEnvironment(multiline))).bffBaseUrl, multiline);
+});
+
+test('a quote or newline in the variable cannot break out of the generated file', async () => {
+  for (const raw of [
+    "https://a.example/it's",
+    'https://a.example/x\ny',
+    "https://a.example/';boom();//",
+  ]) {
+    const value = resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw });
+    assert.equal((await evaluate(renderEnvironment(value))).bffBaseUrl, value);
+    assert.ok(!value.includes('\n'));
+  }
+});
+
+test('rejects credentials, query strings and fragments in the base URL', () => {
+  for (const raw of ['https://u:p@a.example', 'https://a.example/?x=1', 'https://a.example/#f']) {
+    assert.throws(() => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw }), /base URL/);
+  }
 });

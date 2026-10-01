@@ -1,5 +1,6 @@
 // Flat config (FE-ANG-EST-02). Messages cite the rule ID from "Guía Angular" (FE-ANG-...) or from
 // the "Perfil técnico de Quipu" (QP-ANGWEB-...) so a failure explains itself.
+import { readdirSync } from 'node:fs';
 import eslint from '@eslint/js';
 import angular from 'angular-eslint';
 import prettier from 'eslint-config-prettier';
@@ -58,48 +59,65 @@ const folderImports = (extraPatterns, extraPaths = []) => ({
     },
   ],
 });
+// Anchored on the alias (`@core/...`) and on relative paths (`../core/...`): a bare `**/core/**`
+// would also match package paths such as `@angular/core/testing`.
 const forbidFolders = (...folders) =>
-  folders.map((folder) => ({
-    group: [`@${folder}/*`, `**/${folder}/**`],
-    ...restrict('FE-ANG-ORG-02', `this folder must not import from ${folder}/`),
-  }));
+  folders.flatMap((folder) => {
+    const message = restrict('FE-ANG-ORG-02', `this folder must not import from ${folder}/`);
+    return [
+      { group: [`@${folder}/*`], ...message },
+      { regex: `^\\.{1,2}/(.*/)?${folder}(/|$)`, ...message },
+    ];
+  });
 
-// A feature never reaches another feature: relative imports cannot climb out of it.
-const folderScopes = [
+const escapeRegex = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+const MAX_FEATURE_DEPTH = 8;
+
+// FE-ANG-ORG-02: `shared` imports neither `core` nor `features`; `core` does not import `features`
+// (it may use `shared`); a feature never imports another feature. The last rule needs the feature
+// name, so there is one scope per feature and per folder depth inside it: an import climbing out
+// of the feature (`../` more times than the file's depth) may only re-enter the same feature.
+const featureScopes = (feature) =>
+  Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, depth) => {
+    const name = escapeRegex(feature);
+    const message = restrict(
+      'FE-ANG-ORG-02',
+      `a feature must not import another feature; use @core/ or @shared/ (this file is in ${feature})`,
+    );
+    return {
+      dir: `src/app/features/${feature}${'/*'.repeat(depth)}`,
+      patterns: [
+        ...forbidFolders('layout'),
+        { regex: `^@features/(?!${name}(/|$))`, ...message },
+        { regex: `^(\\.\\./){${depth + 1},}(?!${name}(/|$))`, ...message },
+      ],
+    };
+  });
+
+const folderScopes = (features) => [
   { dir: 'src/app/shared/**', patterns: forbidFolders('core', 'features', 'layout') },
   { dir: 'src/app/core/**', patterns: forbidFolders('features', 'layout') },
   { dir: 'src/app/features/**', patterns: forbidFolders('layout') },
-  {
-    dir: 'src/app/features/*/*',
-    patterns: [
-      ...forbidFolders('layout'),
-      {
-        group: ['@features/*', '../../**'],
-        ...restrict(
-          'FE-ANG-ORG-02',
-          'a feature must not import another feature; use @core/ or @shared/',
-        ),
-      },
-    ],
-  },
-  {
-    dir: 'src/app/features/*',
-    patterns: [
-      ...forbidFolders('layout'),
-      {
-        group: ['@features/*', '../**'],
-        ...restrict('FE-ANG-ORG-02', 'a feature must not import another feature'),
-      },
-    ],
-  },
+  ...features.flatMap(featureScopes),
 ];
 
+// Features are the folders under src/app/features, discovered each time ESLint loads this file.
+const discoverFeatures = () => {
+  try {
+    return readdirSync(new URL('./src/app/features/', import.meta.url), { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch {
+    return [];
+  }
+};
+
 const absoluteUrl = {
-  selector: 'Literal[value=/^https?:\\/\\//]',
+  selector: 'Literal[value=/^https?:\\/\\//i]',
   message: 'FE-ANG-HTTP-01: no absolute URLs; take the base URL from environment',
 };
 const absoluteUrlTemplate = {
-  selector: 'TemplateElement[value.raw=/^https?:\\/\\//]',
+  selector: 'TemplateElement[value.raw=/^https?:\\/\\//i]',
   message: 'FE-ANG-HTTP-01: no absolute URLs; take the base URL from environment',
 };
 const restrictedSyntax = [
@@ -127,6 +145,10 @@ const restrictedSyntax = [
     selector: 'MemberExpression[property.name=/^(localStorage|sessionStorage)$/]',
     message: 'FE-ANG-HTTP-02: no browser storage for tokens or personal data',
   },
+  {
+    selector: 'MemberExpression[computed=true][property.value=/^(localStorage|sessionStorage)$/]',
+    message: 'FE-ANG-HTTP-02: no browser storage for tokens or personal data',
+  },
 ];
 
 const restrictedGlobals = ['localStorage', 'sessionStorage'].map((name) => ({
@@ -134,100 +156,104 @@ const restrictedGlobals = ['localStorage', 'sessionStorage'].map((name) => ({
   message: 'FE-ANG-HTTP-02 / FE-ANG-SEC-02: no browser storage for tokens or personal data',
 }));
 
-export default tseslint.config(
-  { ignores: ['dist/', '.angular/', 'coverage/', 'node_modules/', 'src/environments/'] },
-  {
-    files: ['**/*.ts'],
-    extends: [
-      eslint.configs.recommended,
-      ...tseslint.configs.strictTypeChecked,
-      ...tseslint.configs.stylisticTypeChecked,
-      ...angular.configs.tsRecommended,
-    ],
-    processor: angular.processInlineTemplates,
-    languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
-    },
-    rules: {
-      '@angular-eslint/component-selector': [
-        'error',
-        { type: 'element', prefix: 'app', style: 'kebab-case' },
+// `features` are the folders under src/app/features; tests pass their own list.
+export const createConfig = (features) =>
+  tseslint.config(
+    { ignores: ['dist/', '.angular/', 'coverage/', 'node_modules/', 'src/environments/'] },
+    {
+      files: ['**/*.ts'],
+      extends: [
+        eslint.configs.recommended,
+        ...tseslint.configs.strictTypeChecked,
+        ...tseslint.configs.stylisticTypeChecked,
+        ...angular.configs.tsRecommended,
       ],
-      '@angular-eslint/directive-selector': [
-        'error',
-        { type: 'attribute', prefix: 'app', style: 'camelCase' },
-      ],
-      '@angular-eslint/prefer-signals': 'error',
-      '@angular-eslint/prefer-output-readonly': 'error',
-      '@angular-eslint/prefer-output-emitter-ref': 'error',
-      '@angular-eslint/no-uncalled-signals': 'error',
-      '@angular-eslint/no-empty-lifecycle-method': 'error',
-      '@angular-eslint/prefer-inject': 'error',
-      // Angular components and services are decorated classes that may legitimately be empty.
-      '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
-      'no-console': 'error',
-      'no-debugger': 'error',
-      'no-alert': 'error',
-      'no-eval': 'error',
-      'no-new-func': 'error',
-      'max-lines': ['error', { max: 800, skipBlankLines: true, skipComments: true }],
-      'max-depth': ['error', 4],
-      'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
-      '@typescript-eslint/naming-convention': [
-        'error',
-        { selector: 'default', format: ['camelCase'] },
-        { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
-        { selector: 'typeLike', format: ['PascalCase'] },
-        { selector: 'enumMember', format: ['PascalCase', 'UPPER_CASE'] },
-        { selector: 'property', format: null },
-        { selector: 'parameter', format: ['camelCase'], leadingUnderscore: 'allow' },
-      ],
-      'no-restricted-imports': ['error', baseRestrictedImports],
-      'no-restricted-syntax': ['error', ...restrictedSyntax, absoluteUrl, absoluteUrlTemplate],
-      'no-restricted-globals': ['error', ...restrictedGlobals],
+      processor: angular.processInlineTemplates,
+      languageOptions: {
+        parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      },
+      rules: {
+        '@angular-eslint/component-selector': [
+          'error',
+          { type: 'element', prefix: 'app', style: 'kebab-case' },
+        ],
+        '@angular-eslint/directive-selector': [
+          'error',
+          { type: 'attribute', prefix: 'app', style: 'camelCase' },
+        ],
+        '@angular-eslint/prefer-signals': 'error',
+        '@angular-eslint/prefer-output-readonly': 'error',
+        '@angular-eslint/prefer-output-emitter-ref': 'error',
+        '@angular-eslint/no-uncalled-signals': 'error',
+        '@angular-eslint/no-empty-lifecycle-method': 'error',
+        '@angular-eslint/prefer-inject': 'error',
+        // Angular components and services are decorated classes that may legitimately be empty.
+        '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+        'no-console': 'error',
+        'no-debugger': 'error',
+        'no-alert': 'error',
+        'no-eval': 'error',
+        'no-new-func': 'error',
+        'max-lines': ['error', { max: 800, skipBlankLines: true, skipComments: true }],
+        'max-depth': ['error', 4],
+        'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
+        '@typescript-eslint/naming-convention': [
+          'error',
+          { selector: 'default', format: ['camelCase'] },
+          { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
+          { selector: 'typeLike', format: ['PascalCase'] },
+          { selector: 'enumMember', format: ['PascalCase', 'UPPER_CASE'] },
+          { selector: 'property', format: null },
+          { selector: 'parameter', format: ['camelCase'], leadingUnderscore: 'allow' },
+        ],
+        'no-restricted-imports': ['error', baseRestrictedImports],
+        'no-restricted-syntax': ['error', ...restrictedSyntax, absoluteUrl, absoluteUrlTemplate],
+        'no-restricted-globals': ['error', ...restrictedGlobals],
+      },
     },
-  },
-  // FE-ANG-ORG-02 by folder, then the same scopes again for components (FE-ANG-DI-03). Scopes go
-  // from broad to narrow, and all component blocks come after all plain blocks, so the last match
-  // always carries both the folder patterns and the HttpClient restriction.
-  { files: ['**/*.component.ts'], rules: folderImports([], [httpClientPath]) },
-  ...folderScopes.flatMap(({ dir, patterns }) => [
-    { files: [`${dir}/*.ts`], rules: folderImports(patterns) },
-  ]),
-  ...folderScopes.flatMap(({ dir, patterns }) => [
-    { files: [`${dir}/*.component.ts`], rules: folderImports(patterns, [httpClientPath]) },
-  ]),
-  {
-    // Tests: Vitest only (FE-ANG-TST-01); they may use literal URLs and long describe blocks.
-    files: ['**/*.spec.ts'],
-    rules: {
-      'max-lines-per-function': 'off',
-      'no-restricted-syntax': ['error', ...restrictedSyntax],
-      'no-restricted-globals': [
-        'error',
-        ...restrictedGlobals,
-        { name: 'jasmine', message: 'FE-ANG-TST-01: Vitest only, no Jasmine' },
-      ],
+    // FE-ANG-ORG-02 by folder, then the same scopes again for components (FE-ANG-DI-03). Scopes go
+    // from broad to narrow, and all component blocks come after all plain blocks, so the last match
+    // always carries both the folder patterns and the HttpClient restriction.
+    { files: ['**/*.component.ts'], rules: folderImports([], [httpClientPath]) },
+    ...folderScopes(features).flatMap(({ dir, patterns }) => [
+      { files: [`${dir}/*.ts`], rules: folderImports(patterns) },
+    ]),
+    ...folderScopes(features).flatMap(({ dir, patterns }) => [
+      { files: [`${dir}/*.component.ts`], rules: folderImports(patterns, [httpClientPath]) },
+    ]),
+    {
+      // Tests: Vitest only (FE-ANG-TST-01); they may use literal URLs and long describe blocks.
+      files: ['**/*.spec.ts'],
+      rules: {
+        'max-lines-per-function': 'off',
+        'no-restricted-syntax': ['error', ...restrictedSyntax],
+        'no-restricted-globals': [
+          'error',
+          ...restrictedGlobals,
+          { name: 'jasmine', message: 'FE-ANG-TST-01: Vitest only, no Jasmine' },
+        ],
+      },
     },
-  },
-  {
-    files: ['**/*.html'],
-    extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
-    rules: {
-      '@angular-eslint/template/button-has-type': 'error',
-      '@angular-eslint/template/no-inline-styles': 'error',
-      '@angular-eslint/template/prefer-at-empty': 'error',
-      '@angular-eslint/template/prefer-ngsrc': 'error',
-      '@angular-eslint/template/prefer-self-closing-tags': 'error',
-      '@angular-eslint/template/prefer-control-flow': 'error',
-      '@angular-eslint/template/eqeqeq': 'error',
-      '@angular-eslint/template/no-negated-async': 'error',
+    {
+      files: ['**/*.html'],
+      extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
+      rules: {
+        '@angular-eslint/template/button-has-type': 'error',
+        '@angular-eslint/template/no-inline-styles': 'error',
+        '@angular-eslint/template/prefer-at-empty': 'error',
+        '@angular-eslint/template/prefer-ngsrc': 'error',
+        '@angular-eslint/template/prefer-self-closing-tags': 'error',
+        '@angular-eslint/template/prefer-control-flow': 'error',
+        '@angular-eslint/template/eqeqeq': 'error',
+        '@angular-eslint/template/no-negated-async': 'error',
+      },
     },
-  },
-  {
-    files: ['scripts/**/*.mjs'],
-    extends: [eslint.configs.recommended],
-    languageOptions: { globals: { process: 'readonly' } },
-  },
-  prettier,
-);
+    {
+      files: ['scripts/**/*.mjs', 'eslint.config.js'],
+      extends: [eslint.configs.recommended],
+      languageOptions: { globals: { process: 'readonly', URL: 'readonly', Buffer: 'readonly' } },
+    },
+    prettier,
+  );
+
+export default createConfig(discoverFeatures());

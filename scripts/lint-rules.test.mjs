@@ -5,7 +5,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ESLint } from 'eslint';
 import tseslint from 'typescript-eslint';
-import config from '../eslint.config.js';
+import { createConfig } from '../eslint.config.js';
+
+const config = createConfig(['f', 'g']);
 
 const eslint = new ESLint({
   overrideConfigFile: true,
@@ -136,8 +138,36 @@ const violations = [
   ['src/app/a.ts', "export const a = 'https://api.example.org';", 'FE-ANG-HTTP-01'],
   ['src/app/a.ts', 'export const a = `https://api.example.org/${1}`;', 'FE-ANG-HTTP-01'],
   ['src/app/a.ts', 'export const a = () => { console.log(1); };', 'no-console'],
-  ['src/app/a.ts', 'export const a = () => { debugger; };', 'debugger'],
-  ['src/app/a.ts', 'export const a = () => eval("1");', 'eval'],
+  ['src/app/a.ts', 'export const a = () => { debugger; };', 'no-debugger'],
+  ['src/app/a.ts', 'export const a = () => eval("1");', 'no-eval'],
+  ['src/app/a.ts', "export const a = globalThis['localStorage'];", 'FE-ANG-HTTP-02'],
+  ['src/app/a.ts', "export const a = 'HTTPS://api.example.org';", 'FE-ANG-HTTP-01'],
+  // Cross-feature imports are rejected at any depth, by alias and by relative path.
+  [
+    'src/app/features/f/pages/detail/a.ts',
+    "import { x } from '@features/g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/pages/detail/a.ts',
+    "import { x } from '../../../g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/pages/detail/a.ts',
+    "import { x } from '../../../../g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/a/b/c/d/a.ts',
+    "import { x } from '@features/g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/pages/a.ts',
+    "import { x } from '../../../core/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
   ['src/app/a.spec.ts', 'export const a = jasmine;', 'FE-ANG-TST-01'],
   // Templates.
   ['src/app/a.html', '<button>x</button>', 'button-has-type'],
@@ -158,6 +188,23 @@ const controls = [
   ['src/app/features/f/pages/a.ts', "import { x } from '../components/x';\nexport const a = x;"],
   ['src/app/layout/a.ts', "import { x } from '@shared/x';\nexport const a = x;"],
   ['src/app/a.spec.ts', "export const a = 'https://example.org';"],
+  // Package paths that merely contain a folder name are not folder imports.
+  ['src/app/shared/a.ts', "import { x } from '@angular/core/testing';\nexport const a = x;"],
+  ['src/app/shared/a.ts', "import { x } from '@angular/core/rxjs-interop';\nexport const a = x;"],
+  ['src/app/shared/a.spec.ts', "import { x } from '@angular/core/testing';\nexport const a = x;"],
+  ['src/app/shared/a.ts', "import { x } from '../core-utils/x';\nexport const a = x;"],
+  // FE-ANG-ORG-02: core may use shared; a feature may use its own code by any path.
+  ['src/app/core/a.ts', "import { x } from '@shared/x';\nexport const a = x;"],
+  ['src/app/features/f/pages/a.ts', "import { x } from '../../f/other';\nexport const a = x;"],
+  ['src/app/features/f/pages/a.ts', "import { x } from '@features/f/other';\nexport const a = x;"],
+  [
+    'src/app/features/f/pages/detail/a.ts',
+    "import { x } from '../../data/x';\nexport const a = x;",
+  ],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { x } from '@shared/x';\nexport const a = x;",
+  ],
   ['src/app/a.html', '<button type="button">x</button>'],
 ];
 
