@@ -60,6 +60,42 @@ const violations = [
     "import { x } from '@layout/x';\nexport const a = x;",
     'FE-ANG-ORG-02',
   ],
+  // Components keep the folder restrictions and add the HttpClient one (the rules must combine).
+  [
+    'src/app/shared/a.component.ts',
+    "import { x } from '@core/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/core/a.component.ts',
+    "import { x } from '@features/f/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { x } from '@features/g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/f.component.ts',
+    "import { x } from '../g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/shared/a.component.ts',
+    "import { HttpClient } from '@angular/common/http';\nexport const a = HttpClient;",
+    'FE-ANG-DI-03',
+  ],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { HttpClient } from '@angular/common/http';\nexport const a = HttpClient;",
+    'FE-ANG-DI-03',
+  ],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { NgClass } from '@angular/common';\nexport const a = NgClass;",
+    'FE-ANG-TPL-02',
+  ],
   // Imports.
   [
     'src/app/a.ts',

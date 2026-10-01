@@ -42,10 +42,20 @@ const baseRestrictedImports = {
 
 // FE-ANG-ORG-02 / QP-ANGWEB-ORG-01: folders talk to each other through the @core, @shared,
 // @features and @layout aliases; relative imports never leave a folder.
-const folderImports = (extraPatterns) => ({
+// A later matching config block replaces (does not extend) the rule options, so every block
+// below is built from the full set: base restrictions + folder patterns (+ HttpClient for components).
+const httpClientPath = {
+  name: '@angular/common/http',
+  importNames: ['HttpClient'],
+  ...restrict('FE-ANG-DI-03', 'components never inject HttpClient; use a data service'),
+};
+const folderImports = (extraPatterns, extraPaths = []) => ({
   'no-restricted-imports': [
     'error',
-    { ...baseRestrictedImports, patterns: [...baseRestrictedImports.patterns, ...extraPatterns] },
+    {
+      paths: [...baseRestrictedImports.paths, ...extraPaths],
+      patterns: [...baseRestrictedImports.patterns, ...extraPatterns],
+    },
   ],
 });
 const forbidFolders = (...folders) =>
@@ -53,6 +63,36 @@ const forbidFolders = (...folders) =>
     group: [`@${folder}/*`, `**/${folder}/**`],
     ...restrict('FE-ANG-ORG-02', `this folder must not import from ${folder}/`),
   }));
+
+// A feature never reaches another feature: relative imports cannot climb out of it.
+const folderScopes = [
+  { dir: 'src/app/shared/**', patterns: forbidFolders('core', 'features', 'layout') },
+  { dir: 'src/app/core/**', patterns: forbidFolders('features', 'layout') },
+  { dir: 'src/app/features/**', patterns: forbidFolders('layout') },
+  {
+    dir: 'src/app/features/*/*',
+    patterns: [
+      ...forbidFolders('layout'),
+      {
+        group: ['@features/*', '../../**'],
+        ...restrict(
+          'FE-ANG-ORG-02',
+          'a feature must not import another feature; use @core/ or @shared/',
+        ),
+      },
+    ],
+  },
+  {
+    dir: 'src/app/features/*',
+    patterns: [
+      ...forbidFolders('layout'),
+      {
+        group: ['@features/*', '../**'],
+        ...restrict('FE-ANG-ORG-02', 'a feature must not import another feature'),
+      },
+    ],
+  },
+];
 
 const absoluteUrl = {
   selector: 'Literal[value=/^https?:\\/\\//]',
@@ -147,57 +187,16 @@ export default tseslint.config(
       'no-restricted-globals': ['error', ...restrictedGlobals],
     },
   },
-  // FE-ANG-ORG-02 by folder.
-  {
-    files: ['src/app/shared/**/*.ts'],
-    rules: folderImports(forbidFolders('core', 'features', 'layout')),
-  },
-  { files: ['src/app/core/**/*.ts'], rules: folderImports(forbidFolders('features', 'layout')) },
-  { files: ['src/app/features/**/*.ts'], rules: folderImports(forbidFolders('layout')) },
-  {
-    // A feature never reaches another feature: relative imports cannot climb out of it.
-    files: ['src/app/features/*/*/*.ts'],
-    rules: folderImports([
-      ...forbidFolders('layout'),
-      {
-        group: ['@features/*', '../../**'],
-        ...restrict(
-          'FE-ANG-ORG-02',
-          'a feature must not import another feature; use @core/ or @shared/',
-        ),
-      },
-    ]),
-  },
-  {
-    files: ['src/app/features/*/*.ts'],
-    rules: folderImports([
-      ...forbidFolders('layout'),
-      {
-        group: ['@features/*', '../**'],
-        ...restrict('FE-ANG-ORG-02', 'a feature must not import another feature'),
-      },
-    ]),
-  },
-  {
-    // FE-ANG-DI-03: components never inject HttpClient.
-    files: ['**/*.component.ts'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          ...baseRestrictedImports,
-          paths: [
-            ...baseRestrictedImports.paths,
-            {
-              name: '@angular/common/http',
-              importNames: ['HttpClient'],
-              ...restrict('FE-ANG-DI-03', 'components never inject HttpClient; use a data service'),
-            },
-          ],
-        },
-      ],
-    },
-  },
+  // FE-ANG-ORG-02 by folder, then the same scopes again for components (FE-ANG-DI-03). Scopes go
+  // from broad to narrow, and all component blocks come after all plain blocks, so the last match
+  // always carries both the folder patterns and the HttpClient restriction.
+  { files: ['**/*.component.ts'], rules: folderImports([], [httpClientPath]) },
+  ...folderScopes.flatMap(({ dir, patterns }) => [
+    { files: [`${dir}/*.ts`], rules: folderImports(patterns) },
+  ]),
+  ...folderScopes.flatMap(({ dir, patterns }) => [
+    { files: [`${dir}/*.component.ts`], rules: folderImports(patterns, [httpClientPath]) },
+  ]),
   {
     // Tests: Vitest only (FE-ANG-TST-01); they may use literal URLs and long describe blocks.
     files: ['**/*.spec.ts'],

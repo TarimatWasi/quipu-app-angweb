@@ -1,17 +1,21 @@
-// Writes src/environments/environment.ts from NG_APP_BFF_BASE_URL (QP-ANGWEB-BFF-01).
+// Writes src/environments/environment.ts from NG_APP_BFF_BASE_URL (QP-ANGWEB-BFF-01). With the
+// variable unset it restores the local default, so a build against a remote BFF never leaks into
+// the next local run.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+export const DEFAULT_BFF_BASE_URL = 'http://localhost:8080';
+
 const TARGET = new URL('../src/environments/environment.ts', import.meta.url);
 
-/** Returns the validated BFF base URL, or undefined to keep the committed default. */
+/** Returns the validated BFF base URL (the local default when the variable is unset). */
 export function resolveBffBaseUrl(env) {
   const raw = env.NG_APP_BFF_BASE_URL?.trim();
   if (!raw) {
     if (env.VERCEL) {
       throw new Error('NG_APP_BFF_BASE_URL is required on Vercel');
     }
-    return undefined;
+    return DEFAULT_BFF_BASE_URL;
   }
   let url;
   try {
@@ -34,8 +38,5 @@ export const environment = {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const bffBaseUrl = resolveBffBaseUrl(process.env);
-  if (bffBaseUrl) {
-    writeFileSync(TARGET, renderEnvironment(bffBaseUrl));
-  }
+  writeFileSync(TARGET, renderEnvironment(resolveBffBaseUrl(process.env)));
 }

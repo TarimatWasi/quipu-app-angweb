@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { resolveBffBaseUrl, renderEnvironment } from './set-env.mjs';
+import { readFileSync } from 'node:fs';
+import { DEFAULT_BFF_BASE_URL, resolveBffBaseUrl, renderEnvironment } from './set-env.mjs';
 
-test('keeps the default when the variable is unset outside Vercel', () => {
-  assert.equal(resolveBffBaseUrl({}), undefined);
+test('falls back to the local default when the variable is unset outside Vercel', () => {
+  assert.equal(resolveBffBaseUrl({}), DEFAULT_BFF_BASE_URL);
 });
 
 test('fails the build on Vercel when the variable is missing', () => {
@@ -33,4 +34,12 @@ test('renders the environment file', () => {
     renderEnvironment('https://api.example.org'),
     /bffBaseUrl: 'https:\/\/api\.example\.org'/,
   );
+});
+
+test('the committed environment file is the generated local default', () => {
+  const committed = readFileSync(
+    new URL('../src/environments/environment.ts', import.meta.url),
+    'utf8',
+  );
+  assert.equal(committed, renderEnvironment(DEFAULT_BFF_BASE_URL));
 });
