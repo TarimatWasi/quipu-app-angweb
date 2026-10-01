@@ -1,0 +1,49 @@
+<main>
+  <form [formRoot]="loginForm" novalidate>
+    <h1>Iniciar sesión</h1>
+
+    <mat-form-field>
+      <mat-label>Tipo de documento</mat-label>
+      <select matNativeControl [formField]="loginForm.documentType">
+        @for (type of documentTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+    </mat-form-field>
+
+    <mat-form-field>
+      <mat-label>Número de documento</mat-label>
+      <input
+        matInput
+        autocomplete="username"
+        [formField]="loginForm.documentNumber"
+        [attr.aria-invalid]="documentNumberError() ? 'true' : null"
+        [attr.aria-describedby]="documentNumberError() ? 'document-number-error' : null"
+      />
+    </mat-form-field>
+    @if (documentNumberError(); as message) {
+      <p id="document-number-error" class="error" role="alert">{{ message }}</p>
+    }
+
+    <mat-form-field>
+      <mat-label>Contraseña</mat-label>
+      <input
+        matInput
+        type="password"
+        autocomplete="current-password"
+        [formField]="loginForm.password"
+        [attr.aria-invalid]="passwordError() ? 'true' : null"
+        [attr.aria-describedby]="passwordError() ? 'password-error' : null"
+      />
+    </mat-form-field>
+    @if (passwordError(); as message) {
+      <p id="password-error" class="error" role="alert">{{ message }}</p>
+    }
+
+    @if (serverError(); as message) {
+      <p class="error" role="alert">{{ message }}</p>
+    }
+
+    <button mat-flat-button type="submit" [disabled]="loginForm().submitting()">Ingresar</button>
+  </form>
+</main>
