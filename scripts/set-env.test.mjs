@@ -126,7 +126,8 @@ test('the build log states the mode: same-origin by default', () => {
 test('the build log states an absolute URL and warns about it on Vercel (stale variable)', () => {
   const local = describeBffMode('https://api.example.org', {});
   assert.ok(local.includes('absolute'));
-  assert.ok(local.includes('https://api.example.org'));
+  const shown = local.split(' ').find((word) => word.startsWith('https:'));
+  assert.equal(new URL(shown).hostname, 'api.example.org');
   assert.ok(!local.includes('WARNING'));
   const onVercel = describeBffMode('https://api.example.org', { VERCEL: '1' });
   assert.ok(onVercel.includes('WARNING'));
