@@ -4,6 +4,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
+import { firstValueFrom } from 'rxjs';
 import { AuthService, Role } from '@core/services/auth.service';
 import { HomeComponent } from './home.component';
 
@@ -21,14 +22,21 @@ async function setup(session: { role: Role; name: string; mustChangePassword: bo
     ],
   });
   const auth = TestBed.inject(AuthService);
-  auth.login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' }).subscribe();
+  const login = firstValueFrom(
+    auth.login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' }),
+  );
   TestBed.inject(HttpTestingController).expectOne(isLogin).flush(session);
+  await login;
   const fixture = TestBed.createComponent(HomeComponent);
   await fixture.whenStable();
   return { auth, fixture, ui: within(fixture.nativeElement as HTMLElement) };
 }
 
 describe('HomeComponent', () => {
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
   it('greets the logged user by name and shows the role in Spanish', async () => {
     const { ui } = await setup({
       role: 'ADMIN',
@@ -58,6 +66,16 @@ describe('HomeComponent', () => {
     const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
 
     expect(ui.queryByRole('status')).toBeNull();
+  });
+
+  it('says next to "Salir" that the server session stays active until it expires', async () => {
+    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+
+    expect(
+      ui.getByText(
+        'La sesión del servidor sigue activa hasta que expire (pendiente: cierre de sesión del servidor).',
+      ),
+    ).toBeTruthy();
   });
 
   it('forgets the session and goes to /login when the user leaves', async () => {

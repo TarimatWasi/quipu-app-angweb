@@ -7,47 +7,70 @@ import {
   Router,
   RouterStateSnapshot,
 } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '@core/services/auth.service';
 import { environment } from '../../../environments/environment';
-import { AuthService } from '../services/auth.service';
+import { anonymousGuard } from './anonymous.guard';
 import { authGuard } from './auth.guard';
 
-describe('authGuard', () => {
-  const run = () =>
-    TestBed.runInInjectionContext(() =>
-      authGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
-    );
+const run = (guard: typeof authGuard) =>
+  TestBed.runInInjectionContext(() =>
+    guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+  );
 
+async function signIn() {
+  const login = firstValueFrom(
+    TestBed.inject(AuthService).login({
+      documentType: 'DNI',
+      documentNumber: '12345678',
+      password: 'secret-1',
+    }),
+  );
+  TestBed.inject(HttpTestingController)
+    .expectOne(`${environment.bffBaseUrl}/bff/auth/login`)
+    .flush({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+  await login;
+}
+
+describe('route guards', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [provideRouter([]), provideHttpClient(), provideHttpClientTesting()],
     });
   });
 
-  it('redirects to /login when there is no session', () => {
-    expect(run()).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
   });
 
-  it('lets an authenticated user through', () => {
-    TestBed.inject(AuthService)
-      .login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' })
-      .subscribe();
-    TestBed.inject(HttpTestingController)
-      .expectOne(`${environment.bffBaseUrl}/bff/auth/login`)
-      .flush({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+  describe('authGuard', () => {
+    it('redirects to /login when there is no session', () => {
+      expect(run(authGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+    });
 
-    expect(run()).toBe(true);
+    it('lets an authenticated user through', async () => {
+      await signIn();
+
+      expect(run(authGuard)).toBe(true);
+    });
+
+    it('redirects again after the client session is cleared', async () => {
+      await signIn();
+      TestBed.inject(AuthService).clear();
+
+      expect(run(authGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+    });
   });
 
-  it('redirects again after the client session is cleared', () => {
-    const auth = TestBed.inject(AuthService);
-    auth
-      .login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' })
-      .subscribe();
-    TestBed.inject(HttpTestingController)
-      .expectOne(`${environment.bffBaseUrl}/bff/auth/login`)
-      .flush({ role: 'ADMIN', name: 'a', mustChangePassword: false });
-    auth.clear();
+  describe('anonymousGuard', () => {
+    it('lets an anonymous user see the login', () => {
+      expect(run(anonymousGuard)).toBe(true);
+    });
 
-    expect(run()).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+    it('sends a user who is already signed in to /home', async () => {
+      await signIn();
+
+      expect(run(anonymousGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/home']));
+    });
   });
 });

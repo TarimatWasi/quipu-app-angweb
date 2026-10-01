@@ -27,6 +27,12 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
         }
       }
       <button mat-stroked-button type="button" (click)="leave()">Salir</button>
+      <p>
+        <small
+          >La sesión del servidor sigue activa hasta que expire (pendiente: cierre de sesión del
+          servidor).</small
+        >
+      </p>
     </main>
   `,
   styles: `

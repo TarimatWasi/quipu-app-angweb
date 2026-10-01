@@ -1,9 +1,11 @@
 import { Routes } from '@angular/router';
+import { anonymousGuard } from '@core/guards/anonymous.guard';
 import { authGuard } from '@core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: 'login',
+    canActivate: [anonymousGuard],
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {

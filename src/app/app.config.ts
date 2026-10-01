@@ -5,7 +5,8 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { credentialsInterceptor } from './core/interceptors/credentials.interceptor';
+import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
+import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
 import { routes } from './app.routes';
 
 export const appConfig: ApplicationConfig = {
@@ -13,6 +14,6 @@ export const appConfig: ApplicationConfig = {
     provideBrowserGlobalErrorListeners(),
     provideZonelessChangeDetection(),
     provideRouter(routes),
-    provideHttpClient(withInterceptors([credentialsInterceptor])),
+    provideHttpClient(withInterceptors([credentialsInterceptor, sessionExpiredInterceptor])),
   ],
 };

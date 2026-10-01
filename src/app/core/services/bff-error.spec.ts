@@ -1,59 +1,95 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, NEVER, timeout } from 'rxjs';
 import { toBffError } from './bff-error';
 
-describe('toBffError', () => {
-  it('reads code, message and field from a BFF error body', () => {
-    const response = new HttpErrorResponse({
-      status: 400,
-      error: { code: 'VALIDATION_ERROR', message: 'Datos de entrada inválidos', field: 'password' },
-    });
+const bff = (status: number, code: string, message = 'texto del servidor', field?: unknown) =>
+  new HttpErrorResponse({ status, error: { code, message, field } });
 
-    expect(toBffError(response)).toEqual({
+describe('toBffError', () => {
+  it.each([
+    [401, 'AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
+    [403, 'AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
+    [
+      415,
+      'UNSUPPORTED_MEDIA_TYPE',
+      'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
+    ],
+  ])('maps %i %s to its own Spanish text', (status, code, text) => {
+    expect(toBffError(bff(status, code))).toEqual({ code, message: text });
+  });
+
+  it('never shows the text the server sent for a code it knows', () => {
+    const error = toBffError(bff(401, 'AUTH_INVALID_CREDENTIALS', 'Wrong password for user 7'));
+
+    expect(error.message).not.toContain('Wrong password');
+  });
+
+  it.each([
+    ['documentType', 'Elige un tipo de documento válido'],
+    ['documentNumber', 'Revisa el número de documento'],
+    ['password', 'Revisa la contraseña'],
+  ])('maps a VALIDATION_ERROR on %s to a Spanish text for that field', (field, text) => {
+    expect(toBffError(bff(400, 'VALIDATION_ERROR', 'Datos de entrada inválidos', field))).toEqual({
       code: 'VALIDATION_ERROR',
-      message: 'Datos de entrada inválidos',
-      field: 'password',
+      message: text,
+      field,
     });
   });
 
-  it('leaves the field out when the BFF sends none or null', () => {
-    const response = new HttpErrorResponse({
-      status: 401,
-      error: {
-        code: 'AUTH_INVALID_CREDENTIALS',
-        message: 'Documento o contraseña incorrectos',
-        field: null,
-      },
+  it('uses a general text for a VALIDATION_ERROR without a field or with an unknown one', () => {
+    expect(toBffError(bff(400, 'VALIDATION_ERROR', 'x', null))).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Revisa los datos ingresados',
     });
+    expect(toBffError(bff(400, 'VALIDATION_ERROR', 'x', 'nickname'))).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Revisa los datos ingresados',
+      field: 'nickname',
+    });
+  });
 
-    expect(toBffError(response)).toEqual({
-      code: 'AUTH_INVALID_CREDENTIALS',
-      message: 'Documento o contraseña incorrectos',
+  it('hides the message of a code it does not know', () => {
+    const error = toBffError(bff(409, 'SOMETHING_NEW', 'detalle interno'));
+
+    expect(error).toEqual({
+      code: 'UNEXPECTED_ERROR',
+      message: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
     });
   });
 
   it('maps a network failure (status 0) to NETWORK_ERROR', () => {
     const response = new HttpErrorResponse({ status: 0, error: new ProgressEvent('error') });
 
-    expect(toBffError(response).code).toBe('NETWORK_ERROR');
+    expect(toBffError(response)).toEqual({
+      code: 'NETWORK_ERROR',
+      message: 'No se pudo conectar con el servidor. Inténtalo de nuevo.',
+    });
   });
 
-  it('maps a body that is not a BFF error to UNEXPECTED_ERROR', () => {
-    const response = new HttpErrorResponse({ status: 502, error: '<html>Bad gateway</html>' });
+  it('maps a timeout to TIMEOUT', async () => {
+    // A real TimeoutError, produced the way the app produces it.
+    const timedOut = await firstValueFrom(NEVER.pipe(timeout({ first: 1 }))).catch(
+      (error: unknown) => error,
+    );
 
-    expect(toBffError(response).code).toBe('UNEXPECTED_ERROR');
+    expect(toBffError(timedOut)).toEqual({
+      code: 'TIMEOUT',
+      message: 'El servidor tardó demasiado en responder. Inténtalo de nuevo.',
+    });
   });
 
-  it('maps a body with a non-string code or message to UNEXPECTED_ERROR', () => {
-    const response = new HttpErrorResponse({ status: 500, error: { code: 7, message: null } });
-
-    expect(toBffError(response).code).toBe('UNEXPECTED_ERROR');
-  });
-
-  it('maps errors that are not HTTP errors to UNEXPECTED_ERROR', () => {
-    expect(toBffError(new Error('boom')).code).toBe('UNEXPECTED_ERROR');
-  });
-
-  it('always gives the user a Spanish message', () => {
-    expect(toBffError(new Error('boom')).message).toMatch(/inesperado/);
+  it.each([
+    ['an HTML body', new HttpErrorResponse({ status: 502, error: '<html>Bad gateway</html>' })],
+    [
+      'a non-string code',
+      new HttpErrorResponse({ status: 500, error: { code: 7, message: null } }),
+    ],
+    ['no body', new HttpErrorResponse({ status: 500 })],
+    ['a non-HTTP error', new Error('boom')],
+  ])('maps %s to UNEXPECTED_ERROR', (_name, error) => {
+    expect(toBffError(error)).toEqual({
+      code: 'UNEXPECTED_ERROR',
+      message: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+    });
   });
 });
