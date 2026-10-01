@@ -6,7 +6,7 @@
       "has": [
         {
           "type": "host",
-          "value": "quipu-app-angweb-dev[.]vercel[.]app"
+          "value": "^quipu-app-angweb-dev[.]vercel[.]app$"
         }
       ],
       "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
@@ -16,7 +16,27 @@
       "has": [
         {
           "type": "host",
-          "value": "quipu-app-angweb(-dev)?-(git-.+|[a-z0-9]+)-shizukajikus-projects[.]vercel[.]app"
+          "value": "^quipu-app-angweb-dev-shizukajikus-projects[.]vercel[.]app$"
+        }
+      ],
+      "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
+    },
+    {
+      "source": "/bff/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^quipu-app-angweb-dev-git-[a-z0-9-]+-shizukajikus-projects[.]vercel[.]app$"
+        }
+      ],
+      "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
+    },
+    {
+      "source": "/bff/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^quipu-app-angweb-[a-z0-9]+-shizukajikus-projects[.]vercel[.]app$"
         }
       ],
       "destination": "https://quipu-api-dev.onrender.com/bff/:path*"

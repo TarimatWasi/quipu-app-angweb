@@ -122,4 +122,32 @@ describe('sessionExpiredInterceptor', () => {
     await expect(call).rejects.toMatchObject({ status: 401 });
     expect(auth.session()).not.toBeNull();
   });
+
+  it('the match is case-insensitive and accepts /bff exactly and with a query', async () => {
+    for (const url of ['/BFF/contracts', '/bff', '/bff?page=2', '/Bff/Contracts?x=1']) {
+      TestBed.resetTestingModule();
+      const { auth, controller, http, signIn } = setup();
+      await signIn();
+
+      const call = firstValueFrom(http.get(url));
+      controller.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
+      await expect(call).rejects.toMatchObject({ status: 401 });
+      expect(auth.session(), url).toBeNull();
+      controller.verify();
+    }
+  });
+
+  it('does not match paths that only start with the letters bff', async () => {
+    for (const url of ['/bffx/contracts', '/bff-admin', '/x/bff/contracts']) {
+      TestBed.resetTestingModule();
+      const { auth, controller, http, signIn } = setup();
+      await signIn();
+
+      const call = firstValueFrom(http.get(url));
+      controller.expectOne(url).flush({}, { status: 401, statusText: 'Unauthorized' });
+      await expect(call).rejects.toMatchObject({ status: 401 });
+      expect(auth.session(), url).not.toBeNull();
+      controller.verify();
+    }
+  });
 });
