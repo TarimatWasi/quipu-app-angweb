@@ -14,7 +14,7 @@ const LOGIN_URL = `${environment.bffBaseUrl}/bff/auth/login`;
 export const sessionExpiredInterceptor: HttpInterceptorFn = (req, next) => {
   const auth = inject(AuthService);
   const router = inject(Router);
-  const toBff = req.url.startsWith(`${environment.bffBaseUrl}/`);
+  const toBff = req.url.startsWith(`${environment.bffBaseUrl}/bff/`);
   return next(req).pipe(
     catchError((error: unknown) => {
       if (

@@ -111,4 +111,15 @@ describe('sessionExpiredInterceptor', () => {
 
     await expect(call).resolves.toEqual({ items: [] });
   });
+
+  it('same-origin: a 401 from a relative path outside /bff does not end the session', async () => {
+    const { auth, controller, http, signIn } = setup();
+    await signIn();
+
+    const call = firstValueFrom(http.get('/other/resource'));
+    controller.expectOne('/other/resource').flush({}, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(call).rejects.toMatchObject({ status: 401 });
+    expect(auth.session()).not.toBeNull();
+  });
 });

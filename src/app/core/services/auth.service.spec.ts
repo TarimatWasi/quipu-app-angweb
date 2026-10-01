@@ -47,7 +47,9 @@ describe('AuthService', () => {
     const req = controller.expectOne(LOGIN_URL);
     expect(req.request.method).toBe('POST');
     expect(req.request.body).toEqual(REQUEST);
-    expect(req.request.withCredentials).toBe(true);
+    // Same-origin by default: the browser sends the cookie itself, no credentials flag needed.
+    expect(LOGIN_URL).toBe('/bff/auth/login');
+    expect(req.request.withCredentials).toBe(false);
     req.flush(ADMIN);
 
     await expect(result).resolves.toEqual(ADMIN);

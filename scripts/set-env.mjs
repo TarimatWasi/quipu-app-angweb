@@ -1,22 +1,22 @@
-// Writes src/environments/environment.ts from NG_APP_BFF_BASE_URL (QP-ANGWEB-BFF-01). With the
-// variable unset it restores the local default, so a build against a remote BFF never leaks into
-// the next local run. The generated file is committed with the default content; the test
-// "the committed environment file is the generated local default" fails if anything else is
-// committed by accident.
+// Writes src/environments/environment.ts from NG_APP_BFF_BASE_URL (QP-ANGWEB-BFF-01).
+// Default: same-origin (empty base URL). The browser calls /bff/* on its own origin and the
+// platform forwards it to the backend: Vercel via vercel.json rewrites, `ng serve` via
+// proxy.conf.json. An absolute https URL is still accepted for a BFF on another origin.
+// With the variable unset it restores the default, so a build against a remote BFF never leaks
+// into the next local run. The generated file is committed with the default content; the test
+// "the committed environment file is the generated same-origin default" fails if anything else
+// is committed by accident.
 import { writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-export const DEFAULT_BFF_BASE_URL = 'http://localhost:8080';
+export const DEFAULT_BFF_BASE_URL = '';
 
 const TARGET = new URL('../src/environments/environment.ts', import.meta.url);
 
-/** Returns the validated BFF base URL (the local default when the variable is unset). */
+/** Returns the validated BFF base URL ('' = same-origin when the variable is unset or '/'). */
 export function resolveBffBaseUrl(env) {
   const raw = env.NG_APP_BFF_BASE_URL?.trim();
-  if (!raw) {
-    if (env.VERCEL) {
-      throw new Error('NG_APP_BFF_BASE_URL is required on Vercel');
-    }
+  if (!raw || raw === '/') {
     return DEFAULT_BFF_BASE_URL;
   }
   let url;

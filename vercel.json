@@ -1,0 +1,25 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "rewrites": [
+    {
+      "source": "/bff/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "quipu-app-angweb-dev[.]vercel[.]app"
+        }
+      ],
+      "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
+    },
+    {
+      "source": "/bff/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "quipu-app-angweb(-dev)?-(git-.+|[a-z0-9]+)-shizukajikus-projects[.]vercel[.]app"
+        }
+      ],
+      "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
+    }
+  ]
+}
