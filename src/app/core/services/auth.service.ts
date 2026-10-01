@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { map, Observable, tap, timeout } from 'rxjs';
-import { environment } from '../../../environments/environment';
+import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
 export type DocumentType = 'DNI' | 'CE' | 'PASSPORT';
 export type Role = 'ADMIN' | 'GUEST';
@@ -56,6 +56,7 @@ function toSession(body: unknown): Session {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly bffBaseUrl = inject(BFF_BASE_URL);
   private readonly timing = inject(LOGIN_TIMING);
   private readonly current = signal<Session | null>(null);
 
@@ -63,7 +64,7 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.current() !== null);
 
   login(request: LoginRequest): Observable<Session> {
-    return this.http.post<unknown>(`${environment.bffBaseUrl}/bff/auth/login`, request).pipe(
+    return this.http.post<unknown>(`${this.bffBaseUrl}/bff/auth/login`, request).pipe(
       timeout({ first: this.timing.timeoutMs }),
       map(toSession),
       tap((session) => {
