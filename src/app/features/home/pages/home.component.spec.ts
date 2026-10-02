@@ -58,6 +58,7 @@ describe('HomeComponent', () => {
     const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: true });
 
     const notice = ui.getByRole('status');
+    expect(notice.tagName).toBe('OUTPUT');
     expect(notice.textContent).toMatch(/cambiar tu contraseña/);
     expect(notice.textContent).toMatch(/pendiente/);
   });
