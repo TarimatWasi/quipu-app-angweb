@@ -73,6 +73,21 @@ export class AuthService {
     );
   }
 
+  /**
+   * RF-12. On success the BFF has already replaced the session cookie with one that no longer
+   * forces the change, so only the client's view of the session needs to be updated.
+   */
+  changePassword(newPassword: string): Observable<null> {
+    return this.http
+      .post<null>(`${this.bffBaseUrl}/bff/auth/change-password`, { newPassword })
+      .pipe(
+        timeout({ first: this.timing.timeoutMs }),
+        tap(() => {
+          this.current.update((session) => session && { ...session, mustChangePassword: false });
+        }),
+      );
+  }
+
   /** Forgets the session in this tab. The BFF has no logout yet: the cookie lives until it expires. */
   clear(): void {
     this.current.set(null);

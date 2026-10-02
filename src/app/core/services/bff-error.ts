@@ -15,6 +15,9 @@ export interface BffError {
 const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
   ['AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
+  ['AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres'],
+  ['AUTH_PASSWORD_UNCHANGED', 'Elige una contraseña distinta de la temporal'],
+  ['AUTH_PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña para continuar'],
   [
     'UNSUPPORTED_MEDIA_TYPE',
     'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
@@ -28,6 +31,7 @@ const VALIDATION_TEXTS = new Map<string, string>([
   ['documentType', 'Elige un tipo de documento válido'],
   ['documentNumber', 'Revisa el número de documento'],
   ['password', 'Revisa la contraseña'],
+  ['newPassword', 'Revisa la nueva contraseña'],
 ]);
 const VALIDATION_FALLBACK = 'Revisa los datos ingresados';
 
@@ -60,5 +64,9 @@ export function toBffError(error: unknown): BffError {
     const message = (field && VALIDATION_TEXTS.get(field)) ?? VALIDATION_FALLBACK;
     return field ? { code, message, field } : { code, message };
   }
-  return KNOWN_TEXTS.has(code) ? known(code) : known('UNEXPECTED_ERROR');
+  if (!KNOWN_TEXTS.has(code)) {
+    return known('UNEXPECTED_ERROR');
+  }
+  const field = typeof body['field'] === 'string' ? body['field'] : undefined;
+  return field ? { ...known(code), field } : known(code);
 }

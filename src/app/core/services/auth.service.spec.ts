@@ -165,3 +165,44 @@ describe('AuthService', () => {
     expect(service.isAuthenticated()).toBe(false);
   });
 });
+
+describe('AuthService.changePassword', () => {
+  const CHANGE_URL = `${environment.bffBaseUrl}/bff/auth/change-password`;
+
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  async function signIn(service: AuthService, controller: HttpTestingController) {
+    const login = firstValueFrom(service.login(REQUEST));
+    controller.expectOne(LOGIN_URL).flush(ADMIN); // ADMIN must change its password
+    await login;
+  }
+
+  it('posts the new password and clears the pending change of the session', async () => {
+    const { service, controller } = setup();
+    await signIn(service, controller);
+
+    const done = firstValueFrom(service.changePassword('Nueva12345'));
+    const req = controller.expectOne(CHANGE_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ newPassword: 'Nueva12345' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+
+    expect(service.session()).toEqual({ ...ADMIN, mustChangePassword: false });
+  });
+
+  it('keeps the session pending when the BFF rejects the password', async () => {
+    const { service, controller } = setup();
+    await signIn(service, controller);
+
+    const done = firstValueFrom(service.changePassword('corta'));
+    controller
+      .expectOne(CHANGE_URL)
+      .flush({ code: 'AUTH_WEAK_PASSWORD' }, { status: 400, statusText: 'Bad Request' });
+
+    await expect(done).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(service.session()?.mustChangePassword).toBe(true);
+  });
+});

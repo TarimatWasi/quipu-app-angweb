@@ -1,18 +1,11 @@
-import {
-  afterNextRender,
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, required, validate } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
 
@@ -90,19 +83,17 @@ export class LoginComponent {
       submission: {
         action: () => this.login(),
         onInvalid: () => {
-          this.focusFirstProblem();
+          focusFirstProblem(this.host, this.injector, 'login-error');
         },
       },
     },
   );
 
-  protected readonly documentTypeError = computed(() =>
-    this.firstError(this.loginForm.documentType),
-  );
+  protected readonly documentTypeError = computed(() => firstError(this.loginForm.documentType));
   protected readonly documentNumberError = computed(() =>
-    this.firstError(this.loginForm.documentNumber),
+    firstError(this.loginForm.documentNumber),
   );
-  protected readonly passwordError = computed(() => this.firstError(this.loginForm.password));
+  protected readonly passwordError = computed(() => firstError(this.loginForm.password));
 
   /** Runs when the form is valid. A failure comes back as errors, so the form stays editable. */
   private async login() {
@@ -126,7 +117,7 @@ export class LoginComponent {
   }
 
   private failure({ code, message, field }: BffError) {
-    this.focusFirstProblem();
+    focusFirstProblem(this.host, this.injector, 'login-error');
     const target = code === 'VALIDATION_ERROR' ? this.fieldNamed(field) : null;
     if (target) {
       return [{ fieldTree: target, kind: 'server', message }];
@@ -146,28 +137,5 @@ export class LoginComponent {
       default:
         return null;
     }
-  }
-
-  /** Errors show once the user touched the field or tried to submit (which touches every field). */
-  private firstError(field: FieldTree<string>): string | null {
-    const state = field();
-    return state.touched() ? (state.errors()[0]?.message ?? null) : null;
-  }
-
-  /**
-   * After a failed submit the focus goes to the first invalid field, or to the general error when
-   * no field is at fault. Waiting for the next render makes sure the error is already on screen.
-   */
-  private focusFirstProblem(): void {
-    afterNextRender(
-      () => {
-        const root = this.host.nativeElement;
-        const target =
-          root.querySelector<HTMLElement>('[aria-invalid="true"]') ??
-          root.querySelector<HTMLElement>('#login-error');
-        target?.focus();
-      },
-      { injector: this.injector },
-    );
   }
 }
