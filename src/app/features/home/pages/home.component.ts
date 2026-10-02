@@ -21,9 +21,9 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
           >.
         </p>
         @if (current.mustChangePassword) {
-          <p role="status">
+          <output class="notice">
             Debes cambiar tu contraseña. El cambio de contraseña está pendiente de implementarse.
-          </p>
+          </output>
         }
       }
       <button mat-stroked-button type="button" (click)="leave()">Salir</button>
@@ -39,6 +39,10 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
     :host {
       display: block;
       padding: 1rem;
+    }
+    .notice {
+      display: block;
+      margin: 1em 0;
     }
   `,
 })
