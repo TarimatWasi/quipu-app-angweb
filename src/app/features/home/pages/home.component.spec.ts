@@ -54,21 +54,6 @@ describe('HomeComponent', () => {
     expect(ui.getByText('Huésped')).toBeTruthy();
   });
 
-  it('warns that the password change is pending when the account must change it', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: true });
-
-    const notice = ui.getByRole('status');
-    expect(notice.tagName).toBe('OUTPUT');
-    expect(notice.textContent).toMatch(/cambiar tu contraseña/);
-    expect(notice.textContent).toMatch(/pendiente/);
-  });
-
-  it('shows no password notice otherwise', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
-
-    expect(ui.queryByRole('status')).toBeNull();
-  });
-
   it('says next to "Salir" that the server session stays active until it expires', async () => {
     const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
 

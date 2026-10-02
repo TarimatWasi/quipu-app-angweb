@@ -93,3 +93,23 @@ describe('toBffError', () => {
     });
   });
 });
+
+describe('toBffError for the password change (RF-12)', () => {
+  it.each([
+    ['AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres'],
+    ['AUTH_PASSWORD_UNCHANGED', 'Elige una contraseña distinta de la temporal'],
+  ])('maps %s to its own Spanish text and keeps the field', (code, text) => {
+    expect(toBffError(bff(400, code, 'texto del servidor', 'newPassword'))).toEqual({
+      code,
+      message: text,
+      field: 'newPassword',
+    });
+  });
+
+  it('maps the block of a session that must change its password', () => {
+    expect(toBffError(bff(403, 'AUTH_PASSWORD_CHANGE_REQUIRED'))).toEqual({
+      code: 'AUTH_PASSWORD_CHANGE_REQUIRED',
+      message: 'Debes cambiar tu contraseña para continuar',
+    });
+  });
+});

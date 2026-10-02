@@ -79,21 +79,40 @@ describe('routes', () => {
     expect(router.url).toBe('/home');
   });
 
-  it('carries mustChangePassword from the login to the /home notice', async () => {
-    const { harness, signIn, text } = await setup();
+  // RF-12: the change cannot be skipped from the client either (the BFF enforces it too).
+  it('sends a session that must change its password from /home to /change-password', async () => {
+    const { harness, router, signIn, text } = await setup();
     await signIn(true);
 
     await harness.navigateByUrl('/home');
 
-    expect(text()).toContain('Debes cambiar tu contraseña');
+    expect(router.url).toBe('/change-password');
+    expect(text()).toContain('Cambia tu contraseña');
   });
 
-  it('shows no password notice on /home when the account does not need it', async () => {
-    const { harness, signIn, text } = await setup();
+  it('keeps a session that must change its password away from /login', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn(true);
+
+    await harness.navigateByUrl('/login');
+
+    expect(router.url).toBe('/change-password');
+  });
+
+  it('opens /change-password only for a session that must change its password', async () => {
+    const { harness, router, signIn } = await setup();
     await signIn(false);
 
-    await harness.navigateByUrl('/home');
+    await harness.navigateByUrl('/change-password');
 
-    expect(text()).not.toContain('Debes cambiar tu contraseña');
+    expect(router.url).toBe('/home');
+  });
+
+  it('keeps /change-password behind the login', async () => {
+    const { harness, router } = await setup();
+
+    await harness.navigateByUrl('/change-password');
+
+    expect(router.url).toBe('/login');
   });
 });
