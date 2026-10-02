@@ -1,12 +1,4 @@
-import {
-  afterNextRender,
-  Component,
-  computed,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import {
   FieldTree,
   form,
@@ -23,6 +15,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
+import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 
 const MIN_LENGTH = 8;
 /** bcrypt, which the backend uses, hashes at most 72 bytes; accented letters take two. */
@@ -82,15 +75,13 @@ export class ChangePasswordComponent {
       submission: {
         action: () => this.change(),
         onInvalid: () => {
-          this.focusFirstProblem();
+          focusFirstProblem(this.host, this.injector, 'change-password-error');
         },
       },
     },
   );
 
-  protected readonly newPasswordError = computed(() =>
-    this.firstError(this.changeForm.newPassword),
-  );
+  protected readonly newPasswordError = computed(() => firstError(this.changeForm.newPassword));
 
   /** Same as the home "Salir": the BFF has no logout yet, so this only forgets the session in this tab. */
   protected leave(): void {
@@ -111,7 +102,7 @@ export class ChangePasswordComponent {
   }
 
   private failure({ message, field }: BffError) {
-    this.focusFirstProblem();
+    focusFirstProblem(this.host, this.injector, 'change-password-error');
     if (field === 'newPassword') {
       return [{ fieldTree: this.newPasswordField(), kind: 'server', message }];
     }
@@ -122,25 +113,5 @@ export class ChangePasswordComponent {
   /** The explicit type breaks the circular inference between the form and its submit action. */
   private newPasswordField(): FieldTree<string> {
     return this.changeForm.newPassword;
-  }
-
-  /** Errors show once the user touched the field or tried to submit (which touches every field). */
-  private firstError(field: FieldTree<string>): string | null {
-    const state = field();
-    return state.touched() ? (state.errors()[0]?.message ?? null) : null;
-  }
-
-  /** Waiting for the next render makes sure the error is already on screen before focusing it. */
-  private focusFirstProblem(): void {
-    afterNextRender(
-      () => {
-        const root = this.host.nativeElement;
-        const target =
-          root.querySelector<HTMLElement>('[aria-invalid="true"]') ??
-          root.querySelector<HTMLElement>('#change-password-error');
-        target?.focus();
-      },
-      { injector: this.injector },
-    );
   }
 }
