@@ -341,8 +341,9 @@ describe('LoginComponent', () => {
 
       await submit();
 
-      const hint = await ui.findByText(/está despertando/);
-      expect(hint.getAttribute('role')).toBe('status');
+      const hint = await ui.findByRole('status');
+      expect(hint.tagName).toBe('OUTPUT');
+      expect(hint.textContent).toMatch(/está despertando/);
       (await request()).flush(ADMIN);
       await vi.waitFor(() => {
         expect(ui.queryByText(/está despertando/)).toBeNull();

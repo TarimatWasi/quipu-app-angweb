@@ -63,9 +63,9 @@
     }
 
     @if (slow()) {
-      <p class="hint" role="status">
+      <output class="hint">
         El servidor está despertando; la primera solicitud puede tardar hasta un minuto.
-      </p>
+      </output>
     }
 
     <button mat-flat-button type="submit" [disabled]="loginForm().submitting()">Ingresar</button>

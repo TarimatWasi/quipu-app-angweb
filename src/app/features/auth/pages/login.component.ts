@@ -50,6 +50,7 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
       font: var(--mat-sys-body-small);
     }
     .hint {
+      display: block;
       margin: 0;
       font: var(--mat-sys-body-small);
     }
