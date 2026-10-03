@@ -40,6 +40,16 @@
         }
       ],
       "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
+    },
+    {
+      "source": "/bff/:path*",
+      "has": [
+        {
+          "type": "host",
+          "value": "^quipu-dev[.]tarimatwasi[.]com$"
+        }
+      ],
+      "destination": "https://quipu-api-dev.onrender.com/bff/:path*"
     }
   ]
 }

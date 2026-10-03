@@ -30,6 +30,7 @@ const PROJECT_HOSTS = [
   'quipu-app-angweb-dev-git-development-shizukajikus-projects.vercel.app', // branch alias
   'quipu-app-angweb-dev-git-feat-tar-f355f8-shizukajikus-projects.vercel.app', // branch alias
   'quipu-app-angweb-43xhw1j83-shizukajikus-projects.vercel.app', // per-deployment host
+  'quipu-dev.tarimatwasi.com', // custom domain of the dev environment (TAR-128)
 ];
 
 test('every alias of the project proxies /bff/* to the dev backend', () => {
@@ -57,6 +58,10 @@ test('host spoofing and lookalikes do not match (the anchors are in vercel.json)
     'quipu-app-angweb-a.b-shizukajikus-projects.vercel.app',
     'other-team-quipu-app-angweb-43xhw1j83-shizukajikus-projects.vercel.app',
     'quipu-app-angweb-43xhw1j83-otherteam-projects.vercel.app',
+    'quipu-dev.tarimatwasi.com.evil.com',
+    'evilquipu-dev.tarimatwasi.com',
+    'evil.quipu-dev.tarimatwasi.com',
+    'quipu-dev-tarimatwasi-com',
   ]) {
     assert.equal(route(host, '/bff/auth/login'), undefined, host);
   }
@@ -64,7 +69,13 @@ test('host spoofing and lookalikes do not match (the anchors are in vercel.json)
 
 test('an unknown host has no /bff rewrite: it fails closed instead of reaching the dev backend', () => {
   // On such a host the Angular preset falls back to index.html, so POST /bff/* answers HTML.
-  for (const host of ['quipu-app-angweb.vercel.app', 'evil.example', 'localhost']) {
+  // quipu.tarimatwasi.com (production) has no rewrite until its own backend exists (TAR-28)
+  for (const host of [
+    'quipu-app-angweb.vercel.app',
+    'quipu.tarimatwasi.com',
+    'evil.example',
+    'localhost',
+  ]) {
     assert.equal(route(host, '/bff/auth/login'), undefined, host);
   }
 });
