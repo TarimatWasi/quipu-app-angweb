@@ -6,6 +6,10 @@
   >
     <h1>Iniciar sesión</h1>
 
+    @if (passwordUpdated()) {
+      <output class="hint">Contraseña actualizada. Ya puedes iniciar sesión.</output>
+    }
+
     <mat-form-field>
       <mat-label>Tipo de documento</mat-label>
       <select
@@ -69,5 +73,6 @@
     }
 
     <button mat-flat-button type="submit" [disabled]="loginForm().submitting()">Ingresar</button>
+    <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
   </form>
 </main>

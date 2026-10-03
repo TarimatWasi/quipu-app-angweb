@@ -15,6 +15,8 @@ const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres'],
   ['AUTH_PASSWORD_UNCHANGED', 'Elige una contraseña distinta de la temporal'],
   ['AUTH_PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña para continuar'],
+  ['AUTH_INVALID_OR_EXPIRED_CODE', 'Enlace inválido o expirado, solicita uno nuevo'],
+  ['RATE_LIMITED', 'Demasiados intentos, espera un momento antes de volver a intentar'],
   [
     'UNSUPPORTED_MEDIA_TYPE',
     'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
@@ -29,6 +31,7 @@ const VALIDATION_TEXTS = new Map<string, string>([
   ['documentNumber', 'Revisa el número de documento'],
   ['password', 'Revisa la contraseña'],
   ['newPassword', 'Revisa la nueva contraseña'],
+  ['email', 'Revisa el correo'],
 ]);
 const VALIDATION_FALLBACK = 'Revisa los datos ingresados';
 

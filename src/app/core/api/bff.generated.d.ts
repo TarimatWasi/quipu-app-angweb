@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.1.1 (TarimatWasi/quipu-lib-contracts), spec sha256 88a243269eee4f8f4e924f170e453ff530acbfc124f1017f363f491d22dcdc51.
+ * Generated from the BFF contract v0.1.2 (TarimatWasi/quipu-lib-contracts), spec sha256 c7eba417dbbf3d697f47b8443536ae6e9d6fd9cc3826c2af375222a0e2430830.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -977,13 +977,14 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Always 202, whether the email exists or not (generic response by design — never reveals account existence, RF-16). */
+            /** @description Always 202, whether the email exists or not (generic response by design — never reveals account existence, RF-16). When the account exists and is active, the email carries a link with a single-use code that expires in 30 minutes (SEG-05). */
             202: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
+            400: components["responses"]["ValidationFailed"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -997,6 +998,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Single-use code from the link in the recovery email */
                     code: string;
                     /** @description At most 72 bytes in UTF-8 (bcrypt limit) */
                     newPassword: string;
@@ -1004,19 +1006,21 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password reset */
+            /** @description Password reset; the code can no longer be used */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
             };
-            /** @description Invalid or expired code (generic message, no $ref) */
+            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired or already used code, or a disabled account: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`; the code is not consumed) or `VALIDATION_ERROR` if a field is missing */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             429: components["responses"]["TooManyRequests"];
         };

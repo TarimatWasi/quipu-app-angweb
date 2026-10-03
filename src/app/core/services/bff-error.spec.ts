@@ -113,3 +113,20 @@ describe('toBffError for the password change (RF-12)', () => {
     });
   });
 });
+
+describe('toBffError for the password recovery (RF-16)', () => {
+  it.each([
+    ['AUTH_INVALID_OR_EXPIRED_CODE', 400, 'Enlace inválido o expirado, solicita uno nuevo'],
+    ['RATE_LIMITED', 429, 'Demasiados intentos, espera un momento antes de volver a intentar'],
+  ])('maps %s to its own Spanish text', (code, status, text) => {
+    expect(toBffError(bff(status, code, 'texto del servidor'))).toEqual({ code, message: text });
+  });
+
+  it('keeps the email field of a validation error with its own text', () => {
+    expect(toBffError(bff(400, 'VALIDATION_ERROR', 'x', 'email'))).toEqual({
+      code: 'VALIDATION_ERROR',
+      message: 'Revisa el correo',
+      field: 'email',
+    });
+  });
+});

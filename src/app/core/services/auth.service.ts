@@ -87,6 +87,20 @@ export class AuthService {
       );
   }
 
+  /** RF-16. The answer is the same for any email; no session is involved. */
+  requestPasswordReset(email: string): Observable<null> {
+    return this.http
+      .post<null>(`${this.bffBaseUrl}/bff/auth/forgot-password`, { email })
+      .pipe(timeout({ first: this.timing.timeoutMs }));
+  }
+
+  /** RF-16. The person signs in afterwards: a reset does not start a session. */
+  resetPassword(code: string, newPassword: string): Observable<null> {
+    return this.http
+      .post<null>(`${this.bffBaseUrl}/bff/auth/reset-password`, { code, newPassword })
+      .pipe(timeout({ first: this.timing.timeoutMs }));
+  }
+
   /** Forgets the session in this tab. The BFF has no logout yet: the cookie lives until it expires. */
   clear(): void {
     this.current.set(null);

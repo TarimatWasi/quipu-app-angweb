@@ -10,6 +10,17 @@ export const routes: Routes = [
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.AUTH_ROUTES),
   },
   {
+    path: 'forgot-password',
+    canActivate: [anonymousGuard],
+    loadChildren: () =>
+      import('@features/auth/recovery.routes').then((m) => m.FORGOT_PASSWORD_ROUTES),
+  },
+  {
+    path: 'reset-password',
+    loadChildren: () =>
+      import('@features/auth/recovery.routes').then((m) => m.RESET_PASSWORD_ROUTES),
+  },
+  {
     path: 'change-password',
     canActivate: [passwordChangeGuard],
     loadChildren: () =>

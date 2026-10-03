@@ -115,4 +115,51 @@ describe('routes', () => {
 
     expect(router.url).toBe('/login');
   });
+
+  it('opens the recovery pages without a session', async () => {
+    const { harness, router, text } = await setup();
+
+    await harness.navigateByUrl('/forgot-password');
+    expect(router.url).toBe('/forgot-password');
+    expect(text()).toContain('Recuperar contraseña');
+
+    await harness.navigateByUrl('/reset-password');
+    expect(router.url).toBe('/reset-password');
+    expect(text()).toContain('Este enlace no es válido');
+  });
+
+  it('keeps a signed-in user away from the request page but not from the emailed link', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn();
+
+    await harness.navigateByUrl('/forgot-password');
+    expect(router.url).toBe('/home');
+
+    await harness.navigateByUrl('/reset-password?code=abc-DEF_123');
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/reset-password');
+    });
+  });
+
+  it('takes the code out of the address bar once the reset page has read it', async () => {
+    const { harness, router, text } = await setup();
+
+    await harness.navigateByUrl('/reset-password?code=abc-DEF_123');
+
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/reset-password');
+    });
+    expect(text()).toContain('Elige una contraseña nueva');
+  });
+
+  it('offers the recovery link on the login page and confirms an updated password', async () => {
+    const { harness, text } = await setup();
+
+    await harness.navigateByUrl('/login');
+    expect(text()).toContain('¿Olvidaste tu contraseña?');
+    expect(text()).not.toContain('Contraseña actualizada');
+
+    await harness.navigateByUrl('/login?updated=1');
+    expect(text()).toContain('Contraseña actualizada. Ya puedes iniciar sesión.');
+  });
 });
