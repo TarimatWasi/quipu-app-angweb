@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.1.0 (TarimatWasi/quipu-lib-contracts), spec sha256 1226a1b999fedd369a650852b22f0f6b3482f7a60b5f302f58c0d050a79c5713.
+ * Generated from the BFF contract v0.1.1 (TarimatWasi/quipu-lib-contracts), spec sha256 88a243269eee4f8f4e924f170e453ff530acbfc124f1017f363f491d22dcdc51.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -869,6 +869,7 @@ export interface operations {
                     };
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["InvalidCredentials"];
             403: components["responses"]["AccountDisabled"];
             429: components["responses"]["TooManyRequests"];
