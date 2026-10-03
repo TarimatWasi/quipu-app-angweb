@@ -206,3 +206,46 @@ describe('AuthService.changePassword', () => {
     expect(service.session()?.mustChangePassword).toBe(true);
   });
 });
+
+describe('AuthService password recovery (RF-16)', () => {
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('asks for the recovery email with a POST and does not start a session', async () => {
+    const { service, controller } = setup();
+
+    const done = firstValueFrom(service.requestPasswordReset('huesped@example.test'));
+    const req = controller.expectOne(`${environment.bffBaseUrl}/bff/auth/forgot-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ email: 'huesped@example.test' });
+    req.flush(null, { status: 202, statusText: 'Accepted' });
+    await done;
+
+    expect(service.session()).toBeNull();
+  });
+
+  it('resets the password with the code and does not start a session', async () => {
+    const { service, controller } = setup();
+
+    const done = firstValueFrom(service.resetPassword('el-codigo', 'Nueva12345'));
+    const req = controller.expectOne(`${environment.bffBaseUrl}/bff/auth/reset-password`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ code: 'el-codigo', newPassword: 'Nueva12345' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+
+    expect(service.session()).toBeNull();
+  });
+
+  it('lets the HTTP error through so the screen can map its code', async () => {
+    const { service, controller } = setup();
+
+    const done = firstValueFrom(service.resetPassword('vencido', 'Nueva12345'));
+    controller
+      .expectOne(`${environment.bffBaseUrl}/bff/auth/reset-password`)
+      .flush({ code: 'AUTH_INVALID_OR_EXPIRED_CODE' }, { status: 400, statusText: 'Bad Request' });
+
+    await expect(done).rejects.toBeInstanceOf(HttpErrorResponse);
+  });
+});

@@ -1,13 +1,5 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import {
-  FieldTree,
-  form,
-  FormField,
-  FormRoot,
-  minLength,
-  required,
-  validate,
-} from '@angular/forms/signals';
+import { FieldTree, form, FormField, FormRoot } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
@@ -16,11 +8,8 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
-
-const MIN_LENGTH = 8;
-/** bcrypt, which the backend uses, hashes at most 72 bytes; accented letters take two. */
-const MAX_BYTES = 72;
-const ENCODER = new TextEncoder();
+import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
+import { newPasswordRules } from '@shared/forms/new-password-rules';
 
 interface ChangePasswordModel {
   newPassword: string;
@@ -31,24 +20,7 @@ interface ChangePasswordModel {
   selector: 'app-change-password',
   imports: [FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton],
   templateUrl: './change-password.component.html',
-  styles: `
-    :host {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      padding: 1rem;
-    }
-    form {
-      display: grid;
-      gap: 0.5rem;
-      width: min(24rem, 100%);
-    }
-    .error {
-      margin: 0 0 0.5rem;
-      color: var(--mat-sys-error);
-      font: var(--mat-sys-body-small);
-    }
-  `,
+  styles: FORM_PAGE_STYLES,
 })
 export class ChangePasswordComponent {
   private readonly auth = inject(AuthService);
@@ -63,13 +35,7 @@ export class ChangePasswordComponent {
   protected readonly changeForm = form(
     this.model,
     (path) => {
-      required(path.newPassword, { message: 'Ingresa tu nueva contraseña' });
-      minLength(path.newPassword, MIN_LENGTH, { message: 'Mínimo 8 caracteres' });
-      validate(path.newPassword, ({ value }) =>
-        ENCODER.encode(value()).length > MAX_BYTES
-          ? { kind: 'tooLong', message: 'La contraseña es demasiado larga' }
-          : undefined,
-      );
+      newPasswordRules(path.newPassword);
     },
     {
       submission: {
