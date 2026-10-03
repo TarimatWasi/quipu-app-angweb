@@ -11,10 +11,13 @@
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "lint": "ng lint",
+    "contract:sync": "node scripts/contract.mjs sync",
+    "contract:check": "node scripts/contract.mjs check",
+    "contract:pin": "node scripts/contract.mjs pin",
     "test:scripts": "node --test \"scripts/*.test.mjs\"",
     "test": "ng test --watch=false --coverage",
     "pretest": "node scripts/set-env.mjs",
-    "verify": "npm run format:check && npm run lint && npm run test:scripts && npm run build && npm run test"
+    "verify": "npm run format:check && npm run contract:check && npm run lint && npm run test:scripts && npm run build && npm run test"
   },
   "private": true,
   "dependencies": {
@@ -41,6 +44,7 @@
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "jsdom": "^30.0.0",
+    "openapi-typescript": "7.13.0",
     "prettier": "^3.8.1",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.71.0",
@@ -50,5 +54,10 @@
   "engines": {
     "node": "^22.22.3 || ^24.15.0",
     "npm": ">=10"
+  },
+  "overrides": {
+    "openapi-typescript": {
+      "typescript": "$typescript"
+    }
   }
 }
