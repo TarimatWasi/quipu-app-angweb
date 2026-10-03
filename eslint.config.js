@@ -175,7 +175,16 @@ const restrictedGlobals = ['localStorage', 'sessionStorage'].map((name) => ({
 // `features` are the folders under src/app/features; tests pass their own list.
 export const createConfig = (features) =>
   tseslint.config(
-    { ignores: ['dist/', '.angular/', 'coverage/', 'node_modules/', 'src/environments/'] },
+    {
+      ignores: [
+        'dist/',
+        '.angular/',
+        'coverage/',
+        'node_modules/',
+        'src/environments/',
+        'src/app/core/api/bff.generated.d.ts',
+      ],
+    },
     {
       files: ['**/*.ts'],
       extends: [
@@ -267,7 +276,17 @@ export const createConfig = (features) =>
     {
       files: ['scripts/**/*.mjs', 'eslint.config.js'],
       extends: [eslint.configs.recommended],
-      languageOptions: { globals: { process: 'readonly', URL: 'readonly', Buffer: 'readonly' } },
+      languageOptions: {
+        globals: {
+          process: 'readonly',
+          URL: 'readonly',
+          Buffer: 'readonly',
+          fetch: 'readonly',
+          TextDecoder: 'readonly',
+          AbortSignal: 'readonly',
+          setTimeout: 'readonly',
+        },
+      },
     },
     prettier,
   );

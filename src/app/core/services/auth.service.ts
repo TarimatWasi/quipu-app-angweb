@@ -1,23 +1,19 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { map, Observable, tap, timeout } from 'rxjs';
+import type { components, operations } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
-export type DocumentType = 'DNI' | 'CE' | 'PASSPORT';
-export type Role = 'ADMIN' | 'GUEST';
+type LoginOperation = operations['login'];
+type LoginResponse = LoginOperation['responses'][200]['content']['application/json'];
 
-export interface LoginRequest {
-  readonly documentType: DocumentType;
-  readonly documentNumber: string;
-  readonly password: string;
-}
+// The API types come from the shared contract (TAR-23): nothing here is declared by hand.
+export type DocumentType = components['schemas']['DocumentType'];
+export type Role = LoginResponse['role'];
+export type LoginRequest = Readonly<LoginOperation['requestBody']['content']['application/json']>;
 
 /** What the BFF answers to a login. The session token itself travels in an HttpOnly cookie. */
-export interface Session {
-  readonly role: Role;
-  readonly name: string;
-  readonly mustChangePassword: boolean;
-}
+export type Session = Readonly<Pick<LoginResponse, 'role' | 'name' | 'mustChangePassword'>>;
 
 /**
  * How long a login may take. The free Render plan can need 60 to 90 seconds to wake the backend,
@@ -33,8 +29,11 @@ export const LOGIN_TIMING = new InjectionToken<LoginTiming>('LOGIN_TIMING', {
   factory: () => ({ slowHintAfterMs: 8_000, timeoutMs: 90_000 }),
 });
 
+// One entry per role of the contract: a role added to the contract fails to compile here.
+const ROLES: Readonly<Record<Role, true>> = { ADMIN: true, GUEST: true };
+
 function isRole(value: unknown): value is Role {
-  return value === 'ADMIN' || value === 'GUEST';
+  return typeof value === 'string' && Object.hasOwn(ROLES, value);
 }
 
 /** Checks the login response at the boundary: anything unexpected is an error, never a session. */

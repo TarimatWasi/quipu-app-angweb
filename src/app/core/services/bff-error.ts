@@ -1,16 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TimeoutError } from 'rxjs';
+import type { components } from '@core/api/bff.generated';
 
 /**
  * A failed BFF call, reduced to what the UI needs. `code` is stable and decides what the app does
  * (QP-ANGWEB-BFF-02); `message` is always a local Spanish text, never the one the server sent, so
  * a server detail can never reach the screen.
  */
-export interface BffError {
-  readonly code: string;
-  readonly message: string;
-  readonly field?: string;
-}
+export type BffError = Readonly<components['schemas']['Error']>;
 
 const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
