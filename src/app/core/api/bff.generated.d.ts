@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.1.3 (TarimatWasi/quipu-lib-contracts), spec sha256 21bc34c92dc71bf19f6b793799c8b6cb63de5421671c5053e38be1d9fa503dec.
+ * Generated from the BFF contract v0.1.5 (TarimatWasi/quipu-lib-contracts), spec sha256 5b75a9bc3cbfeb1427ab0f2c08aee8ea2e47efb71e1af71225a3744c7a1a303c.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -813,6 +813,20 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description Account temporarily locked after 5 consecutive failed logins (SEG-06): the lock lasts 15 minutes, expires by itself and is lifted by a password reset (RF-16). The `code` is always `AUTH_ACCOUNT_LOCKED` */
+        AccountLocked: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_ACCOUNT_LOCKED";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
         /** @description Rate limit exceeded (SEC-01) — retry after the window in the `Retry-After` header */
         TooManyRequests: {
             headers: {
@@ -872,6 +886,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["InvalidCredentials"];
             403: components["responses"]["AccountDisabled"];
+            423: components["responses"]["AccountLocked"];
             429: components["responses"]["TooManyRequests"];
         };
     };
