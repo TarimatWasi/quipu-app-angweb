@@ -49,10 +49,14 @@ export class ChangePasswordComponent {
 
   protected readonly newPasswordError = computed(() => firstError(this.changeForm.newPassword));
 
-  /** Same as the home "Salir": the BFF has no logout yet, so this only forgets the session in this tab. */
-  protected leave(): void {
-    this.auth.clear();
-    void this.router.navigateByUrl('/login');
+  /** Same as the home "Salir": closes the session in the BFF and goes back to the login. */
+  protected readonly leaving = signal(false);
+
+  protected async leave(): Promise<void> {
+    if (this.leaving()) return;
+    this.leaving.set(true);
+    await firstValueFrom(this.auth.logout());
+    await this.router.navigateByUrl('/login');
   }
 
   /** Runs when the form is valid. A failure comes back as errors, so the form stays editable. */

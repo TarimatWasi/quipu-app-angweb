@@ -138,6 +138,9 @@ describe('ChangePasswordComponent (A0.1, RF-12)', () => {
     TestBed.inject(Router).resetConfig([{ path: 'login', component: HomeStubComponent }]);
 
     fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
+    TestBed.inject(HttpTestingController)
+      .expectOne((req) => req.url.endsWith('/bff/auth/logout'))
+      .flush(null, { status: 204, statusText: 'No Content' });
 
     await vi.waitFor(() => {
       expect(TestBed.inject(Router).url).toBe('/login');

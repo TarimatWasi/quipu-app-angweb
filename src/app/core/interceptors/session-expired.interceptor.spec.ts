@@ -77,6 +77,20 @@ describe('sessionExpiredInterceptor', () => {
     expect(router.url).toBe('/');
   });
 
+  it('does not treat a 401 from /me as an expired session: the restoration decides (TAR-74)', async () => {
+    const { auth, controller, http, router, signIn } = setup();
+    await signIn();
+
+    const call = firstValueFrom(http.get(`${BFF}/bff/auth/me`));
+    controller
+      .expectOne(`${BFF}/bff/auth/me`)
+      .flush({ code: 'AUTH_NO_SESSION' }, { status: 401, statusText: 'Unauthorized' });
+
+    await expect(call).rejects.toMatchObject({ status: 401 });
+    expect(auth.session()).not.toBeNull();
+    expect(router.url).toBe('/');
+  });
+
   it('ignores a 401 from another origin', async () => {
     const { auth, controller, http, router, signIn } = setup();
     await signIn();

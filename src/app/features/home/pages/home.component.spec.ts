@@ -9,6 +9,7 @@ import { AuthService, Role } from '@core/services/auth.service';
 import { HomeComponent } from './home.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
+const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
 
 @Component({ selector: 'app-login-stub', template: '' })
 class LoginStubComponent {}
@@ -54,17 +55,7 @@ describe('HomeComponent', () => {
     expect(ui.getByText('Huésped')).toBeTruthy();
   });
 
-  it('says next to "Salir" that the server session stays active until it expires', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
-
-    expect(
-      ui.getByText(
-        'La sesión del servidor sigue activa hasta que expire (pendiente: cierre de sesión del servidor).',
-      ),
-    ).toBeTruthy();
-  });
-
-  it('forgets the session and goes to /login when the user leaves', async () => {
+  it('tells the BFF to close the session, forgets it and goes to /login when the user leaves', async () => {
     const { auth, ui, fixture } = await setup({
       role: 'ADMIN',
       name: 'a',
@@ -72,6 +63,38 @@ describe('HomeComponent', () => {
     });
 
     fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
+    TestBed.inject(HttpTestingController)
+      .expectOne(isLogout)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await fixture.whenStable();
+
+    expect(auth.session()).toBeNull();
+    await vi.waitFor(() => {
+      expect(TestBed.inject(Router).url).toBe('/login');
+    });
+  });
+
+  it('asks the BFF to close the session once, however many times "Salir" is clicked', async () => {
+    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+
+    const leave = ui.getByRole('button', { name: 'Salir' });
+    fireEvent.click(leave);
+    fireEvent.click(leave);
+
+    TestBed.inject(HttpTestingController)
+      .expectOne(isLogout)
+      .flush(null, { status: 204, statusText: 'No Content' });
+  });
+
+  it('leaves even when the BFF cannot be reached', async () => {
+    const { auth, ui, fixture } = await setup({
+      role: 'ADMIN',
+      name: 'a',
+      mustChangePassword: false,
+    });
+
+    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
+    TestBed.inject(HttpTestingController).expectOne(isLogout).error(new ProgressEvent('error'));
     await fixture.whenStable();
 
     expect(auth.session()).toBeNull();
