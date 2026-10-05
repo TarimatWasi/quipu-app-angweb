@@ -50,7 +50,11 @@ export class ChangePasswordComponent {
   protected readonly newPasswordError = computed(() => firstError(this.changeForm.newPassword));
 
   /** Same as the home "Salir": closes the session in the BFF and goes back to the login. */
+  protected readonly leaving = signal(false);
+
   protected async leave(): Promise<void> {
+    if (this.leaving()) return;
+    this.leaving.set(true);
     await firstValueFrom(this.auth.logout());
     await this.router.navigateByUrl('/login');
   }

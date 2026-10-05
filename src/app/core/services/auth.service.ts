@@ -1,6 +1,16 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
-import { catchError, firstValueFrom, map, Observable, of, tap, timeout } from 'rxjs';
+import {
+  catchError,
+  firstValueFrom,
+  map,
+  Observable,
+  of,
+  tap,
+  throwError,
+  timeout,
+  TimeoutError,
+} from 'rxjs';
 import type { components, operations } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
@@ -36,6 +46,13 @@ function isRole(value: unknown): value is Role {
   return typeof value === 'string' && Object.hasOwn(ROLES, value);
 }
 
+/** Not a definite answer of the BFF: it could not be reached in time, or failed (not a 401). */
+function isUnreachable(error: unknown): boolean {
+  return (
+    error instanceof TimeoutError || (error instanceof HttpErrorResponse && error.status !== 401)
+  );
+}
+
 /** Checks a session answer (login or /me) at the boundary: anything unexpected is an error, never a session. */
 function toSession(body: unknown): Session {
   if (typeof body === 'object' && body !== null) {
@@ -59,6 +76,8 @@ export class AuthService {
   private readonly timing = inject(LOGIN_TIMING);
   private readonly current = signal<Session | null>(null);
   private restoration: Promise<void> | null = null;
+  // Moves with every change of the session made here, so a late /me answer cannot overwrite it.
+  private epoch = 0;
 
   readonly session = this.current.asReadonly();
   readonly isAuthenticated = computed(() => this.current() !== null);
@@ -68,6 +87,7 @@ export class AuthService {
       timeout({ first: this.timing.timeoutMs }),
       map(toSession),
       tap((session) => {
+        this.epoch++;
         this.current.set(session);
         this.restoration ??= Promise.resolve();
       }),
@@ -75,26 +95,40 @@ export class AuthService {
   }
 
   /**
-   * TAR-74. Asks the BFF who the session of this browser is (the cookie is HttpOnly): any failure,
-   * a 401 included, means there is no session to restore, never an error for the caller.
+   * TAR-74. Asks the BFF who the session of this browser is (the cookie is HttpOnly). A 401 or an
+   * answer that is not a session means there is none to restore (null); a failure to reach the BFF
+   * (timeout, network, 5xx) is an error, so that the caller can try again later. A late answer never
+   * overwrites a session that was opened or closed in this tab while it was on its way.
    */
   restore(): Observable<Session | null> {
+    const epoch = this.epoch;
     return this.http.get<unknown>(`${this.bffBaseUrl}/bff/auth/me`).pipe(
       timeout({ first: this.timing.timeoutMs }),
       map(toSession),
       tap((session) => {
-        this.current.set(session);
+        if (this.epoch === epoch) {
+          this.current.set(session);
+        }
       }),
-      catchError(() => of(null)),
+      map(() => this.current()),
+      catchError((error: unknown) =>
+        isUnreachable(error) ? throwError(() => error) : of(this.current()),
+      ),
     );
   }
 
   /**
    * Resolves once the session of a page reload has been restored. The first caller asks the BFF;
-   * the others share its answer. Nothing is asked after a login or a logout in this tab.
+   * the others share its answer. Nothing is asked after a login or a logout in this tab, nor after
+   * a definite answer; if the BFF could not be reached the next caller asks again.
    */
   restored(): Promise<void> {
-    this.restoration ??= firstValueFrom(this.restore()).then(() => undefined);
+    this.restoration ??= firstValueFrom(this.restore()).then(
+      () => undefined,
+      () => {
+        this.restoration = this.current() ? Promise.resolve() : null;
+      },
+    );
     return this.restoration;
   }
 
@@ -108,6 +142,7 @@ export class AuthService {
       .pipe(
         timeout({ first: this.timing.timeoutMs }),
         tap(() => {
+          this.epoch++;
           this.current.update((session) => session && { ...session, mustChangePassword: false });
         }),
       );
@@ -143,6 +178,7 @@ export class AuthService {
 
   /** Forgets the session in this tab only; {@link logout} also expires the cookie. */
   clear(): void {
+    this.epoch++;
     this.current.set(null);
     this.restoration ??= Promise.resolve();
   }

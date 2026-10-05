@@ -298,6 +298,45 @@ describe('AuthService password recovery (RF-16)', () => {
       controller.expectNone(ME_URL);
     });
 
+    it('does not let a late answer overwrite a login made meanwhile', async () => {
+      const { service, controller } = setup();
+      const restoring = service.restored();
+      const login = firstValueFrom(service.login(REQUEST));
+      controller.expectOne(LOGIN_URL).flush({ ...ADMIN, name: 'new@example.test' });
+      await login;
+
+      controller.expectOne(ME_URL).flush({ ...ADMIN, name: 'stale@example.test' });
+      await restoring;
+
+      expect(service.session()?.name).toBe('new@example.test');
+    });
+
+    it('does not let a late answer bring back a session that was closed meanwhile', async () => {
+      const { service, controller } = setup();
+      const restoring = service.restored();
+      service.clear();
+
+      controller.expectOne(ME_URL).flush(ADMIN);
+      await restoring;
+
+      expect(service.session()).toBeNull();
+    });
+
+    it('asks again later when the BFF could not be reached, but not after a 401', async () => {
+      const { service, controller } = setup();
+      const first = service.restored();
+      controller.expectOne(ME_URL).error(new ProgressEvent('error'));
+      await first;
+      expect(service.session()).toBeNull();
+
+      const second = service.restored();
+      controller.expectOne(ME_URL).flush(NO_SESSION, { status: 401, statusText: 'Unauthorized' });
+      await second;
+
+      await service.restored();
+      controller.expectNone(ME_URL);
+    });
+
     it('does not ask when the user already signed in', async () => {
       const { service, controller } = setup();
       const login = firstValueFrom(service.login(REQUEST));

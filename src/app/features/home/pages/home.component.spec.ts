@@ -74,6 +74,18 @@ describe('HomeComponent', () => {
     });
   });
 
+  it('asks the BFF to close the session once, however many times "Salir" is clicked', async () => {
+    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+
+    const leave = ui.getByRole('button', { name: 'Salir' });
+    fireEvent.click(leave);
+    fireEvent.click(leave);
+
+    TestBed.inject(HttpTestingController)
+      .expectOne(isLogout)
+      .flush(null, { status: 204, statusText: 'No Content' });
+  });
+
   it('leaves even when the BFF cannot be reached', async () => {
     const { auth, ui, fixture } = await setup({
       role: 'ADMIN',
