@@ -244,6 +244,19 @@ describe('LoginComponent', () => {
       expect(TestBed.inject(AuthService).session()).toBeNull();
     });
 
+    it('tells the user the account is locked for a while on a 423 (SEG-06, TAR-99)', async () => {
+      const { ui, failWith } = await setup();
+
+      await failWith(423, { code: 'AUTH_ACCOUNT_LOCKED', message: 'x' });
+
+      expect(
+        await ui.findByText(
+          'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+        ),
+      ).toBeTruthy();
+      expect(TestBed.inject(AuthService).session()).toBeNull();
+    });
+
     it.each([
       ['documentNumber', 'document-number', 'Revisa el número de documento'],
       ['password', 'password', 'Revisa la contraseña'],

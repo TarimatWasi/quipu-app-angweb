@@ -10,6 +10,11 @@ describe('toBffError', () => {
     [401, 'AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
     [403, 'AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
     [
+      423,
+      'AUTH_ACCOUNT_LOCKED',
+      'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+    ],
+    [
       415,
       'UNSUPPORTED_MEDIA_TYPE',
       'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
