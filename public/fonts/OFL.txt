@@ -1,0 +1,3 @@
+Fraunces y Nunito Sans se distribuyen bajo la SIL Open Font License 1.1 (https://openfontlicense.org).
+Fraunces: copyright de The Fraunces Project Authors. Nunito Sans: copyright de The Nunito Sans Project Authors.
+Los archivos son el subconjunto latino que sirve Google Fonts, sin modificar.

@@ -15,6 +15,7 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
+import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 
@@ -25,7 +26,7 @@ interface ForgotPasswordModel {
 /** A0.2 (RF-16): asks for the email and, whatever the account, says the same thing afterwards. */
 @Component({
   selector: 'app-forgot-password',
-  imports: [FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
   templateUrl: './forgot-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

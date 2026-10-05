@@ -1,11 +1,93 @@
 @use '@angular/material' as mat;
 
+// Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL.txt): sin llamadas a terceros.
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  font-weight: 500 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/fonts/nunito-sans-latin.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 html {
   @include mat.theme(
     (
       color: mat.$azure-palette,
-      typography: Roboto,
+      typography: (
+        plain-family: ('Nunito Sans', system-ui, sans-serif),
+        brand-family: ('Fraunces', Georgia, serif),
+        bold-weight: 700,
+        medium-weight: 600,
+        regular-weight: 400,
+      ),
       density: 0,
     )
   );
+
+  // Identidad de Quipu (TAR-132): tinta y papel, índigo para las acciones y terracota para los
+  // enlaces. Sustituye los colores de la paleta base; todos los pares texto/fondo cumplen AA y el
+  // borde de los campos supera 3:1.
+  --mat-sys-primary: #2b3a6b;
+  --mat-sys-on-primary: #ffffff;
+  --mat-sys-primary-container: #e9ecf5;
+  --mat-sys-on-primary-container: #1b2750;
+  --mat-sys-surface: #fbf7f0;
+  --mat-sys-background: #fbf7f0;
+  --mat-sys-on-surface: #1f1a17;
+  --mat-sys-on-background: #1f1a17;
+  --mat-sys-surface-variant: #f3eadb;
+  --mat-sys-on-surface-variant: #6b5f54;
+  --mat-sys-outline: #857663;
+  --mat-sys-outline-variant: #d8cbb4;
+  --mat-sys-error: #b3261e;
+  --mat-sys-error-container: #fbe9e6;
+  --mat-sys-on-error-container: #7d1a14;
+  --quipu-tinta: #1f1a17;
+  --quipu-crema: #f3eadb;
+  --quipu-terracota: #a5461f;
+  --quipu-ocre: #d9a441;
+
+  // Formas: campos de 10 px y botones de 12 px y 48 px de alto.
+  --mat-sys-corner-extra-small: 10px;
+  --mat-button-filled-container-shape: 12px;
+  --mat-button-outlined-container-shape: 12px;
+  --mat-button-filled-container-height: 48px;
+  --mat-button-outlined-container-height: 48px;
+}
+
+body {
+  margin: 0;
+  font: var(--mat-sys-body-large);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+h1 {
+  margin: 0 0 0.5rem;
+  font-family: var(--mat-sys-display-small-font, 'Fraunces', Georgia, serif);
+  font-size: 2.125rem;
+  font-weight: 600;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+a {
+  color: var(--quipu-terracota);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+// Foco visible en todo lo interactivo (anillo ocre sobre el papel).
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--quipu-ocre);
+  outline-offset: 2px;
 }

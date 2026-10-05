@@ -6,6 +6,7 @@ import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
+import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
@@ -24,19 +25,16 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
 
 @Component({
   selector: 'app-login',
-  imports: [FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
   templateUrl: './login.component.html',
   styles: `
     :host {
-      display: grid;
-      place-items: center;
-      min-height: 100dvh;
-      padding: 1rem;
+      display: block;
     }
     form {
       display: grid;
       gap: 0.5rem;
-      width: min(24rem, 100%);
+      width: min(25rem, 100%);
     }
     .error {
       margin: 0 0 0.5rem;
