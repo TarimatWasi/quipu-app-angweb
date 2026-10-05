@@ -7,6 +7,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
+import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
@@ -24,7 +25,16 @@ function codeOf(route: ActivatedRoute): string | null {
 /** A0.2 (RF-16): the link of the email brings the code; here the person chooses a new password. */
 @Component({
   selector: 'app-reset-password',
-  imports: [FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatButton,
+    RouterLink,
+  ],
   templateUrl: './reset-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

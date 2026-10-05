@@ -7,6 +7,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/services/auth.service';
 import { BffError, toBffError } from '@core/services/bff-error';
+import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
@@ -18,7 +19,7 @@ interface ChangePasswordModel {
 /** A0.1 (RF-12): the first login with a temporary password must end here before anything else. */
 @Component({
   selector: 'app-change-password',
-  imports: [FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton],
+  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton],
   templateUrl: './change-password.component.html',
   styles: FORM_PAGE_STYLES,
 })
