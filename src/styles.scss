@@ -1,6 +1,6 @@
 @use '@angular/material' as mat;
 
-// Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL.txt): sin llamadas a terceros.
+// Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL-*.txt): sin llamadas a terceros.
 @font-face {
   font-family: 'Fraunces';
   src: url('/fonts/fraunces-latin.woff2') format('woff2');
@@ -22,8 +22,16 @@ html {
     (
       color: mat.$azure-palette,
       typography: (
-        plain-family: ('Nunito Sans', system-ui, sans-serif),
-        brand-family: ('Fraunces', Georgia, serif),
+        plain-family: (
+          'Nunito Sans',
+          system-ui,
+          sans-serif,
+        ),
+        brand-family: (
+          'Fraunces',
+          Georgia,
+          serif,
+        ),
         bold-weight: 700,
         medium-weight: 600,
         regular-weight: 400,
@@ -53,7 +61,6 @@ html {
   --quipu-tinta: #1f1a17;
   --quipu-crema: #f3eadb;
   --quipu-terracota: #a5461f;
-  --quipu-ocre: #d9a441;
 
   // Formas: campos de 10 px y botones de 12 px y 48 px de alto.
   --mat-sys-corner-extra-small: 10px;
@@ -86,8 +93,8 @@ a {
   text-underline-offset: 4px;
 }
 
-// Foco visible en todo lo interactivo (anillo ocre sobre el papel).
+// Foco visible en todo lo interactivo (anillo índigo, 10:1 sobre el papel).
 :where(a, button, input, select, textarea):focus-visible {
-  outline: 3px solid var(--quipu-ocre);
+  outline: 3px solid var(--mat-sys-primary);
   outline-offset: 2px;
 }

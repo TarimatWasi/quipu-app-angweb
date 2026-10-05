@@ -25,7 +25,16 @@ function codeOf(route: ActivatedRoute): string | null {
 /** A0.2 (RF-16): the link of the email brings the code; here the person chooses a new password. */
 @Component({
   selector: 'app-reset-password',
-  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatButton,
+    RouterLink,
+  ],
   templateUrl: './reset-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

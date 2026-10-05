@@ -25,7 +25,16 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
 
 @Component({
   selector: 'app-login',
-  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatButton,
+    RouterLink,
+  ],
   templateUrl: './login.component.html',
   styles: `
     :host {

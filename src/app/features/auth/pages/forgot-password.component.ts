@@ -26,7 +26,16 @@ interface ForgotPasswordModel {
 /** A0.2 (RF-16): asks for the email and, whatever the account, says the same thing afterwards. */
 @Component({
   selector: 'app-forgot-password',
-  imports: [AuthShellComponent, FormRoot, FormField, MatFormField, MatLabel, MatInput, MatButton, RouterLink],
+  imports: [
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    MatFormField,
+    MatLabel,
+    MatInput,
+    MatButton,
+    RouterLink,
+  ],
   templateUrl: './forgot-password.component.html',
   styles: FORM_PAGE_STYLES,
 })
