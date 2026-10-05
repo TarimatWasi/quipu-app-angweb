@@ -12,6 +12,10 @@ export type BffError = Readonly<components['schemas']['Error']>;
 const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
   ['AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
+  [
+    'AUTH_ACCOUNT_LOCKED',
+    'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+  ],
   ['AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres'],
   ['AUTH_PASSWORD_UNCHANGED', 'Elige una contraseña distinta de la temporal'],
   ['AUTH_PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña para continuar'],
