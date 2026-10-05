@@ -46,6 +46,9 @@ function isRole(value: unknown): value is Role {
   return typeof value === 'string' && Object.hasOwn(ROLES, value);
 }
 
+// Leaving is best-effort: unlike the login it must not make the user wait for a sleeping backend.
+const LOGOUT_TIMEOUT_MS = 10_000;
+
 /** Not a definite answer of the BFF: it could not be reached in time, or failed (not a 401). */
 function isUnreachable(error: unknown): boolean {
   return (
@@ -168,7 +171,7 @@ export class AuthService {
    */
   logout(): Observable<null> {
     return this.http.post<null>(`${this.bffBaseUrl}/bff/auth/logout`, null).pipe(
-      timeout({ first: this.timing.timeoutMs }),
+      timeout({ first: LOGOUT_TIMEOUT_MS }),
       catchError(() => of(null)),
       tap(() => {
         this.clear();

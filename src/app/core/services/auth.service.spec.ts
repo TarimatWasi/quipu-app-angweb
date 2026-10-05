@@ -382,6 +382,22 @@ describe('AuthService password recovery (RF-16)', () => {
       expect(service.session()).toBeNull();
     });
 
+    it('gives up waiting for the BFF after a few seconds and still forgets the session', async () => {
+      vi.useFakeTimers();
+      try {
+        const { service, controller } = await signedIn();
+
+        const result = firstValueFrom(service.logout());
+        controller.expectOne(LOGOUT_URL);
+        await vi.advanceTimersByTimeAsync(10_001);
+
+        await result;
+        expect(service.session()).toBeNull();
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('does not ask the BFF who the session is after leaving', async () => {
       const { service, controller } = await signedIn();
       const result = firstValueFrom(service.logout());
