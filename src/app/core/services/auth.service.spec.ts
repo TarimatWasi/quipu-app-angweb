@@ -248,4 +248,110 @@ describe('AuthService password recovery (RF-16)', () => {
 
     await expect(done).rejects.toBeInstanceOf(HttpErrorResponse);
   });
+
+  describe('restoring the session after a reload (TAR-74)', () => {
+    const ME_URL = `${environment.bffBaseUrl}/bff/auth/me`;
+    const NO_SESSION = { code: 'AUTH_NO_SESSION', message: 'Tu sesión no es válida o expiró' };
+
+    it('asks the BFF who the session is and stores the answer', async () => {
+      const { service, controller } = setup();
+
+      const result = firstValueFrom(service.restore());
+      const req = controller.expectOne(ME_URL);
+      expect(req.request.method).toBe('GET');
+      req.flush(ADMIN);
+
+      await expect(result).resolves.toEqual(ADMIN);
+      expect(service.session()).toEqual(ADMIN);
+    });
+
+    it('leaves the session empty when the BFF answers 401', async () => {
+      const { service, controller } = setup();
+
+      const result = firstValueFrom(service.restore());
+      controller.expectOne(ME_URL).flush(NO_SESSION, { status: 401, statusText: 'Unauthorized' });
+
+      await expect(result).resolves.toBeNull();
+      expect(service.session()).toBeNull();
+    });
+
+    it('leaves the session empty when the answer is not a session', async () => {
+      const { service, controller } = setup();
+
+      const result = firstValueFrom(service.restore());
+      controller.expectOne(ME_URL).flush({ role: 'OWNER' });
+
+      await expect(result).resolves.toBeNull();
+      expect(service.session()).toBeNull();
+    });
+
+    it('restores once for any number of callers', async () => {
+      const { service, controller } = setup();
+
+      const first = service.restored();
+      const second = service.restored();
+      controller.expectOne(ME_URL).flush(ADMIN);
+      await Promise.all([first, second]);
+
+      expect(service.session()).toEqual(ADMIN);
+      await service.restored();
+      controller.expectNone(ME_URL);
+    });
+
+    it('does not ask when the user already signed in', async () => {
+      const { service, controller } = setup();
+      const login = firstValueFrom(service.login(REQUEST));
+      controller.expectOne(LOGIN_URL).flush(ADMIN);
+      await login;
+
+      await service.restored();
+
+      controller.expectNone(ME_URL);
+    });
+  });
+
+  describe('logging out (TAR-74)', () => {
+    const LOGOUT_URL = `${environment.bffBaseUrl}/bff/auth/logout`;
+
+    async function signedIn() {
+      const ctx = setup();
+      const login = firstValueFrom(ctx.service.login(REQUEST));
+      ctx.controller.expectOne(LOGIN_URL).flush(ADMIN);
+      await login;
+      return ctx;
+    }
+
+    it('tells the BFF to expire the cookie and forgets the session', async () => {
+      const { service, controller } = await signedIn();
+
+      const result = firstValueFrom(service.logout());
+      const req = controller.expectOne(LOGOUT_URL);
+      expect(req.request.method).toBe('POST');
+      req.flush(null, { status: 204, statusText: 'No Content' });
+
+      await result;
+      expect(service.session()).toBeNull();
+    });
+
+    it('forgets the session even when the BFF answers 401 or cannot be reached', async () => {
+      const { service, controller } = await signedIn();
+
+      const result = firstValueFrom(service.logout());
+      controller.expectOne(LOGOUT_URL).error(new ProgressEvent('error'));
+
+      await result;
+      expect(service.session()).toBeNull();
+    });
+
+    it('does not ask the BFF who the session is after leaving', async () => {
+      const { service, controller } = await signedIn();
+      const result = firstValueFrom(service.logout());
+      controller.expectOne(LOGOUT_URL).flush(null, { status: 204, statusText: 'No Content' });
+      await result;
+
+      await service.restored();
+
+      controller.expectNone(`${environment.bffBaseUrl}/bff/auth/me`);
+    });
+  });
 });

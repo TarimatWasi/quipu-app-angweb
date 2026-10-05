@@ -1,6 +1,6 @@
 import { HttpClient } from '@angular/common/http';
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
-import { map, Observable, tap, timeout } from 'rxjs';
+import { catchError, firstValueFrom, map, Observable, of, tap, timeout } from 'rxjs';
 import type { components, operations } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
@@ -36,7 +36,7 @@ function isRole(value: unknown): value is Role {
   return typeof value === 'string' && Object.hasOwn(ROLES, value);
 }
 
-/** Checks the login response at the boundary: anything unexpected is an error, never a session. */
+/** Checks a session answer (login or /me) at the boundary: anything unexpected is an error, never a session. */
 function toSession(body: unknown): Session {
   if (typeof body === 'object' && body !== null) {
     const { role, name, mustChangePassword } = body as Record<string, unknown>;
@@ -49,8 +49,8 @@ function toSession(body: unknown): Session {
 
 /**
  * Client-side view of the BFF session. The token is never readable from JavaScript
- * (FE-ANG-HTTP-02), so after a page reload there is nothing to restore it from: the BFF has no
- * "who am I" endpoint yet, and the guard sends the user back to the login.
+ * (FE-ANG-HTTP-02), so after a page reload the session is restored by asking the BFF who it is
+ * (GET /bff/auth/me, TAR-74); the guards wait for that answer before deciding.
  */
 @Injectable({ providedIn: 'root' })
 export class AuthService {
@@ -58,6 +58,7 @@ export class AuthService {
   private readonly bffBaseUrl = inject(BFF_BASE_URL);
   private readonly timing = inject(LOGIN_TIMING);
   private readonly current = signal<Session | null>(null);
+  private restoration: Promise<void> | null = null;
 
   readonly session = this.current.asReadonly();
   readonly isAuthenticated = computed(() => this.current() !== null);
@@ -68,8 +69,33 @@ export class AuthService {
       map(toSession),
       tap((session) => {
         this.current.set(session);
+        this.restoration ??= Promise.resolve();
       }),
     );
+  }
+
+  /**
+   * TAR-74. Asks the BFF who the session of this browser is (the cookie is HttpOnly): any failure,
+   * a 401 included, means there is no session to restore, never an error for the caller.
+   */
+  restore(): Observable<Session | null> {
+    return this.http.get<unknown>(`${this.bffBaseUrl}/bff/auth/me`).pipe(
+      timeout({ first: this.timing.timeoutMs }),
+      map(toSession),
+      tap((session) => {
+        this.current.set(session);
+      }),
+      catchError(() => of(null)),
+    );
+  }
+
+  /**
+   * Resolves once the session of a page reload has been restored. The first caller asks the BFF;
+   * the others share its answer. Nothing is asked after a login or a logout in this tab.
+   */
+  restored(): Promise<void> {
+    this.restoration ??= firstValueFrom(this.restore()).then(() => undefined);
+    return this.restoration;
   }
 
   /**
@@ -101,8 +127,23 @@ export class AuthService {
       .pipe(timeout({ first: this.timing.timeoutMs }));
   }
 
-  /** Forgets the session in this tab. The BFF has no logout yet: the cookie lives until it expires. */
+  /**
+   * TAR-74. The BFF expires the cookie (the JWT itself cannot be revoked). The session is forgotten
+   * here whatever the answer: if the BFF was unreachable the cookie simply lives until it expires.
+   */
+  logout(): Observable<null> {
+    return this.http.post<null>(`${this.bffBaseUrl}/bff/auth/logout`, null).pipe(
+      timeout({ first: this.timing.timeoutMs }),
+      catchError(() => of(null)),
+      tap(() => {
+        this.clear();
+      }),
+    );
+  }
+
+  /** Forgets the session in this tab only; {@link logout} also expires the cookie. */
   clear(): void {
     this.current.set(null);
+    this.restoration ??= Promise.resolve();
   }
 }

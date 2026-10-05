@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
 import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthService, Role } from '@core/services/auth.service';
 
 const ROLE_LABELS: Readonly<Record<Role, string>> = {
@@ -22,12 +23,6 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
         </p>
       }
       <button mat-stroked-button type="button" (click)="leave()">Salir</button>
-      <p>
-        <small
-          >La sesión del servidor sigue activa hasta que expire (pendiente: cierre de sesión del
-          servidor).</small
-        >
-      </p>
     </main>
   `,
   styles: `
@@ -47,9 +42,9 @@ export class HomeComponent {
     return current ? ROLE_LABELS[current.role] : '';
   });
 
-  /** The BFF has no logout yet: this only forgets the session in this tab (the cookie expires on its own). */
-  protected leave(): void {
-    this.auth.clear();
-    void this.router.navigateByUrl('/login');
+  /** Closes the session in the BFF (it expires the cookie) and goes back to the login. */
+  protected async leave(): Promise<void> {
+    await firstValueFrom(this.auth.logout());
+    await this.router.navigateByUrl('/login');
   }
 }

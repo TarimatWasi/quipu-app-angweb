@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.1.2 (TarimatWasi/quipu-lib-contracts), spec sha256 c7eba417dbbf3d697f47b8443536ae6e9d6fd9cc3826c2af375222a0e2430830.
+ * Generated from the BFF contract v0.1.3 (TarimatWasi/quipu-lib-contracts), spec sha256 21bc34c92dc71bf19f6b793799c8b6cb63de5421671c5053e38be1d9fa503dec.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -918,6 +918,8 @@ export interface operations {
                          */
                         guestType?: "CONTRACT" | "TEMPORARY" | null;
                         name: string;
+                        /** @description current state of the account, read from the database (RF-12): lets the client restore the session after a reload */
+                        mustChangePassword: boolean;
                     };
                 };
             };

@@ -3,6 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
+  CanActivateFn,
   provideRouter,
   Router,
   RouterStateSnapshot,
@@ -13,7 +14,9 @@ import { environment } from '../../../environments/environment';
 import { anonymousGuard } from './anonymous.guard';
 import { authGuard } from './auth.guard';
 
-const run = (guard: typeof authGuard) =>
+const ME_URL = `${environment.bffBaseUrl}/bff/auth/me`;
+
+const run = (guard: CanActivateFn) =>
   TestBed.runInInjectionContext(() =>
     guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
   );
@@ -44,21 +47,44 @@ describe('route guards', () => {
   });
 
   describe('authGuard', () => {
-    it('redirects to /login when there is no session', () => {
-      expect(run(authGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+    it('redirects to /login when the BFF has no session for the browser', async () => {
+      const result = run(authGuard);
+      TestBed.inject(HttpTestingController)
+        .expectOne(ME_URL)
+        .flush({ code: 'AUTH_NO_SESSION', message: 'x' }, { status: 401, statusText: 'x' });
+
+      expect(await result).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
     });
 
-    it('lets an authenticated user through', async () => {
+    it('restores the session after a reload and lets the user through (TAR-74)', async () => {
+      const result = run(authGuard);
+      TestBed.inject(HttpTestingController)
+        .expectOne(ME_URL)
+        .flush({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+
+      expect(await result).toBe(true);
+    });
+
+    it('sends a restored session that must change its password to /change-password', async () => {
+      const result = run(authGuard);
+      TestBed.inject(HttpTestingController)
+        .expectOne(ME_URL)
+        .flush({ role: 'GUEST', name: 'g', mustChangePassword: true });
+
+      expect(await result).toEqual(TestBed.inject(Router).createUrlTree(['/change-password']));
+    });
+
+    it('lets an authenticated user through without asking the BFF', async () => {
       await signIn();
 
-      expect(run(authGuard)).toBe(true);
+      expect(await run(authGuard)).toBe(true);
     });
 
     it('redirects again after the client session is cleared', async () => {
       await signIn();
       TestBed.inject(AuthService).clear();
 
-      expect(run(authGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
+      expect(await run(authGuard)).toEqual(TestBed.inject(Router).createUrlTree(['/login']));
     });
   });
 

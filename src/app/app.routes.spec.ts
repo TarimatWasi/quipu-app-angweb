@@ -27,7 +27,17 @@ async function setup() {
     await login;
   };
   const text = () => harness.routeNativeElement?.textContent ?? '';
-  return { harness, router, signIn, text };
+  // A protected page asks the BFF who the session is (TAR-74): the browser has none.
+  const answerNoSession = () =>
+    vi.waitFor(() => {
+      TestBed.inject(HttpTestingController)
+        .expectOne((req) => req.url.endsWith('/bff/auth/me'))
+        .flush(
+          { code: 'AUTH_NO_SESSION', message: 'x' },
+          { status: 401, statusText: 'Unauthorized' },
+        );
+    });
+  return { harness, router, signIn, text, answerNoSession };
 }
 
 describe('routes', () => {
@@ -53,9 +63,11 @@ describe('routes', () => {
   });
 
   it('keeps /home behind the login', async () => {
-    const { harness, router } = await setup();
+    const { harness, router, answerNoSession } = await setup();
 
-    await harness.navigateByUrl('/home');
+    const navigation = harness.navigateByUrl('/home');
+    await answerNoSession();
+    await navigation;
 
     expect(router.url).toBe('/login');
   });
@@ -109,9 +121,11 @@ describe('routes', () => {
   });
 
   it('keeps /change-password behind the login', async () => {
-    const { harness, router } = await setup();
+    const { harness, router, answerNoSession } = await setup();
 
-    await harness.navigateByUrl('/change-password');
+    const navigation = harness.navigateByUrl('/change-password');
+    await answerNoSession();
+    await navigation;
 
     expect(router.url).toBe('/login');
   });
