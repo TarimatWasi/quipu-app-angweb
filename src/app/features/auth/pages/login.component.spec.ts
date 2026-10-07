@@ -2,6 +2,7 @@ import { HttpRequest, provideHttpClient, withInterceptors } from '@angular/commo
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
@@ -17,9 +18,13 @@ class HomeStubComponent {}
 async function setup(timing?: LoginTiming) {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: 'home', component: HomeStubComponent }]),
+      provideRouter([
+        { path: 'home', component: HomeStubComponent },
+        { path: 'forgot-password', component: HomeStubComponent },
+      ]),
       provideHttpClient(withInterceptors([credentialsInterceptor])),
       provideHttpClientTesting(),
+      { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
       ...(timing ? [{ provide: LOGIN_TIMING, useValue: timing }] : []),
     ],
   });
@@ -41,10 +46,14 @@ async function setup(timing?: LoginTiming) {
     await fixture.whenStable();
   };
   const request = () => vi.waitFor(() => controller.expectOne(isLogin));
-  const failWith = async (status: number, body: Record<string, unknown>) => {
+  const failWith = async (
+    status: number,
+    body: Record<string, unknown>,
+    headers: Record<string, string> = {},
+  ) => {
     await fillValid();
     await submit();
-    (await request()).flush(body, { status, statusText: 'Error' });
+    (await request()).flush(body, { status, statusText: 'Error', headers });
   };
   const focusedId = () => document.activeElement?.id ?? '';
   const formElement = () => {
@@ -70,6 +79,7 @@ async function setup(timing?: LoginTiming) {
 
 describe('LoginComponent', () => {
   afterEach(() => {
+    vi.useRealTimers();
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -244,16 +254,18 @@ describe('LoginComponent', () => {
       expect(TestBed.inject(AuthService).session()).toBeNull();
     });
 
-    it('tells the user the account is locked for a while on a 423 (SEG-06, TAR-99)', async () => {
+    it('keeps the form open with a plain message on a 423 that does not say how long (SEG-06)', async () => {
       const { ui, failWith } = await setup();
 
       await failWith(423, { code: 'AUTH_ACCOUNT_LOCKED', message: 'x' });
 
       expect(
         await ui.findByText(
-          'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+          'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',
         ),
       ).toBeTruthy();
+      expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+      expect(ui.getByLabelText<HTMLInputElement>('Contraseña').disabled).toBe(false);
       expect(TestBed.inject(AuthService).session()).toBeNull();
     });
 
@@ -397,6 +409,134 @@ describe('LoginComponent', () => {
 
       await submit();
       (await request()).flush(ADMIN);
+    });
+  });
+
+  describe('a locked account with a countdown (TAR-131)', { timeout: 10_000 }, () => {
+    const LOCKED = {
+      code: 'AUTH_ACCOUNT_LOCKED',
+      message: 'x',
+      lockedUntil: '2026-10-07T20:42:00Z',
+    };
+    const RETRY_AFTER = { 'Retry-After': '900' };
+    const body = within(document.body);
+
+    const lockedSetup = async (retryAfter = RETRY_AFTER['Retry-After']) => {
+      const page = await setup();
+      await page.failWith(423, LOCKED, { 'Retry-After': retryAfter });
+      await page.fixture.whenStable();
+      return page;
+    };
+    const closeDialog = async (fixture: { whenStable: () => Promise<unknown> }) => {
+      fireEvent.click(body.getByRole('button', { name: 'Entendido' }));
+      await fixture.whenStable();
+    };
+
+    it('opens an alert dialog once, with the countdown and the time of day in Lima', async () => {
+      await lockedSetup();
+
+      const dialog = await body.findByRole('alertdialog', { name: 'Cuenta bloqueada por un rato' });
+      expect(dialog.getAttribute('aria-modal')).toBe('true');
+      expect(within(dialog).getByText('15:00')).toBeTruthy();
+      expect(within(dialog).getByText(/a las 15:42 \(hora de Lima\)/)).toBeTruthy();
+      expect(document.activeElement?.textContent).toContain('Entendido');
+    });
+
+    it('hides the digits that change every second from screen readers', async () => {
+      await lockedSetup();
+
+      const dialog = await body.findByRole('alertdialog');
+      const digits = within(dialog).getByText('15:00');
+      expect(digits.closest('[aria-hidden="true"]')).not.toBeNull();
+    });
+
+    it('leaves a banner with the countdown and a disabled form once the dialog is closed', async () => {
+      const { ui, fixture, focusedId } = await lockedSetup();
+      await body.findByRole('alertdialog');
+
+      await closeDialog(fixture);
+
+      await vi.waitFor(() => {
+        expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+      });
+      expect(ui.getByText('Cuenta bloqueada por intentos fallidos')).toBeTruthy();
+      expect(ui.getByText(/^(15:00|14:5\d)$/)).toBeTruthy();
+      for (const label of ['Tipo de documento', 'Número de documento', 'Contraseña']) {
+        expect(ui.getByLabelText<HTMLInputElement>(label).disabled).toBe(true);
+      }
+      expect(ui.getByRole<HTMLButtonElement>('button', { name: 'Ingresar' }).disabled).toBe(true);
+      expect(focusedId()).toBe('lock-banner');
+    });
+
+    it('keeps both ways out enabled while it lasts: the reset link in the banner and the page', async () => {
+      const { ui, fixture } = await lockedSetup();
+      await body.findByRole('alertdialog');
+      await closeDialog(fixture);
+
+      expect(ui.getByRole('link', { name: 'Restablece tu contraseña' }).getAttribute('href')).toBe(
+        '/forgot-password',
+      );
+      expect(ui.getByRole('link', { name: '¿Olvidaste tu contraseña?' })).toBeTruthy();
+    });
+
+    it('takes the person to the password reset from the dialog and closes it', async () => {
+      const { fixture } = await lockedSetup();
+      await body.findByRole('alertdialog');
+
+      fireEvent.click(body.getByRole('link', { name: 'Restablecer mi contraseña' }));
+      await fixture.whenStable();
+
+      await vi.waitFor(() => {
+        expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+      });
+      expect(TestBed.inject(Router).url).toBe('/forgot-password');
+    });
+
+    it('announces the lock to screen readers in a polite region that exists from the start', async () => {
+      const { fixture } = await setup();
+      const root = fixture.nativeElement as HTMLElement;
+      const region = root.querySelector('[aria-live="polite"]');
+      expect(region).not.toBeNull();
+      expect(region?.textContent.trim()).toBe('');
+    });
+
+    it('closes the dialog by itself when the lock ends while it is still open', async () => {
+      const { ui, focusedId } = await lockedSetup('2');
+      await body.findByRole('alertdialog');
+
+      // The dialog goes away and the form opens in the same render, but the test sees them at
+      // different moments: everything is awaited together.
+      await vi.waitFor(
+        () => {
+          expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+          expect(ui.getByText('Ya puedes intentarlo de nuevo')).toBeTruthy();
+          expect(ui.getByLabelText<HTMLInputElement>('Contraseña').disabled).toBe(false);
+          expect(focusedId()).toBe('password');
+        },
+        { timeout: 6000 },
+      );
+    });
+
+    it('opens the form again at zero: password cleared, focus on it and a notice', async () => {
+      const { ui, fixture, focusedId } = await lockedSetup('2');
+      await body.findByRole('alertdialog');
+      await closeDialog(fixture);
+
+      await vi.waitFor(
+        () => {
+          expect(ui.getByText('Ya puedes intentarlo de nuevo')).toBeTruthy();
+        },
+        { timeout: 6000 },
+      );
+
+      expect(ui.queryByText('Cuenta bloqueada por intentos fallidos')).toBeNull();
+      for (const label of ['Tipo de documento', 'Número de documento', 'Contraseña']) {
+        expect(ui.getByLabelText<HTMLInputElement>(label).disabled).toBe(false);
+      }
+      expect(ui.getByLabelText<HTMLInputElement>('Número de documento').value).toBe('12345678');
+      expect(ui.getByLabelText<HTMLInputElement>('Contraseña').value).toBe('');
+      expect(ui.getByRole<HTMLButtonElement>('button', { name: 'Ingresar' }).disabled).toBe(false);
+      expect(focusedId()).toBe('password');
     });
   });
 });

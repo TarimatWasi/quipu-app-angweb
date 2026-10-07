@@ -1,4 +1,4 @@
-import { HttpErrorResponse } from '@angular/common/http';
+import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, NEVER, timeout } from 'rxjs';
 import { toBffError } from './bff-error';
 
@@ -12,7 +12,7 @@ describe('toBffError', () => {
     [
       423,
       'AUTH_ACCOUNT_LOCKED',
-      'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+      'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',
     ],
     [
       415,
@@ -21,6 +21,67 @@ describe('toBffError', () => {
     ],
   ])('maps %i %s to its own Spanish text', (status, code, text) => {
     expect(toBffError(bff(status, code))).toEqual({ code, message: text });
+  });
+
+  describe('the lock of a 423 (TAR-131)', () => {
+    const LOCKED_UNTIL = '2026-10-07T20:42:00Z';
+    const locked = (
+      retryAfter: string | null,
+      extra: Record<string, unknown> = { lockedUntil: LOCKED_UNTIL },
+    ) =>
+      new HttpErrorResponse({
+        status: 423,
+        headers:
+          retryAfter === null ? new HttpHeaders() : new HttpHeaders({ 'Retry-After': retryAfter }),
+        error: { code: 'AUTH_ACCOUNT_LOCKED', message: 'texto del servidor', ...extra },
+      });
+
+    beforeEach(() => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date('2026-10-07T20:27:00Z'));
+    });
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('keeps the seconds of Retry-After and the instant the lock ends', () => {
+      expect(toBffError(locked('900')).lock).toEqual({
+        retryAfterSeconds: 900,
+        lockedUntil: new Date(LOCKED_UNTIL),
+      });
+    });
+
+    it('counts from lockedUntil when the header is missing or not a whole number of seconds', () => {
+      for (const header of [null, '', '0', '-3', '1.5', 'abc']) {
+        expect(toBffError(locked(header)).lock).toEqual({
+          retryAfterSeconds: 900,
+          lockedUntil: new Date(LOCKED_UNTIL),
+        });
+      }
+    });
+
+    it('builds lockedUntil from the header when the body does not give a valid one', () => {
+      for (const lockedUntil of [undefined, 'ayer', 12]) {
+        expect(toBffError(locked('600', { lockedUntil })).lock).toEqual({
+          retryAfterSeconds: 600,
+          lockedUntil: new Date('2026-10-07T20:37:00Z'),
+        });
+      }
+    });
+
+    it('gives no lock when neither the header nor the body say how long it lasts', () => {
+      expect(toBffError(locked(null, {}))).toEqual({
+        code: 'AUTH_ACCOUNT_LOCKED',
+        message:
+          'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',
+      });
+    });
+
+    it('gives no lock when lockedUntil is already in the past and the header is unusable', () => {
+      expect(
+        toBffError(locked(null, { lockedUntil: '2026-10-07T20:00:00Z' })).lock,
+      ).toBeUndefined();
+    });
   });
 
   it('never shows the text the server sent for a code it knows', () => {

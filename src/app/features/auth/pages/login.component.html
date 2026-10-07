@@ -6,6 +6,64 @@
   >
     <h1>Iniciar sesión</h1>
 
+    <!-- Lo único que se le dice a un lector de pantalla del bloqueo: al empezar, a los 10, 5 y 1 minutos y al terminar. -->
+    <p class="sr-only" aria-live="polite">{{ countdown.announcement() }}</p>
+
+    @if (countdown.active()) {
+      <div id="lock-banner" class="lock" tabindex="-1">
+        <svg
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="5" y="11" width="14" height="10" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+        </svg>
+        <div>
+          <p class="lock-title">Cuenta bloqueada por intentos fallidos</p>
+          <p>
+            Podrás intentarlo de nuevo
+            <span aria-hidden="true"
+              >en <strong class="time">{{ countdown.display() }}</strong
+              >,</span
+            >
+            a las {{ countdown.clockTime() }} (hora de Lima).
+          </p>
+          <p>¿No quieres esperar? <a routerLink="/forgot-password">Restablece tu contraseña</a>.</p>
+        </div>
+      </div>
+    } @else if (unlocked()) {
+      <div class="lock lock-ok">
+        <svg
+          aria-hidden="true"
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <rect x="5" y="11" width="14" height="10" rx="2" />
+          <path d="M8 11V8a4 4 0 0 1 7.5-2" />
+        </svg>
+        <div>
+          <p class="lock-title">Ya puedes intentarlo de nuevo</p>
+          <p>
+            Ingresa tu contraseña con cuidado: si fallas 5 veces seguidas, la cuenta se bloqueará
+            otra vez.
+          </p>
+        </div>
+      </div>
+    }
+
     @if (passwordUpdated()) {
       <output class="hint">Contraseña actualizada. Ya puedes iniciar sesión.</output>
     }
@@ -72,7 +130,13 @@
       </output>
     }
 
-    <button mat-flat-button type="submit" [disabled]="loginForm().submitting()">Ingresar</button>
+    <button
+      mat-flat-button
+      type="submit"
+      [disabled]="loginForm().submitting() || countdown.active()"
+    >
+      Ingresar
+    </button>
     <a routerLink="/forgot-password">¿Olvidaste tu contraseña?</a>
   </form>
 </app-auth-shell>
