@@ -7,14 +7,23 @@ import type { components } from '@core/api/bff.generated';
  * (QP-ANGWEB-BFF-02); `message` is always a local Spanish text, never the one the server sent, so
  * a server detail can never reach the screen.
  */
-export type BffError = Readonly<components['schemas']['Error']>;
+export type BffError = Readonly<components['schemas']['Error']> & { readonly lock?: AccountLock };
+
+/**
+ * How long a locked account stays locked (TAR-131). `retryAfterSeconds` comes from the
+ * `Retry-After` header and is what a countdown starts from; `lockedUntil` is the time of day to show.
+ */
+export interface AccountLock {
+  readonly retryAfterSeconds: number;
+  readonly lockedUntil: Date;
+}
 
 const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
   ['AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
   [
     'AUTH_ACCOUNT_LOCKED',
-    'Tu cuenta está bloqueada por intentos fallidos. Inténtalo en 15 minutos o recupera tu contraseña.',
+    'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',
   ],
   ['AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres'],
   ['AUTH_PASSWORD_UNCHANGED', 'Elige una contraseña distinta de la temporal'],
@@ -47,6 +56,31 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null;
 }
 
+/** A whole number of seconds, at least one (the contract's `Retry-After`). */
+function wholeSeconds(header: string | null): number | undefined {
+  return header !== null && /^[1-9]\d*$/.test(header) ? Number(header) : undefined;
+}
+
+/**
+ * The lock a 423 reports. The header decides the seconds; the body's `lockedUntil` is only the time
+ * of day. Each one stands in for the other when it is missing or unusable; with neither there is
+ * no countdown to show.
+ */
+function lockOf(error: HttpErrorResponse, body: Record<string, unknown>): AccountLock | undefined {
+  const until = typeof body['lockedUntil'] === 'string' ? new Date(body['lockedUntil']) : undefined;
+  const validUntil = until && !Number.isNaN(until.getTime()) ? until : undefined;
+  const seconds =
+    wholeSeconds(error.headers.get('Retry-After')) ??
+    (validUntil ? Math.ceil((validUntil.getTime() - Date.now()) / 1000) : undefined);
+  if (seconds === undefined || seconds < 1) {
+    return undefined;
+  }
+  return {
+    retryAfterSeconds: seconds,
+    lockedUntil: validUntil ?? new Date(Date.now() + seconds * 1000),
+  };
+}
+
 /** Turns whatever a failed BFF call threw into a {@link BffError}. */
 export function toBffError(error: unknown): BffError {
   if (error instanceof TimeoutError) {
@@ -70,6 +104,10 @@ export function toBffError(error: unknown): BffError {
   }
   if (!KNOWN_TEXTS.has(code)) {
     return known('UNEXPECTED_ERROR');
+  }
+  if (code === 'AUTH_ACCOUNT_LOCKED') {
+    const lock = lockOf(error, body);
+    return lock ? { ...known(code), lock } : known(code);
   }
   const field = typeof body['field'] === 'string' ? body['field'] : undefined;
   return field ? { ...known(code), field } : known(code);

@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.2.2 (TarimatWasi/quipu-lib-contracts), spec sha256 1a682f3019517ffeab93a1f99ffedd45db678d143e4fc08a5fd845dcf8a5dfc9.
+ * Generated from the BFF contract v0.2.3 (TarimatWasi/quipu-lib-contracts), spec sha256 d31f5ecf1bebd82eb303e5c58800b4848f4038c61381c1ad9ad28a99a56b14fe.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -1459,9 +1459,11 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Account temporarily locked after 5 consecutive failed logins (SEG-06): the lock lasts 15 minutes, expires by itself and is lifted by a password reset (RF-16). The `code` is always `AUTH_ACCOUNT_LOCKED` */
+        /** @description Account temporarily locked after 5 consecutive failed logins (SEG-06): the lock lasts 15 minutes, expires by itself and is lifted by a password reset (RF-16). The `code` is always `AUTH_ACCOUNT_LOCKED`. The `Retry-After` header gives the seconds left, which is what the client counts down from (so a wrong clock on the device cannot skew it), and `lockedUntil` the instant the lock ends, to show the time of day */
         AccountLocked: {
             headers: {
+                /** @description Seconds until the account can try again, rounded up (at least 1) */
+                "Retry-After": number;
                 [name: string]: unknown;
             };
             content: {
@@ -1470,6 +1472,11 @@ export interface components {
                     code: "AUTH_ACCOUNT_LOCKED";
                     /** @description User-facing message, in Spanish, ready to display in the UI */
                     message: string;
+                    /**
+                     * Format: date-time
+                     * @description UTC instant at which the lock ends; the UI shows it in America/Lima
+                     */
+                    lockedUntil: string;
                 };
             };
         };
