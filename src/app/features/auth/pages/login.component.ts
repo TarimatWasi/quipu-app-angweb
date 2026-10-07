@@ -19,7 +19,7 @@ import {
   validate,
 } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { MatFormField, MatLabel } from '@angular/material/form-field';
 import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -148,6 +148,7 @@ export class LoginComponent {
   /** Shown from the moment the lock ends until the next attempt. */
   protected readonly unlocked = signal(false);
   private readonly dialog = inject(MatDialog);
+  private lockDialog: MatDialogRef<AccountLockedDialogComponent> | undefined;
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -236,24 +237,34 @@ export class LoginComponent {
     this.countdown.start(lock, () => {
       this.unlock();
     });
-    this.dialog
-      .open(AccountLockedDialogComponent, {
-        role: 'alertdialog',
-        ariaModal: true,
-        ariaDescribedBy: ACCOUNT_LOCKED_TEXT_ID,
-        data: { countdown: this.countdown },
-        restoreFocus: false,
-        maxWidth: 'calc(100vw - 2rem)',
-      })
+    const dialog = this.dialog.open(AccountLockedDialogComponent, {
+      role: 'alertdialog',
+      ariaModal: true,
+      ariaDescribedBy: ACCOUNT_LOCKED_TEXT_ID,
+      data: { countdown: this.countdown },
+      restoreFocus: false,
+      maxWidth: 'calc(100vw - 2rem)',
+    });
+    this.lockDialog = dialog;
+    dialog
       .afterClosed()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe(() => {
-        this.focusOnNextRender('#lock-banner');
+        // Closed by the person: the banner explains what is left. Closed because the lock ended:
+        // there is no banner, and unlock() already moved the focus.
+        if (this.countdown.active()) {
+          this.focusOnNextRender('#lock-banner');
+        }
       });
   }
 
-  /** The countdown reached zero: a stale password is not worth keeping, so the form starts clean. */
+  /**
+   * The countdown reached zero: a dialog still open would trap the person over an enabled form, so
+   * it closes; and a stale password is not worth keeping, so the form starts clean.
+   */
   private unlock() {
+    this.lockDialog?.close();
+    this.lockDialog = undefined;
     this.model.update((value) => ({ ...value, password: '' }));
     this.unlocked.set(true);
     this.focusOnNextRender('#password');

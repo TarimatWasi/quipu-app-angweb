@@ -412,7 +412,7 @@ describe('LoginComponent', () => {
     });
   });
 
-  describe('a locked account with a countdown (TAR-131)', () => {
+  describe('a locked account with a countdown (TAR-131)', { timeout: 10_000 }, () => {
     const LOCKED = {
       code: 'AUTH_ACCOUNT_LOCKED',
       message: 'x',
@@ -500,8 +500,25 @@ describe('LoginComponent', () => {
       expect(region?.textContent.trim()).toBe('');
     });
 
+    it('closes the dialog by itself when the lock ends while it is still open', async () => {
+      const { ui, focusedId } = await lockedSetup('2');
+      await body.findByRole('alertdialog');
+
+      // The dialog goes away and the form opens in the same render, but the test sees them at
+      // different moments: everything is awaited together.
+      await vi.waitFor(
+        () => {
+          expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+          expect(ui.getByText('Ya puedes intentarlo de nuevo')).toBeTruthy();
+          expect(ui.getByLabelText<HTMLInputElement>('Contraseña').disabled).toBe(false);
+          expect(focusedId()).toBe('password');
+        },
+        { timeout: 6000 },
+      );
+    });
+
     it('opens the form again at zero: password cleared, focus on it and a notice', async () => {
-      const { ui, fixture, focusedId } = await lockedSetup('1');
+      const { ui, fixture, focusedId } = await lockedSetup('2');
       await body.findByRole('alertdialog');
       await closeDialog(fixture);
 
@@ -509,7 +526,7 @@ describe('LoginComponent', () => {
         () => {
           expect(ui.getByText('Ya puedes intentarlo de nuevo')).toBeTruthy();
         },
-        { timeout: 4000 },
+        { timeout: 6000 },
       );
 
       expect(ui.queryByText('Cuenta bloqueada por intentos fallidos')).toBeNull();
