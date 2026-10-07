@@ -16,12 +16,12 @@ async function vercelHeaders(): Promise<Map<string, string>> {
   const config = JSON.parse(await readText('vercel.json')) as VercelConfig;
   const all = config.headers.filter((rule) => rule.source === '/(.*)');
   expect(all.length).toBe(1);
-  return new Map(all[0].headers.map((h) => [h.key, h.value]));
+  return new Map((all[0]?.headers ?? []).map((h) => [h.key, h.value]));
 }
 
 async function nginxHeaders(): Promise<Map<string, string>> {
   const found = (await readText('nginx.conf')).matchAll(/add_header\s+(\S+)\s+"(.*)"\s+always;/g);
-  return new Map([...found].map((m) => [m[1], m[2]]));
+  return new Map([...found].map((m): [string, string] => [m[1] ?? '', m[2] ?? '']));
 }
 
 const COMMON = [
