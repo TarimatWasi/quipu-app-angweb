@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.1.5 (TarimatWasi/quipu-lib-contracts), spec sha256 5b75a9bc3cbfeb1427ab0f2c08aee8ea2e47efb71e1af71225a3744c7a1a303c.
+ * Generated from the BFF contract v0.2.2 (TarimatWasi/quipu-lib-contracts), spec sha256 1a682f3019517ffeab93a1f99ffedd45db678d143e4fc08a5fd845dcf8a5dfc9.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -49,6 +49,26 @@ export interface paths {
         get: operations["getCurrentUser"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/activate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Activate access with the single-use link and choose the password (RF-11, RF-12, CU-24)
+         * @description The administrator hands the guest a link (RN-32) whose token is single-use and expires 30 minutes after it was generated. The guest opens it and chooses their own password; the session starts right away. It also serves an already active guest whose password was lost: the administrator generates a new access (`POST /admin/guests/{id}/access`) and the guest sets a new password with it; the previous password stays valid until the link is used.
+         */
+        post: operations["activateAccess"];
         delete?: never;
         options?: never;
         head?: never;
@@ -189,7 +209,10 @@ export interface paths {
         /** List guests (RF-02) */
         get: operations["listGuests"];
         put?: never;
-        /** Register guest (RF-02, RF-14, CU-02) — triggers credential email if an email is provided (RF-11) */
+        /**
+         * Register guest with the minimal data and generate their access (RF-02, RF-11, CU-02, CU-09)
+         * @description The administrator registers only the document type and number and the guest type (RN-31); optionally a phone or an email to notify. The guest completes everything else in the onboarding (RF-20). The guest is created pending activation and the response carries the first access (link or temporary password, valid 30 minutes, RN-32). If an email was given, the access is also sent to it by email, best-effort: the activation link in LINK mode, the temporary password itself in TEMPORARY_PASSWORD mode. If the document is already registered nothing is created or modified: the existing guest comes back with `alreadyRegistered: true` and a 200 (RN-18). The response is never cacheable (`Cache-Control: no-store`) because it carries the access in clear.
+         */
         post: operations["createGuest"];
         delete?: never;
         options?: never;
@@ -211,7 +234,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edit guest — contact data and type-specific fields only; document id and consent are immutable after creation (RN-18, RN-14) */
+        /** Correct the document (only while pending activation) and manage the stay data (RN-17, RN-36). The personal and contact data belong to the guest alone and are edited through the guest's own endpoints. */
         patch: operations["updateGuest"];
         trace?: never;
     };
@@ -241,7 +264,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Reactivate a previously deactivated guest — restores login access (RN-12) */
+        /**
+         * Reactivate a previously deactivated guest — restores login access and the state it had when deactivated (RF-13, RN-12, CU-28)
+         * @description Answers the guest as it stands after reactivating: if the access it had expired meanwhile the guest comes back pending activation and the administrator offers to generate a new access.
+         */
         post: operations["reactivateGuest"];
         delete?: never;
         options?: never;
@@ -249,7 +275,7 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/admin/guests/{id}/resend-credentials": {
+    "/admin/guests/{id}/access": {
         parameters: {
             query?: never;
             header?: never;
@@ -258,8 +284,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Resend credentials — invalidates the previous temporary password (RF-17, CU-13) */
-        post: operations["resendGuestCredentials"];
+        /**
+         * Generate a new access (link or temporary password) for a guest — invalidates the previous one (RF-17, CU-13)
+         * @description Covers an expired, lost or undelivered access, and a guest without email. Any guest that is not inactive qualifies, active ones included (an administrator-assisted password recovery). Generating a new access revokes the previous one, but the guest's current password stays valid until the new link or temporary password is used. The response carries the access in clear and is never cacheable (`Cache-Control: no-store`).
+         */
+        post: operations["generateGuestAccess"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Documents the guest uploaded in the onboarding, with a short-lived signed link (RN-37, CU-27)
+         * @description Only the administrator sees these files. Each `url` is a signed R2 link that expires 5 minutes after the response; ask again for a new one.
+         */
+        get: operations["listGuestDocuments"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -436,7 +485,7 @@ export interface paths {
         delete: operations["deleteExpense"];
         options?: never;
         head?: never;
-        /** Edit expense — no audit restriction (RN-24) */
+        /** Edit expense — replaces its category, amount, month and description; no audit restriction (RN-24) */
         patch: operations["updateExpense"];
         trace?: never;
     };
@@ -540,8 +589,105 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edit own contact data (CU-20) */
+        /** Edit own personal and contact data (CU-20, RN-17) */
         patch: operations["updateOwnProfile"];
+        trace?: never;
+    };
+    "/guest/onboarding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Onboarding state — next step, saved data and the consent text in force (RF-20, CU-26)
+         * @description Lets the guest resume where they left off. `nextStep` is the first pending step in the order PASSWORD, PERSONAL_DATA, DOCUMENTS, CONSENT (RN-33); the documents step is optional (RN-37) but is still offered once.
+         */
+        get: operations["getOnboarding"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/personal-data": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Save the personal data step (RF-20, CU-25)
+         * @description Requires the password step to be done (RN-33). Only while the guest is in onboarding; afterwards the data is edited through the profile endpoint.
+         */
+        put: operations["savePersonalData"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload one optional document (RN-37, RF-15, CU-25)
+         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. Files are neither deleted nor replaced.
+         */
+        post: operations["uploadOnboardingDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/documents/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark the documents step as finished, with files or skipped (RN-37, CU-25) */
+        post: operations["finishDocumentsStep"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/consent": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Accept the personal data consent — closes the onboarding (RF-14, RN-14, CU-11)
+         * @description Records the acceptance with date, time and the text version. With the password and personal data steps already done, the guest becomes ACTIVE (RN-33, RN-36). Accepting before the personal data step answers 409 `ONBOARDING_STEP_OUT_OF_ORDER`.
+         */
+        post: operations["acceptConsent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/temporary-guest/payment-status": {
@@ -591,7 +737,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Edit own contact data (CU-23) */
+        /** Edit own personal and contact data (CU-23, RN-17) */
         patch: operations["updateOwnProfileTemporary"];
         trace?: never;
     };
@@ -622,30 +768,184 @@ export interface components {
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
         };
+        /** @description Session data answered by login, link activation and `GET /auth/me`, in one of four shapes: the administrator, a guest that must still set its password (temporary password), a guest in onboarding with the password already set (with the step to go to) or an active guest. `name` is the guest's name; while the guest has not completed the personal data step it is the document in text (for example "DNI 12345678") so the field is always there. */
+        SessionInfo: components["schemas"]["AdminSession"] | components["schemas"]["GuestPasswordPendingSession"] | components["schemas"]["GuestOnboardingSession"] | components["schemas"]["GuestActiveSession"];
+        AdminSession: {
+            /** @enum {string} */
+            role: "ADMIN";
+            name: string;
+            /** @description true until the administrator changes a temporary password (RF-12) */
+            mustChangePassword: boolean;
+        };
+        /** @description A guest that logged in with a temporary password and must choose its own first (RF-12, RN-33) */
+        GuestPasswordPendingSession: {
+            /** @enum {string} */
+            role: "GUEST";
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            name: string;
+            /** @enum {boolean} */
+            mustChangePassword: true;
+            /** @enum {string} */
+            guestStatus: "ONBOARDING";
+            /** @enum {string} */
+            nextOnboardingStep: "PASSWORD";
+        };
+        /** @description A guest whose password is set and whose onboarding still has steps left (RN-33) */
+        GuestOnboardingSession: {
+            /** @enum {string} */
+            role: "GUEST";
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            name: string;
+            /** @enum {boolean} */
+            mustChangePassword: false;
+            /** @enum {string} */
+            guestStatus: "ONBOARDING";
+            /**
+             * @description First pending step, in the order of RN-33
+             * @enum {string}
+             */
+            nextOnboardingStep: "PERSONAL_DATA" | "DOCUMENTS" | "CONSENT";
+        };
+        /** @description A guest that completed the onboarding (RN-36) */
+        GuestActiveSession: {
+            /** @enum {string} */
+            role: "GUEST";
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            name: string;
+            /** @description true while a temporary password has not been changed (RF-12) */
+            mustChangePassword: boolean;
+            /** @enum {string} */
+            guestStatus: "ACTIVE";
+        };
+        /** @description A guest that has just set its password through the activation link and still has onboarding steps left */
+        ActivatedOnboardingSession: {
+            /** @enum {string} */
+            role: "GUEST";
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            name: string;
+            /** @enum {boolean} */
+            mustChangePassword: false;
+            /** @enum {string} */
+            guestStatus: "ONBOARDING";
+            /** @enum {string} */
+            nextOnboardingStep: "PERSONAL_DATA" | "DOCUMENTS" | "CONSENT";
+        };
+        /** @description An already active guest that recovered its access with a new link */
+        ActivatedActiveSession: {
+            /** @enum {string} */
+            role: "GUEST";
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            name: string;
+            /** @enum {boolean} */
+            mustChangePassword: false;
+            /** @enum {string} */
+            guestStatus: "ACTIVE";
+        };
+        /**
+         * @description Guest lifecycle (RN-36). Inactive is reversible (RN-12)
+         * @enum {string}
+         */
+        GuestStatus: "PENDING_ACTIVATION" | "ONBOARDING" | "ACTIVE" | "INACTIVE";
+        /**
+         * @description How the administrator delivers the access: an activation link or a temporary password (RN-32)
+         * @enum {string}
+         */
+        AccessMode: "LINK" | "TEMPORARY_PASSWORD";
+        /** @description An access generated by the administrator. Valid 30 minutes and single use (RN-32). The secret is given only here, in clear, and cannot be read again, so each mode requires its own secret: `activationUrl` for LINK, `temporaryPassword` for TEMPORARY_PASSWORD. */
+        AccessGrant: components["schemas"]["LinkAccessGrant"] | components["schemas"]["PasswordAccessGrant"];
+        LinkAccessGrant: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "LINK";
+            /** @description Single-use activation link (RN-32) */
+            activationUrl: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description true if the access (the link, or the temporary password) was sent to the guest's email (best-effort, RN-19) */
+            emailSent: boolean;
+            /** @description Spanish text ready to copy or to send by WhatsApp, with the link and the 30-minute notice */
+            shareMessage: string;
+        };
+        PasswordAccessGrant: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            mode: "TEMPORARY_PASSWORD";
+            /** @description Temporary password, valid 30 minutes (RN-32) */
+            temporaryPassword: string;
+            /** Format: date-time */
+            expiresAt: string;
+            /** @description true if the access (the link, or the temporary password) was sent to the guest's email (best-effort, RN-19) */
+            emailSent: boolean;
+            /** @description Spanish text ready to copy or to send by WhatsApp, with the password and the 30-minute notice */
+            shareMessage: string;
+        };
+        /** @description Minimal registration by the administrator (RN-31) */
         GuestInput: {
             documentType: components["schemas"]["DocumentType"];
             documentNumber: string;
-            name: string;
-            phone?: string;
-            /** Format: email */
-            contactEmail?: string;
             /** @enum {string} */
             type: "CONTRACT" | "TEMPORARY";
-            /** @description Must be true (RN-14) */
-            dataConsent: boolean;
+            /** @description Optional, to notify the guest */
+            phone?: string;
             /**
-             * Format: date
-             * @description Only when type=TEMPORARY
+             * Format: email
+             * @description Optional: if present the access (the link or the temporary password, depending on accessMode) is also sent by email (RN-19)
              */
-            stayStartDate?: string;
+            contactEmail?: string;
+            accessMode: components["schemas"]["AccessMode"];
+        };
+        /** @description Answer of a registration that created the guest; it always carries the first access */
+        GuestCreated: {
+            guest: components["schemas"]["PendingGuestSummary"];
+            /** @enum {boolean} */
+            alreadyRegistered: false;
+            access: components["schemas"]["AccessGrant"];
+        };
+        /** @description A guest that is not inactive: what the duplicate-document answer (RN-18) and a successful reactivation (RN-12) return */
+        NonInactiveGuestSummary: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description null until the guest completes the personal data step */
+            name: string | null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            /** @enum {string} */
+            status: "PENDING_ACTIVATION" | "ONBOARDING" | "ACTIVE";
+            hasLoginAccess: boolean;
+        };
+        /** @description A guest just created by the administrator: always pending activation (RN-36) and still without a name (RN-31) */
+        PendingGuestSummary: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
             /**
-             * Format: date
-             * @description Only when type=TEMPORARY
+             * @description Always null: the guest completes the personal data in the onboarding (RN-31)
+             * @enum {string|null}
              */
-            stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
-            agreedAmount?: number;
-            emergencyContact?: components["schemas"]["EmergencyContact"];
+            name: null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            /** @enum {string} */
+            status: "PENDING_ACTIVATION";
+            hasLoginAccess: boolean;
+        };
+        /** @description Answer when the document was already registered; the guest comes back unmodified and no access is generated (RN-18) */
+        GuestAlreadyRegistered: {
+            guest: components["schemas"]["NonInactiveGuestSummary"];
+            /** @enum {boolean} */
+            alreadyRegistered: true;
         };
         /** @description Optional, never blocks guest registration (RN-29) */
         EmergencyContact: {
@@ -653,12 +953,10 @@ export interface components {
             relationship?: string;
             phone?: string;
         };
-        /** @description Editable subset of GuestInput. documentType/documentNumber (RN-18 identity key) and dataConsent (RN-14, captured once at creation) are immutable after creation — not included here. */
+        /** @description What the administrator may change: the document, only while the guest is pending activation (RN-36), and the stay data of a temporary guest. Personal and contact data are the guest's alone (RN-17). */
         GuestUpdateInput: {
-            name?: string;
-            phone?: string;
-            /** Format: email */
-            contactEmail?: string;
+            documentType?: components["schemas"]["DocumentType"];
+            documentNumber?: string;
             /**
              * Format: date
              * @description Only when guest type=TEMPORARY
@@ -671,9 +969,133 @@ export interface components {
             stayEndDate?: string;
             /** @description Only when guest type=TEMPORARY */
             agreedAmount?: number;
+        };
+        /** @description Personal data step of the onboarding (RN-33) */
+        PersonalDataInput: {
+            name: string;
+            phone: string;
+            /**
+             * Format: email
+             * @description Optional; without it the password can only be recovered through the administrator (RF-16, RF-17)
+             */
+            contactEmail?: string;
             emergencyContact?: components["schemas"]["EmergencyContact"];
         };
+        /** @description The guest edits their own data; every field is optional (RN-17) */
+        ProfileUpdateInput: {
+            name?: string;
+            phone?: string;
+            /** Format: email */
+            contactEmail?: string;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+        };
+        ConsentInput: {
+            /**
+             * @description Must be true (RN-14); anything else is answered 400 CONSENT_NOT_ACCEPTED
+             * @enum {boolean}
+             */
+            accepted: true;
+            /** @description Version of the text being accepted; must be the one in `OnboardingState.consent.version` */
+            consentVersion: string;
+        };
         GuestSummary: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description null until the guest completes the personal data step */
+            name: string | null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            status: components["schemas"]["GuestStatus"];
+            hasLoginAccess: boolean;
+        };
+        /**
+         * @description Ordered onboarding progress of a guest (RN-33): the password is chosen, then the personal data saved, then the documents step finished or skipped, then the consent accepted (COMPLETED, which is what an ACTIVE guest always has). One value, so impossible combinations cannot be expressed.
+         * @enum {string}
+         */
+        OnboardingProgress: "NOT_STARTED" | "PASSWORD_SET" | "PERSONAL_DATA_SAVED" | "DOCUMENTS_DONE" | "COMPLETED";
+        /** @description Guest 360 detail. `status` and `onboardingProgress` go together (RN-33, RN-36): pending activation has not started, an onboarding guest is anywhere before the consent, an active guest is always COMPLETED and an inactive one keeps the progress it had. */
+        GuestDetail: components["schemas"]["PendingGuestDetail"] | components["schemas"]["OnboardingGuestDetail"] | components["schemas"]["OnboardingPersonalDataSavedGuestDetail"] | components["schemas"]["ActiveGuestDetail"] | components["schemas"]["InactiveGuestDetail"];
+        PendingGuestDetail: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description null until the guest completes the personal data step */
+            name: string | null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            hasLoginAccess: boolean;
+            phone?: string | null;
+            contactEmail?: string | null;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayStartDate?: string;
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayEndDate?: string;
+            /** @description Only when type=TEMPORARY */
+            agreedAmount?: number;
+            documentCount: number;
+            /**
+             * Format: date-time
+             * @description Expiry of the current unused access, if there is one
+             */
+            accessExpiresAt?: string | null;
+            contract?: components["schemas"]["Contract"];
+            paymentHistory: components["schemas"]["Payment"][];
+            /** @enum {string} */
+            status: "PENDING_ACTIVATION";
+            /** @enum {string} */
+            onboardingProgress: "NOT_STARTED";
+        };
+        /** @description Onboarding guest whose personal data is not saved yet (the name and phone may be missing) */
+        OnboardingGuestDetail: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description null until the guest completes the personal data step */
+            name: string | null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            hasLoginAccess: boolean;
+            phone?: string | null;
+            contactEmail?: string | null;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayStartDate?: string;
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayEndDate?: string;
+            /** @description Only when type=TEMPORARY */
+            agreedAmount?: number;
+            documentCount: number;
+            /**
+             * Format: date-time
+             * @description Expiry of the current unused access, if there is one
+             */
+            accessExpiresAt?: string | null;
+            contract?: components["schemas"]["Contract"];
+            paymentHistory: components["schemas"]["Payment"][];
+            /** @enum {string} */
+            status: "ONBOARDING";
+            /** @enum {string} */
+            onboardingProgress: "NOT_STARTED" | "PASSWORD_SET";
+        };
+        /** @description Onboarding guest whose personal data is saved, so the name and phone are always there (RN-33) */
+        OnboardingPersonalDataSavedGuestDetail: {
             /** Format: uuid */
             id: string;
             documentType: components["schemas"]["DocumentType"];
@@ -681,13 +1103,193 @@ export interface components {
             name: string;
             /** @enum {string} */
             type: "CONTRACT" | "TEMPORARY";
-            /** @enum {string} */
-            status: "ACTIVE" | "INACTIVE";
             hasLoginAccess: boolean;
-        };
-        GuestDetail: components["schemas"]["GuestSummary"] & {
+            phone: string;
+            contactEmail?: string | null;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayStartDate?: string;
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayEndDate?: string;
+            /** @description Only when type=TEMPORARY */
+            agreedAmount?: number;
+            documentCount: number;
+            /**
+             * Format: date-time
+             * @description Expiry of the current unused access, if there is one
+             */
+            accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
             paymentHistory: components["schemas"]["Payment"][];
+            /** @enum {string} */
+            status: "ONBOARDING";
+            /** @enum {string} */
+            onboardingProgress: "PERSONAL_DATA_SAVED" | "DOCUMENTS_DONE";
+        };
+        /** @description Active guest, so the onboarding is complete and the name and phone are always there (RN-33, RN-36) */
+        ActiveGuestDetail: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            name: string;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            hasLoginAccess: boolean;
+            phone: string;
+            contactEmail?: string | null;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayStartDate?: string;
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayEndDate?: string;
+            /** @description Only when type=TEMPORARY */
+            agreedAmount?: number;
+            documentCount: number;
+            /**
+             * Format: date-time
+             * @description Expiry of the current unused access, if there is one
+             */
+            accessExpiresAt?: string | null;
+            contract?: components["schemas"]["Contract"];
+            paymentHistory: components["schemas"]["Payment"][];
+            /** @enum {string} */
+            status: "ACTIVE";
+            /** @enum {string} */
+            onboardingProgress: "COMPLETED";
+        };
+        InactiveGuestDetail: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description null until the guest completes the personal data step */
+            name: string | null;
+            /** @enum {string} */
+            type: "CONTRACT" | "TEMPORARY";
+            hasLoginAccess: boolean;
+            phone?: string | null;
+            contactEmail?: string | null;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayStartDate?: string;
+            /**
+             * Format: date
+             * @description Only when type=TEMPORARY
+             */
+            stayEndDate?: string;
+            /** @description Only when type=TEMPORARY */
+            agreedAmount?: number;
+            documentCount: number;
+            /**
+             * Format: date-time
+             * @description Expiry of the current unused access, if there is one
+             */
+            accessExpiresAt?: string | null;
+            contract?: components["schemas"]["Contract"];
+            paymentHistory: components["schemas"]["Payment"][];
+            /** @enum {string} */
+            status: "INACTIVE";
+            onboardingProgress: components["schemas"]["OnboardingProgress"];
+        };
+        /** @description A document as the guest sees it, without a link: only the administrator can open the file (RN-37) */
+        GuestDocumentRef: {
+            /** Format: uuid */
+            id: string;
+            originalName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "application/pdf";
+            sizeBytes: number;
+            /** Format: date-time */
+            uploadedAt: string;
+        };
+        /** @description A document as the administrator sees it: with a short-lived signed link (RN-37) */
+        GuestDocument: {
+            /** Format: uuid */
+            id: string;
+            originalName: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "application/pdf";
+            sizeBytes: number;
+            /** Format: date-time */
+            uploadedAt: string;
+            /** @description R2 signed URL, expires 5 minutes after the response (RN-37) */
+            url: string;
+            /** Format: date-time */
+            urlExpiresAt: string;
+        };
+        /** @description Onboarding state. While the guest is in onboarding `nextStep` names the step to go to; once active there is no `nextStep` (RN-33, RN-36). */
+        OnboardingState: components["schemas"]["OnboardingInProgress"] | components["schemas"]["OnboardingCompleted"];
+        /** @description Onboarding still open (the password is already chosen). Before the personal data step is saved the data is not there yet; from the documents step on it is always returned. */
+        OnboardingInProgress: components["schemas"]["OnboardingPersonalDataPending"] | components["schemas"]["OnboardingDocumentsPending"] | components["schemas"]["OnboardingConsentPending"];
+        OnboardingPersonalDataPending: {
+            /** @enum {string} */
+            status: "ONBOARDING";
+            /**
+             * @description The password step is already done: a guest that still must change its temporary password cannot reach the onboarding operations (RF-12)
+             * @enum {string}
+             */
+            nextStep: "PERSONAL_DATA";
+            documents: components["schemas"]["GuestDocumentRef"][];
+            consent: components["schemas"]["PendingConsentState"];
+        };
+        /** @description Personal data saved; the optional documents step is next (the answer of saving the personal data) */
+        OnboardingDocumentsPending: {
+            /** @enum {string} */
+            status: "ONBOARDING";
+            /** @enum {string} */
+            nextStep: "DOCUMENTS";
+            personalData: components["schemas"]["PersonalDataInput"];
+            documents: components["schemas"]["GuestDocumentRef"][];
+            consent: components["schemas"]["PendingConsentState"];
+        };
+        /** @description Documents step finished or skipped; only the consent is left (the answer of finishing the documents step) */
+        OnboardingConsentPending: {
+            /** @enum {string} */
+            status: "ONBOARDING";
+            /** @enum {string} */
+            nextStep: "CONSENT";
+            personalData: components["schemas"]["PersonalDataInput"];
+            documents: components["schemas"]["GuestDocumentRef"][];
+            consent: components["schemas"]["PendingConsentState"];
+        };
+        OnboardingCompleted: {
+            /** @enum {string} */
+            status: "ACTIVE";
+            personalData: components["schemas"]["PersonalDataInput"];
+            documents: components["schemas"]["GuestDocumentRef"][];
+            consent: components["schemas"]["AcceptedConsentState"];
+        };
+        /** @description The consent in force, not yet accepted (the guest is still in onboarding) */
+        PendingConsentState: {
+            version: string;
+            /** @description Consent text in force, in Spanish */
+            text: string;
+            /** @enum {boolean} */
+            accepted: false;
+        };
+        /** @description The consent the guest accepted, which is what completes the onboarding (RN-14, RN-36) */
+        AcceptedConsentState: {
+            version: string;
+            /** @description Consent text that was accepted, in Spanish */
+            text: string;
+            /** @enum {boolean} */
+            accepted: true;
         };
         Contract: {
             /** Format: uuid */
@@ -738,8 +1340,14 @@ export interface components {
         ExpenseInput: {
             /** @enum {string} */
             category: "WATER" | "ELECTRICITY" | "INTERNET" | "OTHER";
+            /** @description In soles, greater than 0, at most two decimals */
             amount: number;
+            /**
+             * @description Month the expense belongs to
+             * @example 2026-09
+             */
             month: string;
+            /** @description Optional; blank means none */
             description?: string;
         };
         FineInput: {
@@ -753,9 +1361,17 @@ export interface components {
             /** Format: uuid */
             id: string;
         };
-        Expense: components["schemas"]["ExpenseInput"] & {
+        /** @description An expense as the BFF answers it; the fields of `ExpenseInput`, with the same constraints, plus its `id`. The description is left out when there is none. */
+        Expense: {
             /** Format: uuid */
             id: string;
+            /** @enum {string} */
+            category: "WATER" | "ELECTRICITY" | "INTERNET" | "OTHER";
+            /** @description In soles, greater than 0, at most two decimals */
+            amount: number;
+            /** @example 2026-09 */
+            month: string;
+            description?: string;
         };
     };
     responses: {
@@ -775,6 +1391,36 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The session is valid but its role cannot use the operation (RN-08, RN-09). The `code` is always `AUTH_FORBIDDEN` */
+        Forbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_FORBIDDEN";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
+        /** @description Another environment already has that code (RF-01). The `code` is always `ENVIRONMENT_CODE_TAKEN` and `field` is always `code` */
+        EnvironmentCodeTaken: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "ENVIRONMENT_CODE_TAKEN";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                    /** @enum {string} */
+                    field: "code";
+                };
             };
         };
         /** @description No active session */
@@ -836,6 +1482,59 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description The guest is inactive (RN-12, RN-18). The `code` is always `GUEST_INACTIVE` and `guestId` lets the administrator reactivate it right from the notice (`POST /admin/guests/{id}/reactivate`, CU-28) */
+        GuestInactive: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "GUEST_INACTIVE";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                    /** Format: uuid */
+                    guestId: string;
+                };
+            };
+        };
+        /** @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach */
+        OnboardingAccessDenied: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
+        /** @description The guest session cannot use the operation yet or at all. The `code` is `AUTH_ONBOARDING_REQUIRED` while the onboarding is incomplete (RN-33: the client redirects to the first pending step, `nextStep` of `GET /guest/onboarding`), `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) and `AUTH_FORBIDDEN` for a guest of the other type (a CONTRACT guest on `/temporary-guest/**` or the reverse, RN-09) */
+        GuestAccessDenied: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
+        /** @description `ONBOARDING_STEP_OUT_OF_ORDER` (a step was attempted before its predecessor, RN-33) or `ONBOARDING_ALREADY_COMPLETED` (the guest is already active: use the profile endpoint) */
+        OnboardingConflict: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
     };
     parameters: {
         Id: string;
@@ -869,22 +1568,19 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        role: "ADMIN" | "GUEST";
-                        /**
-                         * @description only when role is GUEST
-                         * @enum {string|null}
-                         */
-                        guestType?: "CONTRACT" | "TEMPORARY" | null;
-                        name: string;
-                        /** @description true on first login with a temporary password (RF-12) */
-                        mustChangePassword: boolean;
-                    };
+                    "application/json": components["schemas"]["SessionInfo"];
                 };
             };
             400: components["responses"]["ValidationFailed"];
-            401: components["responses"]["InvalidCredentials"];
+            /** @description `AUTH_INVALID_CREDENTIALS` (incorrect document or password) or `AUTH_TEMPORARY_PASSWORD_EXPIRED` (the temporary password was correct but its 30 minutes are over, RN-32: the guest asks the administrator for a new access). The expired code is only given when the password matched, so it never reveals whether a document exists */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             403: components["responses"]["AccountDisabled"];
             423: components["responses"]["AccountLocked"];
             429: components["responses"]["TooManyRequests"];
@@ -918,27 +1614,56 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Active session data */
+            /** @description Active session data, read from the account in the database (not from the token), so the client can restore the session after a reload */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        role: "ADMIN" | "GUEST";
-                        /**
-                         * @description only when role is GUEST
-                         * @enum {string|null}
-                         */
-                        guestType?: "CONTRACT" | "TEMPORARY" | null;
-                        name: string;
-                        /** @description current state of the account, read from the database (RF-12): lets the client restore the session after a reload */
-                        mustChangePassword: boolean;
-                    };
+                    "application/json": components["schemas"]["SessionInfo"];
                 };
             };
             401: components["responses"]["NoSession"];
+        };
+    };
+    activateAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Single-use token from the activation link */
+                    token: string;
+                    /** @description At most 72 bytes in UTF-8 (bcrypt limit) */
+                    newPassword: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Access activated — HttpOnly JWT cookie issued. Always a guest session with the password already set: the guest goes on to the onboarding (never back to the password step) or, if it was already active (administrator-assisted recovery), straight to the home */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ActivatedOnboardingSession"] | components["schemas"]["ActivatedActiveSession"];
+                };
+            };
+            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired, revoked or already used token: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`; the token is not consumed) or `VALIDATION_ERROR` if a field is missing */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["AccountDisabled"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     changePassword: {
@@ -1063,6 +1788,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createEnvironment: {
@@ -1075,6 +1801,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /** @description Unique, e.g. "201". Surrounding spaces are ignored; at least one character is not a space */
                     code: string;
                     /** @enum {string} */
                     type: "ROOM" | "CABIN";
@@ -1082,7 +1809,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Environment created */
+            /** @description Environment created, always ACTIVE */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -1092,13 +1819,9 @@ export interface operations {
                 };
             };
             400: components["responses"]["ValidationFailed"];
-            /** @description Duplicate environment code (RN-*) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["EnvironmentCodeTaken"];
         };
     };
     getEnvironment: {
@@ -1122,6 +1845,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1134,7 +1858,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": {
                     code?: string;
@@ -1144,7 +1868,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Environment updated */
+            /** @description Environment updated (status is not changed here, see deactivate and reactivate) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1153,15 +1877,11 @@ export interface operations {
                     "application/json": components["schemas"]["Environment"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Duplicate environment code (RN-*) */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            409: components["responses"]["EnvironmentCodeTaken"];
         };
     };
     deactivateEnvironment: {
@@ -1175,7 +1895,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Environment deactivated, history preserved */
+            /** @description Environment deactivated, history preserved; deactivating an inactive one changes nothing */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1183,6 +1903,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1197,7 +1918,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Environment reactivated, visible in active listings again */
+            /** @description Environment reactivated, visible in active listings again; reactivating an active one changes nothing */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1205,6 +1926,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1212,7 +1934,8 @@ export interface operations {
         parameters: {
             query?: {
                 type?: "CONTRACT" | "TEMPORARY";
-                status?: "ACTIVE" | "INACTIVE" | "ALL";
+                /** @description CURRENT is every guest except the inactive ones (pending activation, onboarding and active) */
+                status?: "CURRENT" | "PENDING_ACTIVATION" | "ONBOARDING" | "ACTIVE" | "INACTIVE" | "ALL";
             };
             header?: never;
             path?: never;
@@ -1230,6 +1953,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createGuest: {
@@ -1245,22 +1969,29 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Guest created (or linked to an existing person by document id, RN-18) */
-            201: {
+            /** @description The document was already registered: the existing guest, unmodified, with `alreadyRegistered: true` and no `access` (RN-18) */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestSummary"];
+                    "application/json": components["schemas"]["GuestAlreadyRegistered"];
                 };
             };
-            /** @description Consent not accepted (RN-14) or invalid document id */
-            400: {
+            /** @description Guest created pending activation, with its first access */
+            201: {
                 headers: {
+                    "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestCreated"];
+                };
             };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["GuestInactive"];
         };
     };
     getGuestDetail: {
@@ -1284,6 +2015,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1311,8 +2043,19 @@ export interface operations {
                     "application/json": components["schemas"]["GuestSummary"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            /** @description `GUEST_DOCUMENT_LOCKED` (the document can only be corrected while the guest is pending activation, RN-36) or `GUEST_DOCUMENT_TAKEN` (the corrected document already belongs to another guest, RN-18), both with the `field` that caused it */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     deactivateGuest: {
@@ -1334,6 +2077,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1349,17 +2093,55 @@ export interface operations {
         requestBody?: never;
         responses: {
             /** @description Guest reactivated, login access restored */
-            204: {
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["NonInactiveGuestSummary"];
+                };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
-    resendGuestCredentials: {
+    generateGuestAccess: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    accessMode: components["schemas"]["AccessMode"];
+                };
+            };
+        };
+        responses: {
+            /** @description New access generated; the previous one is revoked */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccessGrant"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["GuestInactive"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listGuestDocuments: {
         parameters: {
             query?: never;
             header?: never;
@@ -1370,22 +2152,19 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Resend email queued */
-            202: {
+            /** @description Documents of the guest (empty if none was uploaded) */
+            200: {
                 headers: {
+                    "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestDocument"][];
+                };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description Guest has no registered email */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
         };
     };
     listGuestPaymentsByAdmin: {
@@ -1409,6 +2188,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1737,7 +2517,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Expense list */
+            /** @description Expense list of the month, oldest first */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -1746,7 +2526,9 @@ export interface operations {
                     "application/json": components["schemas"]["Expense"][];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createExpense: {
@@ -1771,14 +2553,9 @@ export interface operations {
                     "application/json": components["schemas"]["Expense"];
                 };
             };
-            /** @description Invalid amount */
-            400: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
         };
     };
     deleteExpense: {
@@ -1792,7 +2569,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Expense deleted */
+            /** @description Expense deleted for good (RN-24) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -1800,6 +2577,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1812,7 +2590,7 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: {
+        requestBody: {
             content: {
                 "application/json": components["schemas"]["ExpenseInput"];
             };
@@ -1827,7 +2605,9 @@ export interface operations {
                     "application/json": components["schemas"]["Expense"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };
@@ -1934,6 +2714,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
     getOwnContract: {
@@ -1955,6 +2736,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
             /** @description No contract was ever associated with this guest */
             404: {
                 headers: {
@@ -1983,6 +2765,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
     uploadPaymentVoucher: {
@@ -2024,12 +2807,19 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
-            /** @description No active contract (RN-27) */
+            /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09) */
             403: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "VOUCHER_NO_ACTIVE_CONTRACT" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                    };
+                };
             };
             /** @description A pending voucher already exists for this period (RN-15) */
             409: {
@@ -2050,11 +2840,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    phone?: string;
-                    /** Format: email */
-                    contactEmail?: string;
-                };
+                "application/json": components["schemas"]["ProfileUpdateInput"];
             };
         };
         responses: {
@@ -2069,6 +2855,167 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+        };
+    };
+    getOnboarding: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current onboarding state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingState"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+        };
+    };
+    savePersonalData: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonalDataInput"];
+            };
+        };
+        responses: {
+            /** @description Step saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingDocumentsPending"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            409: components["responses"]["OnboardingConflict"];
+        };
+    };
+    uploadOnboardingDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPG/PNG/PDF, ≤5MB (RF-15)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Document stored */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocumentRef"];
+                };
+            };
+            /** @description `DOCUMENT_INVALID_FILE` (type or size not allowed, RF-15) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            /** @description `DOCUMENT_LIMIT_REACHED` (the guest already has 5 files), `ONBOARDING_STEP_OUT_OF_ORDER` or `ONBOARDING_ALREADY_COMPLETED` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    finishDocumentsStep: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Step finished */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingConsentPending"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            409: components["responses"]["OnboardingConflict"];
+        };
+    };
+    acceptConsent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsentInput"];
+            };
+        };
+        responses: {
+            /** @description Consent recorded and the guest is now ACTIVE: the onboarding is complete */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingCompleted"];
+                };
+            };
+            /** @description `CONSENT_NOT_ACCEPTED` (`accepted` is not true) or `VALIDATION_ERROR` with `field: consentVersion` if it is not the version in force */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            409: components["responses"]["OnboardingConflict"];
         };
     };
     getTemporaryGuestPaymentStatus: {
@@ -2090,6 +3037,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
     uploadTemporaryVoucher: {
@@ -2128,6 +3076,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
             /** @description A voucher already exists for this stay, pending or approved (RN-03, RN-15) */
             409: {
                 headers: {
@@ -2147,11 +3096,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": {
-                    phone?: string;
-                    /** Format: email */
-                    contactEmail?: string;
-                };
+                "application/json": components["schemas"]["ProfileUpdateInput"];
             };
         };
         responses: {
@@ -2166,6 +3111,7 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
 }
