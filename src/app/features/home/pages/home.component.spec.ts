@@ -81,9 +81,11 @@ describe('HomeComponent', () => {
     fireEvent.click(leave);
     fireEvent.click(leave);
 
-    TestBed.inject(HttpTestingController)
-      .expectOne(isLogout)
-      .flush(null, { status: 204, statusText: 'No Content' });
+    const requests = TestBed.inject(HttpTestingController).match(isLogout);
+    expect(requests).toHaveLength(1);
+    for (const request of requests) {
+      request.flush(null, { status: 204, statusText: 'No Content' });
+    }
   });
 
   it('leaves even when the BFF cannot be reached', async () => {

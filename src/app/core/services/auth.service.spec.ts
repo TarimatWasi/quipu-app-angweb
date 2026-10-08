@@ -345,7 +345,7 @@ describe('AuthService password recovery (RF-16)', () => {
 
       await service.restored();
 
-      controller.expectNone(ME_URL);
+      expect(controller.match(ME_URL)).toHaveLength(0);
     });
   });
 
@@ -406,7 +406,7 @@ describe('AuthService password recovery (RF-16)', () => {
 
       await service.restored();
 
-      controller.expectNone(`${environment.bffBaseUrl}/bff/auth/me`);
+      expect(controller.match(`${environment.bffBaseUrl}/bff/auth/me`)).toHaveLength(0);
     });
   });
 });
