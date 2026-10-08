@@ -81,6 +81,14 @@ function lockOf(error: HttpErrorResponse, body: Record<string, unknown>): Accoun
   };
 }
 
+function fieldOf(body: Record<string, unknown>): string | undefined {
+  return typeof body['field'] === 'string' ? body['field'] : undefined;
+}
+
+function withField(base: BffError, field: string | undefined): BffError {
+  return field ? { ...base, field } : base;
+}
+
 /** Turns whatever a failed BFF call threw into a {@link BffError}. */
 export function toBffError(error: unknown): BffError {
   if (error instanceof TimeoutError) {
@@ -98,9 +106,9 @@ export function toBffError(error: unknown): BffError {
   }
   const code = body['code'];
   if (code === 'VALIDATION_ERROR') {
-    const field = typeof body['field'] === 'string' ? body['field'] : undefined;
+    const field = fieldOf(body);
     const message = (field && VALIDATION_TEXTS.get(field)) ?? VALIDATION_FALLBACK;
-    return field ? { code, message, field } : { code, message };
+    return withField({ code, message }, field);
   }
   if (!KNOWN_TEXTS.has(code)) {
     return known('UNEXPECTED_ERROR');
@@ -109,6 +117,5 @@ export function toBffError(error: unknown): BffError {
     const lock = lockOf(error, body);
     return lock ? { ...known(code), lock } : known(code);
   }
-  const field = typeof body['field'] === 'string' ? body['field'] : undefined;
-  return field ? { ...known(code), field } : known(code);
+  return withField(known(code), fieldOf(body));
 }
