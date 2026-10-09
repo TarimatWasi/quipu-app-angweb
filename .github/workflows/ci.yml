@@ -21,6 +21,8 @@ jobs:
           cache: npm
       - run: npm ci --ignore-scripts
       - run: npm run verify
+      # Los scripts de despliegue por pipeline (TAR-167) se prueban sin red con un curl falso.
+      - run: bash .github/deploy/tests/vercel.test.sh
   trivy:
     runs-on: ubuntu-latest
     timeout-minutes: 10
