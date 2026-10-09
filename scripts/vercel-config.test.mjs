@@ -103,3 +103,15 @@ test('every destination is https and every rule is host-conditional', () => {
     assert.ok(rule.has?.length, rule.source);
   }
 });
+
+// ADR-O03 / TAR-167: la rama development la despliega el pipeline (workflow deploy), no la integración
+// de Git de Vercel; desactivar solo esa rama evita desplegar dos veces y conserva los previews de PR.
+test('the development branch is deployed by the pipeline, not by the Vercel Git integration', () => {
+  const enabled = config.git?.deploymentEnabled;
+  assert.ok(enabled && typeof enabled === 'object', 'git.deploymentEnabled must be an object');
+  assert.equal(enabled.development, false);
+});
+
+test('only the development branch is switched off, so pull request previews keep working', () => {
+  assert.deepEqual(Object.keys(config.git.deploymentEnabled), ['development']);
+});
