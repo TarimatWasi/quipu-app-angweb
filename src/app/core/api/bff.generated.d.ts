@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.3.0 (TarimatWasi/quipu-lib-contracts), spec sha256 7d377a2387999816df8502846dd4ccb2aae685e4abc75719e04e9c7a490fa7e7.
+ * Generated from the BFF contract v0.3.1 (TarimatWasi/quipu-lib-contracts), spec sha256 49049d1e4e22c7ef5aa17b649ed8c04332e38a94149c978a09d767dfdec418b8.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -768,6 +768,13 @@ export interface components {
             /** @description Field name if this is a validation error */
             field?: string;
         };
+        /** @description Optimistic-locking conflict (BE-SPR-DAT-13). The `code` is always `CONCURRENT_MODIFICATION` */
+        ConcurrentModificationError: {
+            /** @enum {string} */
+            code: "CONCURRENT_MODIFICATION";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
         /**
          * @description DNI (national ID, 8 digits), CE (Carné de Extranjería), PASSPORT (foreign visitors without CE)
          * @enum {string}
@@ -1437,6 +1444,21 @@ export interface components {
                 };
             };
         };
+        /** @description Two edits of the same record collided (optimistic locking, BE-SPR-DAT-13): the record changed after the client loaded it. The client reloads the record and retries. The `code` is always `CONCURRENT_MODIFICATION`. Applies to environments, guests and expenses */
+        ConcurrentModification: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "CONCURRENT_MODIFICATION",
+                 *       "message": "El registro cambió mientras lo editabas; vuelve a cargarlo e inténtalo de nuevo"
+                 *     }
+                 */
+                "application/json": components["schemas"]["ConcurrentModificationError"];
+            };
+        };
         /** @description No active session */
         NoSession: {
             headers: {
@@ -1915,7 +1937,22 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["EnvironmentCodeTaken"];
+            /** @description `ENVIRONMENT_CODE_TAKEN` (another environment already has that code, with `field: code`, RF-01) or `CONCURRENT_MODIFICATION` (the record changed while it was being edited, see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "ENVIRONMENT_CODE_TAKEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                        /** @enum {string} */
+                        field: "code";
+                    } | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
         };
     };
     deactivateEnvironment: {
@@ -1939,6 +1976,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
         };
     };
     reactivateEnvironment: {
@@ -1962,6 +2000,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
         };
     };
     listGuests: {
@@ -2087,13 +2126,25 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `GUEST_DOCUMENT_LOCKED` (the document can only be corrected while the guest is pending activation, RN-36) or `GUEST_DOCUMENT_TAKEN` (the corrected document already belongs to another guest, RN-18), both with the `field` that caused it */
+            /** @description `GUEST_DOCUMENT_LOCKED` (the document can only be corrected while the guest is pending activation, RN-36) or `GUEST_DOCUMENT_TAKEN` (the corrected document already belongs to another guest, RN-18), both with the `field` that caused it; or `CONCURRENT_MODIFICATION` (the record changed while it was being edited, see the `ConcurrentModification` response) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Error"];
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "GUEST_DOCUMENT_LOCKED";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                        field: string;
+                    } | {
+                        /** @enum {string} */
+                        code: "GUEST_DOCUMENT_TAKEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                        field: string;
+                    } | components["schemas"]["ConcurrentModificationError"];
                 };
             };
         };
@@ -2119,6 +2170,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
         };
     };
     reactivateGuest: {
@@ -2144,6 +2196,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
         };
     };
     generateGuestAccess: {
@@ -2177,7 +2230,22 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["GuestInactive"];
+            /** @description `GUEST_INACTIVE` (the guest is inactive, RN-12, RN-18; `guestId` lets the administrator reactivate it, CU-28) or `CONCURRENT_MODIFICATION` (the guest row changed while the access was generated, see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "GUEST_INACTIVE";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                        /** Format: uuid */
+                        guestId: string;
+                    } | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -2654,6 +2722,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            409: components["responses"]["ConcurrentModification"];
         };
     };
     listFines: {
