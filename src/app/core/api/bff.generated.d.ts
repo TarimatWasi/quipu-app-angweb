@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.2.3 (TarimatWasi/quipu-lib-contracts), spec sha256 d31f5ecf1bebd82eb303e5c58800b4848f4038c61381c1ad9ad28a99a56b14fe.
+ * Generated from the BFF contract v0.3.0 (TarimatWasi/quipu-lib-contracts), spec sha256 7d377a2387999816df8502846dd4ccb2aae685e4abc75719e04e9c7a490fa7e7.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -745,6 +745,20 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        PagedEnvironments: {
+            content: components["schemas"]["Environment"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        PagedGuests: {
+            content: components["schemas"]["GuestSummary"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        PagedExpenses: {
+            content: components["schemas"]["Expense"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        /** @description Value for `after` to get the next page; `null` when this is the last one */
+        NextCursor: string | null;
         /** @description BFF error shape — plain JSON, distinct from RFC 7807 (that is exclusive to the internal Core API, see SRS chapter "10 - APIs e Integraciones"). `code` is a stable English constant read by the frontend; `message` is the Spanish text shown to the end user. */
         Error: {
             /** @description Stable error code, e.g. VOUCHER_ALREADY_EXISTS */
@@ -1545,9 +1559,16 @@ export interface components {
     };
     parameters: {
         Id: string;
+        /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+        Limit: number;
+        /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+        After: string;
     };
     requestBodies: never;
-    headers: never;
+    headers: {
+        /** @description Absolute path of the created resource, with its masked id (RFC 9110, 201 Created) */
+        Location: string;
+    };
     pathItems: never;
 }
 export type $defs = Record<string, never>;
@@ -1778,6 +1799,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "INACTIVE" | "ALL";
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
             };
             header?: never;
             path?: never;
@@ -1785,15 +1810,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Environment list */
+            /** @description One page of the environment list, ordered by code */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Environment"][];
+                    "application/json": components["schemas"]["PagedEnvironments"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
         };
@@ -1819,6 +1845,7 @@ export interface operations {
             /** @description Environment created, always ACTIVE */
             201: {
                 headers: {
+                    Location: components["headers"]["Location"];
                     [name: string]: unknown;
                 };
                 content: {
@@ -1943,6 +1970,10 @@ export interface operations {
                 type?: "CONTRACT" | "TEMPORARY";
                 /** @description CURRENT is every guest except the inactive ones (pending activation, onboarding and active) */
                 status?: "CURRENT" | "PENDING_ACTIVATION" | "ONBOARDING" | "ACTIVE" | "INACTIVE" | "ALL";
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
             };
             header?: never;
             path?: never;
@@ -1950,15 +1981,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Guest list */
+            /** @description One page of the guest list, ordered by document type and number */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestSummary"][];
+                    "application/json": components["schemas"]["PagedGuests"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
         };
@@ -1988,6 +2020,7 @@ export interface operations {
             /** @description Guest created pending activation, with its first access */
             201: {
                 headers: {
+                    Location: components["headers"]["Location"];
                     "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
@@ -2517,6 +2550,10 @@ export interface operations {
         parameters: {
             query: {
                 month: string;
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
             };
             header?: never;
             path?: never;
@@ -2524,13 +2561,13 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Expense list of the month, oldest first */
+            /** @description One page of the expense list of the month, oldest first */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Expense"][];
+                    "application/json": components["schemas"]["PagedExpenses"];
                 };
             };
             400: components["responses"]["ValidationFailed"];
@@ -2554,6 +2591,7 @@ export interface operations {
             /** @description Expense created */
             201: {
                 headers: {
+                    Location: components["headers"]["Location"];
                     [name: string]: unknown;
                 };
                 content: {
