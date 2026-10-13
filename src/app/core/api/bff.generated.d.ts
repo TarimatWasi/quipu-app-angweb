@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.3.1 (TarimatWasi/quipu-lib-contracts), spec sha256 49049d1e4e22c7ef5aa17b649ed8c04332e38a94149c978a09d767dfdec418b8.
+ * Generated from the BFF contract v0.4.0 (TarimatWasi/quipu-lib-contracts), spec sha256 e02cfa7de581a75d2b2c92e318cffdc64e7b6d73e9ccf1de9468f88d20021991.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -1359,8 +1359,11 @@ export interface components {
             status: "PAID" | "UNDER_REVIEW" | "UNPAID" | "OVERDUE";
         };
         ExpenseInput: {
-            /** @enum {string} */
-            category: "WATER" | "ELECTRICITY" | "INTERNET" | "OTHER";
+            /**
+             * @description UTILITIES: electricity, water, internet. MAINTENANCE: maintenance and repairs. CLEANING_SUPPLIES: cleaning and supplies. TAXES_FEES: taxes and fees (D-26)
+             * @enum {string}
+             */
+            category: "UTILITIES" | "MAINTENANCE" | "CLEANING_SUPPLIES" | "TAXES_FEES";
             /** @description In soles, greater than 0, at most two decimals */
             amount: number;
             /**
@@ -1386,8 +1389,11 @@ export interface components {
         Expense: {
             /** Format: uuid */
             id: string;
-            /** @enum {string} */
-            category: "WATER" | "ELECTRICITY" | "INTERNET" | "OTHER";
+            /**
+             * @description UTILITIES: electricity, water, internet. MAINTENANCE: maintenance and repairs. CLEANING_SUPPLIES: cleaning and supplies. TAXES_FEES: taxes and fees (D-26)
+             * @enum {string}
+             */
+            category: "UTILITIES" | "MAINTENANCE" | "CLEANING_SUPPLIES" | "TAXES_FEES";
             /** @description In soles, greater than 0, at most two decimals */
             amount: number;
             /** @example 2026-09 */
