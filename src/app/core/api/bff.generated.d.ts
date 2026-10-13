@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.4.0 (TarimatWasi/quipu-lib-contracts), spec sha256 e02cfa7de581a75d2b2c92e318cffdc64e7b6d73e9ccf1de9468f88d20021991.
+ * Generated from the BFF contract v0.4.1 (TarimatWasi/quipu-lib-contracts), spec sha256 832c9184c7aa9f79ad9172780ca2d39ef5e100e3c645cc46c62337beea0c005e.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -376,7 +376,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Manually terminate contract (RN-25, CU-12) — blocked if there is outstanding debt */
+        /** Manually terminate contract (RN-25, CU-12) — the debt does not block it, and the guest keeps owing the periods until they are paid */
         post: operations["terminateContract"];
         delete?: never;
         options?: never;
@@ -774,6 +774,76 @@ export interface components {
             code: "CONCURRENT_MODIFICATION";
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
+        };
+        /** @description The environment has a contract in force (RN-12, RN-20). The `code` is always `ENVIRONMENT_OCCUPIED` */
+        EnvironmentOccupiedError: {
+            /** @enum {string} */
+            code: "ENVIRONMENT_OCCUPIED";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description The guest is inactive (RN-12, RN-18). The `guestId` lets the administrator reactivate it */
+        GuestInactiveError: {
+            /** @enum {string} */
+            code: "GUEST_INACTIVE";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** Format: uuid */
+            guestId: string;
+        };
+        /** @description A step was attempted out of order, or the onboarding is already complete (RN-33) */
+        OnboardingConflictError: {
+            /** @enum {string} */
+            code: "ONBOARDING_STEP_OUT_OF_ORDER" | "ONBOARDING_ALREADY_COMPLETED";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description The guest is not active, so it cannot take a new contract or payment (RN-35) */
+        GuestNotActiveError: {
+            /** @enum {string} */
+            code: "GUEST_NOT_ACTIVE";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** Format: uuid */
+            guestId: string;
+        };
+        /** @description The document already belongs to another guest or to an administrator account (RN-18, D-34e) */
+        GuestDocumentTakenError: {
+            /** @enum {string} */
+            code: "GUEST_DOCUMENT_TAKEN";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            field: string;
+        };
+        /** @description The contact email already belongs to another guest (D-33); the account email is independent */
+        GuestEmailTakenError: {
+            /** @enum {string} */
+            code: "GUEST_EMAIL_TAKEN";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** @enum {string} */
+            field: "contactEmail";
+        };
+        /** @description The guest has a contract in force, so it cannot be deactivated (RN-12). Debt does not block it */
+        GuestHasActiveContractError: {
+            /** @enum {string} */
+            code: "GUEST_HAS_ACTIVE_CONTRACT";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /**
+             * Format: uuid
+             * @description The contract in force, so the UI can link to it
+             */
+            contractId: string;
+        };
+        /** @description The guest owes periods (RN-25), so it cannot take a new contract or be reactivated until they are paid (RN-35) */
+        GuestHasPendingDebtError: {
+            /** @enum {string} */
+            code: "GUEST_HAS_PENDING_DEBT";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** @description The periods owed, oldest first, so the UI can list them and offer the direct payment (RN-23) */
+            periods: string[];
         };
         /**
          * @description DNI (national ID, 8 digits), CE (Carné de Extranjería), PASSPORT (foreign visitors without CE)
@@ -1537,14 +1607,7 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": {
-                    /** @enum {string} */
-                    code: "GUEST_INACTIVE";
-                    /** @description User-facing message, in Spanish, ready to display in the UI */
-                    message: string;
-                    /** Format: uuid */
-                    guestId: string;
-                };
+                "application/json": components["schemas"]["GuestInactiveError"];
             };
         };
         /** @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach */
@@ -1581,7 +1644,16 @@ export interface components {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["Error"];
+                "application/json": components["schemas"]["OnboardingConflictError"];
+            };
+        };
+        /** @description The contact email already belongs to another guest (D-33). The `code` is always `GUEST_EMAIL_TAKEN` and `field` is `contactEmail` */
+        GuestEmailTaken: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["GuestEmailTakenError"];
             };
         };
     };
@@ -1982,7 +2054,15 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["ConcurrentModification"];
+            /** @description `ENVIRONMENT_OCCUPIED` (the environment has a contract in force, RN-12, RN-20) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnvironmentOccupiedError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
         };
     };
     reactivateEnvironment: {
@@ -2076,7 +2156,15 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
-            409: components["responses"]["GuestInactive"];
+            /** @description `GUEST_INACTIVE` (the document belongs to an inactive guest, RN-12, RN-18), `GUEST_DOCUMENT_TAKEN` (the document belongs to an administrator account, D-34e) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["GuestEmailTakenError"];
+                };
+            };
         };
     };
     getGuestDetail: {
@@ -2132,7 +2220,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `GUEST_DOCUMENT_LOCKED` (the document can only be corrected while the guest is pending activation, RN-36) or `GUEST_DOCUMENT_TAKEN` (the corrected document already belongs to another guest, RN-18), both with the `field` that caused it; or `CONCURRENT_MODIFICATION` (the record changed while it was being edited, see the `ConcurrentModification` response) */
+            /** @description `GUEST_DOCUMENT_LOCKED` (the document can only be corrected while the guest is pending activation, RN-36) or `GUEST_DOCUMENT_TAKEN` (the corrected document already belongs to another guest or to an administrator account, RN-18, D-34e), both with the `field` that caused it; or `CONCURRENT_MODIFICATION` (the record changed while it was being edited, see the `ConcurrentModification` response) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2176,7 +2264,15 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["ConcurrentModification"];
+            /** @description `GUEST_HAS_ACTIVE_CONTRACT` (the guest has a contract in force; debt does not block, RN-12) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestHasActiveContractError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
         };
     };
     reactivateGuest: {
@@ -2202,7 +2298,15 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            409: components["responses"]["ConcurrentModification"];
+            /** @description `GUEST_HAS_PENDING_DEBT` (the guest owes periods; it is reactivated once they are paid, RN-25, RN-35) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
         };
     };
     generateGuestAccess: {
@@ -2379,12 +2483,14 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
-            /** @description Environment already has an active contract (RN-20) */
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentOccupiedError"];
+                };
             };
             429: components["responses"]["TooManyRequests"];
         };
@@ -2432,13 +2538,8 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
-            /** @description Unpaid periods pending (RN-25) — detail in the body */
-            409: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getAdminDashboard: {
@@ -2976,6 +3077,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["GuestEmailTaken"];
         };
     };
     getOnboarding: {
@@ -3025,7 +3127,15 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["OnboardingAccessDenied"];
-            409: components["responses"]["OnboardingConflict"];
+            /** @description An onboarding-state conflict (`ONBOARDING_STEP_OUT_OF_ORDER`, `ONBOARDING_ALREADY_COMPLETED`, see the `OnboardingConflict` response) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingConflictError"] | components["schemas"]["GuestEmailTakenError"];
+                };
+            };
         };
     };
     uploadOnboardingDocument: {
@@ -3232,6 +3342,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["GuestEmailTaken"];
         };
     };
 }
