@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.4.1 (TarimatWasi/quipu-lib-contracts), spec sha256 832c9184c7aa9f79ad9172780ca2d39ef5e100e3c645cc46c62337beea0c005e.
+ * Generated from the BFF contract v0.5.0 (TarimatWasi/quipu-lib-contracts), spec sha256 af662de0ac73e3f44f8fe51ab3b64f4427caee45608e3bee2292268217d0713c.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -234,7 +234,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Correct the document (only while pending activation) and manage the stay data (RN-17, RN-36). The personal and contact data belong to the guest alone and are edited through the guest's own endpoints. */
+        /** Correct the document (only while pending activation, RN-36). The stays are managed through `/admin/guests/{id}/stays` (RN-17). The personal and contact data belong to the guest alone and are edited through the guest's own endpoints. */
         patch: operations["updateGuest"];
         trace?: never;
     };
@@ -273,6 +273,47 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/stays": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stay history of a temporary guest, newest first (RN-13, CU-06, CU-31)
+         * @description Every visit keeps its dates and agreed amount; a new stay is a new row of the same guest, never a new guest (RN-13, RN-18).
+         */
+        get: operations["listGuestStays"];
+        put?: never;
+        /**
+         * Register a stay of a temporary guest (RN-13, RN-17, CU-31)
+         * @description Only for an active temporary guest. The dates may not overlap another stay of the same guest; a stay in the future may be registered while the previous one is still running.
+         */
+        post: operations["createGuestStay"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/stays/{stayId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Correct the dates or the agreed amount of a stay (RN-17, CU-31) */
+        patch: operations["updateGuestStay"];
         trace?: never;
     };
     "/admin/guests/{id}/access": {
@@ -716,7 +757,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload one-time payment voucher (RF-04, CU-22) — a temporary guest record allows exactly one voucher ever, pending or approved (RN-03: single non-recurring payment). A second stay is a new guest record (RN-13), never a second voucher on this one. */
+        /** Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`); how each later stay is paid (which stay a voucher, a status or a direct payment belongs to) is defined together with the payments contract (TAR-185). Until then this operation keeps its single-stay behaviour. */
         post: operations["uploadTemporaryVoucher"];
         delete?: never;
         options?: never;
@@ -844,6 +885,57 @@ export interface components {
             message: string;
             /** @description The periods owed, oldest first, so the UI can list them and offer the direct payment (RN-23) */
             periods: string[];
+        };
+        /** @description One visit of a temporary guest (RN-13); the stay of a guest is never edited into a new one, a new visit is a new row */
+        Stay: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            startDate: string;
+            /**
+             * Format: date
+             * @description On or after startDate
+             */
+            endDate: string;
+            /** @description In soles, greater than 0, at most two decimals */
+            agreedAmount: number;
+        };
+        StayInput: {
+            /** Format: date */
+            startDate: string;
+            /**
+             * Format: date
+             * @description On or after startDate
+             */
+            endDate: string;
+            /** @description In soles, greater than 0, at most two decimals */
+            agreedAmount: number;
+        };
+        /** @description At least one field; the resulting dates must stay valid and may not overlap another stay of the guest */
+        StayUpdateInput: {
+            /** Format: date */
+            startDate?: string;
+            /** Format: date */
+            endDate?: string;
+            agreedAmount?: number;
+        };
+        PagedStays: {
+            content: components["schemas"]["Stay"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        /** @description The dates cross another stay of the same guest. The `code` is always `STAY_OVERLAP` */
+        StayOverlapError: {
+            /** @enum {string} */
+            code: "STAY_OVERLAP";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description Only temporary guests have stays (RN-13). The `code` is always `GUEST_NOT_TEMPORARY` */
+        GuestNotTemporaryError: {
+            /** @enum {string} */
+            code: "GUEST_NOT_TEMPORARY";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
         };
         /**
          * @description DNI (national ID, 8 digits), CE (Carné de Extranjería), PASSPORT (foreign visitors without CE)
@@ -1044,22 +1136,10 @@ export interface components {
             relationship?: string;
             phone?: string;
         };
-        /** @description What the administrator may change: the document, only while the guest is pending activation (RN-36), and the stay data of a temporary guest. Personal and contact data are the guest's alone (RN-17). */
+        /** @description What the administrator may change: the document, only while the guest is pending activation (RN-36). The stays of a temporary guest are managed through `/admin/guests/{id}/stays` (RN-13, RN-17). Personal and contact data are the guest's alone (RN-17). */
         GuestUpdateInput: {
             documentType?: components["schemas"]["DocumentType"];
             documentNumber?: string;
-            /**
-             * Format: date
-             * @description Only when guest type=TEMPORARY
-             */
-            stayStartDate?: string;
-            /**
-             * Format: date
-             * @description Only when guest type=TEMPORARY
-             */
-            stayEndDate?: string;
-            /** @description Only when guest type=TEMPORARY */
-            agreedAmount?: number;
         };
         /** @description Personal data step of the onboarding (RN-33) */
         PersonalDataInput: {
@@ -1123,15 +1203,20 @@ export interface components {
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayStartDate?: string;
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
+            /**
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
+             */
             agreedAmount?: number;
             documentCount: number;
             /**
@@ -1162,15 +1247,20 @@ export interface components {
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayStartDate?: string;
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
+            /**
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
+             */
             agreedAmount?: number;
             documentCount: number;
             /**
@@ -1200,15 +1290,20 @@ export interface components {
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayStartDate?: string;
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
+            /**
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
+             */
             agreedAmount?: number;
             documentCount: number;
             /**
@@ -1238,15 +1333,20 @@ export interface components {
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayStartDate?: string;
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
+            /**
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
+             */
             agreedAmount?: number;
             documentCount: number;
             /**
@@ -1276,15 +1376,20 @@ export interface components {
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayStartDate?: string;
             /**
              * Format: date
-             * @description Only when type=TEMPORARY
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
              */
             stayEndDate?: string;
-            /** @description Only when type=TEMPORARY */
+            /**
+             * @deprecated
+             * @description Deprecated, read-only: taken from the stay in course today, else the next one, else the latest; read the stays at /admin/guests/{id}/stays. Only when type=TEMPORARY
+             */
             agreedAmount?: number;
             documentCount: number;
             /**
@@ -1659,6 +1764,7 @@ export interface components {
     };
     parameters: {
         Id: string;
+        StayId: string;
         /** @description Items per page, from 1 to 100. A value out of range is a 400 */
         Limit: number;
         /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
@@ -2305,6 +2411,117 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
+        };
+    };
+    listGuestStays: {
+        parameters: {
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the stays of the guest */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedStays"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    createGuestStay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StayInput"];
+            };
+        };
+        responses: {
+            /** @description Stay registered */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stay"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_TEMPORARY` (only temporary guests have stays) or `STAY_OVERLAP` (the dates cross another stay of the guest) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotTemporaryError"] | components["schemas"]["StayOverlapError"];
+                };
+            };
+        };
+    };
+    updateGuestStay: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                stayId: components["parameters"]["StayId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StayUpdateInput"];
+            };
+        };
+        responses: {
+            /** @description Stay updated */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Stay"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `STAY_OVERLAP` (the new dates cross another stay of the guest) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StayOverlapError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
         };
