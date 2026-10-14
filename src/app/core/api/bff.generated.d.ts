@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.7.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d661406d048f902311e318b3934134fdd770e2f9073b1b7413052b93eaaade0f.
+ * Generated from the BFF contract v0.7.1 (TarimatWasi/quipu-lib-contracts), spec sha256 9ff4be662bae08d5e0bef809e4ad6b756b1482d3e7c889e9086d2c4f0d45bef4.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -3111,7 +3111,11 @@ export interface operations {
                     amount: number;
                     /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
                     paymentMethod?: string;
-                } & (unknown | unknown);
+                } & ({
+                    period: string;
+                } | {
+                    stayId: string;
+                });
             };
         };
         responses: {
