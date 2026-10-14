@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.5.0 (TarimatWasi/quipu-lib-contracts), spec sha256 af662de0ac73e3f44f8fe51ab3b64f4427caee45608e3bee2292268217d0713c.
+ * Generated from the BFF contract v0.6.0 (TarimatWasi/quipu-lib-contracts), spec sha256 90f5d15d8e1bb650725bd4d0686ac8deaa94aa026980a3b5b959e9fa3d028a17.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -380,7 +380,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List contracts with validity status (RF-09, CU-07) */
+        /**
+         * List contracts with validity status (RF-09, CU-07)
+         * @description Newest first. The list carries no `fileUrl` (a signed URL per row would sign N files); ask `getContract` for the file of one contract. `status` is derived from the dates at the time of the request (America/Lima), so EXPIRED needs no job (RN-07).
+         */
         get: operations["listContracts"];
         put?: never;
         /** Upload contract (RF-03, CU-03) */
@@ -417,7 +420,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Manually terminate contract (RN-25, CU-12) — the debt does not block it, and the guest keeps owing the periods until they are paid */
+        /**
+         * Manually terminate contract (RN-25, CU-12) — the debt does not block it, and the guest keeps owing the periods until they are paid
+         * @description Idempotent — a contract that is already terminated or expired answers 204 and stays as it is
+         */
         post: operations["terminateContract"];
         delete?: never;
         options?: never;
@@ -1506,8 +1512,42 @@ export interface components {
             endDate?: string | null;
             /** @enum {string} */
             status: "ACTIVE" | "EXPIRED" | "TERMINATED";
-            /** @description R2 signed URL, expires in 15 min */
+            /** @description R2 signed URL, expires in 15 min; signed when the contract is requested, never stored */
             fileUrl: string;
+        };
+        /** @description A contract in a list, without the signed file URL */
+        ContractSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            environmentId: string;
+            /** Format: uuid */
+            guestId: string;
+            monthlyAmount: number;
+            paymentDay: number;
+            graceDays: number;
+            /** Format: date */
+            startDate: string;
+            /**
+             * Format: date
+             * @description null means an open-ended contract (RN-07)
+             */
+            endDate?: string | null;
+            /** @enum {string} */
+            status: "ACTIVE" | "EXPIRED" | "TERMINATED";
+            /** @description ACTIVE with 30 days or fewer to the end date (RF-09, D-27); false when open-ended */
+            expiringSoon: boolean;
+        };
+        PagedContracts: {
+            content: components["schemas"]["ContractSummary"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        /** @description Only a guest of type CONTRACT takes a contract (RN-13). The `code` is always `GUEST_NOT_CONTRACT` */
+        GuestNotContractError: {
+            /** @enum {string} */
+            code: "GUEST_NOT_CONTRACT";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
         };
         Payment: {
             /** Format: uuid */
@@ -2631,6 +2671,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "EXPIRED" | "TERMINATED";
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
             };
             header?: never;
             path?: never;
@@ -2638,15 +2682,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Contract list */
+            /** @description Contract page */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Contract"][];
+                    "application/json": components["schemas"]["PagedContracts"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
         };
     };
@@ -2669,6 +2714,7 @@ export interface operations {
                     environmentId: string;
                     /** Format: uuid */
                     guestId: string;
+                    /** @description In soles, greater than 0, at most two decimals */
                     monthlyAmount: number;
                     paymentDay: number;
                     graceDays: number;
@@ -2676,7 +2722,7 @@ export interface operations {
                     startDate: string;
                     /**
                      * Format: date
-                     * @description optional; omitted means an open-ended contract (RN-07)
+                     * @description optional; omitted means an open-ended contract (RN-07); when present it must be after `startDate`
                      */
                     endDate?: string;
                 };
@@ -2692,21 +2738,32 @@ export interface operations {
                     "application/json": components["schemas"]["Contract"];
                 };
             };
-            /** @description Invalid file, end date before start date, etc. */
+            /** @description `CONTRACT_INVALID_FILE` (not a PDF by content, or over 10 MB, RF-15), `CONTRACT_INVALID_DATES` (the end date is not after the start date, RF-03) or `VALIDATION_ERROR` (any other field, with its `field`) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
-            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20) */
+            /** @description The environment or the guest does not exist (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_CONTRACT` (only a guest of type CONTRACT takes a contract, the temporary one has stays, RN-13), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20). The check order is: guest state, guest type, debt, environment */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentOccupiedError"];
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotContractError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentOccupiedError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
