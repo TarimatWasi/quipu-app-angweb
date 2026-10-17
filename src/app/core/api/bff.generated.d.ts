@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.6.0 (TarimatWasi/quipu-lib-contracts), spec sha256 90f5d15d8e1bb650725bd4d0686ac8deaa94aa026980a3b5b959e9fa3d028a17.
+ * Generated from the BFF contract v0.7.1 (TarimatWasi/quipu-lib-contracts), spec sha256 9ff4be662bae08d5e0bef809e4ad6b756b1482d3e7c889e9086d2c4f0d45bef4.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -363,7 +363,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A guest's payment history, admin view (RF-10) */
+        /** A guest's payment history, admin view (RF-10) — newest first, without the voucher URL (ask `getPayment` for it) */
         get: operations["listGuestPaymentsByAdmin"];
         put?: never;
         post?: never;
@@ -472,7 +472,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Payment review queue (RF-05, CU-05) */
+        /**
+         * Payment review queue (RF-05, CU-05) — oldest first, so the review is first in, first out
+         * @description Each row carries the guest, the environment (or the temporary mark), the period and the upload date, and no amount: the administrator compares the declared amount with the voucher in `getPayment` before resolving (RN-16, A5).
+         */
         get: operations["listPayments"];
         put?: never;
         /** Register a direct payment (cash/manual) — admin uploads the voucher on the guest's behalf, auto-approved (RN-22, RN-23, CU-14). A voucher is always required, no exceptions (RN-22). */
@@ -490,13 +493,20 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Payment detail with the voucher to review (A5.2, RN-16)
+         * @description The voucher URL is signed when this is requested, expires in 15 minutes and forces the download
+         */
+        get: operations["getPayment"];
         put?: never;
         post?: never;
         delete?: never;
         options?: never;
         head?: never;
-        /** Approve or reject a payment (RF-05, CU-05) */
+        /**
+         * Approve or reject a payment (RF-05, CU-05)
+         * @description A pending payment is resolved once. Rejecting does not close the period: the guest can upload a new voucher. A short payment is rejected with a reason and the guest uploads a voucher for the full amount (RN-16).
+         */
         patch: operations["resolvePayment"];
         trace?: never;
     };
@@ -612,7 +622,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Own payment history (RF-10, CU-19) — own record only (RN-09) */
+        /** Own payment history (RF-10, CU-19) — own record only (RN-09), newest first, without the voucher URL */
         get: operations["listOwnPayments"];
         put?: never;
         /** Upload monthly payment voucher (RF-04, CU-17) */
@@ -744,7 +754,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Payment status for the stay period (CU-21) */
+        /**
+         * Payment status of the stay in force (CU-21)
+         * @description The stay in force today, otherwise the next one, otherwise the last one (the same rule as the stay fields of the guest detail).
+         */
         get: operations["getTemporaryGuestPaymentStatus"];
         put?: never;
         post?: never;
@@ -763,7 +776,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`); how each later stay is paid (which stay a voucher, a status or a direct payment belongs to) is defined together with the payments contract (TAR-185). Until then this operation keeps its single-stay behaviour. */
+        /** Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`). The guest does not choose the stay: the voucher belongs to the stay in force today, otherwise to the next one that has no pending or approved payment. */
         post: operations["uploadTemporaryVoucher"];
         delete?: never;
         options?: never;
@@ -1231,7 +1244,7 @@ export interface components {
              */
             accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
-            paymentHistory: components["schemas"]["Payment"][];
+            paymentHistory: components["schemas"]["PaymentSummary"][];
             /** @enum {string} */
             status: "PENDING_ACTIVATION";
             /** @enum {string} */
@@ -1275,7 +1288,7 @@ export interface components {
              */
             accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
-            paymentHistory: components["schemas"]["Payment"][];
+            paymentHistory: components["schemas"]["PaymentSummary"][];
             /** @enum {string} */
             status: "ONBOARDING";
             /** @enum {string} */
@@ -1318,7 +1331,7 @@ export interface components {
              */
             accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
-            paymentHistory: components["schemas"]["Payment"][];
+            paymentHistory: components["schemas"]["PaymentSummary"][];
             /** @enum {string} */
             status: "ONBOARDING";
             /** @enum {string} */
@@ -1361,7 +1374,7 @@ export interface components {
              */
             accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
-            paymentHistory: components["schemas"]["Payment"][];
+            paymentHistory: components["schemas"]["PaymentSummary"][];
             /** @enum {string} */
             status: "ACTIVE";
             /** @enum {string} */
@@ -1404,7 +1417,7 @@ export interface components {
              */
             accessExpiresAt?: string | null;
             contract?: components["schemas"]["Contract"];
-            paymentHistory: components["schemas"]["Payment"][];
+            paymentHistory: components["schemas"]["PaymentSummary"][];
             /** @enum {string} */
             status: "INACTIVE";
             onboardingProgress: components["schemas"]["OnboardingProgress"];
@@ -1549,29 +1562,191 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
+        /** @description A payment without its voucher URL — what lists and the guest's own responses carry */
+        PaymentSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            guestId: string;
+            /**
+             * Format: uuid
+             * @description The contract the period belongs to; null for a temporary guest
+             */
+            contractId: string | null;
+            /**
+             * Format: uuid
+             * @description The stay a temporary guest paid for; null for a guest with a contract
+             */
+            stayId: string | null;
+            /**
+             * @description null for a temporary guest (RN-03)
+             * @example 2026-09
+             */
+            period: string | null;
+            /** @description Declared amount, in soles */
+            amount: number;
+            /** @description Free text per payment (RN-28) */
+            paymentMethod?: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Shown to the guest in the app only, never by email (D-34d) */
+            rejectionReason?: string | null;
+            /** Format: date-time */
+            reviewedAt?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        } & ({
+            contractId?: string;
+            period?: string;
+            /** @enum {string|null} */
+            stayId?: null;
+        } | {
+            stayId?: string;
+            /** @enum {string|null} */
+            contractId?: null;
+            /** @enum {string|null} */
+            period?: null;
+        });
+        /** @description A payment with its signed voucher URL (admin detail, `getPayment`) */
         Payment: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             guestId: string;
+            /** Format: uuid */
+            contractId: string | null;
+            /** Format: uuid */
+            stayId: string | null;
             /** @example 2026-09 */
-            period: string;
+            period: string | null;
+            /** @description Declared amount, in soles */
             amount: number;
             /** @description Free text per payment (RN-28) */
             paymentMethod?: string | null;
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
             rejectionReason?: string | null;
-            /** @description R2 signed URL — every payment has a voucher, no exceptions (RN-22, includes admin-direct payments per RN-23) */
+            /** Format: date-time */
+            reviewedAt?: string | null;
+            /** @description R2 signed URL, expires in 15 min; signed when the payment is requested, never stored — every payment has a voucher, no exceptions (RN-22, includes admin-direct payments per RN-23) */
             voucherUrl: string;
             /** Format: date-time */
             createdAt: string;
+        } & ({
+            contractId?: string;
+            period?: string;
+            /** @enum {string|null} */
+            stayId?: null;
+        } | {
+            stayId?: string;
+            /** @enum {string|null} */
+            contractId?: null;
+            /** @enum {string|null} */
+            period?: null;
+        });
+        PagedPayments: {
+            content: components["schemas"]["PaymentSummary"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
+        /** @description A row of the review queue (A5); it does not show the amount */
+        PaymentQueueItem: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            guestId: string;
+            /** @description null while the guest has not given a name in the onboarding */
+            guestName: string | null;
+            documentNumber: string;
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            /** @description null for a temporary guest (shown as Temporal) */
+            environmentCode: string | null;
+            /** @example 2026-09 */
+            period: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /**
+             * Format: date-time
+             * @description When the voucher was uploaded
+             */
+            createdAt: string;
+        } & ({
+            /** @enum {string} */
+            guestType?: "CONTRACT";
+            environmentCode?: string;
+            period?: string;
+        } | {
+            /** @enum {string} */
+            guestType?: "TEMPORARY";
+            /** @enum {string|null} */
+            environmentCode?: null;
+            /** @enum {string|null} */
+            period?: null;
+        });
+        PagedPaymentQueue: {
+            content: components["schemas"]["PaymentQueueItem"][];
+            nextCursor: components["schemas"]["NextCursor"];
         };
         PeriodStatus: {
             /** @example 2026-09 */
             period: string;
             /** @enum {string} */
             status: "PAID" | "UNDER_REVIEW" | "UNPAID" | "OVERDUE";
+            /**
+             * Format: date
+             * @description Payment day of the month, or its last day when the month is shorter (RN-10); the grace days come on top
+             */
+            dueDate: string;
+            /** @description Monthly amount of the contract */
+            amount: number;
+            /** Format: uuid */
+            contractId: string;
+            /**
+             * Format: uuid
+             * @description The live or last payment of the period, if any
+             */
+            paymentId?: string | null;
+            /** @description Reason of the last rejected voucher while no other payment is alive (D-34d); a rejected period stays UNPAID or OVERDUE */
+            rejectionReason?: string | null;
+        };
+        /** @description Payment status of one stay of a temporary guest (CU-21) */
+        StayPaymentStatus: {
+            /** Format: uuid */
+            stayId: string;
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string;
+            /**
+             * @description OVERDUE once the exit date has passed without an approved payment
+             * @enum {string}
+             */
+            status: "PAID" | "UNDER_REVIEW" | "UNPAID" | "OVERDUE";
+            agreedAmount: number;
+            /** Format: uuid */
+            paymentId?: string | null;
+            rejectionReason?: string | null;
+        };
+        /** @description A voucher is already pending for the period or the stay (RN-15, RN-03). The `code` is always `VOUCHER_ALREADY_EXISTS` */
+        VoucherAlreadyExistsError: {
+            /** @enum {string} */
+            code: "VOUCHER_ALREADY_EXISTS";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description The period or the stay already has an approved payment (RN-02, D-28). The `code` is always `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` */
+        PaymentAlreadyExistsForPeriodError: {
+            /** @enum {string} */
+            code: "PAYMENT_ALREADY_EXISTS_FOR_PERIOD";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description Another process resolved the payment first. The `code` is always `PAYMENT_ALREADY_RESOLVED` */
+        PaymentAlreadyResolvedError: {
+            /** @enum {string} */
+            code: "PAYMENT_ALREADY_RESOLVED";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
         };
         ExpenseInput: {
             /**
@@ -2644,7 +2819,12 @@ export interface operations {
     };
     listGuestPaymentsByAdmin: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+            };
             header?: never;
             path: {
                 id: components["parameters"]["Id"];
@@ -2653,15 +2833,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment history for the given guest */
+            /** @description Payment history page for the given guest */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"][];
+                    "application/json": components["schemas"]["PagedPayments"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -2780,9 +2961,10 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Contract detail */
+            /** @description Contract detail (never cacheable: it carries a freshly signed file URL) */
             200: {
                 headers: {
+                    "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -2835,7 +3017,7 @@ export interface operations {
                         paymentsUpToDate: number;
                         paymentsPending: number;
                         paymentsOverdue: number;
-                        pendingVouchers: components["schemas"]["Payment"][];
+                        pendingVouchers: components["schemas"]["PaymentSummary"][];
                     };
                 };
             };
@@ -2880,6 +3062,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "PENDING" | "APPROVED" | "REJECTED";
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
             };
             header?: never;
             path?: never;
@@ -2887,15 +3073,16 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment list */
+            /** @description Payment queue page */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"][];
+                    "application/json": components["schemas"]["PagedPaymentQueue"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
         };
     };
@@ -2911,14 +3098,24 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB (RF-15)
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
                      */
                     file: string;
                     /** Format: uuid */
                     guestId: string;
-                    period: string;
+                    /** @example 2026-09 */
+                    period?: string;
+                    /** Format: uuid */
+                    stayId?: string;
+                    /** @description In soles, greater than 0, at most two decimals */
                     amount: number;
-                };
+                    /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
+                    paymentMethod?: string;
+                } & ({
+                    period: string;
+                } | {
+                    stayId: string;
+                });
             };
         };
         responses: {
@@ -2928,25 +3125,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"];
+                    "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description Invalid file (RF-15) */
+            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount, period, stayId, or both or neither of period and stayId) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
-            /** @description An approved payment already exists for this period (RN-02) */
+            /** @description The guest or the stay does not exist (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (an approved payment already exists for the period or the stay, RN-02) or `VOUCHER_ALREADY_EXISTS` (a voucher is still pending for it: resolve it first) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
+                };
             };
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    getPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Payment detail (never cacheable: it carries a freshly signed voucher URL) */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Payment"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     resolvePayment: {
@@ -2963,35 +3199,41 @@ export interface operations {
                 "application/json": {
                     /** @enum {string} */
                     status: "APPROVED" | "REJECTED";
-                    /** @description Required when status=REJECTED (RN-05) */
+                    /** @description Required when status=REJECTED, not blank (RN-05); shown to the guest in the app only */
                     reason?: string;
                 };
             };
         };
         responses: {
-            /** @description Payment resolved */
+            /** @description Payment resolved (without the voucher URL; ask `getPayment` for it) */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"];
+                    "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description Empty reason on rejection (RN-05) */
+            /** @description `PAYMENT_REASON_REQUIRED` (empty reason on rejection, RN-05) or `VALIDATION_ERROR` */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
-            /** @description Payment already resolved */
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `PAYMENT_ALREADY_RESOLVED` (another process resolved it first) or `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (approving it would leave two approved payments for the same period or stay) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["PaymentAlreadyResolvedError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"];
+                };
             };
         };
     };
@@ -3221,9 +3463,10 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Own contract, whatever its status */
+            /** @description Own contract, whatever its status (never cacheable: it carries a freshly signed file URL) */
             200: {
                 headers: {
+                    "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
                 content: {
@@ -3243,22 +3486,28 @@ export interface operations {
     };
     listOwnPayments: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
         };
         requestBody?: never;
         responses: {
-            /** @description Own payment history */
+            /** @description Own payment history page */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"][];
+                    "application/json": components["schemas"]["PagedPayments"];
                 };
             };
+            400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
         };
@@ -3275,10 +3524,16 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB (RF-15)
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
                      */
                     file: string;
+                    /**
+                     * @description A month of the contract, up to the current month
+                     * @example 2026-09
+                     */
                     period: string;
+                    /** @description Declared amount, in soles; the administrator compares it with the voucher (RN-16) */
+                    amount: number;
                     /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
                     paymentMethod?: string;
                 };
@@ -3291,15 +3546,17 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"];
+                    "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description Invalid file (RF-15) */
+            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount, period) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
             /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09) */
@@ -3316,12 +3573,14 @@ export interface operations {
                     };
                 };
             };
-            /** @description A pending voucher already exists for this period (RN-15) */
+            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the period is already approved, RN-02, D-28) or `VOUCHER_ALREADY_EXISTS` (a voucher is pending for this period, RN-15) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
+                };
             };
             429: components["responses"]["TooManyRequests"];
         };
@@ -3537,11 +3796,20 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PeriodStatus"];
+                    "application/json": components["schemas"]["StayPaymentStatus"];
                 };
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
+            /** @description The guest has no stay yet (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     uploadTemporaryVoucher: {
@@ -3556,9 +3824,13 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB (RF-15)
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
                      */
                     file: string;
+                    /** @description Declared amount, in soles; the administrator compares it with the voucher (RN-16) */
+                    amount: number;
+                    /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
+                    paymentMethod?: string;
                 };
             };
         };
@@ -3569,24 +3841,41 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Payment"];
+                    "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description Invalid file (RF-15) */
+            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount) */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
-            403: components["responses"]["GuestAccessDenied"];
-            /** @description A voucher already exists for this stay, pending or approved (RN-03, RN-15) */
+            /** @description `VOUCHER_NO_ACTIVE_STAY` (the guest has no stay in force or coming, CU-22), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "VOUCHER_NO_ACTIVE_STAY" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                    };
+                };
+            };
+            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the stay is already paid, RN-03) or `VOUCHER_ALREADY_EXISTS` (a voucher is pending for the stay, RN-03, RN-15) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
+                };
             };
             429: components["responses"]["TooManyRequests"];
         };
