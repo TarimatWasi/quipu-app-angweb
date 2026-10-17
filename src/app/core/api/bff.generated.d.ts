@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.7.1 (TarimatWasi/quipu-lib-contracts), spec sha256 9ff4be662bae08d5e0bef809e4ad6b756b1482d3e7c889e9086d2c4f0d45bef4.
+ * Generated from the BFF contract v0.7.2 (TarimatWasi/quipu-lib-contracts), spec sha256 01c4c7eb558e44078cb976dcdbb19d10c6465fa19873b8f6a3b31438f5b36602.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -1562,6 +1562,13 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
+        /** @description The file storage could not store or sign the file. The `code` is always `FILE_STORAGE_UNAVAILABLE` */
+        FileStorageUnavailableError: {
+            /** @enum {string} */
+            code: "FILE_STORAGE_UNAVAILABLE";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
         /** @description A payment without its voucher URL — what lists and the guest's own responses carry */
         PaymentSummary: {
             /** Format: uuid */
@@ -1595,18 +1602,22 @@ export interface components {
             reviewedAt?: string | null;
             /** Format: date-time */
             createdAt: string;
-        } & ({
+        } & (({
             contractId?: string;
             period?: string;
             /** @enum {string|null} */
             stayId?: null;
-        } | {
+        } & {
+            [key: string]: unknown;
+        }) | ({
             stayId?: string;
             /** @enum {string|null} */
             contractId?: null;
             /** @enum {string|null} */
             period?: null;
-        });
+        } & {
+            [key: string]: unknown;
+        }));
         /** @description A payment with its signed voucher URL (admin detail, `getPayment`) */
         Payment: {
             /** Format: uuid */
@@ -1632,18 +1643,22 @@ export interface components {
             voucherUrl: string;
             /** Format: date-time */
             createdAt: string;
-        } & ({
+        } & (({
             contractId?: string;
             period?: string;
             /** @enum {string|null} */
             stayId?: null;
-        } | {
+        } & {
+            [key: string]: unknown;
+        }) | ({
             stayId?: string;
             /** @enum {string|null} */
             contractId?: null;
             /** @enum {string|null} */
             period?: null;
-        });
+        } & {
+            [key: string]: unknown;
+        }));
         PagedPayments: {
             content: components["schemas"]["PaymentSummary"][];
             nextCursor: components["schemas"]["NextCursor"];
@@ -1670,19 +1685,23 @@ export interface components {
              * @description When the voucher was uploaded
              */
             createdAt: string;
-        } & ({
+        } & (({
             /** @enum {string} */
             guestType?: "CONTRACT";
             environmentCode?: string;
             period?: string;
-        } | {
+        } & {
+            [key: string]: unknown;
+        }) | ({
             /** @enum {string} */
             guestType?: "TEMPORARY";
             /** @enum {string|null} */
             environmentCode?: null;
             /** @enum {string|null} */
             period?: null;
-        });
+        } & {
+            [key: string]: unknown;
+        }));
         PagedPaymentQueue: {
             content: components["schemas"]["PaymentQueueItem"][];
             nextCursor: components["schemas"]["NextCursor"];
@@ -1919,6 +1938,15 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description The file storage (R2) is not configured or failed; nothing was saved — retry later (`FILE_STORAGE_UNAVAILABLE`) */
+        FileStorageUnavailable: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["FileStorageUnavailableError"];
             };
         };
         /** @description The guest is inactive (RN-12, RN-18). The `code` is always `GUEST_INACTIVE` and `guestId` lets the administrator reactivate it right from the notice (`POST /admin/guests/{id}/reactivate`, CU-28) */
@@ -2947,7 +2975,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotContractError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentOccupiedError"];
                 };
             };
-            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     getContract: {
@@ -2973,6 +3001,7 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     terminateContract: {
@@ -3156,7 +3185,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
-            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     getPayment: {
@@ -3183,6 +3212,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     resolvePayment: {
@@ -3482,6 +3512,7 @@ export interface operations {
                 };
                 content?: never;
             };
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     listOwnPayments: {
@@ -3582,7 +3613,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
-            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     updateOwnProfile: {
@@ -3877,7 +3908,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
-            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     updateOwnProfileTemporary: {
