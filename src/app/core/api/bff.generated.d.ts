@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.7.3 (TarimatWasi/quipu-lib-contracts), spec sha256 b602cb8d269e2b0f587468c0e0f6d69f3ff2f3bc470c532cf7ea8160b7659125.
+ * Generated from the BFF contract v0.8.0 (TarimatWasi/quipu-lib-contracts), spec sha256 4312ce7c09465db859f8f62b72d91f3178ac945d1b8e99c184785e8237cad0e4.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -832,6 +832,13 @@ export interface components {
         ConcurrentModificationError: {
             /** @enum {string} */
             code: "CONCURRENT_MODIFICATION";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
+        /** @description The environment is inactive and takes no new contract (RF-01). The `code` is always `ENVIRONMENT_INACTIVE` */
+        EnvironmentInactiveError: {
+            /** @enum {string} */
+            code: "ENVIRONMENT_INACTIVE";
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
@@ -2967,13 +2974,13 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_CONTRACT` (only a guest of type CONTRACT takes a contract, the temporary one has stays, RN-13), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20). The check order is: guest state, guest type, debt, environment */
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_CONTRACT` (only a guest of type CONTRACT takes a contract, the temporary one has stays, RN-13), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25), `ENVIRONMENT_INACTIVE` (the environment is inactive and takes no new contract, RF-01) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20). The check order is: guest state, guest type, debt, environment state, environment occupancy */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotContractError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentOccupiedError"];
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotContractError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentInactiveError"] | components["schemas"]["EnvironmentOccupiedError"];
                 };
             };
             503: components["responses"]["FileStorageUnavailable"];
