@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.7.2 (TarimatWasi/quipu-lib-contracts), spec sha256 01c4c7eb558e44078cb976dcdbb19d10c6465fa19873b8f6a3b31438f5b36602.
+ * Generated from the BFF contract v0.7.3 (TarimatWasi/quipu-lib-contracts), spec sha256 b602cb8d269e2b0f587468c0e0f6d69f3ff2f3bc470c532cf7ea8160b7659125.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -1829,7 +1829,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description The session is valid but its role cannot use the operation (RN-08, RN-09). The `code` is always `AUTH_FORBIDDEN` */
+        /** @description The session is valid but its role cannot use the operation (RN-08, RN-09). On the multipart uploads it is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). The `code` is always `AUTH_FORBIDDEN` */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -1958,7 +1958,7 @@ export interface components {
                 "application/json": components["schemas"]["GuestInactiveError"];
             };
         };
-        /** @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach */
+        /** @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach. On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
         OnboardingAccessDenied: {
             headers: {
                 [name: string]: unknown;
@@ -2916,7 +2916,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description PDF, ≤10MB (RF-15)
+                     * @description PDF, ≤10MB, checked by content (RF-15)
                      */
                     file: string;
                     /** Format: uuid */
@@ -2957,6 +2957,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             /** @description The environment or the guest does not exist (`RESOURCE_NOT_FOUND`) */
             404: {
                 headers: {
@@ -3167,6 +3168,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             /** @description The guest or the stay does not exist (`RESOURCE_NOT_FOUND`) */
             404: {
                 headers: {
@@ -3590,7 +3592,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09) */
+            /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3714,7 +3716,7 @@ export interface operations {
                 "multipart/form-data": {
                     /**
                      * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB (RF-15)
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
                      */
                     file: string;
                 };
@@ -3885,7 +3887,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `VOUCHER_NO_ACTIVE_STAY` (the guest has no stay in force or coming, CU-22), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09) */
+            /** @description `VOUCHER_NO_ACTIVE_STAY` (the guest has no stay in force or coming, CU-22), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
             403: {
                 headers: {
                     [name: string]: unknown;
