@@ -34,6 +34,10 @@ const KNOWN_TEXTS = new Map<string, string>([
     'UNSUPPORTED_MEDIA_TYPE',
     'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
   ],
+  [
+    'PAYMENT_PERIOD_NOT_PAYABLE',
+    'El contrato ya no cobra ese período; rechaza el comprobante indicando el motivo.',
+  ],
   ['NETWORK_ERROR', 'No se pudo conectar con el servidor. Inténtalo de nuevo.'],
   ['TIMEOUT', 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'],
   ['UNEXPECTED_ERROR', 'Ocurrió un error inesperado. Inténtalo de nuevo.'],

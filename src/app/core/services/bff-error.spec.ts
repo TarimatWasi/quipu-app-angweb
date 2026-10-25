@@ -196,3 +196,12 @@ describe('toBffError for the password recovery (RF-16)', () => {
     });
   });
 });
+
+describe('toBffError for resolving a payment (TAR-207)', () => {
+  it('maps a 409 PAYMENT_PERIOD_NOT_PAYABLE to its own Spanish text', () => {
+    expect(toBffError(bff(409, 'PAYMENT_PERIOD_NOT_PAYABLE'))).toEqual({
+      code: 'PAYMENT_PERIOD_NOT_PAYABLE',
+      message: 'El contrato ya no cobra ese período; rechaza el comprobante indicando el motivo.',
+    });
+  });
+});
