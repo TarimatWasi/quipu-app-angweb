@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.9.1 (TarimatWasi/quipu-lib-contracts), spec sha256 eece8dc6be6b6a4e0308a36175b9eee62b7613db8f0723cd55894da4c3a37028.
+ * Generated from the BFF contract v0.9.2 (TarimatWasi/quipu-lib-contracts), spec sha256 579bca91740e9c6b7253434d2a8eafd0c6c2539df85fc6a125eb270f3078dff4.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -1918,6 +1918,13 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
+        /** @description The payment's period is no longer charged by the contract (it was terminated or expired before the approval), so it cannot be approved. The payment stays pending and can only be rejected with a reason. The `code` is always `PAYMENT_PERIOD_NOT_PAYABLE` */
+        PaymentPeriodNotPayableError: {
+            /** @enum {string} */
+            code: "PAYMENT_PERIOD_NOT_PAYABLE";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
         ExpenseInput: {
             /**
              * @description UTILITIES: electricity, water, internet. MAINTENANCE: maintenance and repairs. CLEANING_SUPPLIES: cleaning and supplies. TAXES_FEES: taxes and fees (D-26)
@@ -3580,13 +3587,13 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `PAYMENT_ALREADY_RESOLVED` (another process resolved it first) or `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (approving it would leave two approved payments for the same period or stay) */
+            /** @description `PAYMENT_ALREADY_RESOLVED` (the payment is no longer pending: another process resolved it first), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (approving it would leave two approved payments for the same period or stay) or `PAYMENT_PERIOD_NOT_PAYABLE` (approving a payment whose period the contract no longer charges, because it was terminated or expired first; the payment stays pending and can only be rejected with a reason) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PaymentAlreadyResolvedError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"];
+                    "application/json": components["schemas"]["PaymentAlreadyResolvedError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["PaymentPeriodNotPayableError"];
                 };
             };
         };
