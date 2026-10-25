@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.8.0 (TarimatWasi/quipu-lib-contracts), spec sha256 4312ce7c09465db859f8f62b72d91f3178ac945d1b8e99c184785e8237cad0e4.
+ * Generated from the BFF contract v0.9.0 (TarimatWasi/quipu-lib-contracts), spec sha256 fcaaa2f0fc94cd3330c9502fdae13d7bd82615b049f6da2c1981a3a09683caeb.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -345,9 +345,69 @@ export interface paths {
         };
         /**
          * Documents the guest uploaded in the onboarding, with a short-lived signed link (RN-37, CU-27)
-         * @description Only the administrator sees these files. Each `url` is a signed R2 link that expires 5 minutes after the response; ask again for a new one.
+         * @description Only the administrator sees these files. Each `url` is a signed R2 link that expires 5 minutes after the response; ask again for a new one. A document is never deleted or replaced, except on an ARCO request of the holder or an upload error (RN-37), only by an administrator and with evidence (`deleteGuestDocument`, `replaceGuestDocument`, `listGuestDocumentActions`).
          */
         get: operations["listGuestDocuments"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Replace a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). The fields `reason`, `requestedAt`, `requestChannel` and `note` follow the rules of `DocumentActionRequest`; an empty multipart field (`requestedAt=""`, `requestChannel=""`, `note=""` or whitespace only) counts as absent. A file over 5 MB is a 400 `DOCUMENT_INVALID_FILE`, never a 413. Order and atomicity: (1) the new object is uploaded to the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE` and nothing changes. (2) In a single transaction the document row is swapped for the new one (new `id`) and the evidence entry (`REPLACE`) is inserted; if the transaction fails the new object is deleted and nothing changes. (3) After the commit the old object is deleted, with a persistent retry; no row references it any more, so no new signed URL is issued for it. A signed URL already handed out for the old object (`listGuestDocuments`) may keep opening it until it expires (at most 5 minutes) or until the old object is deleted, whichever comes first. Concurrency: of two actions on the same `documentId` (replace or delete) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`).
+         */
+        put: operations["replaceGuestDocument"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/documents/{documentId}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Delete a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). A `POST` with a JSON body instead of a `DELETE` with a body, because proxies and rewrites may drop the body of a `DELETE`. It deletes personal data irreversibly and a `POST` can be sent cross-site without a preflight, so it is under the same `Origin`/`Sec-Fetch-Site` check as the multipart routes (ADR-006, 403), and it only accepts `Content-Type: application/json` (anything else is a 415). Order and atomicity: (1) the object is deleted from the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE`, nothing is deleted and no evidence is written. An object that is already missing counts as deleted, so a retry never gets stuck in 503. (2) If it succeeds, in a single transaction the document row is deleted and the evidence entry (`DELETE`) is inserted; if that transaction fails the answer is 500 and the row stays, so the administrator repeats the action and it completes (idempotent: step 1 finds the object missing and goes on to step 2). Concurrency: of two actions on the same `documentId` (delete or replace) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`).
+         */
+        post: operations["deleteGuestDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/document-actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Evidence of the deletions and replacements of the guest's documents, newest first (RN-37)
+         * @description Who deleted or replaced which document, when and why. Never carries the file name, the storage key or the content.
+         */
+        get: operations["listGuestDocumentActions"];
         put?: never;
         post?: never;
         delete?: never;
@@ -701,7 +761,7 @@ export interface paths {
         put?: never;
         /**
          * Upload one optional document (RN-37, RF-15, CU-25)
-         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. Files are neither deleted nor replaced.
+         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. The guest can neither delete nor replace a file. The only exception is an ARCO request of the holder or an upload error (RN-37): an administrator deletes or replaces the file (`POST /admin/guests/{id}/documents/{documentId}/deletion` and `PUT /admin/guests/{id}/documents/{documentId}`), and each action leaves an evidence entry with who and when (`GET /admin/guests/{id}/document-actions`).
          */
         post: operations["uploadOnboardingDocument"];
         delete?: never;
@@ -1455,6 +1515,78 @@ export interface components {
             /** Format: date-time */
             urlExpiresAt: string;
         };
+        /**
+         * @description Why an administrator deleted or replaced a document: an ARCO request of the holder or an upload error (RN-37)
+         * @enum {string}
+         */
+        DocumentActionReason: "ARCO_REQUEST" | "UPLOAD_ERROR";
+        /**
+         * @description Channel through which the holder made the ARCO request
+         * @enum {string}
+         */
+        DocumentRequestChannel: "WHATSAPP" | "EMAIL" | "IN_PERSON" | "OTHER";
+        /**
+         * Format: date
+         * @description Date the holder made the ARCO request, on or before today (America/Lima). Required with `ARCO_REQUEST`; not allowed with `UPLOAD_ERROR`
+         */
+        DocumentRequestedAt: string;
+        /** @description Only a reference (ticket or channel); no personal data of the holder. It is never logged. Empty or whitespace only counts as absent (stored as null) */
+        DocumentActionNote: string;
+        /** @description Why a document is deleted or replaced (RN-37). OpenAPI 3.0 cannot express the conditions, so they are listed here; each one broken is a 400 `VALIDATION_ERROR` with its `field`. With `ARCO_REQUEST`, `requestedAt` and `requestChannel` are both required. With `UPLOAD_ERROR`, neither may be sent. `requestedAt` is on or before today (America/Lima). An empty or whitespace-only `note` counts as null. */
+        DocumentActionRequest: {
+            reason: components["schemas"]["DocumentActionReason"];
+            requestedAt?: components["schemas"]["DocumentRequestedAt"];
+            requestChannel?: components["schemas"]["DocumentRequestChannel"];
+            note?: components["schemas"]["DocumentActionNote"];
+        };
+        /** @description Evidence of one deletion or replacement of a guest document (RN-37). Never carries the file name, the storage key or the content. */
+        GuestDocumentAction: {
+            /** Format: uuid */
+            id: string;
+            /** @enum {string} */
+            action: "DELETE" | "REPLACE";
+            /**
+             * Format: uuid
+             * @description The document deleted or replaced
+             */
+            documentId: string;
+            /**
+             * Format: uuid
+             * @description The new document of a REPLACE; null for a DELETE
+             */
+            replacementDocumentId: string | null;
+            reason: components["schemas"]["DocumentActionReason"];
+            /**
+             * Format: date
+             * @description Date the holder made the request; null for UPLOAD_ERROR
+             */
+            requestedAt: string | null;
+            /**
+             * @description null for UPLOAD_ERROR
+             * @enum {string|null}
+             */
+            requestChannel: "WHATSAPP" | "EMAIL" | "IN_PERSON" | "OTHER" | null;
+            /** @description Only a reference (ticket or channel); null when absent or blank */
+            note: string | null;
+            /**
+             * @description Type of the deleted or replaced file
+             * @enum {string}
+             */
+            contentType: "image/jpeg" | "image/png" | "application/pdf";
+            /** @description Size of the deleted or replaced file */
+            sizeBytes: number;
+            /**
+             * Format: uuid
+             * @description The administrator who performed the action
+             */
+            actorId: string;
+            /** Format: date-time */
+            performedAt: string;
+        };
+        PagedGuestDocumentActions: {
+            content: components["schemas"]["GuestDocumentAction"][];
+            nextCursor: components["schemas"]["NextCursor"];
+        };
         /** @description Onboarding state. While the guest is in onboarding `nextStep` names the step to go to; once active there is no `nextStep` (RN-33, RN-36). */
         OnboardingState: components["schemas"]["OnboardingInProgress"] | components["schemas"]["OnboardingCompleted"];
         /** @description Onboarding still open (the password is already chosen). Before the personal data step is saved the data is not there yet; from the documents step on it is always returned. */
@@ -1941,6 +2073,31 @@ export interface components {
         /** @description Rate limit exceeded (SEC-01) — retry after the window in the `Retry-After` header */
         TooManyRequests: {
             headers: {
+                /** @description Seconds until the client may retry */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
+        /** @description `AUTH_FORBIDDEN`: the session is not an administrator (RN-08), or the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin`, or they name another site (ADR-006). `replaceGuestDocument` is the sixth route of the exact set of multipart routes under that check: `createContract`, `createDirectPayment`, `uploadPaymentVoucher`, `uploadOnboardingDocument`, `uploadTemporaryVoucher` and `replaceGuestDocument`. `deleteGuestDocument` is the only JSON route under the same check, because it deletes personal data irreversibly */
+        OriginCheckForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_FORBIDDEN";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
+        /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
+        GuestDocumentNotFound: {
+            headers: {
                 [name: string]: unknown;
             };
             content: {
@@ -2015,6 +2172,7 @@ export interface components {
     parameters: {
         Id: string;
         StayId: string;
+        DocumentId: string;
         /** @description Items per page, from 1 to 100. A value out of range is a 400 */
         Limit: number;
         /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
@@ -2850,6 +3008,149 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    replaceGuestDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15); over 5 MB is a 400 DOCUMENT_INVALID_FILE, not a 413
+                     */
+                    file: string;
+                    reason: components["schemas"]["DocumentActionReason"];
+                    requestedAt?: components["schemas"]["DocumentRequestedAt"];
+                    requestChannel?: components["schemas"]["DocumentRequestChannel"];
+                    note?: components["schemas"]["DocumentActionNote"];
+                };
+            };
+        };
+        responses: {
+            /** @description Document replaced; the response is the new document, with a new `id` */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocument"];
+                };
+            };
+            /** @description `DOCUMENT_INVALID_FILE` (not JPG, PNG or PDF by content, over 5 MB, or an unknown multipart field, RF-15) or `VALIDATION_ERROR` with its `field`: `reason` missing or unknown; with `ARCO_REQUEST`, `requestedAt` or `requestChannel` missing; with `UPLOAD_ERROR`, `requestedAt` or `requestChannel` present; `requestedAt` after today (America/Lima); `note` over 500 characters */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OriginCheckForbidden"];
+            404: components["responses"]["GuestDocumentNotFound"];
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    deleteGuestDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentActionRequest"];
+            };
+        };
+        responses: {
+            /** @description File and row deleted, evidence entry recorded */
+            204: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `VALIDATION_ERROR` with its `field`: `reason` missing or unknown; with `ARCO_REQUEST`, `requestedAt` or `requestChannel` missing; with `UPLOAD_ERROR`, `requestedAt` or `requestChannel` present; `requestedAt` after today (America/Lima); `note` over 500 characters; or an unknown property */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OriginCheckForbidden"];
+            404: components["responses"]["GuestDocumentNotFound"];
+            /** @description The `Content-Type` is not exactly `application/json` (`UNSUPPORTED_MEDIA_TYPE`) */
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            /** @description The object was deleted from the storage but the transaction that deletes the row and writes the evidence failed; the row stays. Repeat the action: it is idempotent and completes */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    listGuestDocumentActions: {
+        parameters: {
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+            };
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the document actions of the guest, newest first (empty if there is none) */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedGuestDocumentActions"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listGuestPaymentsByAdmin: {
