@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.9.0 (TarimatWasi/quipu-lib-contracts), spec sha256 fcaaa2f0fc94cd3330c9502fdae13d7bd82615b049f6da2c1981a3a09683caeb.
+ * Generated from the BFF contract v0.9.1 (TarimatWasi/quipu-lib-contracts), spec sha256 eece8dc6be6b6a4e0308a36175b9eee62b7613db8f0723cd55894da4c3a37028.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -366,7 +366,7 @@ export interface paths {
         get?: never;
         /**
          * Replace a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
-         * @description Only for an ARCO request of the holder or an upload error (RN-37). The fields `reason`, `requestedAt`, `requestChannel` and `note` follow the rules of `DocumentActionRequest`; an empty multipart field (`requestedAt=""`, `requestChannel=""`, `note=""` or whitespace only) counts as absent. A file over 5 MB is a 400 `DOCUMENT_INVALID_FILE`, never a 413. Order and atomicity: (1) the new object is uploaded to the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE` and nothing changes. (2) In a single transaction the document row is swapped for the new one (new `id`) and the evidence entry (`REPLACE`) is inserted; if the transaction fails the new object is deleted and nothing changes. (3) After the commit the old object is deleted, with a persistent retry; no row references it any more, so no new signed URL is issued for it. A signed URL already handed out for the old object (`listGuestDocuments`) may keep opening it until it expires (at most 5 minutes) or until the old object is deleted, whichever comes first. Concurrency: of two actions on the same `documentId` (replace or delete) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`).
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). The fields `reason`, `requestedAt`, `requestChannel` and `note` follow the rules of `DocumentActionRequest`; an empty multipart field (`requestedAt=""`, `requestChannel=""`, `note=""` or whitespace only) counts as absent. A file over 5 MB is a 400 `DOCUMENT_INVALID_FILE`, never a 413. Order and atomicity: (1) the new object is uploaded to the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE` and nothing changes. (2) In a single transaction the document row is swapped for the new one (new `id`) and the evidence entry (`REPLACE`) is inserted; if the transaction fails the new object is deleted and nothing changes. (3) After the commit the old object is deleted, with a persistent retry; no row references it any more, so no new signed URL is issued for it. A signed URL already handed out for the old object (`listGuestDocuments`) may keep opening it until it expires (at most 5 minutes) or until the old object is deleted, whichever comes first. Concurrency: of two actions on the same `documentId` (replace or delete) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         put: operations["replaceGuestDocument"];
         post?: never;
@@ -446,7 +446,10 @@ export interface paths {
          */
         get: operations["listContracts"];
         put?: never;
-        /** Upload contract (RF-03, CU-03) */
+        /**
+         * Upload contract (RF-03, CU-03)
+         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
         post: operations["createContract"];
         delete?: never;
         options?: never;
@@ -538,7 +541,10 @@ export interface paths {
          */
         get: operations["listPayments"];
         put?: never;
-        /** Register a direct payment (cash/manual) — admin uploads the voucher on the guest's behalf, auto-approved (RN-22, RN-23, CU-14). A voucher is always required, no exceptions (RN-22). */
+        /**
+         * Register a direct payment (cash/manual) — admin uploads the voucher on the guest's behalf, auto-approved (RN-22, RN-23, CU-14). A voucher is always required, no exceptions (RN-22).
+         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
         post: operations["createDirectPayment"];
         delete?: never;
         options?: never;
@@ -685,7 +691,10 @@ export interface paths {
         /** Own payment history (RF-10, CU-19) — own record only (RN-09), newest first, without the voucher URL */
         get: operations["listOwnPayments"];
         put?: never;
-        /** Upload monthly payment voucher (RF-04, CU-17) */
+        /**
+         * Upload monthly payment voucher (RF-04, CU-17)
+         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
         post: operations["uploadPaymentVoucher"];
         delete?: never;
         options?: never;
@@ -761,7 +770,7 @@ export interface paths {
         put?: never;
         /**
          * Upload one optional document (RN-37, RF-15, CU-25)
-         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. The guest can neither delete nor replace a file. The only exception is an ARCO request of the holder or an upload error (RN-37): an administrator deletes or replaces the file (`POST /admin/guests/{id}/documents/{documentId}/deletion` and `PUT /admin/guests/{id}/documents/{documentId}`), and each action leaves an evidence entry with who and when (`GET /admin/guests/{id}/document-actions`).
+         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. The guest can neither delete nor replace a file. The only exception is an ARCO request of the holder or an upload error (RN-37): an administrator deletes or replaces the file (`POST /admin/guests/{id}/documents/{documentId}/deletion` and `PUT /admin/guests/{id}/documents/{documentId}`), and each action leaves an evidence entry with who and when (`GET /admin/guests/{id}/document-actions`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         post: operations["uploadOnboardingDocument"];
         delete?: never;
@@ -836,7 +845,10 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`). The guest does not choose the stay: the voucher belongs to the stay in force today, otherwise to the next one that has no pending or approved payment. */
+        /**
+         * Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`). The guest does not choose the stay: the voucher belongs to the stay in force today, otherwise to the next one that has no pending or approved payment.
+         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
         post: operations["uploadTemporaryVoucher"];
         delete?: never;
         options?: never;
@@ -3284,6 +3296,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotContractError"] | components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["EnvironmentInactiveError"] | components["schemas"]["EnvironmentOccupiedError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
@@ -3495,6 +3508,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
@@ -3923,6 +3937,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
@@ -4218,6 +4233,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["VoucherAlreadyExistsError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
