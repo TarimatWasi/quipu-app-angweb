@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.10.1 (TarimatWasi/quipu-lib-contracts), spec sha256 7a0cb85b86d3fce1b87e468e6a6d9e66572f71105ecc7db2c996904c114ac7bf.
+ * Generated from the BFF contract v0.11.0 (TarimatWasi/quipu-lib-contracts), spec sha256 ab23d31e15cc98be01ad979140c079272fceb989cd18aa1c69accebc64d240af.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -193,6 +193,26 @@ export interface paths {
         put?: never;
         /** Reactivate a previously deactivated environment (RN-12) */
         post: operations["reactivateEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/administrators": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * An administrator creates another administrator (RF-22, CU-30)
+         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 administrators may exist (configurable). Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Deactivating administrators is out of scope (TAR-127).
+         */
+        post: operations["createAdministrator"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1197,6 +1217,24 @@ export interface components {
             emailSent: boolean;
             /** @description Spanish text ready to copy or to send by WhatsApp, with the password and the 30-minute notice */
             shareMessage: string;
+        };
+        /** @description Data of the new administrator plus the re-authentication of the creator (RF-22, D-34c) */
+        AdministratorInput: {
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /**
+             * Format: email
+             * @description Account email of the new administrator, where the access link goes
+             */
+            email: string;
+            /** @description Password of the administrator who creates the account */
+            currentPassword: string;
+        };
+        AdministratorCreated: {
+            /** Format: uuid */
+            id: string;
+            /** @description true if the access link was sent to the new administrator (best-effort) */
+            emailSent: boolean;
         };
         /** @description Minimal registration by the administrator (RN-31) */
         GuestInput: {
@@ -2666,6 +2704,51 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["ConcurrentModification"];
+        };
+    };
+    createAdministrator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdministratorInput"];
+            };
+        };
+        responses: {
+            /** @description Administrator created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdministratorCreated"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `ACCOUNT_DOCUMENT_TAKEN` (the document already belongs to an account, administrator or guest, `field: documentNumber`), `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to an account, `field: email`; a guest contact email is not an account email, D-33) or `ADMIN_LIMIT_REACHED` (the maximum number of administrators already exists) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listGuests: {
