@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.11.2 (TarimatWasi/quipu-lib-contracts), spec sha256 bc8c8eb44ee4d3f7377fb844fa7c3331acd19852e0e6dbfe252273d120c1ef28.
+ * Generated from the BFF contract v0.12.0 (TarimatWasi/quipu-lib-contracts), spec sha256 db6d48a57ad4f01ee95c1ee27aa32bfa1a900292c301561d5ec372d9e2237955.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -578,7 +578,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Income vs. expenses balance for a month (RF-18, CU-08) */
+        /**
+         * Income vs. expenses balance for a month (RF-18, CU-08)
+         * @description Income is the sum of the approved payments attributed to the month plus the fines of the month (RF-19); expenses are the expenses of the month (RF-07); `net` is income minus expenses. A contract payment belongs to its period; a stay payment belongs to the month the stay starts (D-68). Pending, rejected or cancelled payments do not count. Guests and environments count whether active or inactive. A month without movements answers zeros. Amounts in soles with two decimals.
+         */
         get: operations["getFinanceSummary"];
         put?: never;
         post?: never;
@@ -3610,6 +3613,7 @@ export interface operations {
     getFinanceSummary: {
         parameters: {
             query: {
+                /** @description Month to summarize, YYYY-MM with a year from 0001 to 9999 */
                 month: string;
             };
             header?: never;
@@ -3625,18 +3629,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @example 2026-09 */
+                        month: string;
+                        /** @description incomeFromPayments + incomeFromFines */
                         totalIncome: number;
+                        /** @description Approved contract and stay payments attributed to the month */
+                        incomeFromPayments: number;
+                        /** @description Fines of the month */
+                        incomeFromFines: number;
                         totalExpenses: number;
+                        /** @description totalIncome - totalExpenses; negative when expenses are higher */
                         net: number;
                     };
                 };
             };
-            /** @description Invalid month parameter */
+            /** @description `VALIDATION_ERROR` with `field: month` when it is missing, not a YYYY-MM month or its year is 0000 */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
