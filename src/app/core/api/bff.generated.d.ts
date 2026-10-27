@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.11.0 (TarimatWasi/quipu-lib-contracts), spec sha256 ab23d31e15cc98be01ad979140c079272fceb989cd18aa1c69accebc64d240af.
+ * Generated from the BFF contract v0.11.1 (TarimatWasi/quipu-lib-contracts), spec sha256 bb049e30e5a3c86626c1dc4c0301d0f09e3431ba79f9661c4bb5506b827dbea3.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -193,6 +193,26 @@ export interface paths {
         put?: never;
         /** Reactivate a previously deactivated environment (RN-12) */
         post: operations["reactivateEnvironment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/environments/{id}/account-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Payment status by period of the environment's current contract, admin view (RF-06, D-66)
+         * @description Every period of the environment's current contract (status `ACTIVE`, RN-07), classified as in `getGuestAccountStatus` (paid, pending review, unpaid or overdue by payment day plus grace days, RN-10), in the same order. An environment without a current contract (none, expired or terminated) answers an empty list. Works for active and inactive environments.
+         */
+        get: operations["getEnvironmentAccountStatus"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -2704,6 +2724,31 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["ConcurrentModification"];
+        };
+    };
+    getEnvironmentAccountStatus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status per period of the environment's current contract */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodStatus"][];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     createAdministrator: {
