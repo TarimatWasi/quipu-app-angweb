@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.9.2 (TarimatWasi/quipu-lib-contracts), spec sha256 579bca91740e9c6b7253434d2a8eafd0c6c2539df85fc6a125eb270f3078dff4.
+ * Generated from the BFF contract v0.10.0 (TarimatWasi/quipu-lib-contracts), spec sha256 ca7a05e474782350bd9e7a55dec520cbb0be95684ba1ece7c2c464437a8c0cab.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -619,10 +619,16 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List monthly fines (RF-19) */
+        /**
+         * List monthly fines (RF-19)
+         * @description Fines of the month, of any guest, active or inactive. The list is a plain array with no pagination: a month has few fines (RF-19).
+         */
         get: operations["listFines"];
         put?: never;
-        /** Register fine as income against a guest (RF-19, RN-30) */
+        /**
+         * Register fine as income against a guest (RF-19, RN-30)
+         * @description A fine is direct income of its month (RN-30): it takes no voucher and no approval, and it counts in the monthly balance as soon as it is created. It accepts any existing guest, active or inactive (a fine can be charged after the guest left). A fine is not edited: to change it, delete it and create it again (RN-24).
+         */
         post: operations["createFine"];
         delete?: never;
         options?: never;
@@ -640,7 +646,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
-        /** Delete fine — no audit restriction (RN-24) */
+        /**
+         * Delete fine — no audit restriction (RN-24)
+         * @description Deletes the fine for good (RN-24): it leaves the monthly balance at once. There is no edit operation; to correct a fine, delete it and create it again (RF-19, RN-30).
+         */
         delete: operations["deleteFine"];
         options?: never;
         head?: never;
@@ -1942,15 +1951,32 @@ export interface components {
             description?: string;
         };
         FineInput: {
-            /** Format: uuid */
+            /**
+             * Format: uuid
+             * @description Any existing guest, active or inactive
+             */
             guestId: string;
+            /** @description In soles, greater than 0, at most two decimals */
             amount: number;
+            /**
+             * @description Month the fine counts as income (RN-30)
+             * @example 2026-09
+             */
             month: string;
+            /** @description Optional; blank means none */
             description?: string;
         };
-        Fine: components["schemas"]["FineInput"] & {
+        /** @description A fine as the BFF answers it; the fields of `FineInput`, with the same constraints, plus its `id`. The description is left out when there is none. */
+        Fine: {
             /** Format: uuid */
             id: string;
+            /** Format: uuid */
+            guestId: string;
+            /** @description In soles, greater than 0, at most two decimals */
+            amount: number;
+            /** @example 2026-09 */
+            month: string;
+            description?: string;
         };
         /** @description An expense as the BFF answers it; the fields of `ExpenseInput`, with the same constraints, plus its `id`. The description is left out when there is none. */
         Expense: {
@@ -3720,7 +3746,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Fine list */
+            /** @description Fines of the month, not paginated */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3729,7 +3755,17 @@ export interface operations {
                     "application/json": components["schemas"]["Fine"][];
                 };
             };
+            /** @description `VALIDATION_ERROR` with `field: month` (missing, or not a YYYY-MM month) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
         };
     };
     createFine: {
@@ -3748,26 +3784,32 @@ export interface operations {
             /** @description Fine created */
             201: {
                 headers: {
+                    Location: components["headers"]["Location"];
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Fine"];
                 };
             };
-            /** @description Invalid amount or month */
+            /** @description `VALIDATION_ERROR` with its `field`: `guestId` missing or not a UUID, `amount` missing, not greater than 0, over 99999999.99 or with more than two decimals, `month` missing or not a YYYY-MM month, or `description` over 500 characters */
             400: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
             401: components["responses"]["NoSession"];
-            /** @description Guest not found */
+            403: components["responses"]["Forbidden"];
+            /** @description The guest does not exist (`RESOURCE_NOT_FOUND`) */
             404: {
                 headers: {
                     [name: string]: unknown;
                 };
-                content?: never;
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
             };
         };
     };
@@ -3782,7 +3824,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Fine deleted */
+            /** @description Fine deleted for good (RN-24) */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3790,7 +3832,16 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
-            404: components["responses"]["NotFound"];
+            403: components["responses"]["Forbidden"];
+            /** @description The fine does not exist (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
         };
     };
     getGuestAccountStatus: {
