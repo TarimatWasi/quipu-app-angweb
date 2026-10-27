@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.10.0 (TarimatWasi/quipu-lib-contracts), spec sha256 ca7a05e474782350bd9e7a55dec520cbb0be95684ba1ece7c2c464437a8c0cab.
+ * Generated from the BFF contract v0.10.1 (TarimatWasi/quipu-lib-contracts), spec sha256 7a0cb85b86d3fce1b87e468e6a6d9e66572f71105ecc7db2c996904c114ac7bf.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -425,6 +425,26 @@ export interface paths {
         };
         /** A guest's payment history, admin view (RF-10) — newest first, without the voucher URL (ask `getPayment` for it) */
         get: operations["listGuestPaymentsByAdmin"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/guests/{id}/account-status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * A guest's payment status by period, admin view (RF-06) — the same classification the guest sees in `getGuestAccountStatus`
+         * @description Every period of the guest's contracts, current or past, classified as in `getGuestAccountStatus` (paid, pending review, unpaid or overdue by payment day plus grace days, RN-10), in the same order. A guest without contracts, such as a temporary guest, answers an empty list. Works for active and inactive guests.
+         */
+        get: operations["getGuestAccountStatusByAdmin"];
         put?: never;
         post?: never;
         delete?: never;
@@ -3224,6 +3244,31 @@ export interface operations {
                 };
             };
             400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    getGuestAccountStatusByAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Status per period of the given guest */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PeriodStatus"][];
+                };
+            };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
