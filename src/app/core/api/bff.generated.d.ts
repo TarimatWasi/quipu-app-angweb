@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.11.1 (TarimatWasi/quipu-lib-contracts), spec sha256 bb049e30e5a3c86626c1dc4c0301d0f09e3431ba79f9661c4bb5506b827dbea3.
+ * Generated from the BFF contract v0.11.2 (TarimatWasi/quipu-lib-contracts), spec sha256 bc8c8eb44ee4d3f7377fb844fa7c3331acd19852e0e6dbfe252273d120c1ef28.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -2559,6 +2559,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createEnvironment: {
@@ -2593,6 +2594,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             409: components["responses"]["EnvironmentCodeTaken"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getEnvironment: {
@@ -2618,6 +2620,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     updateEnvironment: {
@@ -2668,6 +2671,7 @@ export interface operations {
                     } | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     deactivateEnvironment: {
@@ -2700,6 +2704,7 @@ export interface operations {
                     "application/json": components["schemas"]["EnvironmentOccupiedError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     reactivateEnvironment: {
@@ -2724,6 +2729,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["ConcurrentModification"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getEnvironmentAccountStatus: {
@@ -2749,6 +2755,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createAdministrator: {
@@ -2825,6 +2832,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createGuest: {
@@ -2872,6 +2880,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["GuestEmailTakenError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getGuestDetail: {
@@ -2897,6 +2906,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     updateGuest: {
@@ -2948,6 +2958,7 @@ export interface operations {
                     } | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     deactivateGuest: {
@@ -2980,6 +2991,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestHasActiveContractError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     reactivateGuest: {
@@ -3014,6 +3026,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestHasPendingDebtError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listGuestStays: {
@@ -3045,6 +3058,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createGuestStay: {
@@ -3085,6 +3099,7 @@ export interface operations {
                     "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotTemporaryError"] | components["schemas"]["StayOverlapError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     updateGuestStay: {
@@ -3125,6 +3140,7 @@ export interface operations {
                     "application/json": components["schemas"]["StayOverlapError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     generateGuestAccess: {
@@ -3201,6 +3217,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     replaceGuestDocument: {
@@ -3375,6 +3392,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getGuestAccountStatusByAdmin: {
@@ -3400,6 +3418,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listContracts: {
@@ -3428,6 +3447,8 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createContract: {
@@ -3484,7 +3505,7 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
-            /** @description The environment or the guest does not exist (`RESOURCE_NOT_FOUND`) */
+            /** @description The environment (`ENVIRONMENT_NOT_FOUND`) or the guest (`GUEST_NOT_FOUND`) does not exist */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3528,7 +3549,9 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
@@ -3553,6 +3576,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getAdminDashboard: {
@@ -3579,6 +3603,8 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getFinanceSummary: {
@@ -3613,6 +3639,8 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listPayments: {
@@ -3641,6 +3669,8 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createDirectPayment: {
@@ -3696,7 +3726,7 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
-            /** @description The guest or the stay does not exist (`RESOURCE_NOT_FOUND`) */
+            /** @description The guest (`GUEST_NOT_FOUND`) or the stay (`STAY_NOT_FOUND`) does not exist */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -3742,6 +3772,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
         };
     };
@@ -3795,6 +3826,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentAlreadyResolvedError"] | components["schemas"]["PaymentAlreadyExistsForPeriodError"] | components["schemas"]["PaymentPeriodNotPayableError"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listExpenses: {
@@ -3824,6 +3856,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createExpense: {
@@ -3852,6 +3885,7 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     deleteExpense: {
@@ -3875,6 +3909,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     updateExpense: {
@@ -3906,6 +3941,7 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             409: components["responses"]["ConcurrentModification"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     listFines: {
@@ -3939,6 +3975,7 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     createFine: {
@@ -3984,6 +4021,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     deleteFine: {
@@ -4015,6 +4053,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getGuestAccountStatus: {
