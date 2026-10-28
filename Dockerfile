@@ -11,7 +11,7 @@ ARG NG_APP_BFF_BASE_URL=""
 ENV NG_APP_BFF_BASE_URL=${NG_APP_BFF_BASE_URL}
 RUN npm run build
 
-FROM nginxinc/nginx-unprivileged:stable-alpine@sha256:ed04ec1ff34502c339ee5c3ae3f855442398edc1d05591e2b98981dcbbd20b1e
+FROM nginxinc/nginx-unprivileged:stable-alpine@sha256:f5116ed4606f3eb015dd4a8e28cb9b351476dc0ad4bc6e9f93b19cec130cdf03
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /build/dist/quipu-app-angweb/browser /usr/share/nginx/html
 # Usuario sin privilegios declarado de forma explícita (uid 101, el de la imagen base).
