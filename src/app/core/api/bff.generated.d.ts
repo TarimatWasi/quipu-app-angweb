@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.12.0 (TarimatWasi/quipu-lib-contracts), spec sha256 db6d48a57ad4f01ee95c1ee27aa32bfa1a900292c301561d5ec372d9e2237955.
+ * Generated from the BFF contract v0.14.0 (TarimatWasi/quipu-lib-contracts), spec sha256 07c0d737d848c9db64a0816a63ff193440739fc60185bbd2e3ad413634d09894.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -226,13 +226,57 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * List the administrators, active and inactive (RF-22, TAR-127)
+         * @description Every ADMIN account, active and inactive, ordered by `createdAt` (oldest first). Not paginated: there are never more than the configurable maximum of administrators (5). The document number comes masked and `self` marks the account of the session. Never cacheable (`Cache-Control: no-store`).
+         */
+        get: operations["listAdministrators"];
         put?: never;
         /**
          * An administrator creates another administrator (RF-22, CU-30)
-         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 administrators may exist (configurable). Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Deactivating administrators is out of scope (TAR-127).
+         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 administrators may exist (configurable). Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Administrators are listed with `listAdministrators` and deactivated or reactivated with `deactivateAdministrator` and `reactivateAdministrator` (TAR-127).
          */
         post: operations["createAdministrator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/administrators/{id}/deactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Deactivate an administrator (RF-22, TAR-127)
+         * @description Deactivates another ADMIN account, effective immediately: its session stops being valid from its next request on and it cannot log in until it is reactivated. Its history is kept. The caller re-authenticates with `currentPassword`, checked before anything else. An administrator cannot deactivate their own account (`ADMIN_SELF_DEACTIVATION`) and the last active administrator cannot be deactivated (`LAST_ACTIVE_ADMIN`): the system always keeps at least one active ADMIN. Deactivating an inactive administrator is idempotent: 204 and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
+         */
+        post: operations["deactivateAdministrator"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/administrators/{id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Reactivate a previously deactivated administrator (RF-22, TAR-127)
+         * @description Reactivates an inactive ADMIN account, effective immediately: it can log in again. The caller re-authenticates with `currentPassword`, checked before anything else. Reactivating an active administrator is idempotent: 204 and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
+         */
+        post: operations["reactivateAdministrator"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1259,6 +1303,40 @@ export interface components {
             /** @description true if the access link was sent to the new administrator (best-effort) */
             emailSent: boolean;
         };
+        /** @description An administrator in the list (TAR-127) */
+        AdministratorSummary: {
+            /** Format: uuid */
+            id: string;
+            documentType: components["schemas"]["DocumentType"];
+            /**
+             * @description Masked: only the last 3 characters are shown, every other one is replaced by `*`
+             * @example *****678
+             */
+            documentNumber: string;
+            /**
+             * Format: email
+             * @description Account email of the administrator
+             */
+            email: string;
+            /** @enum {string} */
+            status: "ACTIVE" | "INACTIVE";
+            /** Format: date-time */
+            createdAt: string;
+            /** @description true for the account of the session */
+            self: boolean;
+        };
+        /** @description Re-authentication of the administrator who deactivates or reactivates another one (TAR-127) */
+        AdministratorReauthentication: {
+            /** @description Password of the administrator who makes the change */
+            currentPassword: string;
+        };
+        /** @description The deactivation is refused so that the system keeps at least one active administrator (TAR-127) */
+        AdministratorDeactivationConflictError: {
+            /** @enum {string} */
+            code: "ADMIN_SELF_DEACTIVATION" | "LAST_ACTIVE_ADMIN";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
         /** @description Minimal registration by the administrator (RN-31) */
         GuestInput: {
             documentType: components["schemas"]["DocumentType"];
@@ -2221,6 +2299,26 @@ export interface components {
                 };
             };
         };
+        /** @description The id does not exist or is not an ADMIN account (`ADMIN_NOT_FOUND`); both cases answer the same `message` */
+        AdministratorNotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example {
+                 *       "code": "ADMIN_NOT_FOUND",
+                 *       "message": "El administrador no existe"
+                 *     }
+                 */
+                "application/json": {
+                    /** @enum {string} */
+                    code: "ADMIN_NOT_FOUND";
+                    /** @description User-facing message, in Spanish, ready to display in the UI */
+                    message: string;
+                };
+            };
+        };
         /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
         GuestDocumentNotFound: {
             headers: {
@@ -2761,6 +2859,60 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    listAdministrators: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The administrators */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example [
+                     *       {
+                     *         "id": "3f2b8c1e-7a4d-4e6b-9c0a-1d2e3f4a5b6c",
+                     *         "documentType": "DNI",
+                     *         "documentNumber": "*****678",
+                     *         "email": "admin.uno@example.com",
+                     *         "status": "ACTIVE",
+                     *         "createdAt": "2026-01-15T14:00:00Z",
+                     *         "self": true
+                     *       },
+                     *       {
+                     *         "id": "8a7b6c5d-4e3f-4a1b-8c2d-3e4f5a6b7c8d",
+                     *         "documentType": "CE",
+                     *         "documentNumber": "******321",
+                     *         "email": "admin.dos@example.com",
+                     *         "status": "INACTIVE",
+                     *         "createdAt": "2026-03-02T16:30:00Z",
+                     *         "self": false
+                     *       }
+                     *     ]
+                     */
+                    "application/json": components["schemas"]["AdministratorSummary"][];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            /** @description Not an administrator (`AUTH_FORBIDDEN`) or the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     createAdministrator: {
         parameters: {
             query?: never;
@@ -2803,6 +2955,95 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    deactivateAdministrator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdministratorReauthentication"];
+            };
+        };
+        responses: {
+            /** @description Administrator deactivated; deactivating an inactive one changes nothing */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["AdministratorNotFound"];
+            /** @description `ADMIN_SELF_DEACTIVATION` (the target is the account of the session) or `LAST_ACTIVE_ADMIN` (deactivating it would leave no active administrator) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "LAST_ACTIVE_ADMIN",
+                     *       "message": "No puedes desactivar al último administrador activo"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["AdministratorDeactivationConflictError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    reactivateAdministrator: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdministratorReauthentication"];
+            };
+        };
+        responses: {
+            /** @description Administrator reactivated; reactivating an active one changes nothing */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            404: components["responses"]["AdministratorNotFound"];
             429: components["responses"]["TooManyRequests"];
         };
     };
