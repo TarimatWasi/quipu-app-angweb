@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.14.0 (TarimatWasi/quipu-lib-contracts), spec sha256 07c0d737d848c9db64a0816a63ff193440739fc60185bbd2e3ad413634d09894.
+ * Generated from the BFF contract v0.15.1 (TarimatWasi/quipu-lib-contracts), spec sha256 af71cdbc11347fad43006eb73e0b4e208f9ce8de1ed1c21bb84136d38d9dcc1e.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -605,7 +605,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Administrator home summary (HU-A04, CU-04) */
+        /**
+         * Administrator home summary (HU-A04, CU-04)
+         * @description One state per active contract (its period of the current month, America/Lima, RN-10) and per temporary guest whose stay covers today: `PAID` counts as up to date, `UNDER_REVIEW` as under review, `UNPAID` not yet overdue as pending and `OVERDUE` as overdue (RN-06). The vouchers awaiting review come oldest first, at most 20; `pendingVouchersTotal` gives how many there are.
+         */
         get: operations["getAdminDashboard"];
         put?: never;
         post?: never;
@@ -1418,7 +1421,7 @@ export interface components {
             contactEmail?: string;
             emergencyContact?: components["schemas"]["EmergencyContact"];
         };
-        /** @description The guest edits their own data; every field is optional (RN-17) */
+        /** @description The guest edits their own data; every field is optional and an absent field keeps its value (RN-17). The document, the contract and the stays are not editable here. */
         ProfileUpdateInput: {
             name?: string;
             phone?: string;
@@ -3839,10 +3842,16 @@ export interface operations {
                 };
                 content: {
                     "application/json": {
+                        /** @description PAID */
                         paymentsUpToDate: number;
+                        /** @description UNDER_REVIEW */
+                        paymentsUnderReview: number;
+                        /** @description UNPAID, not yet overdue */
                         paymentsPending: number;
+                        /** @description OVERDUE */
                         paymentsOverdue: number;
                         pendingVouchers: components["schemas"]["PaymentSummary"][];
+                        pendingVouchersTotal: number;
                     };
                 };
             };
@@ -4492,6 +4501,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
             409: components["responses"]["GuestEmailTaken"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getOnboarding: {
@@ -4788,6 +4798,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
             409: components["responses"]["GuestEmailTaken"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
 }
