@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.15.1 (TarimatWasi/quipu-lib-contracts), spec sha256 af71cdbc11347fad43006eb73e0b4e208f9ce8de1ed1c21bb84136d38d9dcc1e.
+ * Generated from the BFF contract v0.16.1 (TarimatWasi/quipu-lib-contracts), spec sha256 56974d56f8ebc47a2271398f1f106f5d170ef4972667cf1f44dfc159cc8ebc90.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -398,6 +398,26 @@ export interface paths {
         head?: never;
         /** Correct the dates or the agreed amount of a stay (RN-17, CU-31) */
         patch: operations["updateGuestStay"];
+        trace?: never;
+    };
+    "/admin/guests/{id}/account-email": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set or change the account email of a guest, the one password recovery writes to (RF-16, D-76)
+         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive and must have a login account.
+         */
+        put: operations["setGuestAccountEmail"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/guests/{id}/access": {
@@ -1072,6 +1092,15 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
             field: string;
+        };
+        /** @description The email is already the account email of another account, administrator or guest (a guest contact email is not an account email, D-33) */
+        AccountEmailTakenError: {
+            /** @enum {string} */
+            code: "ACCOUNT_EMAIL_TAKEN";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** @enum {string} */
+            field: "contactEmail" | "email";
         };
         /** @description The contact email already belongs to another guest (D-33); the account email is independent */
         GuestEmailTakenError: {
@@ -2522,7 +2551,7 @@ export interface operations {
                     "application/json": components["schemas"]["ActivatedOnboardingSession"] | components["schemas"]["ActivatedActiveSession"];
                 };
             };
-            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired, revoked or already used token: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`; the token is not consumed) or `VALIDATION_ERROR` if a field is missing */
+            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired, revoked or already used token: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`: too short, too long or equal to a live link or temporary password of the account; the token is not consumed) or `VALIDATION_ERROR` if a field is missing */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2560,7 +2589,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `AUTH_WEAK_PASSWORD` (shorter than 8 characters or longer than 72 bytes) or `AUTH_PASSWORD_UNCHANGED` (same as the current one), both with `field: newPassword`; `VALIDATION_ERROR` if the field is missing */
+            /** @description `AUTH_WEAK_PASSWORD` (shorter than 8 characters, longer than 72 bytes, or equal to a live link or temporary password of the account) or `AUTH_PASSWORD_UNCHANGED` (same as the current one), both with `field: newPassword`; `VALIDATION_ERROR` if the field is missing */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2624,7 +2653,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired or already used code, or a disabled account: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`; the code is not consumed) or `VALIDATION_ERROR` if a field is missing */
+            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired or already used code, or a disabled account: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`: too short, too long or equal to a live link or temporary password of the account; the code is not consumed) or `VALIDATION_ERROR` if a field is missing */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -3118,13 +3147,13 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
-            /** @description `GUEST_INACTIVE` (the document belongs to an inactive guest, RN-12, RN-18), `GUEST_DOCUMENT_TAKEN` (the document belongs to an administrator account, D-34e) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) */
+            /** @description `GUEST_INACTIVE` (the document belongs to an inactive guest, RN-12, RN-18), `GUEST_DOCUMENT_TAKEN` (the document belongs to an administrator account, D-34e) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) or `ACCOUNT_EMAIL_TAKEN` (the contact email, case-insensitive, is already the account email of another account, administrator or guest; nothing is created, so the guest never ends up without an account email in silence, RF-02, D-77) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["GuestEmailTakenError"];
+                    "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["GuestEmailTakenError"] | components["schemas"]["AccountEmailTakenError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -3385,6 +3414,47 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StayOverlapError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    setGuestAccountEmail: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: email */
+                    email: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Account email saved (unchanged if it was already that one) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to another account, `field: email`), `GUEST_INACTIVE` (the guest is inactive, RN-12) or `GUEST_WITHOUT_ACCOUNT` (the guest has no login account yet) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AccountEmailTakenError"] | components["schemas"]["GuestInactiveError"] | components["schemas"]["Error"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
