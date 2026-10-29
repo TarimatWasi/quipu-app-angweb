@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.16.1 (TarimatWasi/quipu-lib-contracts), spec sha256 56974d56f8ebc47a2271398f1f106f5d170ef4972667cf1f44dfc159cc8ebc90.
+ * Generated from the BFF contract v0.16.3 (TarimatWasi/quipu-lib-contracts), spec sha256 b50926d2e29d8326d90a9c73429d23e7e344d3d4d6294dd5c1c2cbc26749450c.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -410,7 +410,7 @@ export interface paths {
         get?: never;
         /**
          * Set or change the account email of a guest, the one password recovery writes to (RF-16, D-76)
-         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive and must have a login account.
+         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive.
          */
         put: operations["setGuestAccountEmail"];
         post?: never;
@@ -491,7 +491,7 @@ export interface paths {
         put?: never;
         /**
          * Delete a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
-         * @description Only for an ARCO request of the holder or an upload error (RN-37). A `POST` with a JSON body instead of a `DELETE` with a body, because proxies and rewrites may drop the body of a `DELETE`. It deletes personal data irreversibly and a `POST` can be sent cross-site without a preflight, so it is under the same `Origin`/`Sec-Fetch-Site` check as the multipart routes (ADR-006, 403), and it only accepts `Content-Type: application/json` (anything else is a 415). Order and atomicity: (1) the object is deleted from the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE`, nothing is deleted and no evidence is written. An object that is already missing counts as deleted, so a retry never gets stuck in 503. (2) If it succeeds, in a single transaction the document row is deleted and the evidence entry (`DELETE`) is inserted; if that transaction fails the answer is 500 and the row stays, so the administrator repeats the action and it completes (idempotent: step 1 finds the object missing and goes on to step 2). Concurrency: of two actions on the same `documentId` (delete or replace) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`).
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). A `POST` with a JSON body instead of a `DELETE` with a body, because proxies and rewrites may drop the body of a `DELETE`. It deletes personal data irreversibly and a `POST` can be sent cross-site without a preflight, so it is under the same `Origin`/`Sec-Fetch-Site` check as the multipart routes (ADR-006, 403), and it only accepts `Content-Type: application/json` (anything else is a 415). Order and atomicity: (1) the object is deleted from the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE`, nothing is deleted and no evidence is written. An object that is already missing counts as deleted, so a retry never gets stuck in 503. (2) If it succeeds, in a single transaction the document row is deleted and the evidence entry (`DELETE`) is inserted; if that transaction fails the answer is 500 and the row stays, so the administrator repeats the action and it completes (idempotent: step 1 finds the object missing and goes on to step 2). Concurrency: of two actions on the same `documentId` (delete or replace) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete. A deletion of a document that is already deleted (another deletion won at the same time, or the document was deleted before) is answered 204 as well: the document is gone, and the evidence keeps only the first deletion (who asked, when and why); the repeated one writes nothing. A deletion that loses to a replacement gets 404 `RESOURCE_NOT_FOUND`, as does a document that never belonged to that guest. Never cacheable (`Cache-Control: no-store`).
          */
         post: operations["deleteGuestDocument"];
         delete?: never;
@@ -2351,7 +2351,7 @@ export interface components {
                 };
             };
         };
-        /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
+        /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`; for a deletion, only a replacement that won: an already deleted document is a 204). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
         GuestDocumentNotFound: {
             headers: {
                 [name: string]: unknown;
@@ -3448,13 +3448,13 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to another account, `field: email`), `GUEST_INACTIVE` (the guest is inactive, RN-12) or `GUEST_WITHOUT_ACCOUNT` (the guest has no login account yet) */
+            /** @description `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to another account, `field: email`) or `GUEST_INACTIVE` (the guest is inactive, RN-12) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailTakenError"] | components["schemas"]["GuestInactiveError"] | components["schemas"]["Error"];
+                    "application/json": components["schemas"]["AccountEmailTakenError"] | components["schemas"]["GuestInactiveError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -3605,7 +3605,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description File and row deleted, evidence entry recorded */
+            /** @description File and row deleted, evidence entry recorded; or the document was already deleted, and its first evidence entry stays as it was */
             204: {
                 headers: {
                     "Cache-Control": "no-store";
