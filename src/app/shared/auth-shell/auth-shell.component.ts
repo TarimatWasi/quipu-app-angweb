@@ -17,7 +17,6 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
         <div class="brand">
           <img class="emblem" ngSrc="emblema.png" priority alt="" width="132" height="132" />
           <p class="name">Quipu</p>
-          <p class="claim">Contratos, pagos y estadías de cada huésped, en un solo registro.</p>
         </div>
         <div class="band" aria-hidden="true"></div>
       </header>
@@ -65,14 +64,6 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
       line-height: 1;
       letter-spacing: -0.03em;
     }
-    .claim {
-      grid-column: 1 / -1;
-      max-width: 22ch;
-      margin: 1.25rem 0 0;
-      font-size: clamp(1.25rem, 1.9vw, 1.75rem);
-      line-height: 1.3;
-      text-wrap: balance;
-    }
     .band {
       height: 2.5rem;
       margin-inline: -2.25rem;
@@ -96,8 +87,7 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
         gap: 0.875rem;
         padding: 1rem 1.25rem 0;
       }
-      .quipu,
-      .claim {
+      .quipu {
         display: none;
       }
       .brand {
