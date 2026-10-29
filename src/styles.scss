@@ -125,6 +125,11 @@ a {
   }
 }
 
+// Los campos con contorno son transparentes: con fondo propio no dejan ver el tejido del acceso.
+.mat-mdc-form-field .mat-mdc-text-field-wrapper {
+  background: var(--mat-sys-surface);
+}
+
 // Error de la página (no de un campo): bloque en tono de error, sin borde.
 .quipu-alert {
   margin: 0 0 0.5rem;

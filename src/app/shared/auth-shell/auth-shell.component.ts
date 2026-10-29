@@ -76,6 +76,8 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
       display: grid;
       place-items: center;
       padding: 2.5rem 2rem;
+      /* La cenefa, muy tenue, como tejido de fondo (solo en el acceso). */
+      background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23141c18%22%20stroke-opacity%3D%220.07%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M0%2018%20L10%206%20L20%2018%20L30%206%20L40%2018%22%2F%3E%3Cpath%20d%3D%22M0%2034%20L10%2022%20L20%2034%20L30%2022%20L40%2034%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E');
     }
     @media (max-width: 47.5rem) {
       .frame {
