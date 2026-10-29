@@ -90,8 +90,8 @@ export const ACCOUNT_LOCKED_TEXT_ID = 'account-locked-text';
       display: grid;
       gap: 0.5rem;
       padding: 1rem 1.25rem;
-      border-radius: 12px;
-      background: var(--quipu-crema);
+      border-radius: 4px;
+      background: var(--mat-sys-surface-variant);
     }
     .remaining p {
       margin: 0;
