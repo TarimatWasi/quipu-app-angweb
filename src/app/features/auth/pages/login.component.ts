@@ -94,14 +94,12 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
       gap: 0.875rem;
       margin-bottom: 0.75rem;
       padding: 1rem 1.125rem;
-      border: 1px solid color-mix(in srgb, var(--mat-sys-error) 30%, transparent);
-      border-radius: 12px;
+      border-radius: 4px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
       font: var(--mat-sys-body-medium);
     }
     .lock-ok {
-      border-color: color-mix(in srgb, var(--mat-sys-primary) 30%, transparent);
       background: var(--mat-sys-primary-container);
       color: var(--mat-sys-on-primary-container);
     }

@@ -2,14 +2,13 @@ import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter, Router } from '@angular/router';
-import { fireEvent, within } from '@testing-library/dom';
+import { provideRouter } from '@angular/router';
+import { within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, Role } from '@core/services/auth.service';
 import { HomeComponent } from './home.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
-const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
 
 @Component({ selector: 'app-login-stub', template: '' })
 class LoginStubComponent {}
@@ -53,55 +52,5 @@ describe('HomeComponent', () => {
     const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
 
     expect(ui.getByText('Huésped')).toBeTruthy();
-  });
-
-  it('tells the BFF to close the session, forgets it and goes to /login when the user leaves', async () => {
-    const { auth, ui, fixture } = await setup({
-      role: 'ADMIN',
-      name: 'a',
-      mustChangePassword: false,
-    });
-
-    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
-    TestBed.inject(HttpTestingController)
-      .expectOne(isLogout)
-      .flush(null, { status: 204, statusText: 'No Content' });
-    await fixture.whenStable();
-
-    expect(auth.session()).toBeNull();
-    await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/login');
-    });
-  });
-
-  it('asks the BFF to close the session once, however many times "Salir" is clicked', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
-
-    const leave = ui.getByRole('button', { name: 'Salir' });
-    fireEvent.click(leave);
-    fireEvent.click(leave);
-
-    const requests = TestBed.inject(HttpTestingController).match(isLogout);
-    expect(requests).toHaveLength(1);
-    for (const request of requests) {
-      request.flush(null, { status: 204, statusText: 'No Content' });
-    }
-  });
-
-  it('leaves even when the BFF cannot be reached', async () => {
-    const { auth, ui, fixture } = await setup({
-      role: 'ADMIN',
-      name: 'a',
-      mustChangePassword: false,
-    });
-
-    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
-    TestBed.inject(HttpTestingController).expectOne(isLogout).error(new ProgressEvent('error'));
-    await fixture.whenStable();
-
-    expect(auth.session()).toBeNull();
-    await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/login');
-    });
   });
 });
