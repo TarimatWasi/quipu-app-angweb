@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.16.1 (TarimatWasi/quipu-lib-contracts), spec sha256 56974d56f8ebc47a2271398f1f106f5d170ef4972667cf1f44dfc159cc8ebc90.
+ * Generated from the BFF contract v0.18.1 (TarimatWasi/quipu-lib-contracts), spec sha256 339f20aa389508c196a8d075deb1bf4426906d089e7ecc8032ddabad8f32fd85.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -86,7 +86,7 @@ export interface paths {
         put?: never;
         /**
          * Change password — mandatory on first login (RF-12)
-         * @description `currentPassword` is optional only while the session still has the password change pending (first login with a temporary password) and required otherwise. On success the response sets a fresh `sessionToken` cookie without the pending mark. A new password equal to the current (or temporary) one is rejected.
+         * @description `currentPassword` is optional only while the session still has the password change pending (first login with a temporary password) and required otherwise (A0.6, any administrator or guest from the account menu). On success the response sets a fresh `sessionToken` cookie without the pending mark, and every other session of the account stops being valid (decided 2026-11-01). A new password equal to the current (or temporary) one is rejected. Rate limited per session user.
          */
         post: operations["changePassword"];
         delete?: never;
@@ -136,7 +136,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** List environments (RF-01) */
+        /**
+         * List environments (RF-01), with their occupancy (RN-20, TAR-237)
+         * @description Each environment says who occupies it today (a contract in force or a stay of a temporary guest), who comes next (a contract or a stay that starts later: A2 shows «Libre hasta …») and, when it is free, since when. With `freeFrom` and `freeTo` the list keeps only the environments free for the whole range, to choose one for a stay (A3.5) or a contract (A4.1); `freeTo` absent means open-ended (a contract without end date).
+         */
         get: operations["listEnvironments"];
         put?: never;
         /** Create environment (RF-01, CU-01) */
@@ -228,13 +231,13 @@ export interface paths {
         };
         /**
          * List the administrators, active and inactive (RF-22, TAR-127)
-         * @description Every ADMIN account, active and inactive, ordered by `createdAt` (oldest first). Not paginated: there are never more than the configurable maximum of administrators (5). The document number comes masked and `self` marks the account of the session. Never cacheable (`Cache-Control: no-store`).
+         * @description Every ADMIN account, active and inactive, ordered by `createdAt` (oldest first). Not paginated: the configurable maximum of administrators (5) counts only the active ones, so the list can hold more accounts than that maximum when some are inactive, but it stays small. The document number comes masked and `self` marks the account of the session. Never cacheable (`Cache-Control: no-store`).
          */
         get: operations["listAdministrators"];
         put?: never;
         /**
          * An administrator creates another administrator (RF-22, CU-30)
-         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 administrators may exist (configurable). Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Administrators are listed with `listAdministrators` and deactivated or reactivated with `deactivateAdministrator` and `reactivateAdministrator` (TAR-127).
+         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 active administrators may exist (configurable); inactive administrators do not count toward that maximum. Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Administrators are listed with `listAdministrators` and deactivated or reactivated with `deactivateAdministrator` and `reactivateAdministrator` (TAR-127).
          */
         post: operations["createAdministrator"];
         delete?: never;
@@ -274,7 +277,7 @@ export interface paths {
         put?: never;
         /**
          * Reactivate a previously deactivated administrator (RF-22, TAR-127)
-         * @description Reactivates an inactive ADMIN account, effective immediately: it can log in again. The caller re-authenticates with `currentPassword`, checked before anything else. Reactivating an active administrator is idempotent: 204 and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
+         * @description Reactivates an inactive ADMIN account, effective immediately: it can log in again. The caller re-authenticates with `currentPassword`, checked before anything else. Reactivating an active administrator is idempotent: 204 and nothing changes. Inactive administrators do not count toward the configurable maximum of administrators (5); reactivating one when that maximum of active administrators is already reached answers 409 `ADMIN_LIMIT_REACHED` and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
          */
         post: operations["reactivateAdministrator"];
         delete?: never;
@@ -396,7 +399,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Correct the dates or the agreed amount of a stay (RN-17, CU-31) */
+        /** Correct the environment, the dates or the agreed amount of a stay (RN-17, CU-31, TAR-237) */
         patch: operations["updateGuestStay"];
         trace?: never;
     };
@@ -410,7 +413,7 @@ export interface paths {
         get?: never;
         /**
          * Set or change the account email of a guest, the one password recovery writes to (RF-16, D-76)
-         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive and must have a login account.
+         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive.
          */
         put: operations["setGuestAccountEmail"];
         post?: never;
@@ -449,7 +452,7 @@ export interface paths {
         };
         /**
          * Documents the guest uploaded in the onboarding, with a short-lived signed link (RN-37, CU-27)
-         * @description Only the administrator sees these files. Each `url` is a signed R2 link that expires 5 minutes after the response; ask again for a new one. A document is never deleted or replaced, except on an ARCO request of the holder or an upload error (RN-37), only by an administrator and with evidence (`deleteGuestDocument`, `replaceGuestDocument`, `listGuestDocumentActions`).
+         * @description Only the administrator sees these files. Each `url` is a signed R2 link that expires 15 minutes after the response; ask again for a new one. A document is never deleted or replaced, except on an ARCO request of the holder or an upload error (RN-37), only by an administrator and with evidence (`deleteGuestDocument`, `replaceGuestDocument`, `listGuestDocumentActions`).
          */
         get: operations["listGuestDocuments"];
         put?: never;
@@ -470,7 +473,7 @@ export interface paths {
         get?: never;
         /**
          * Replace a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
-         * @description Only for an ARCO request of the holder or an upload error (RN-37). The fields `reason`, `requestedAt`, `requestChannel` and `note` follow the rules of `DocumentActionRequest`; an empty multipart field (`requestedAt=""`, `requestChannel=""`, `note=""` or whitespace only) counts as absent. A file over 5 MB is a 400 `DOCUMENT_INVALID_FILE`, never a 413. Order and atomicity: (1) the new object is uploaded to the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE` and nothing changes. (2) In a single transaction the document row is swapped for the new one (new `id`) and the evidence entry (`REPLACE`) is inserted; if the transaction fails the new object is deleted and nothing changes. (3) After the commit the old object is deleted, with a persistent retry; no row references it any more, so no new signed URL is issued for it. A signed URL already handed out for the old object (`listGuestDocuments`) may keep opening it until it expires (at most 5 minutes) or until the old object is deleted, whichever comes first. Concurrency: of two actions on the same `documentId` (replace or delete) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). The fields `reason`, `requestedAt`, `requestChannel` and `note` follow the rules of `DocumentActionRequest`; an empty multipart field (`requestedAt=""`, `requestChannel=""`, `note=""` or whitespace only) counts as absent. A file over 5 MB is a 400 `DOCUMENT_INVALID_FILE`, never a 413. Order and atomicity: (1) the new object is uploaded to the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE` and nothing changes. (2) In a single transaction the document row is swapped for the new one (new `id`) and the evidence entry (`REPLACE`) is inserted; if the transaction fails the new object is deleted and nothing changes. (3) After the commit the old object is deleted, with a persistent retry; no row references it any more, so no new signed URL is issued for it. A signed URL already handed out for the old object (`listGuestDocuments`) may keep opening it until it expires (at most 15 minutes) or until the old object is deleted, whichever comes first. Concurrency: of two actions on the same `documentId` (replace or delete) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         put: operations["replaceGuestDocument"];
         post?: never;
@@ -491,7 +494,7 @@ export interface paths {
         put?: never;
         /**
          * Delete a document of the guest on an ARCO request or an upload error, with evidence (RN-37)
-         * @description Only for an ARCO request of the holder or an upload error (RN-37). A `POST` with a JSON body instead of a `DELETE` with a body, because proxies and rewrites may drop the body of a `DELETE`. It deletes personal data irreversibly and a `POST` can be sent cross-site without a preflight, so it is under the same `Origin`/`Sec-Fetch-Site` check as the multipart routes (ADR-006, 403), and it only accepts `Content-Type: application/json` (anything else is a 415). Order and atomicity: (1) the object is deleted from the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE`, nothing is deleted and no evidence is written. An object that is already missing counts as deleted, so a retry never gets stuck in 503. (2) If it succeeds, in a single transaction the document row is deleted and the evidence entry (`DELETE`) is inserted; if that transaction fails the answer is 500 and the row stays, so the administrator repeats the action and it completes (idempotent: step 1 finds the object missing and goes on to step 2). Concurrency: of two actions on the same `documentId` (delete or replace) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete, and the loser gets 404 `RESOURCE_NOT_FOUND`. Never cacheable (`Cache-Control: no-store`).
+         * @description Only for an ARCO request of the holder or an upload error (RN-37). A `POST` with a JSON body instead of a `DELETE` with a body, because proxies and rewrites may drop the body of a `DELETE`. It deletes personal data irreversibly and a `POST` can be sent cross-site without a preflight, so it is under the same `Origin`/`Sec-Fetch-Site` check as the multipart routes (ADR-006, 403), and it only accepts `Content-Type: application/json` (anything else is a 415). Order and atomicity: (1) the object is deleted from the storage; if that fails the answer is 503 `FILE_STORAGE_UNAVAILABLE`, nothing is deleted and no evidence is written. An object that is already missing counts as deleted, so a retry never gets stuck in 503. (2) If it succeeds, in a single transaction the document row is deleted and the evidence entry (`DELETE`) is inserted; if that transaction fails the answer is 500 and the row stays, so the administrator repeats the action and it completes (idempotent: step 1 finds the object missing and goes on to step 2). Concurrency: of two actions on the same `documentId` (delete or replace) only one wins; the row is taken by `(guest_id, id)` with a row lock or a conditional delete. A deletion of a document that is already deleted (another deletion won at the same time, or the document was deleted before) is answered 204 as well: the document is gone, and the evidence keeps only the first deletion (who asked, when and why); the repeated one writes nothing. A deletion that loses to a replacement gets 404 `RESOURCE_NOT_FOUND`, as does a document that never belonged to that guest. Never cacheable (`Cache-Control: no-store`).
          */
         post: operations["deleteGuestDocument"];
         delete?: never;
@@ -557,6 +560,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/guests/{id}/payable-periods": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What the guest can pay or has pending, for a direct payment (A5.1, CU-14, CU-28, RN-27, RN-38)
+         * @description For a guest with a contract, every period its contracts charge up to the current month (RN-27) that is not paid; for a temporary guest, every stay without an approved payment. Each one says its state, what is due after the credit applied (RN-38) and, when a payment already exists (pending or rejected), its id: that one is completed in `correctPaymentByAdmin`, not with a new direct payment. Works for active and inactive guests (CU-28). Oldest first.
+         */
+        get: operations["listPayablePeriods"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/admin/contracts": {
         parameters: {
             query?: never;
@@ -566,7 +589,7 @@ export interface paths {
         };
         /**
          * List contracts with validity status (RF-09, CU-07)
-         * @description Newest first. The list carries no `fileUrl` (a signed URL per row would sign N files); ask `getContract` for the file of one contract. `status` is derived from the dates at the time of the request (America/Lima), so EXPIRED needs no job (RN-07).
+         * @description Newest first. The list carries no `fileUrl` (a signed URL per row would sign N files); ask `getContract` for the file of one contract. `status` is derived from the dates at the time of the request (America/Lima), so EXPIRED needs no job (RN-07). With `expiringSoon=true` only the ACTIVE contracts with 30 days or fewer to their end date come, ordered by end date, soonest first: A4 «Lo que toca ahora» (how many, whose and when) and its «Por vencer» filter take them from here, so the notice is right whatever page the list is on (D-27).
          */
         get: operations["listContracts"];
         put?: never;
@@ -627,7 +650,7 @@ export interface paths {
         };
         /**
          * Administrator home summary (HU-A04, CU-04)
-         * @description One state per active contract (its period of the current month, America/Lima, RN-10) and per temporary guest whose stay covers today: `PAID` counts as up to date, `UNDER_REVIEW` as under review, `UNPAID` not yet overdue as pending and `OVERDUE` as overdue (RN-06). The vouchers awaiting review come oldest first, at most 20; `pendingVouchersTotal` gives how many there are.
+         * @description One state per active contract (its period of the current month, America/Lima, RN-10) and per temporary guest whose stay covers today: `PAID` counts as up to date, `UNDER_REVIEW` as under review, `UNPAID` not yet overdue as pending and `OVERDUE` as overdue (RN-06). The vouchers awaiting review come oldest first, at most 20, as rows of the review queue (A5): who the guest is and its environment, without the amount; `pendingVouchersTotal` gives how many there are. `charges` are the rows of «Cobros del mes» (one per active contract and per stay in force today) and the other blocks feed «Lo que toca ahora» and «También pendiente» (A1, decided 2026-11-01): overdue charges, payments rejected and not yet corrected, refunds to register (RN-38, RN-39), contracts expiring in 30 days or less (RN-07) and guests that have not activated their account (RN-32).
          */
         get: operations["getAdminDashboard"];
         put?: never;
@@ -647,7 +670,7 @@ export interface paths {
         };
         /**
          * Income vs. expenses balance for a month (RF-18, CU-08)
-         * @description Income is the sum of the approved payments attributed to the month plus the fines of the month (RF-19); expenses are the expenses of the month (RF-07); `net` is income minus expenses. A contract payment belongs to its period; a stay payment belongs to the month the stay starts (D-68). Pending, rejected or cancelled payments do not count. Guests and environments count whether active or inactive. A month without movements answers zeros. Amounts in soles with two decimals.
+         * @description Income is the sum of the approved payments attributed to the month, by their verified amounts (RN-16), plus the fines of the month (RF-19), minus the refunds dated in the month (RN-39, TAR-240); expenses are the expenses of the month (RF-07); `net` is income minus expenses. Each part carries how many movements it adds up, for the A6 breakdown. A contract payment belongs to its period; a stay payment belongs to the month the stay starts (D-68). Pending, rejected or cancelled payments do not count. Guests and environments count whether active or inactive. A month without movements answers zeros. Amounts in soles with two decimals.
          */
         get: operations["getFinanceSummary"];
         put?: never;
@@ -667,13 +690,13 @@ export interface paths {
         };
         /**
          * Payment review queue (RF-05, CU-05) — oldest first, so the review is first in, first out
-         * @description Each row carries the guest, the environment (or the temporary mark), the period and the upload date, and no amount: the administrator compares the declared amount with the voucher in `getPayment` before resolving (RN-16, A5).
+         * @description Each row carries the guest, the environment (or the temporary mark), the period or the stay dates, the last submission date and a summary of the proofs (how many vouchers, whether there is cash), and no amount: the administrator compares the declared amounts with the proofs in `getPayment` before resolving (RN-16, A5). The queue is ordered by `submittedAt`, the last time the payment was sent: a rejected payment that the guest corrects and sends again enters the queue with its new date (TAR-239).
          */
         get: operations["listPayments"];
         put?: never;
         /**
-         * Register a direct payment (cash/manual) — admin uploads the voucher on the guest's behalf, auto-approved (RN-22, RN-23, CU-14). A voucher is always required, no exceptions (RN-22).
-         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         * Register a direct payment received by the administration (RN-23, CU-14, A5.1) — one or more proofs, vouchers or cash without a voucher (RN-22), approved at once with the amounts given as verified
+         * @description Only for a period or a stay that has no payment yet (TAR-239): one that is pending or rejected is completed in `correctPaymentByAdmin` (A5.2). The proofs must cover what is due (the monthly amount or the agreed amount, minus the credit applied, RN-38); a short payment is not registered (400 `VALIDATION_ERROR` with `field: proofs`). What is left over becomes credit for the next period, or a refund to register in Finanzas when it is the last period of a contract or a stay (RN-38, RN-39). Every proof is recorded as added by the administration. A guest that is not active can only pay periods it owes (CU-28, RN-27, RN-35). Rate limited per session user, checked before the files are read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         post: operations["createDirectPayment"];
         delete?: never;
@@ -690,8 +713,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Payment detail with the voucher to review (A5.2, RN-16)
-         * @description The voucher URL is signed when this is requested, expires in 15 minutes and forces the download
+         * Payment detail with its proofs to review (A5.2, RN-16, RN-22)
+         * @description Carries what is being paid (guest, environment, period or stay dates, the amount due after the credit applied, and whether it is the last period, which decides between credit and refund for what is left over, RN-38) and every proof with its declared and verified amounts and who added it. Each voucher's URL is signed when this is requested, expires in 15 minutes and forces the download; a cash proof has no file.
          */
         get: operations["getPayment"];
         put?: never;
@@ -700,10 +723,30 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Approve or reject a payment (RF-05, CU-05)
-         * @description A pending payment is resolved once. Rejecting does not close the period: the guest can upload a new voucher. A short payment is rejected with a reason and the guest uploads a voucher for the full amount (RN-16).
+         * Approve or reject a pending or rejected payment, with the verified amount of each proof (RF-05, CU-05, RN-16)
+         * @description Resolves a PENDING payment, or a REJECTED one that the administrator corrected (`correctPaymentByAdmin`) and decides on at once, without sending it back to the queue (decided 2026-10-31, TAR-239). To approve, send the verified amount of every proof: what is approved is their sum, which must cover what is due (the monthly amount or the agreed amount minus the credit applied); a short payment is rejected with a reason (RN-16). What is left over becomes credit or a refund to register (RN-38, RN-39). Rejecting keeps the proofs: the guest or the administrator adds or corrects them and the payment is sent again (RN-05). The reviewer is recorded and shown in the administrator's views (TAR-230).
          */
         patch: operations["resolvePayment"];
+        trace?: never;
+    };
+    "/admin/payments/{id}/proofs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Add or correct the proofs of a pending or rejected payment (A5.2, RN-05, RN-15, RN-22)
+         * @description Replaces the payment's set of proofs: every proof listed with its `id` is kept (its amount or method can change, and a new file replaces its voucher), every proof without `id` is added by the administration (a voucher of reference or cash), and every existing proof not listed is removed. The status does not change: a rejected payment stays REJECTED until `resolvePayment` approves or rejects it again (decided 2026-10-31, TAR-239). An approved payment cannot be corrected. Rate limited per session user, checked before the files are read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
+        put: operations["correctPaymentByAdmin"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/admin/expenses": {
@@ -786,6 +829,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/admin/refunds": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Refunds of a month (RF-24, A6 «Devoluciones»)
+         * @description The refunds Quipu made to guests whose date falls in the month: each one counts in the month of its date and is subtracted from that month's income (RN-39, RF-18). Newest first.
+         */
+        get: operations["listRefunds"];
+        put?: never;
+        /**
+         * Register a refund of Quipu to a guest (RF-24, RN-39, A6.5)
+         * @description Returns part or all of a guest's pending credit (RN-38): a partial refund is allowed and the rest stays pending. The amount cannot exceed the pending credit, also when two refunds are registered at the same time (the second one answers 400 with `field: amount`). In the MVP a refund is not edited nor deleted (decided 2026-10-29). Who and when are recorded; no personal data goes to the logs.
+         */
+        post: operations["createRefund"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Guests with credit to refund (RN-38, A6 and A1 notices)
+         * @description Credit that has no period left to be used in: the contract ended or is in its last period, or it came from a stay of a temporary guest. Oldest first, so A6.5 offers the oldest one. Not paginated: there are few at a time.
+         */
+        get: operations["listPendingCredits"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/guest/account-status": {
         parameters: {
             query?: never;
@@ -803,6 +890,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/guest/credit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own credit — what is left over to use or to be refunded (RN-38, RN-39, H1)
+         * @description The credit the guest has now and whether Quipu will refund it (no period left where to use it: the contract ended or this is its last period), plus the last refund made. The guest cannot ask for a refund while a period remains where to use the credit (decided 2026-11-01). H1 reads it instead of the payment history.
+         */
+        get: operations["getOwnCredit"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/guest/contract": {
         parameters: {
             query?: never;
@@ -810,7 +917,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Own contract, regardless of status — shown read-only even when EXPIRED or TERMINATED (CU-18, RN-26). A guest never loses visibility of their own contract; only the ability to act on it changes with status (e.g. voucher upload requires ACTIVE, see /guest/payments). */
+        /**
+         * Own contracts, regardless of status — shown read-only even when EXPIRED or TERMINATED (CU-18, RN-26). A guest never loses visibility of their own contract; only the ability to act on it changes with status (e.g. voucher upload requires ACTIVE, see /guest/payments).
+         * @description `current` is the contract in force today, or the one that starts first if none is running yet (RN-07), or the latest one if all ended. `next` is a renewal already loaded that starts after `current` ends (RN-20); H2 shows it below as «Tu próximo contrato» (decided 2026-10-31, TAR-237).
+         */
         get: operations["getOwnContract"];
         put?: never;
         post?: never;
@@ -827,14 +937,38 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Own payment history (RF-10, CU-19) — own record only (RN-09), newest first, without the voucher URL */
+        /**
+         * Own payment history (RF-10, CU-19, H4) — own record only (RN-09), newest first, without voucher URLs
+         * @description Each payment with its proofs (kind, method, declared and verified amount, who added it), what happened to it (sent, rejected with its reason, approved), what was left over and the credit it used (RN-38); the refunds Quipu made to the guest come as items of their own, by date (RN-39, label Devuelto). `creditBalance` is the credit the guest has right now. Who reviewed a payment is not shown to the guest (TAR-230).
+         */
         get: operations["listOwnPayments"];
         put?: never;
         /**
-         * Upload monthly payment voucher (RF-04, CU-17)
-         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         * Send the payment of a month with one or more proofs (RF-04, CU-17, H3, RN-22)
+         * @description A payment gathers from 1 to 5 proofs: vouchers (a file each) and cash without a voucher (RN-22). It is created PENDING. Rate limited per session user, checked before the files are read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         post: operations["uploadPaymentVoucher"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One own payment with its proofs (H3 read-only «Tu pago» and correction, RN-15) — without voucher URLs */
+        get: operations["getOwnPayment"];
+        /**
+         * Correct a rejected payment and send it again (H3 «Enviar de nuevo», RN-05)
+         * @description Replaces the payment's set of proofs as `correctPaymentByAdmin` does (listed with `id`: kept, with its amount, method or file changed; without `id`: added; not listed: removed) and sends it again: the payment goes back to PENDING with a new `submittedAt`. Only a REJECTED payment can be corrected; a pending one is read-only (RN-15). Rate limited per session user, checked before the files are read.
+         */
+        put: operations["correctOwnPayment"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -848,7 +982,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Own personal and contact data, the account email and the uploaded documents (H5, RN-17)
+         * @description What H5 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), the account email where the password recovery link goes (read-only: only the administration changes it, A3.9) and the documents uploaded during the onboarding or later (RN-37, `uploadOwnDocument`), without links: each one opens with `getOwnDocument` (TAR-241). Never cacheable.
+         */
+        get: operations["getOwnProfile"];
         put?: never;
         post?: never;
         delete?: never;
@@ -856,6 +994,46 @@ export interface paths {
         head?: never;
         /** Edit own personal and contact data (CU-20, RN-17) */
         patch: operations["updateOwnProfile"];
+        trace?: never;
+    };
+    "/guest/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload one more own document from «Mis datos» after the onboarding (RN-37, TAR-242)
+         * @description Same rules as the onboarding upload (`uploadOnboardingDocument`): one file per call, JPG, PNG or PDF of up to 5 MB checked by real content (SEC-07, RF-15), and at most 5 files per guest counting the ones of the onboarding (RN-37). Only for a guest whose onboarding is complete (RN-33); before that the guest uses the onboarding step. The guest can neither delete nor replace a file: an administrator does it on an ARCO request or an upload error, with evidence (`deleteGuestDocument`, `replaceGuestDocument`). Under the `Origin`/`Sec-Fetch-Site` check of the multipart routes (ADR-006). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
+        post: operations["uploadOwnDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open one own document with a short-lived signed link (RN-37, TAR-241)
+         * @description For «Ver documento» in «Mis datos». The document is looked up by `(guest_id of the session, documentId)`: a document of another guest, a deleted one or one that never existed answer the same 404 `RESOURCE_NOT_FOUND`, so the response never reveals whether another guest's document exists. `url` is a signed R2 link that expires 15 minutes after the response and is never stored; ask again for a new one. Never cacheable.
+         */
+        get: operations["getOwnDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/guest/onboarding": {
@@ -909,7 +1087,7 @@ export interface paths {
         put?: never;
         /**
          * Upload one optional document (RN-37, RF-15, CU-25)
-         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest never gets the file back: only the administrator sees it. The guest can neither delete nor replace a file. The only exception is an ARCO request of the holder or an upload error (RN-37): an administrator deletes or replaces the file (`POST /admin/guests/{id}/documents/{documentId}/deletion` and `PUT /admin/guests/{id}/documents/{documentId}`), and each action leaves an evidence entry with who and when (`GET /admin/guests/{id}/document-actions`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         * @description One file per call; repeat for more. At most 5 files per guest, each JPG, PNG or PDF of up to 5 MB, checked by real content (SEC-07). The guest opens their own files later from «Mis datos» with a short-lived signed link (`getOwnDocument`, TAR-241), never another guest's. The guest can neither delete nor replace a file. The only exception is an ARCO request of the holder or an upload error (RN-37): an administrator deletes or replaces the file (`POST /admin/guests/{id}/documents/{documentId}/deletion` and `PUT /admin/guests/{id}/documents/{documentId}`), and each action leaves an evidence entry with who and when (`GET /admin/guests/{id}/document-actions`). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         post: operations["uploadOnboardingDocument"];
         delete?: never;
@@ -985,10 +1163,34 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Upload the one-time payment voucher (RF-04, CU-22) — a stay allows exactly one voucher, pending or approved (RN-03: single non-recurring payment per stay). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`). The guest does not choose the stay: the voucher belongs to the stay in force today, otherwise to the next one that has no pending or approved payment.
-         * @description Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         * Send the single payment of a stay with one or more proofs (RF-04, CU-22, T2) — a stay has one payment (RN-03), which gathers from 1 to 5 proofs, vouchers or cash (RN-22). The guest keeps its record across visits and each visit is a stay (RN-13, RN-18, `POST /admin/guests/{id}/stays`). The guest does not choose the stay: the payment belongs to the stay in force today, otherwise to the next one that has no payment.
+         * @description Rate limited per session user, checked before the files are read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
          */
         post: operations["uploadTemporaryVoucher"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/payments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The payment of a stay with its proofs (T2 read-only «Tu pago» and correction, RN-15) — without voucher URLs
+         * @description The id comes from `paymentId` in `getTemporaryGuestPaymentStatus`; the temporary guest has no history (H4) yet.
+         */
+        get: operations["getOwnPaymentTemporary"];
+        /**
+         * Correct the rejected payment of a stay and send it again (T2 «Enviar de nuevo», RN-05)
+         * @description Same rules as `correctOwnPayment`.
+         */
+        put: operations["correctOwnPaymentTemporary"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1002,7 +1204,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Own personal and contact data, the account email and the uploaded documents (T3, RN-17)
+         * @description What T3 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), the account email where the password recovery link goes (read-only: only the administration changes it, A3.9) and the documents uploaded during the onboarding or later (RN-37, `uploadTemporaryOwnDocument`), without links: each one opens with `getTemporaryOwnDocument` (TAR-241). Never cacheable.
+         */
+        get: operations["getOwnProfileTemporary"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1012,6 +1218,46 @@ export interface paths {
         patch: operations["updateOwnProfileTemporary"];
         trace?: never;
     };
+    "/temporary-guest/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Upload one more own document from «Mis datos» after the onboarding (RN-37, TAR-242)
+         * @description Same rules as the onboarding upload (`uploadOnboardingDocument`): one file per call, JPG, PNG or PDF of up to 5 MB checked by real content (SEC-07, RF-15), and at most 5 files per guest counting the ones of the onboarding (RN-37). Only for a guest whose onboarding is complete (RN-33); before that the guest uses the onboarding step. The guest can neither delete nor replace a file: an administrator does it on an ARCO request or an upload error, with evidence (`deleteGuestDocument`, `replaceGuestDocument`). Under the `Origin`/`Sec-Fetch-Site` check of the multipart routes (ADR-006). Rate limited per session user, checked before the file is read: over the limit the answer is 429 `RATE_LIMITED` with a `Retry-After` header.
+         */
+        post: operations["uploadTemporaryOwnDocument"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/documents/{documentId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Open one own document with a short-lived signed link (RN-37, TAR-241)
+         * @description For «Ver documento» in «Mis datos». The document is looked up by `(guest_id of the session, documentId)`: a document of another guest, a deleted one or one that never existed answer the same 404 `RESOURCE_NOT_FOUND`, so the response never reveals whether another guest's document exists. `url` is a signed R2 link that expires 15 minutes after the response and is never stored; ask again for a new one. Never cacheable.
+         */
+        get: operations["getTemporaryOwnDocument"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -1019,14 +1265,22 @@ export interface components {
         PagedEnvironments: {
             content: components["schemas"]["Environment"][];
             nextCursor: components["schemas"]["NextCursor"];
+            /** @description Active environments free today and with nothing coming, across all pages (the A2 notice) */
+            freeCount: number;
         };
         PagedGuests: {
             content: components["schemas"]["GuestSummary"][];
             nextCursor: components["schemas"]["NextCursor"];
+            /** @description Guests pending activation across all pages, whatever the filters (the A3 notice «Lo que toca ahora», RN-33) */
+            pendingActivationCount: number;
+            /** @description Guests in onboarding across all pages, whatever the filters (the A3 notice, RN-36) */
+            onboardingCount: number;
         };
         PagedExpenses: {
             content: components["schemas"]["Expense"][];
             nextCursor: components["schemas"]["NextCursor"];
+            /** @description Expenses of the month, for «Mostrando X de Y» (A6, TAR-240) */
+            totalCount: number;
         };
         /** @description Value for `after` to get the next page; `null` when this is the last one */
         NextCursor: string | null;
@@ -1053,10 +1307,11 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
-        /** @description The environment has a contract in force (RN-12, RN-20). The `code` is always `ENVIRONMENT_OCCUPIED` */
+        /** @description The environment is occupied in those dates by a contract in force or a stay, now or later (RN-12, RN-20, TAR-237). `occupant` says by whom, for the dialog and its link. The `code` is always `ENVIRONMENT_OCCUPIED` */
         EnvironmentOccupiedError: {
             /** @enum {string} */
             code: "ENVIRONMENT_OCCUPIED";
+            occupant?: components["schemas"]["Occupant"];
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
@@ -1131,11 +1386,28 @@ export interface components {
             message: string;
             /** @description The periods owed, oldest first, so the UI can list them and offer the direct payment (RN-23) */
             periods: string[];
+            /** @description Everything owed with its amount, oldest first, including the unpaid stays of a temporary guest (TAR-237) */
+            debts?: {
+                period: string | null;
+                /** Format: uuid */
+                stayId: string | null;
+                /** Format: date */
+                stayStartDate: string | null;
+                /** Format: date */
+                stayEndDate: string | null;
+                amountDue: number;
+            }[];
         };
-        /** @description One visit of a temporary guest (RN-13); the stay of a guest is never edited into a new one, a new visit is a new row */
+        /** @description One visit of a temporary guest (RN-13); the stay of a guest is never edited into a new one, a new visit is a new row. It occupies its environment during its dates like a contract (RN-20, TAR-237); stays registered before carry no environment */
         Stay: {
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description null for a stay registered before TAR-237 («Sin ambiente»)
+             */
+            environmentId: string | null;
+            environmentCode: string | null;
             /** Format: date */
             startDate: string;
             /**
@@ -1145,8 +1417,28 @@ export interface components {
             endDate: string;
             /** @description In soles, greater than 0, at most two decimals */
             agreedAmount: number;
+            /**
+             * @description As in StayPaymentStatus: OVERDUE once the exit date passed without an approved payment (A3.2)
+             * @enum {string}
+             */
+            paymentStatus: "PAID" | "UNDER_REVIEW" | "UNPAID" | "OVERDUE";
+            /**
+             * Format: uuid
+             * @description Its payment, if any
+             */
+            paymentId: string | null;
+            /**
+             * Format: int64
+             * @description Optimistic-locking version (BE-SPR-DAT-13): A3.5 sends it back when correcting the stay; it grows with every change of the stay
+             */
+            readonly version: number;
         };
         StayInput: {
+            /**
+             * Format: uuid
+             * @description An active environment free for the whole stay (RN-20, TAR-237); see listEnvironments with freeFrom and freeTo
+             */
+            environmentId: string;
             /** Format: date */
             startDate: string;
             /**
@@ -1157,12 +1449,23 @@ export interface components {
             /** @description In soles, greater than 0, at most two decimals */
             agreedAmount: number;
         };
-        /** @description At least one field; the resulting dates must stay valid and may not overlap another stay of the guest */
+        /** @description The `version` loaded and at least one field; the resulting dates must stay valid and may not overlap another stay of the guest */
         StayUpdateInput: {
+            /**
+             * Format: int64
+             * @description The `version` the client loaded. When the record changed since, the answer is 409 CONCURRENT_MODIFICATION and nothing is saved (BE-SPR-DAT-13)
+             */
+            version: number;
+            /**
+             * Format: uuid
+             * @description Moves the stay to another free environment (RN-20)
+             */
+            environmentId?: string;
             /** Format: date */
             startDate?: string;
             /** Format: date */
             endDate?: string;
+            /** @description Can be corrected even when the stay has a payment: the review compares with the new amount (decided 2026-10-30) */
             agreedAmount?: number;
         };
         PagedStays: {
@@ -1196,6 +1499,62 @@ export interface components {
             type: "ROOM" | "CABIN";
             /** @enum {string} */
             status: "ACTIVE" | "INACTIVE";
+            /** @description Who occupies it today; null when free (derived from contracts and stays, RN-20) */
+            occupant: components["schemas"]["Occupant"] | (never | null);
+            /** @description A contract or a stay that starts after today; with occupant null, A2 shows «Libre hasta <startDate>» */
+            nextOccupant: components["schemas"]["Occupant"] | (never | null);
+            /**
+             * Format: date
+             * @description When it became free (end of the last contract or stay, or the creation of the environment); null when occupied
+             */
+            freeSince: string | null;
+            /**
+             * Format: date-time
+             * @description When it was deactivated; null when active
+             */
+            deactivatedAt?: string | null;
+            /**
+             * Format: int64
+             * @description Optimistic-locking version (BE-SPR-DAT-13): A2.4 sends it back in the PATCH; it grows with every change of the environment
+             */
+            readonly version: number;
+        };
+        /** @description A contract or a stay that occupies an environment (RN-20, TAR-237) */
+        Occupant: {
+            /** @enum {string} */
+            kind: "CONTRACT" | "STAY";
+            /** Format: uuid */
+            guestId: string;
+            guestName: string | null;
+            /**
+             * Format: uuid
+             * @description Set when kind=CONTRACT («Ver contrato vigente»)
+             */
+            contractId: string | null;
+            /**
+             * Format: uuid
+             * @description Set when kind=STAY («Ver huésped»)
+             */
+            stayId: string | null;
+            /** Format: date */
+            startDate: string;
+            /**
+             * Format: date
+             * @description null for a contract without end date
+             */
+            endDate: string | null;
+        };
+        /** @description The environment a guest occupies, with its validity (A3 column Ambiente) */
+        EnvironmentRef: {
+            code: string;
+            /** @enum {string} */
+            type: "ROOM" | "CABIN";
+            /** @enum {string} */
+            kind: "CONTRACT" | "STAY";
+            /** Format: date */
+            startDate: string;
+            /** Format: date */
+            endDate: string | null;
         };
         /** @description Session data answered by login, link activation and `GET /auth/me`, in one of four shapes: the administrator, a guest that must still set its password (temporary password), a guest in onboarding with the password already set (with the step to go to) or an active guest. `name` is the guest's name; while the guest has not completed the personal data step it is the document in text (for example "DNI 12345678") so the field is always there. */
         SessionInfo: components["schemas"]["AdminSession"] | components["schemas"]["GuestPasswordPendingSession"] | components["schemas"]["GuestOnboardingSession"] | components["schemas"]["GuestActiveSession"];
@@ -1339,6 +1698,8 @@ export interface components {
         AdministratorSummary: {
             /** Format: uuid */
             id: string;
+            /** @description Full name the administrator wrote when activating the account (A0.5); null while it has not activated it («Sin activar» in A7) */
+            name: string | null;
             documentType: components["schemas"]["DocumentType"];
             /**
              * @description Masked: only the last 3 characters are shown, every other one is replaced by `*`
@@ -1372,10 +1733,11 @@ export interface components {
         /** @description Minimal registration by the administrator (RN-31) */
         GuestInput: {
             documentType: components["schemas"]["DocumentType"];
+            /** @description A DNI is exactly 8 digits; a CE or a passport, letters, digits or hyphen. A DNI with another shape is 400 VALIDATION_ERROR with field documentNumber (TAR-237) */
             documentNumber: string;
             /** @enum {string} */
             type: "CONTRACT" | "TEMPORARY";
-            /** @description Optional, to notify the guest */
+            /** @description Optional, to notify the guest: digits, spaces and hyphens, with an optional + prefix */
             phone?: string;
             /**
              * Format: email
@@ -1428,14 +1790,19 @@ export interface components {
             /** @enum {boolean} */
             alreadyRegistered: true;
         };
-        /** @description Optional, never blocks guest registration (RN-29) */
+        /** @description Optional, never blocks guest registration (RN-29). The limits are those of its columns; a longer value or a field it does not define is 400 VALIDATION_ERROR with `field` = `emergencyContact.<name>`. */
         EmergencyContact: {
             name?: string;
             relationship?: string;
             phone?: string;
         };
-        /** @description What the administrator may change: the document, only while the guest is pending activation (RN-36). The stays of a temporary guest are managed through `/admin/guests/{id}/stays` (RN-13, RN-17). Personal and contact data are the guest's alone (RN-17). */
+        /** @description What the administrator may change: the document, only while the guest is pending activation (RN-36). The stays of a temporary guest are managed through `/admin/guests/{id}/stays` (RN-13, RN-17). Personal and contact data are the guest's alone (RN-17). Always with the `version` loaded and at least one field to change. */
         GuestUpdateInput: {
+            /**
+             * Format: int64
+             * @description The `version` the client loaded. When the record changed since, the answer is 409 CONCURRENT_MODIFICATION and nothing is saved (BE-SPR-DAT-13)
+             */
+            version: number;
             documentType?: components["schemas"]["DocumentType"];
             documentNumber?: string;
         };
@@ -1445,10 +1812,33 @@ export interface components {
             phone: string;
             /**
              * Format: email
-             * @description Optional; without it the password can only be recovered through the administrator (RF-16, RF-17)
+             * @description Optional contact email, independent of the account email used to recover the password (D-76, RF-16, A3.9)
              */
             contactEmail?: string;
             emergencyContact?: components["schemas"]["EmergencyContact"];
+        };
+        /** @description The guest's own data for «Mis datos» (H5, T3) */
+        OwnProfile: {
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            name: string;
+            phone: string | null;
+            /** Format: email */
+            contactEmail: string | null;
+            /** @description The fields of EmergencyContact, inline: an allOf with that schema would reject null (OAS 3.0.3). Null when the guest saved none (RN-29) */
+            emergencyContact: {
+                name?: string;
+                relationship?: string;
+                phone?: string;
+            } | null;
+            /**
+             * Format: email
+             * @description Where the password recovery link goes (RF-16); read-only for the guest, the administration changes it (A3.9). Null when it has none
+             */
+            accountEmail: string | null;
+            documents: components["schemas"]["GuestDocumentRef"][];
+            /** @description How many documents a guest may have (5, RN-37) */
+            documentsLimit: number;
         };
         /** @description The guest edits their own data; every field is optional and an absent field keeps its value (RN-17). The document, the contract and the stays are not editable here. */
         ProfileUpdateInput: {
@@ -1478,6 +1868,13 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             status: components["schemas"]["GuestStatus"];
             hasLoginAccess: boolean;
+            /** @description Environment it occupies (contract in force or stay, including a coming one), or the last one for an inactive guest; null without any (A3, TAR-237). Only in the administrator's lists */
+            environment?: components["schemas"]["EnvironmentRef"] | (never | null);
+            /**
+             * Format: date-time
+             * @description Only for a guest pending activation: when the unused access expires; in the past, A3 says «Acceso vencido» so the administrator regenerates it (A3.4). null otherwise. Only in the administrator's lists
+             */
+            accessExpiresAt?: string | null;
         };
         /**
          * @description Ordered onboarding progress of a guest (RN-33): the password is chosen, then the personal data saved, then the documents step finished or skipped, then the consent accepted (COMPLETED, which is what an ACTIVE guest always has). One value, so impossible combinations cannot be expressed.
@@ -1489,6 +1886,11 @@ export interface components {
         PendingGuestDetail: {
             /** Format: uuid */
             id: string;
+            /**
+             * Format: int64
+             * @description Optimistic-locking version (BE-SPR-DAT-13): A3.5 sends it back when correcting the document, the only edit of a pending guest (RN-36); it grows with every change of the guest
+             */
+            readonly version: number;
             documentType: components["schemas"]["DocumentType"];
             documentNumber: string;
             /** @description null until the guest completes the personal data step */
@@ -1498,6 +1900,8 @@ export interface components {
             hasLoginAccess: boolean;
             phone?: string | null;
             contactEmail?: string | null;
+            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
+            accountEmail?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1542,6 +1946,8 @@ export interface components {
             hasLoginAccess: boolean;
             phone?: string | null;
             contactEmail?: string | null;
+            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
+            accountEmail?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1585,6 +1991,8 @@ export interface components {
             hasLoginAccess: boolean;
             phone: string;
             contactEmail?: string | null;
+            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
+            accountEmail?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1628,6 +2036,8 @@ export interface components {
             hasLoginAccess: boolean;
             phone: string;
             contactEmail?: string | null;
+            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
+            accountEmail?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1671,6 +2081,8 @@ export interface components {
             hasLoginAccess: boolean;
             phone?: string | null;
             contactEmail?: string | null;
+            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
+            accountEmail?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1700,8 +2112,13 @@ export interface components {
             /** @enum {string} */
             status: "INACTIVE";
             onboardingProgress: components["schemas"]["OnboardingProgress"];
+            /**
+             * Format: date-time
+             * @description When it was deactivated (A3.2 «inactivo desde …», TAR-237)
+             */
+            deactivatedAt?: string | null;
         };
-        /** @description A document as the guest sees it, without a link: only the administrator can open the file (RN-37) */
+        /** @description A document in a list, without a link; the guest opens their own with `getOwnDocument` and the administrator with `listGuestDocuments` (RN-37) */
         GuestDocumentRef: {
             /** Format: uuid */
             id: string;
@@ -1712,7 +2129,7 @@ export interface components {
             /** Format: date-time */
             uploadedAt: string;
         };
-        /** @description A document as the administrator sees it: with a short-lived signed link (RN-37) */
+        /** @description A document with a short-lived signed link: the administrator gets it for any guest (`listGuestDocuments`) and the guest only for their own (`getOwnDocument`, TAR-241) (RN-37) */
         GuestDocument: {
             /** Format: uuid */
             id: string;
@@ -1722,7 +2139,7 @@ export interface components {
             sizeBytes: number;
             /** Format: date-time */
             uploadedAt: string;
-            /** @description R2 signed URL, expires 5 minutes after the response (RN-37) */
+            /** @description R2 signed URL, expires 15 minutes after the response (RN-37) */
             url: string;
             /** Format: date-time */
             urlExpiresAt: string;
@@ -1792,6 +2209,8 @@ export interface components {
              * @description The administrator who performed the action
              */
             actorId: string;
+            /** @description Name of that administrator (A3.8, TAR-237) */
+            actorName?: string;
             /** Format: date-time */
             performedAt: string;
         };
@@ -1864,6 +2283,14 @@ export interface components {
             environmentId: string;
             /** Format: uuid */
             guestId: string;
+            /** @description null while the guest has not given a name (TAR-237) */
+            guestName: string | null;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description «201»; with environmentType, «Habitación 201» (A4, A3.2, H2) */
+            environmentCode: string;
+            /** @enum {string} */
+            environmentType: "ROOM" | "CABIN";
             monthlyAmount: number;
             paymentDay: number;
             graceDays: number;
@@ -1876,8 +2303,22 @@ export interface components {
             endDate?: string | null;
             /** @enum {string} */
             status: "ACTIVE" | "EXPIRED" | "TERMINATED";
-            /** @description R2 signed URL, expires in 15 min; signed when the contract is requested, never stored */
-            fileUrl: string;
+            /** @description ACTIVE with 30 days or fewer to the end date (RF-09, D-27); false when open-ended (H2 «Próximo a vencer», TAR-237) */
+            expiringSoon: boolean;
+            /**
+             * Format: date
+             * @description When it was terminated (RN-21); null unless TERMINATED
+             */
+            terminatedAt: string | null;
+            /** @description The PDF of the contract (A4.2, H2) */
+            file: {
+                name: string;
+                sizeBytes: number;
+                /** Format: date-time */
+                uploadedAt: string;
+            };
+            /** @description R2 signed URL, expires in 15 min; signed when the contract is requested, never stored. null when the storage could not sign it: the rest of the contract still comes, and «Ver contrato» shows the storage notice (TAR-237) */
+            fileUrl: string | null;
         };
         /** @description A contract in a list, without the signed file URL */
         ContractSummary: {
@@ -1887,6 +2328,14 @@ export interface components {
             environmentId: string;
             /** Format: uuid */
             guestId: string;
+            /** @description null while the guest has not given a name (TAR-237) */
+            guestName: string | null;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @description «201»; with environmentType, «Habitación 201» (A4, A3.2, H2) */
+            environmentCode: string;
+            /** @enum {string} */
+            environmentType: "ROOM" | "CABIN";
             monthlyAmount: number;
             paymentDay: number;
             graceDays: number;
@@ -1901,6 +2350,11 @@ export interface components {
             status: "ACTIVE" | "EXPIRED" | "TERMINATED";
             /** @description ACTIVE with 30 days or fewer to the end date (RF-09, D-27); false when open-ended */
             expiringSoon: boolean;
+            /**
+             * Format: date
+             * @description When it was terminated (RN-21); null unless TERMINATED
+             */
+            terminatedAt: string | null;
         };
         PagedContracts: {
             content: components["schemas"]["ContractSummary"][];
@@ -1920,7 +2374,147 @@ export interface components {
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
         };
-        /** @description A payment without its voucher URL — what lists and the guest's own responses carry */
+        /**
+         * @description VOUCHER: an image or PDF (RF-15). CASH: an amount in cash without a voucher (RN-22)
+         * @enum {string}
+         */
+        ProofKind: "VOUCHER" | "CASH";
+        /** @description One proof of a payment being sent (RN-22). A VOUCHER points to its file with `fileIndex`, the position of the file in the `files` part (0-based); a CASH proof has no file */
+        ProofInput: {
+            kind: components["schemas"]["ProofKind"];
+            /** @description Declared amount of this proof, in soles (RN-16) */
+            amount: number;
+            /** @description Optional free text, e.g. Yape or transfer (RN-28); a CASH proof is recorded as cash */
+            method?: string;
+            /** @description Required for VOUCHER, absent for CASH */
+            fileIndex?: number;
+        };
+        /** @description One proof in a correction. With `id`, an existing proof of the payment that is kept (its amount or method can change, and `fileIndex` replaces its file); without `id`, a new proof */
+        ProofEdit: {
+            /** Format: uuid */
+            id?: string;
+            kind: components["schemas"]["ProofKind"];
+            amount: number;
+            method?: string;
+            /** @description Required for a new VOUCHER; optional for a kept one (replaces its file) */
+            fileIndex?: number;
+        };
+        /** @description Multipart body of `uploadPaymentVoucher`: the month, the proofs as a JSON part and their files */
+        GuestPaymentUpload: {
+            /**
+             * @description A month of the contract, up to the current month
+             * @example 2026-09
+             */
+            period: string;
+            proofs: components["schemas"]["ProofInput"][];
+            /** @description JPG/PNG/PDF, ≤5MB each, checked by content (RF-15); one per VOUCHER proof */
+            files?: string[];
+        };
+        /** @description Multipart body of `uploadTemporaryVoucher`: the proofs as a JSON part and their files */
+        StayPaymentUpload: {
+            proofs: components["schemas"]["ProofInput"][];
+            /** @description JPG/PNG/PDF, ≤5MB each, checked by content (RF-15); one per VOUCHER proof */
+            files?: string[];
+        };
+        /** @description Multipart body of `createDirectPayment`. Send exactly one of `period` (a guest with a contract) or `stayId` (a temporary guest, whose single payment belongs to a stay, RN-03) */
+        DirectPaymentUpload: {
+            /** Format: uuid */
+            guestId: string;
+            /** @example 2026-09 */
+            period?: string;
+            /** Format: uuid */
+            stayId?: string;
+            /**
+             * Format: date
+             * @description When the money was received; optional, by default the day of the registration; not in the future. It does not change the month the payment counts in (RF-18)
+             */
+            receivedOn?: string;
+            proofs: components["schemas"]["ProofInput"][];
+            /** @description JPG/PNG/PDF, ≤5MB each, checked by content (RF-15); one per VOUCHER proof */
+            files?: string[];
+        };
+        /** @description Multipart body of a correction: the whole new set of proofs as a JSON part and the new files */
+        ProofsCorrection: {
+            proofs: components["schemas"]["ProofEdit"][];
+            /** @description JPG/PNG/PDF, ≤5MB each, checked by content (RF-15) */
+            files?: string[];
+        };
+        /** @description The file of a voucher, without its URL */
+        ProofFileInfo: {
+            /** @description Sanitized file name */
+            name: string;
+            /** @enum {string} */
+            contentType: "image/jpeg" | "image/png" | "application/pdf";
+            sizeBytes: number;
+        };
+        /** @description A proof of a payment as its own guest sees it (no voucher URL) */
+        GuestProof: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ProofKind"];
+            method?: string | null;
+            /** @description What was declared for this proof, in soles */
+            declaredAmount: number;
+            /** @description What the administrator verified (RN-16); null until the payment is approved */
+            verifiedAmount: number | null;
+            /**
+             * @description Who added the proof (RN-22)
+             * @enum {string}
+             */
+            uploadedBy: "GUEST" | "ADMIN";
+            /** Format: date-time */
+            addedAt: string;
+            /**
+             * Format: date
+             * @description When the administration received the money (direct payments only)
+             */
+            receivedOn?: string | null;
+            /** @description null for CASH */
+            file?: components["schemas"]["ProofFileInfo"] | (never | null);
+        };
+        /** @description A proof of a payment in the administrator's detail, with its signed voucher URL */
+        AdminProof: {
+            /** Format: uuid */
+            id: string;
+            kind: components["schemas"]["ProofKind"];
+            method?: string | null;
+            declaredAmount: number;
+            verifiedAmount: number | null;
+            /** @enum {string} */
+            uploadedBy: "GUEST" | "ADMIN";
+            /** Format: date-time */
+            addedAt: string;
+            /** Format: date */
+            receivedOn?: string | null;
+            /** @description null for CASH */
+            file?: components["schemas"]["ProofFileInfo"] | (never | null);
+            /** @description R2 signed URL, expires in 15 min, forces the download; null for CASH */
+            fileUrl: string | null;
+        };
+        /** @description One decision on a payment (payment_reviews) */
+        PaymentReview: {
+            /** @enum {string} */
+            decision: "APPROVED" | "REJECTED";
+            reason?: string | null;
+            /** Format: date-time */
+            at: string;
+        };
+        /** @description The administrator who resolved a payment (TAR-230); only in the administrator's views */
+        ReviewerRef: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+        };
+        /** @description What was left over when the payment was approved (RN-38, RN-39) */
+        PaymentSurplus: {
+            amount: number;
+            /**
+             * @description CREDIT: discounted from the next period. REFUND_PENDING / REFUNDED: last period of a contract or a stay, returned by Quipu
+             * @enum {string}
+             */
+            outcome: "CREDIT" | "REFUND_PENDING" | "REFUNDED";
+        };
+        /** @description A payment without its proofs' URLs — what lists and the guest's own responses carry */
         PaymentSummary: {
             /** Format: uuid */
             id: string;
@@ -1941,16 +2535,29 @@ export interface components {
              * @example 2026-09
              */
             period: string | null;
-            /** @description Declared amount, in soles */
+            /** @description Sum of the declared amounts of its proofs, in soles */
             amount: number;
-            /** @description Free text per payment (RN-28) */
+            /** @description Sum of the verified amounts (RN-16); null until approved */
+            verifiedAmount: number | null;
+            /**
+             * @deprecated
+             * @description Method of its first proof; each proof carries its own method now (TAR-239)
+             */
             paymentMethod?: string | null;
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
             /** @description Shown to the guest in the app only, never by email (D-34d) */
             rejectionReason?: string | null;
+            proofCount: number;
+            voucherCount: number;
+            hasCash: boolean;
             /** Format: date-time */
             reviewedAt?: string | null;
+            /**
+             * Format: date-time
+             * @description Last time it was sent (a corrected payment is sent again)
+             */
+            submittedAt: string;
             /** Format: date-time */
             createdAt: string;
         } & (({
@@ -1969,31 +2576,58 @@ export interface components {
         } & {
             [key: string]: unknown;
         }));
-        /** @description A payment with its signed voucher URL (admin detail, `getPayment`) */
+        /** @description A payment in the administrator's detail (`getPayment`): what is being paid, its proofs with their signed URLs and its reviews (A5.2, TAR-239) */
         Payment: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             guestId: string;
+            /** @description null while the guest has not given a name in the onboarding */
+            guestName: string | null;
+            documentNumber: string;
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            /** @description null for a stay without environment (TAR-237) */
+            environmentCode: string | null;
             /** Format: uuid */
             contractId: string | null;
             /** Format: uuid */
             stayId: string | null;
             /** @example 2026-09 */
             period: string | null;
-            /** @description Declared amount, in soles */
+            /**
+             * Format: date
+             * @description Stay dates; null for a guest with a contract
+             */
+            stayStartDate: string | null;
+            /** Format: date */
+            stayEndDate: string | null;
+            /** @description Monthly amount of the contract or agreed amount of the stay */
+            expectedAmount: number;
+            /** @description Credit of the guest discounted from this period (RN-38); 0 for a stay */
+            creditApplied: number;
+            /** @description expectedAmount - creditApplied: what the verified sum must cover to approve */
+            amountDue: number;
+            /** @description Last period of the contract, or a stay: what is left over is refunded instead of kept as credit (RN-38) */
+            lastPeriod: boolean;
+            /** @description Sum of the declared amounts */
             amount: number;
-            /** @description Free text per payment (RN-28) */
-            paymentMethod?: string | null;
+            verifiedAmount: number | null;
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
             rejectionReason?: string | null;
+            surplus?: components["schemas"]["PaymentSurplus"] | (never | null);
             /** Format: date-time */
             reviewedAt?: string | null;
-            /** @description R2 signed URL, expires in 15 min; signed when the payment is requested, never stored — every payment has a voucher, no exceptions (RN-22, includes admin-direct payments per RN-23) */
-            voucherUrl: string;
+            /** @description Who resolved it last (TAR-230); null while pending */
+            reviewedBy: components["schemas"]["ReviewerRef"] | (never | null);
+            /** Format: date-time */
+            submittedAt: string;
             /** Format: date-time */
             createdAt: string;
+            proofs: components["schemas"]["AdminProof"][];
+            /** @description Oldest first */
+            reviews: components["schemas"]["PaymentReview"][];
         } & (({
             contractId?: string;
             period?: string;
@@ -2014,6 +2648,175 @@ export interface components {
             content: components["schemas"]["PaymentSummary"][];
             nextCursor: components["schemas"]["NextCursor"];
         };
+        /** @description A row of «Cobros del mes» in A1 (TAR-236) */
+        DashboardCharge: {
+            /** Format: uuid */
+            guestId: string;
+            guestName: string | null;
+            documentType: components["schemas"]["DocumentType"];
+            documentNumber: string;
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            /** @description Null for an old stay without environment (TAR-237) */
+            environmentCode: string | null;
+            /** Format: uuid */
+            contractId: string | null;
+            /** Format: uuid */
+            stayId: string | null;
+            /** @description Period of a contract; null for a stay */
+            period: string | null;
+            /** Format: date */
+            stayStartDate: string | null;
+            /** Format: date */
+            stayEndDate: string | null;
+            /** @description Monthly amount or agreed amount of the stay, minus the credit applied (RN-38) */
+            amount: number;
+            /**
+             * Format: date
+             * @description Payment day of the period (RN-10) or the check-out date of the stay
+             */
+            dueDate: string;
+            /** @enum {string} */
+            status: "PAID" | "UNDER_REVIEW" | "UNPAID" | "OVERDUE";
+            /**
+             * Format: uuid
+             * @description The payment of the period, to open A5.2: the live one when UNDER_REVIEW, or the rejected one nobody corrected yet (paymentRejected). Null when the period has no payment
+             */
+            paymentId: string | null;
+            /** @description The period (UNPAID or OVERDUE) has a rejected payment not corrected yet (RN-05): A1 says «Pago rechazado» and offers «Corregir pago» (A5.2) instead of «Registrar pago», because the period already has its payment (RN-15) */
+            paymentRejected: boolean;
+        };
+        DashboardChargeRef: {
+            /** Format: uuid */
+            guestId: string;
+            guestName: string | null;
+            environmentCode: string | null;
+            period: string | null;
+            /** Format: date */
+            stayStartDate: string | null;
+            /** Format: date */
+            stayEndDate: string | null;
+            /** Format: date */
+            dueDate: string;
+            amount: number;
+        };
+        /** @description Overdue charges, of this month or earlier (RN-10, RN-25) */
+        DashboardOverdue: {
+            count: number;
+            total: number;
+            /** @description The oldest ones first */
+            first: components["schemas"]["DashboardChargeRef"][];
+        };
+        /** @description Payments rejected that nobody has corrected yet (RN-05, A5 Rechazados) */
+        DashboardRejected: {
+            count: number;
+            oldest: {
+                /** Format: uuid */
+                paymentId: string;
+                guestName: string | null;
+                period: string | null;
+                /** Format: date */
+                stayStartDate: string | null;
+                /** Format: date */
+                stayEndDate: string | null;
+                /** Format: date-time */
+                rejectedAt: string;
+            } | null;
+        };
+        /** @description Credit to refund (RN-38, RN-39); the detail is in GET /admin/credits?pending=true */
+        DashboardRefunds: {
+            /** @description Guests with credit to refund */
+            count: number;
+            total: number;
+        };
+        /** @description Active contracts that end in 30 days or less (RN-07, expiringSoon) */
+        DashboardExpiringContracts: {
+            count: number;
+            /** @description The one that ends first */
+            first: {
+                /** Format: uuid */
+                contractId: string;
+                guestName: string | null;
+                environmentCode: string;
+                /** Format: date */
+                endDate: string;
+            } | null;
+        };
+        /** @description Guests pending activation (RN-32, RN-36) */
+        DashboardGuestsNotActivated: {
+            count: number;
+            /** @description How many of them have their access expired */
+            expired: number;
+            /** @description An expired one first, otherwise the one whose access ends first */
+            first: {
+                /** Format: uuid */
+                guestId: string;
+                documentType: components["schemas"]["DocumentType"];
+                documentNumber: string;
+                /** Format: date-time */
+                accessExpiresAt: string | null;
+            } | null;
+        };
+        /** @description One own payment as the guest sees it (H3 «Tu pago», H4), without voucher URLs nor who reviewed it */
+        GuestPayment: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            contractId: string | null;
+            /** Format: uuid */
+            stayId: string | null;
+            period: string | null;
+            /** Format: date */
+            stayStartDate?: string | null;
+            /** Format: date */
+            stayEndDate?: string | null;
+            /** @enum {string} */
+            status: "PENDING" | "APPROVED" | "REJECTED";
+            /** @description Sum of the declared amounts */
+            amount: number;
+            verifiedAmount: number | null;
+            creditApplied: number;
+            amountDue: number;
+            surplus?: components["schemas"]["PaymentSurplus"] | (never | null);
+            rejectionReason?: string | null;
+            /** Format: date-time */
+            submittedAt: string;
+            /** Format: date-time */
+            createdAt: string;
+            proofs: components["schemas"]["GuestProof"][];
+            /** @description What happened, oldest first («Lo que pasó» in H4) */
+            reviews: components["schemas"]["PaymentReview"][];
+        };
+        /** @description A refund Quipu made to the guest (RN-39), shown in H4 with the label Devuelto */
+        GuestRefund: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date */
+            date: string;
+            method: string;
+            amount: number;
+            /**
+             * Format: uuid
+             * @description The payment whose surplus was refunded
+             */
+            fromPaymentId: string;
+            fromPeriod?: string | null;
+        };
+        /** @description An item of the guest's history: a payment or a refund, by `kind` */
+        GuestHistoryItem: {
+            /** @enum {string} */
+            kind: "PAYMENT" | "REFUND";
+            /** @description Set when kind=PAYMENT */
+            payment: components["schemas"]["GuestPayment"] | (never | null);
+            /** @description Set when kind=REFUND */
+            refund: components["schemas"]["GuestRefund"] | (never | null);
+        };
+        PagedGuestHistory: {
+            content: components["schemas"]["GuestHistoryItem"][];
+            nextCursor: components["schemas"]["NextCursor"];
+            /** @description Credit the guest has now, to be discounted from the next period (RN-38) */
+            creditBalance: number;
+        };
         /** @description A row of the review queue (A5); it does not show the amount */
         PaymentQueueItem: {
             /** Format: uuid */
@@ -2025,15 +2828,33 @@ export interface components {
             documentNumber: string;
             /** @enum {string} */
             guestType: "CONTRACT" | "TEMPORARY";
-            /** @description null for a temporary guest (shown as Temporal) */
+            /** @description Environment of the contract or of the stay (A5 column Ambiente, «C1»); null only for an old stay registered without environment (TAR-237) */
             environmentCode: string | null;
             /** @example 2026-09 */
             period: string | null;
+            /**
+             * Format: date
+             * @description Stay dates of a temporary guest («20 – 31 oct»); null for a contract
+             */
+            stayStartDate: string | null;
+            /** Format: date */
+            stayEndDate: string | null;
             /** @enum {string} */
             status: "PENDING" | "APPROVED" | "REJECTED";
+            proofCount: number;
+            /** @description With hasCash, the Comprobantes column («2 vouchers», «1 voucher y efectivo») */
+            voucherCount: number;
+            hasCash: boolean;
+            /** @description Who resolved it (TAR-230); null while pending */
+            reviewedBy?: components["schemas"]["ReviewerRef"] | (never | null);
             /**
              * Format: date-time
-             * @description When the voucher was uploaded
+             * @description Last time it was sent; orders the queue
+             */
+            submittedAt: string;
+            /**
+             * Format: date-time
+             * @description When the payment was first sent
              */
             createdAt: string;
         } & (({
@@ -2046,8 +2867,8 @@ export interface components {
         }) | ({
             /** @enum {string} */
             guestType?: "TEMPORARY";
-            /** @enum {string|null} */
-            environmentCode?: null;
+            /** @description The environment of the stay; null only for an old stay registered without environment */
+            environmentCode?: string | null;
             /** @enum {string|null} */
             period?: null;
         } & {
@@ -2069,15 +2890,33 @@ export interface components {
             dueDate: string;
             /** @description Monthly amount of the contract */
             amount: number;
+            /** @description Credit of the guest discounted from this period (RN-38), at most `amount` */
+            creditApplied: number;
+            /** @description amount - creditApplied: what is left to pay (H1 «S/ 750.00»). When the credit covers the whole period it is 0 and the period is PAID without a payment (`paymentId` null); the credit left passes on to the next period, month by month (RN-38, decided 2026-11-01) */
+            amountDue: number;
             /** Format: uuid */
             contractId: string;
             /**
              * Format: uuid
-             * @description The live or last payment of the period, if any
+             * @description The live or last payment of the period, if any; null for a period paid with credit only
              */
             paymentId?: string | null;
-            /** @description Reason of the last rejected voucher while no other payment is alive (D-34d); a rejected period stays UNPAID or OVERDUE */
+            /** @description Reason of the last rejection while the payment stays rejected (D-34d); a rejected period stays UNPAID or OVERDUE */
             rejectionReason?: string | null;
+        };
+        /** @description Credit of a guest with a contract (RN-38, RN-39) */
+        GuestCredit: {
+            /** @description Credit the guest has now; 0 when none */
+            balance: number;
+            /** @description true when no period is left where to use it, so Quipu refunds it (A6.5) */
+            toRefund: boolean;
+            /** @description The last refund Quipu made to the guest (H1 «Te devolvimos S/ 120.00 el 3 de noviembre por Yape») */
+            lastRefund: {
+                amount: number;
+                /** Format: date */
+                date: string;
+                method: string;
+            } | null;
         };
         /** @description Payment status of one stay of a temporary guest (CU-21) */
         StayPaymentStatus: {
@@ -2096,6 +2935,53 @@ export interface components {
             /** Format: uuid */
             paymentId?: string | null;
             rejectionReason?: string | null;
+            /** @description What was paid over the agreed amount: a stay keeps no credit, it is refunded (RN-38, RN-39, T1) */
+            surplus: {
+                amount: number;
+                /** @enum {string} */
+                refundStatus: "PENDING" | "REFUNDED";
+                /** Format: date */
+                refundedOn?: string | null;
+                refundMethod?: string | null;
+            } | null;
+        };
+        /** @description A period or a stay of the guest for a direct payment (A5.1) */
+        PayablePeriod: {
+            /** Format: uuid */
+            contractId: string | null;
+            period: string | null;
+            /** Format: uuid */
+            stayId: string | null;
+            /** Format: date */
+            stayStartDate: string | null;
+            /** Format: date */
+            stayEndDate: string | null;
+            /**
+             * @description UNPAID and OVERDUE take a direct payment; UNDER_REVIEW and REJECTED are completed in A5.2
+             * @enum {string}
+             */
+            status: "UNPAID" | "OVERDUE" | "UNDER_REVIEW" | "REJECTED";
+            /**
+             * Format: date
+             * @description Payment day of the period, or exit date of the stay
+             */
+            dueDate: string;
+            expectedAmount: number;
+            creditApplied: number;
+            amountDue: number;
+            lastPeriod: boolean;
+            /**
+             * Format: uuid
+             * @description Set when UNDER_REVIEW or REJECTED
+             */
+            paymentId: string | null;
+        };
+        /** @description The payment cannot be corrected in its state: the guest corrects only a REJECTED payment, the administrator a PENDING or REJECTED one. The `code` is always `PAYMENT_NOT_CORRECTABLE` */
+        PaymentNotCorrectableError: {
+            /** @enum {string} */
+            code: "PAYMENT_NOT_CORRECTABLE";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
         };
         /** @description A voucher is already pending for the period or the stay (RN-15, RN-03). The `code` is always `VOUCHER_ALREADY_EXISTS` */
         VoucherAlreadyExistsError: {
@@ -2124,6 +3010,78 @@ export interface components {
             code: "PAYMENT_PERIOD_NOT_PAYABLE";
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
+        };
+        RefundInput: {
+            /** Format: uuid */
+            guestId: string;
+            /** @description In soles; at most the pending credit of the guest (RN-38) */
+            amount: number;
+            /**
+             * Format: date
+             * @description When the money was returned; not in the future. The refund counts in this date's month (RN-39)
+             */
+            date: string;
+            /** @description Free text, e.g. Yape or transfer; required (RN-39) */
+            method: string;
+            /** @description Optional; blank means none */
+            note?: string;
+        };
+        /** @description A refund as the BFF answers it, with the guest it went to */
+        Refund: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            guestId: string;
+            guestName: string | null;
+            /** @description The environment of the contract or stay the credit came from; null for a stay without environment (TAR-237) */
+            environmentCode: string | null;
+            amount: number;
+            /** Format: date */
+            date: string;
+            method: string;
+            note?: string | null;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        PagedRefunds: {
+            content: components["schemas"]["Refund"][];
+            nextCursor: components["schemas"]["NextCursor"];
+            /** @description Refunds of the month, for «Mostrando X de Y» */
+            totalCount: number;
+        };
+        /** @description Credit of a guest that has to be refunded (RN-38) */
+        PendingCredit: {
+            /** Format: uuid */
+            guestId: string;
+            guestName: string | null;
+            /** @enum {string} */
+            guestType: "CONTRACT" | "TEMPORARY";
+            environmentCode: string | null;
+            /** @description Pending credit, after any partial refund */
+            amount: number;
+            /** @description Where the credit came from («Sobró del pago de octubre; su contrato terminó el 15 oct») */
+            origin: {
+                /** Format: uuid */
+                paymentId: string;
+                period: string | null;
+                /** Format: date */
+                stayStartDate: string | null;
+                /** Format: date */
+                stayEndDate: string | null;
+                /**
+                 * Format: date
+                 * @description End or termination date when the contract is over; null otherwise
+                 */
+                contractEndedOn: string | null;
+            };
+        };
+        /** @description An edit of an expense (A6.1) is the whole expense again, with the `version` the client loaded */
+        ExpenseUpdateInput: components["schemas"]["ExpenseInput"] & {
+            /**
+             * Format: int64
+             * @description The `version` the client loaded. When the expense changed since, the answer is 409 CONCURRENT_MODIFICATION and nothing is saved (BE-SPR-DAT-13)
+             */
+            version: number;
         };
         ExpenseInput: {
             /**
@@ -2157,12 +3115,16 @@ export interface components {
             /** @description Optional; blank means none */
             description?: string;
         };
-        /** @description A fine as the BFF answers it; the fields of `FineInput`, with the same constraints, plus its `id`. The description is left out when there is none. */
+        /** @description A fine as the BFF answers it; the fields of `FineInput`, with the same constraints, plus its `id` and who it was charged to. The description is left out when there is none. */
         Fine: {
             /** Format: uuid */
             id: string;
             /** Format: uuid */
             guestId: string;
+            /** @description For the Multas table of A6 (TAR-240) */
+            guestName: string | null;
+            /** @description The guest's environment when the fine was charged, or its last one; null if it never had one */
+            environmentCode: string | null;
             /** @description In soles, greater than 0, at most two decimals */
             amount: number;
             /** @example 2026-09 */
@@ -2173,6 +3135,11 @@ export interface components {
         Expense: {
             /** Format: uuid */
             id: string;
+            /**
+             * Format: int64
+             * @description Optimistic-locking version (BE-SPR-DAT-13): A6.1 sends it back when editing; it grows with every change of the expense
+             */
+            readonly version: number;
             /**
              * @description UTILITIES: electricity, water, internet. MAINTENANCE: maintenance and repairs. CLEANING_SUPPLIES: cleaning and supplies. TAXES_FEES: taxes and fees (D-26)
              * @enum {string}
@@ -2234,7 +3201,7 @@ export interface components {
                 };
             };
         };
-        /** @description Two edits of the same record collided (optimistic locking, BE-SPR-DAT-13): the record changed after the client loaded it. The client reloads the record and retries. The `code` is always `CONCURRENT_MODIFICATION`. Applies to environments, guests and expenses */
+        /** @description Two edits of the same record collided (optimistic locking, BE-SPR-DAT-13): the record changed after the client loaded it. The edits of an environment (A2.4), a pending guest's document and a stay (A3.5) and an expense (A6.1) send back the `version` the client loaded, and a different one is this conflict; elsewhere it is a write that lost a race. The client reloads the record and retries. The `code` is always `CONCURRENT_MODIFICATION` */
         ConcurrentModification: {
             headers: {
                 [name: string]: unknown;
@@ -2317,7 +3284,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `AUTH_FORBIDDEN`: the session is not an administrator (RN-08), or the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin`, or they name another site (ADR-006). `replaceGuestDocument` is the sixth route of the exact set of multipart routes under that check: `createContract`, `createDirectPayment`, `uploadPaymentVoucher`, `uploadOnboardingDocument`, `uploadTemporaryVoucher` and `replaceGuestDocument`. `deleteGuestDocument` is the only JSON route under the same check, because it deletes personal data irreversibly */
+        /** @description `AUTH_FORBIDDEN`: the session is not an administrator (RN-08), or the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin`, or they name another site (ADR-006). `replaceGuestDocument` is one route of the exact set of multipart routes under that check: `createContract`, `createDirectPayment`, `uploadPaymentVoucher`, `uploadOnboardingDocument`, `uploadTemporaryVoucher`, `uploadOwnDocument`, `uploadTemporaryOwnDocument`, `replaceGuestDocument`, and the corrections of a payment (TAR-239): `correctPaymentByAdmin`, `correctOwnPayment` and `correctOwnPaymentTemporary`. `deleteGuestDocument` is the only JSON route under the same check, because it deletes personal data irreversibly */
         OriginCheckForbidden: {
             headers: {
                 [name: string]: unknown;
@@ -2351,7 +3318,7 @@ export interface components {
                 };
             };
         };
-        /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
+        /** @description The guest does not exist, the document does not belong to that guest, or a concurrent action on the same document won (`RESOURCE_NOT_FOUND`; for a deletion, only a replacement that won: an already deleted document is a 204). A single lookup by `(guest_id, id)` answers all cases with the same `message`, so the response does not reveal whether the guest or the document exists */
         GuestDocumentNotFound: {
             headers: {
                 [name: string]: unknown;
@@ -2599,6 +3566,16 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
+            /** @description `AUTH_INVALID_CREDENTIALS` with `field: currentPassword` when the current password is wrong (A0.6, as in the re-authentication of the administrators, TAR-127) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
         };
     };
     requestPasswordReset: {
@@ -2642,6 +3619,8 @@ export interface operations {
                     code: string;
                     /** @description At most 72 bytes in UTF-8 (bcrypt limit) */
                     newPassword: string;
+                    /** @description Full name of an administrator that activates the account created by another one (RF-22, A0.5, decided 2026-11-01): required while the account has no name, and ignored once it has one. The email of an account without name links to the administrator activation screen instead of the recovery one. */
+                    name?: string;
                 };
             };
         };
@@ -2653,7 +3632,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired or already used code, or a disabled account: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`: too short, too long or equal to a live link or temporary password of the account; the code is not consumed) or `VALIDATION_ERROR` if a field is missing */
+            /** @description `AUTH_INVALID_OR_EXPIRED_CODE` (unknown, expired or already used code, or a disabled account: one generic answer for all of them), `AUTH_WEAK_PASSWORD` (with `field: newPassword`: too short, too long or equal to a live link or temporary password of the account; the code is not consumed) or `VALIDATION_ERROR` if a field is missing (also `field: name` for an administrator account without name; the code is not consumed) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -2669,6 +3648,10 @@ export interface operations {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "INACTIVE" | "ALL";
+                /** @description First day the environment must be free */
+                freeFrom?: string;
+                /** @description Last day the environment must be free; requires `freeFrom` */
+                freeTo?: string;
                 /** @description Items per page, from 1 to 100. A value out of range is a 400 */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
@@ -2705,7 +3688,7 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
-                    /** @description Unique, e.g. "201". Surrounding spaces are ignored; at least one character is not a space */
+                    /** @description Unique, e.g. "201". Only letters, digits, space and . _ / - (decided 2026-10-31, TAR-237); surrounding spaces are ignored; at least one character is not a space */
                     code: string;
                     /** @enum {string} */
                     type: "ROOM" | "CABIN";
@@ -2768,6 +3751,12 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": {
+                    /**
+                     * Format: int64
+                     * @description The `version` the client loaded. When the environment changed since, the answer is 409 CONCURRENT_MODIFICATION and nothing is saved (BE-SPR-DAT-13)
+                     */
+                    version: number;
+                    /** @description Same rule as on creation */
                     code?: string;
                     /** @enum {string} */
                     type?: "ROOM" | "CABIN";
@@ -2828,7 +3817,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `ENVIRONMENT_OCCUPIED` (the environment has a contract in force, RN-12, RN-20) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            /** @description `ENVIRONMENT_OCCUPIED` (the environment has a contract in force or a stay, now or later, RN-12, RN-20) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2911,6 +3900,7 @@ export interface operations {
                      * @example [
                      *       {
                      *         "id": "3f2b8c1e-7a4d-4e6b-9c0a-1d2e3f4a5b6c",
+                     *         "name": "Rosa Quispe",
                      *         "documentType": "DNI",
                      *         "documentNumber": "*****678",
                      *         "email": "admin.uno@example.com",
@@ -2920,6 +3910,7 @@ export interface operations {
                      *       },
                      *       {
                      *         "id": "8a7b6c5d-4e3f-4a1b-8c2d-3e4f5a6b7c8d",
+                     *         "name": null,
                      *         "documentType": "CE",
                      *         "documentNumber": "******321",
                      *         "email": "admin.dos@example.com",
@@ -2978,7 +3969,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description `ACCOUNT_DOCUMENT_TAKEN` (the document already belongs to an account, administrator or guest, `field: documentNumber`), `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to an account, `field: email`; a guest contact email is not an account email, D-33) or `ADMIN_LIMIT_REACHED` (the maximum number of administrators already exists) */
+            /** @description `ACCOUNT_DOCUMENT_TAKEN` (the document already belongs to an account, administrator or guest, `field: documentNumber`), `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to an account, `field: email`; a guest contact email is not an account email, D-33) or `ADMIN_LIMIT_REACHED` (the maximum number of active administrators already exists; inactive administrators do not count) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3076,6 +4067,21 @@ export interface operations {
                 };
             };
             404: components["responses"]["AdministratorNotFound"];
+            /** @description `ADMIN_LIMIT_REACHED` (the maximum number of active administrators already exists; inactive administrators do not count) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ADMIN_LIMIT_REACHED",
+                     *       "message": "Ya hay 5 administradores, el máximo. Desactiva uno antes de crear otro."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -3085,6 +4091,8 @@ export interface operations {
                 type?: "CONTRACT" | "TEMPORARY";
                 /** @description CURRENT is every guest except the inactive ones (pending activation, onboarding and active) */
                 status?: "CURRENT" | "PENDING_ACTIVATION" | "ONBOARDING" | "ACTIVE" | "INACTIVE" | "ALL";
+                /** @description true: only guests without a contract in force, to choose one when loading a contract (A4.1, TAR-237) */
+                withoutContract?: boolean;
                 /** @description Items per page, from 1 to 100. A value out of range is a 400 */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
@@ -3366,13 +4374,13 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_TEMPORARY` (only temporary guests have stays) or `STAY_OVERLAP` (the dates cross another stay of the guest) */
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_TEMPORARY` (only temporary guests have stays), `STAY_OVERLAP` (the dates cross another stay of the guest) or `ENVIRONMENT_OCCUPIED` (the environment is taken in those dates by a contract or another stay, or it is inactive; message «El ambiente ya está ocupado en esas fechas», TAR-237) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotTemporaryError"] | components["schemas"]["StayOverlapError"];
+                    "application/json": components["schemas"]["GuestNotActiveError"] | components["schemas"]["GuestNotTemporaryError"] | components["schemas"]["StayOverlapError"] | components["schemas"]["EnvironmentOccupiedError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -3407,13 +4415,13 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `STAY_OVERLAP` (the new dates cross another stay of the guest) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
+            /** @description `STAY_OVERLAP` (the new dates cross another stay of the guest), `ENVIRONMENT_OCCUPIED` (the environment is taken in the new dates, TAR-237) or `CONCURRENT_MODIFICATION` (see the `ConcurrentModification` response) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["StayOverlapError"] | components["schemas"]["ConcurrentModificationError"];
+                    "application/json": components["schemas"]["StayOverlapError"] | components["schemas"]["EnvironmentOccupiedError"] | components["schemas"]["ConcurrentModificationError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -3448,13 +4456,13 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to another account, `field: email`), `GUEST_INACTIVE` (the guest is inactive, RN-12) or `GUEST_WITHOUT_ACCOUNT` (the guest has no login account yet) */
+            /** @description `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to another account, `field: email`) or `GUEST_INACTIVE` (the guest is inactive, RN-12) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AccountEmailTakenError"] | components["schemas"]["GuestInactiveError"] | components["schemas"]["Error"];
+                    "application/json": components["schemas"]["AccountEmailTakenError"] | components["schemas"]["GuestInactiveError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -3605,7 +4613,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description File and row deleted, evidence entry recorded */
+            /** @description File and row deleted, evidence entry recorded; or the document was already deleted, and its first evidence entry stays as it was */
             204: {
                 headers: {
                     "Cache-Control": "no-store";
@@ -3738,10 +4746,38 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    listPayablePeriods: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Periods or stays that can receive a payment, or that have one pending or rejected */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PayablePeriod"][];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     listContracts: {
         parameters: {
             query?: {
                 status?: "ACTIVE" | "EXPIRED" | "TERMINATED";
+                /** @description true: only ACTIVE contracts with 30 days or fewer to the end date, soonest first (implies status=ACTIVE; with another status the answer is 400 `VALIDATION_ERROR`) */
+                expiringSoon?: boolean;
                 /** @description Items per page, from 1 to 100. A value out of range is a 400 */
                 limit?: components["parameters"]["Limit"];
                 /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
@@ -3831,7 +4867,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_CONTRACT` (only a guest of type CONTRACT takes a contract, the temporary one has stays, RN-13), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25), `ENVIRONMENT_INACTIVE` (the environment is inactive and takes no new contract, RF-01) or `ENVIRONMENT_OCCUPIED` (the environment already has a contract in force, RN-20). The check order is: guest state, guest type, debt, environment state, environment occupancy */
+            /** @description `GUEST_NOT_ACTIVE` (the guest is not active, RN-35), `GUEST_NOT_CONTRACT` (only a guest of type CONTRACT takes a contract, the temporary one has stays, RN-13), `GUEST_HAS_PENDING_DEBT` (the guest owes periods, RN-25), `ENVIRONMENT_INACTIVE` (the environment is inactive and takes no new contract, RF-01) or `ENVIRONMENT_OCCUPIED` (the dates cross another contract not terminated or a stay of the environment, RN-20; a renewal that starts after the end of the contract in force is accepted, decided 2026-10-31). The check order is: guest state, guest type, debt, environment state, environment occupancy */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -3855,7 +4891,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Contract detail (never cacheable: it carries a freshly signed file URL) */
+            /** @description Contract detail (never cacheable: it carries a freshly signed file URL, null if the storage could not sign it) */
             200: {
                 headers: {
                     "Cache-Control": "no-store";
@@ -3869,7 +4905,6 @@ export interface operations {
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             429: components["responses"]["TooManyRequests"];
-            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     terminateContract: {
@@ -3920,8 +4955,15 @@ export interface operations {
                         paymentsPending: number;
                         /** @description OVERDUE */
                         paymentsOverdue: number;
-                        pendingVouchers: components["schemas"]["PaymentSummary"][];
+                        pendingVouchers: components["schemas"]["PaymentQueueItem"][];
                         pendingVouchersTotal: number;
+                        /** @description One per active contract (its period of the current month) and per stay in force today; not paginated (a few dozen at most) */
+                        charges: components["schemas"]["DashboardCharge"][];
+                        overdue: components["schemas"]["DashboardOverdue"];
+                        rejected: components["schemas"]["DashboardRejected"];
+                        refunds: components["schemas"]["DashboardRefunds"];
+                        expiringContracts: components["schemas"]["DashboardExpiringContracts"];
+                        guestsNotActivated: components["schemas"]["DashboardGuestsNotActivated"];
                     };
                 };
             };
@@ -3951,13 +4993,19 @@ export interface operations {
                     "application/json": {
                         /** @example 2026-09 */
                         month: string;
-                        /** @description incomeFromPayments + incomeFromFines */
+                        /** @description incomeFromPayments + incomeFromFines - refundsTotal (RN-11, RN-39) */
                         totalIncome: number;
-                        /** @description Approved contract and stay payments attributed to the month */
+                        /** @description Approved contract and stay payments attributed to the month, by their verified amounts */
                         incomeFromPayments: number;
+                        paymentsCount: number;
                         /** @description Fines of the month */
                         incomeFromFines: number;
+                        finesCount: number;
+                        /** @description Refunds dated in the month (RN-39) */
+                        refundsTotal: number;
+                        refundsCount: number;
                         totalExpenses: number;
+                        expensesCount: number;
                         /** @description totalIncome - totalExpenses; negative when expenses are higher */
                         net: number;
                     };
@@ -4016,31 +5064,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
-                     */
-                    file: string;
-                    /** Format: uuid */
-                    guestId: string;
-                    /** @example 2026-09 */
-                    period?: string;
-                    /** Format: uuid */
-                    stayId?: string;
-                    /** @description In soles, greater than 0, at most two decimals */
-                    amount: number;
-                    /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
-                    paymentMethod?: string;
-                } & ({
-                    period: string;
-                } | {
-                    stayId: string;
-                });
+                "multipart/form-data": components["schemas"]["DirectPaymentUpload"];
             };
         };
         responses: {
-            /** @description Payment registered, status APPROVED immediately (RN-23) */
+            /** @description Payment registered, status APPROVED immediately (RN-23), with each proof verified at its amount */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4049,7 +5077,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount, period, stayId, or both or neither of period and stayId) */
+            /** @description `VOUCHER_INVALID_FILE` (a file is not JPG, PNG or PDF by content, or is over 5 MB, RF-15; `field` names it, e.g. `proofs[1].file`) or `VALIDATION_ERROR` (any other field, with its `field`: amount, period, stayId, receivedOn, `proofs` when there are none, more than 5, or they do not cover what is due, `proofs[i].amount`, or both or neither of period and stayId) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4059,7 +5087,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            403: components["responses"]["Forbidden"];
+            403: components["responses"]["OriginCheckForbidden"];
             /** @description The guest (`GUEST_NOT_FOUND`) or the stay (`STAY_NOT_FOUND`) does not exist */
             404: {
                 headers: {
@@ -4069,7 +5097,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (an approved payment already exists for the period or the stay, RN-02) or `VOUCHER_ALREADY_EXISTS` (a voucher is still pending for it: resolve it first) */
+            /** @description `GUEST_NOT_ACTIVE` (RN-35; a guest that is not active and does not owe that period), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (an approved payment already exists for the period or the stay, RN-02) or `VOUCHER_ALREADY_EXISTS` (a payment is pending or rejected for it: complete it in `correctPaymentByAdmin`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4093,7 +5121,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Payment detail (never cacheable: it carries a freshly signed voucher URL) */
+            /** @description Payment detail (never cacheable: it carries freshly signed voucher URLs) */
             200: {
                 headers: {
                     "Cache-Control": "no-store";
@@ -4126,11 +5154,18 @@ export interface operations {
                     status: "APPROVED" | "REJECTED";
                     /** @description Required when status=REJECTED, not blank (RN-05); shown to the guest in the app only */
                     reason?: string;
+                    /** @description Required when status=APPROVED: one entry per proof of the payment, with what the administrator verified (RN-16) */
+                    proofs?: {
+                        /** Format: uuid */
+                        id: string;
+                        /** @description In soles; 0 when the proof turned out to be worthless */
+                        verifiedAmount: number;
+                    }[];
                 };
             };
         };
         responses: {
-            /** @description Payment resolved (without the voucher URL; ask `getPayment` for it) */
+            /** @description Payment resolved (without the voucher URLs; ask `getPayment` for them) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -4139,7 +5174,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description `PAYMENT_REASON_REQUIRED` (empty reason on rejection, RN-05) or `VALIDATION_ERROR` */
+            /** @description `PAYMENT_REASON_REQUIRED` (empty reason on rejection, RN-05) or `VALIDATION_ERROR` (`field: proofs` when approving without the verified amount of every proof of the payment, or when their sum does not cover what is due) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4151,7 +5186,7 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
-            /** @description `PAYMENT_ALREADY_RESOLVED` (the payment is no longer pending: another process resolved it first), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (approving it would leave two approved payments for the same period or stay) or `PAYMENT_PERIOD_NOT_PAYABLE` (approving a payment whose period the contract no longer charges, because it was terminated or expired first; the payment stays pending and can only be rejected with a reason) */
+            /** @description `PAYMENT_ALREADY_RESOLVED` (the payment is already approved: another process resolved it first), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (approving it would leave two approved payments for the same period or stay) or `PAYMENT_PERIOD_NOT_PAYABLE` (approving a payment whose period the contract no longer charges, because it was terminated or expired first; the payment can only be rejected with a reason) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4161,6 +5196,55 @@ export interface operations {
                 };
             };
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    correctPaymentByAdmin: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ProofsCorrection"];
+            };
+        };
+        responses: {
+            /** @description Proofs saved; the payment without the voucher URLs (ask `getPayment` for them) */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSummary"];
+                };
+            };
+            /** @description `VOUCHER_INVALID_FILE` (with the `field` of the file, RF-15) or `VALIDATION_ERROR` (`field: proofs` when there are none or more than 5, or `proofs[i].…`; an `id` that is not a proof of this payment is `proofs[i].id`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OriginCheckForbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description `PAYMENT_NOT_CORRECTABLE` (the payment is already approved) or `CONCURRENT_MODIFICATION` (the payment changed meanwhile, for example the guest sent it again) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentNotCorrectableError"] | components["schemas"]["ConcurrentModificationError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     listExpenses: {
@@ -4257,7 +5341,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ExpenseInput"];
+                "application/json": components["schemas"]["ExpenseUpdateInput"];
             };
         };
         responses: {
@@ -4390,6 +5474,109 @@ export interface operations {
             429: components["responses"]["TooManyRequests"];
         };
     };
+    listRefunds: {
+        parameters: {
+            query: {
+                month: string;
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of the refunds of the month */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedRefunds"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    createRefund: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RefundInput"];
+            };
+        };
+        responses: {
+            /** @description Refund registered; the month of its date is recalculated */
+            201: {
+                headers: {
+                    Location: components["headers"]["Location"];
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Refund"];
+                };
+            };
+            /** @description `VALIDATION_ERROR` with its `field`: `guestId`; `amount` (missing, not greater than 0, more than two decimals, or more than the pending credit of the guest); `date` (missing or in the future); `method` (missing, blank or over 50); `note` (over 500) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            /** @description The guest does not exist (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listPendingCredits: {
+        parameters: {
+            query: {
+                /** @description Only credit still to refund; `true` is the only value supported for now */
+                pending: true;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Pending credits, one per guest */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PendingCredit"][];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
     getGuestAccountStatus: {
         parameters: {
             query?: never;
@@ -4412,6 +5599,28 @@ export interface operations {
             403: components["responses"]["GuestAccessDenied"];
         };
     };
+    getOwnCredit: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own credit */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestCredit"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+        };
+    };
     getOwnContract: {
         parameters: {
             query?: never;
@@ -4421,14 +5630,17 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Own contract, whatever its status (never cacheable: it carries a freshly signed file URL) */
+            /** @description Own contracts (never cacheable: they carry freshly signed file URLs) */
             200: {
                 headers: {
                     "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Contract"];
+                    "application/json": {
+                        current: components["schemas"]["Contract"];
+                        next: components["schemas"]["Contract"] | (never | null);
+                    };
                 };
             };
             401: components["responses"]["NoSession"];
@@ -4440,7 +5652,6 @@ export interface operations {
                 };
                 content?: never;
             };
-            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     listOwnPayments: {
@@ -4463,7 +5674,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["PagedPayments"];
+                    "application/json": components["schemas"]["PagedGuestHistory"];
                 };
             };
             400: components["responses"]["ValidationFailed"];
@@ -4480,26 +5691,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
-                     */
-                    file: string;
-                    /**
-                     * @description A month of the contract, up to the current month
-                     * @example 2026-09
-                     */
-                    period: string;
-                    /** @description Declared amount, in soles; the administrator compares it with the voucher (RN-16) */
-                    amount: number;
-                    /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
-                    paymentMethod?: string;
-                };
+                "multipart/form-data": components["schemas"]["GuestPaymentUpload"];
             };
         };
         responses: {
-            /** @description Voucher uploaded, payment set to PENDING */
+            /** @description Payment sent, status PENDING */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4508,7 +5704,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount, period) */
+            /** @description `VOUCHER_INVALID_FILE` (a file is not JPG, PNG or PDF by content, or is over 5 MB, RF-15; `field` names it, e.g. `proofs[1].file`) or `VALIDATION_ERROR` (any other field, with its `field`: period, `proofs` when there are none or more than 5, `proofs[i].amount`, `proofs[i].fileIndex`) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4532,7 +5728,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the period is already approved, RN-02, D-28) or `VOUCHER_ALREADY_EXISTS` (a voucher is pending for this period, RN-15) */
+            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the period is already approved, RN-02, D-28) or `VOUCHER_ALREADY_EXISTS` (a payment is pending for this period, RN-15, or rejected: correct it with `correctOwnPayment`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4543,6 +5739,119 @@ export interface operations {
             };
             429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getOwnPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payment, with its proofs and reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestPayment"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description No payment with that id belongs to this guest (`RESOURCE_NOT_FOUND`, RN-09) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    correctOwnPayment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ProofsCorrection"];
+            };
+        };
+        responses: {
+            /** @description Payment sent again, status PENDING */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSummary"];
+                };
+            };
+            /** @description `VOUCHER_INVALID_FILE` (with the `field` of the file, RF-15) or `VALIDATION_ERROR` (`proofs` or `proofs[i].…`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description No payment with that id belongs to this guest (`RESOURCE_NOT_FOUND`, RN-09) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `PAYMENT_NOT_CORRECTABLE` (the payment is pending or approved, not rejected) or `GUEST_NOT_ACTIVE` (RN-35) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentNotCorrectableError"] | components["schemas"]["GuestNotActiveError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getOwnProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own profile */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnProfile"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
     updateOwnProfile: {
@@ -4572,6 +5881,107 @@ export interface operations {
             403: components["responses"]["GuestAccessDenied"];
             409: components["responses"]["GuestEmailTaken"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    uploadOwnDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Document stored; it appears in `documents` of the own profile */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocumentRef"];
+                };
+            };
+            /** @description `DOCUMENT_INVALID_FILE` (type or size not allowed, RF-15) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a TEMPORARY guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                    };
+                };
+            };
+            /** @description `DOCUMENT_LIMIT_REACHED` (the guest already has 5 files, RN-37) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getOwnDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document with its signed link */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocument"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description The document is not one of the session's guest (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
     getOnboarding: {
@@ -4782,21 +6192,11 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "multipart/form-data": {
-                    /**
-                     * Format: binary
-                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
-                     */
-                    file: string;
-                    /** @description Declared amount, in soles; the administrator compares it with the voucher (RN-16) */
-                    amount: number;
-                    /** @description Optional free text, e.g. Yape/transfer/cash (RN-28) */
-                    paymentMethod?: string;
-                };
+                "multipart/form-data": components["schemas"]["StayPaymentUpload"];
             };
         };
         responses: {
-            /** @description Voucher uploaded, payment set to PENDING */
+            /** @description Payment sent, status PENDING */
             201: {
                 headers: {
                     [name: string]: unknown;
@@ -4805,7 +6205,7 @@ export interface operations {
                     "application/json": components["schemas"]["PaymentSummary"];
                 };
             };
-            /** @description `VOUCHER_INVALID_FILE` (not JPG, PNG or PDF by content, or over 5 MB, RF-15) or `VALIDATION_ERROR` (any other field, with its `field`: amount) */
+            /** @description `VOUCHER_INVALID_FILE` (a file is not JPG, PNG or PDF by content, or is over 5 MB, RF-15; `field` names it) or `VALIDATION_ERROR` (`proofs` when there are none or more than 5, `proofs[i].amount`, `proofs[i].fileIndex`) */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -4829,7 +6229,7 @@ export interface operations {
                     };
                 };
             };
-            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the stay is already paid, RN-03) or `VOUCHER_ALREADY_EXISTS` (a voucher is pending for the stay, RN-03, RN-15) */
+            /** @description `GUEST_NOT_ACTIVE` (RN-35), `PAYMENT_ALREADY_EXISTS_FOR_PERIOD` (the stay is already paid, RN-03) or `VOUCHER_ALREADY_EXISTS` (a payment is pending for the stay, RN-03, RN-15, or rejected: correct it with `correctOwnPaymentTemporary`) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4840,6 +6240,119 @@ export interface operations {
             };
             429: components["responses"]["TooManyRequests"];
             503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getOwnPaymentTemporary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The payment, with its proofs and reviews */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestPayment"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description No payment with that id belongs to this guest (`RESOURCE_NOT_FOUND`, RN-09) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+        };
+    };
+    correctOwnPaymentTemporary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["ProofsCorrection"];
+            };
+        };
+        responses: {
+            /** @description Payment sent again, status PENDING */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentSummary"];
+                };
+            };
+            /** @description `VOUCHER_INVALID_FILE` (with the `field` of the file, RF-15) or `VALIDATION_ERROR` (`proofs` or `proofs[i].…`) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description No payment with that id belongs to this guest (`RESOURCE_NOT_FOUND`, RN-09) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            /** @description `PAYMENT_NOT_CORRECTABLE` (the payment is pending or approved, not rejected) or `GUEST_NOT_ACTIVE` (RN-35) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PaymentNotCorrectableError"] | components["schemas"]["GuestNotActiveError"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getOwnProfileTemporary: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Own profile */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnProfile"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
         };
     };
     updateOwnProfileTemporary: {
@@ -4869,6 +6382,107 @@ export interface operations {
             403: components["responses"]["GuestAccessDenied"];
             409: components["responses"]["GuestEmailTaken"];
             429: components["responses"]["TooManyRequests"];
+        };
+    };
+    uploadTemporaryOwnDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description JPG/PNG/PDF, ≤5MB, checked by content (RF-15)
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Document stored; it appears in `documents` of the own profile */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocumentRef"];
+                };
+            };
+            /** @description `DOCUMENT_INVALID_FILE` (type or size not allowed, RF-15) */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a CONTRACT guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        /** @description User-facing message, in Spanish, ready to display in the UI */
+                        message: string;
+                    };
+                };
+            };
+            /** @description `DOCUMENT_LIMIT_REACHED` (the guest already has 5 files, RN-37) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
+        };
+    };
+    getTemporaryOwnDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                documentId: components["parameters"]["DocumentId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The document with its signed link */
+            200: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GuestDocument"];
+                };
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            /** @description The document is not one of the session's guest (`RESOURCE_NOT_FOUND`) */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            429: components["responses"]["TooManyRequests"];
+            503: components["responses"]["FileStorageUnavailable"];
         };
     };
 }
