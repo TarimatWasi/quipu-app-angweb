@@ -115,6 +115,7 @@ describe('GuestHistoryComponent (H4)', () => {
 
   it('lists the own payments with their state, the rejected one with its reason and «Corregir pago»', async () => {
     const ui = await setup();
+    expect(ui.page().getByRole('status').textContent).toContain('Cargando pagos');
     const req = await ui.expect1();
     expect(req.request.params.get('limit')).toBe('20');
     expect(req.request.params.has('after')).toBe(false);

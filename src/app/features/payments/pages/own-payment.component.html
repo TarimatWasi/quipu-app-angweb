@@ -11,7 +11,7 @@
 
   @switch (state().kind) {
     @case ('loading') {
-      <p class="muted" role="status">Cargando…</p>
+      <output class="muted">Cargando…</output>
     }
     @case ('not-found') {
       <div class="quipu-alert" role="alert">
@@ -202,13 +202,14 @@
                     [value]="proof.method"
                     (input)="typedMethod(i, methodFrom($event.target))"
                   />
-                  <div class="shortcuts" role="group" aria-label="Medios frecuentes">
+                  <fieldset class="shortcuts">
+                    <legend class="visually-hidden">Medios frecuentes</legend>
                     @for (shortcut of shortcuts; track shortcut) {
                       <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
                         {{ shortcut }}
                       </button>
                     }
-                  </div>
+                  </fieldset>
                 </div>
               }
 
@@ -256,7 +257,7 @@
             }
           </div>
           @if (balanceText(); as text) {
-            <p class="strong" role="status">Suma {{ formatMoney(sum()) }} · {{ text }}</p>
+            <output class="strong">Suma {{ formatMoney(sum()) }} · {{ text }}</output>
           }
           @if (proofsError(); as message) {
             <p class="error" id="op-proofs-error">{{ message }}</p>

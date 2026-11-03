@@ -20,6 +20,7 @@ export const HOME_PANEL_STYLES = `
     font-weight: 700;
   }
   .muted {
+    display: block;
     color: var(--mat-sys-on-surface-variant);
   }
   .quipu-alert {

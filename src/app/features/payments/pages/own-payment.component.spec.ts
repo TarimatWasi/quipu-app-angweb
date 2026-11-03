@@ -190,6 +190,7 @@ const error = (code: string, message: string, field?: string) => ({
 /** H3 opened with the account status answered. */
 async function newContractPayment(url = '/guest/payments/new') {
   const ui = await setup(url);
+  expect(ui.page().getByRole('status').textContent).toContain('Cargando');
   await ui.flush(await ui.expect1(isStatus), PERIODS);
   return ui;
 }
@@ -234,11 +235,12 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByText(/Cuota S\/ 350.00/).textContent).toContain('por pagar S/ 300.00');
 
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
-      await ui.click(ui.proof(1).getByRole('button', { name: 'Yape' }));
+      const shortcuts = within(ui.proof(1).getByRole('group', { name: 'Medios frecuentes' }));
+      await ui.click(shortcuts.getByRole('button', { name: 'Yape' }));
       await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '200');
       await ui.click(ui.page().getByRole('button', { name: 'Agregar otro comprobante' }));
       await cash(ui, 2, '100');
-      expect(ui.page().getByText(/Suma S\/ 300.00/).textContent).toContain('Completo');
+      expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
 
       await send(ui);
       const req = await ui.expect1(isGuestUpload);

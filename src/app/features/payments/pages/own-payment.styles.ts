@@ -47,4 +47,13 @@ export const OWN_PAYMENT_STYLES = `
   .reason {
     margin: 0;
   }
+  output {
+    display: block;
+  }
+  fieldset.shortcuts {
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+  }
 `;

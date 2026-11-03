@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -31,7 +31,7 @@ export function unpaidText(count: number): string {
       <h2 id="guest-payments-title">Tus pagos</h2>
       @switch (state().kind) {
         @case ('loading') {
-          <p class="muted" role="status">Cargando tu estado de cuenta…</p>
+          <output class="muted">Cargando tu estado de cuenta…</output>
         }
         @case ('error') {
           <div class="quipu-alert" role="alert">
@@ -64,7 +64,7 @@ export function unpaidText(count: number): string {
   `,
   styles: HOME_PANEL_STYLES,
 })
-export class GuestHomePanelComponent {
+export class GuestHomePanelComponent implements OnInit {
   private readonly payments = inject(GuestPaymentsService);
 
   protected readonly periods = signal<readonly PeriodStatus[]>([]);
@@ -88,6 +88,9 @@ export class GuestHomePanelComponent {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
     });
+  }
+
+  ngOnInit(): void {
     void this.load();
   }
 

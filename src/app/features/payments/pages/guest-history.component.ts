@@ -1,4 +1,4 @@
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -38,7 +38,7 @@ const SURPLUS_TEXTS: Readonly<Record<NonNullable<GuestPayment['surplus']>['outco
   templateUrl: './guest-history.component.html',
   styles: [PAYMENT_PAGE_STYLES, OWN_PAYMENT_STYLES],
 })
-export class GuestHistoryComponent {
+export class GuestHistoryComponent implements OnInit {
   private readonly payments = inject(GuestPaymentsService);
 
   protected readonly formatMoney = formatMoney;
@@ -65,6 +65,9 @@ export class GuestHistoryComponent {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
     });
+  }
+
+  ngOnInit(): void {
     void this.load();
   }
 
@@ -90,14 +93,14 @@ export class GuestHistoryComponent {
   }
 
   protected proofText(proof: GuestProof): string {
-    const parts = [proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo'];
-    if (proof.method) parts.push(proof.method);
-    parts.push(proof.uploadedBy === 'GUEST' ? 'enviado por ti' : 'agregado por la administración');
-    parts.push(`declarado ${formatMoney(proof.declaredAmount)}`);
-    if (proof.verifiedAmount !== null) {
-      parts.push(`verificado ${formatMoney(proof.verifiedAmount)}`);
-    }
-    return parts.join(' · ');
+    const parts = [
+      proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo',
+      proof.method ?? '',
+      proof.uploadedBy === 'GUEST' ? 'enviado por ti' : 'agregado por la administración',
+      `declarado ${formatMoney(proof.declaredAmount)}`,
+      proof.verifiedAmount === null ? '' : `verificado ${formatMoney(proof.verifiedAmount)}`,
+    ];
+    return parts.filter((part) => part !== '').join(' · ');
   }
 
   private async load(after?: string): Promise<void> {

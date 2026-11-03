@@ -6,6 +6,7 @@ import {
   ElementRef,
   inject,
   Injector,
+  OnInit,
   signal,
 } from '@angular/core';
 import { MatAnchor, MatButton } from '@angular/material/button';
@@ -67,11 +68,11 @@ type AfterNotice = 'stay' | 'reload';
 
 interface Notice {
   readonly title: string;
-  readonly then: AfterNotice;
+  readonly afterClose: AfterNotice;
 }
 
-const CHANGED: Notice = { title: 'Tu pago ya cambió', then: 'reload' };
-const NOT_ACTIVE: Notice = { title: 'Tu cuenta no está activa', then: 'stay' };
+const CHANGED: Notice = { title: 'Tu pago ya cambió', afterClose: 'reload' };
+const NOT_ACTIVE: Notice = { title: 'Tu cuenta no está activa', afterClose: 'stay' };
 
 /**
  * The conflicts the SRS shows as a modal for each kind of guest (H3, T2), with the BFF's own
@@ -79,18 +80,21 @@ const NOT_ACTIVE: Notice = { title: 'Tu cuenta no está activa', then: 'stay' };
  */
 const NOTICES: Readonly<Record<GuestType, Readonly<Partial<Record<string, Notice>>>>> = {
   CONTRACT: {
-    VOUCHER_NO_ACTIVE_CONTRACT: { title: 'No tienes un contrato vigente', then: 'stay' },
+    VOUCHER_NO_ACTIVE_CONTRACT: { title: 'No tienes un contrato vigente', afterClose: 'stay' },
     GUEST_NOT_ACTIVE: NOT_ACTIVE,
-    VOUCHER_ALREADY_EXISTS: { title: 'Este período ya tiene un pago', then: 'reload' },
-    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', then: 'reload' },
+    VOUCHER_ALREADY_EXISTS: { title: 'Este período ya tiene un pago', afterClose: 'reload' },
+    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', afterClose: 'reload' },
     PAYMENT_NOT_CORRECTABLE: CHANGED,
     PAYMENT_ALREADY_RESOLVED: CHANGED,
   },
   TEMPORARY: {
-    VOUCHER_NO_ACTIVE_STAY: { title: 'No tienes una estadía vigente', then: 'stay' },
+    VOUCHER_NO_ACTIVE_STAY: { title: 'No tienes una estadía vigente', afterClose: 'stay' },
     GUEST_NOT_ACTIVE: NOT_ACTIVE,
-    VOUCHER_ALREADY_EXISTS: { title: 'Ya subiste un voucher para esta estadía', then: 'reload' },
-    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'La estadía ya está pagada', then: 'reload' },
+    VOUCHER_ALREADY_EXISTS: {
+      title: 'Ya subiste un voucher para esta estadía',
+      afterClose: 'reload',
+    },
+    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'La estadía ya está pagada', afterClose: 'reload' },
     PAYMENT_NOT_CORRECTABLE: CHANGED,
     PAYMENT_ALREADY_RESOLVED: CHANGED,
   },
@@ -141,7 +145,7 @@ export type OwnPaymentMode = 'new' | 'correct' | 'read';
   templateUrl: './own-payment.component.html',
   styles: [PAYMENT_PAGE_STYLES, DIRECT_PAYMENT_STYLES, OWN_PAYMENT_STYLES],
 })
-export class OwnPaymentComponent {
+export class OwnPaymentComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly snackBar = inject(MatSnackBar);
@@ -299,6 +303,9 @@ export class OwnPaymentComponent {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
     });
+  }
+
+  ngOnInit(): void {
     void this.load();
   }
 
@@ -479,7 +486,7 @@ export class OwnPaymentComponent {
       });
       await firstValueFrom(ref.afterClosed());
       // What the guest can pay or correct changed: show it as it is now.
-      if (notice.then === 'reload' && !this.destroyed) await this.load();
+      if (notice.afterClose === 'reload' && !this.destroyed) await this.load();
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
@@ -513,34 +520,45 @@ export class OwnPaymentComponent {
     const request = ++this.loadRequest;
     this.state.set({ kind: 'loading' });
     try {
+      const current = () => request === this.loadRequest;
       if (this.paymentId !== null) {
-        const payment = await firstValueFrom(this.api().get(this.paymentId));
-        if (request !== this.loadRequest) return;
-        this.payment.set(payment);
-        this.submitted.set(false);
-        this.proofs.set(
-          payment.status === 'REJECTED' && payment.proofs.length > 0
-            ? payment.proofs.slice(0, MAX_PROOFS).map((proof) => this.keptDraft(proof))
-            : [this.draft()],
-        );
+        await this.loadPayment(this.paymentId, current);
       } else if (this.audience === 'TEMPORARY') {
-        const stay = await firstValueFrom(this.temporaryPayments.paymentStatus());
-        if (request !== this.loadRequest) return;
-        this.stay.set(stay);
+        await this.loadStay(current);
       } else {
-        const periods = await firstValueFrom(this.guestPayments.accountStatus());
-        if (request !== this.loadRequest) return;
-        this.periods.set(periods);
-        if (!this.options().some((option) => option.period === this.periodChoice())) {
-          this.periodChoice.set('');
-        }
+        await this.loadPeriods(current);
       }
-      this.state.set({ kind: 'ready' });
+      if (current()) this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
       if (request !== this.loadRequest) return;
       const { message } = toBffErrorWithServerMessage(error);
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
       this.state.set({ kind: notFound ? 'not-found' : 'error', message });
+    }
+  }
+
+  /** The own payment by id; a rejected one fills the form with the proofs it was sent with. */
+  private async loadPayment(id: string, current: () => boolean): Promise<void> {
+    const payment = await firstValueFrom(this.api().get(id));
+    if (!current()) return;
+    this.payment.set(payment);
+    this.submitted.set(false);
+    const kept = payment.status === 'REJECTED' ? payment.proofs.slice(0, MAX_PROOFS) : [];
+    this.proofs.set(kept.length > 0 ? kept.map((proof) => this.keptDraft(proof)) : [this.draft()]);
+  }
+
+  private async loadStay(current: () => boolean): Promise<void> {
+    const stay = await firstValueFrom(this.temporaryPayments.paymentStatus());
+    if (current()) this.stay.set(stay);
+  }
+
+  /** The months of the contract; a month chosen that no longer takes a payment is dropped. */
+  private async loadPeriods(current: () => boolean): Promise<void> {
+    const periods = await firstValueFrom(this.guestPayments.accountStatus());
+    if (!current()) return;
+    this.periods.set(periods);
+    if (!this.options().some((option) => option.period === this.periodChoice())) {
+      this.periodChoice.set('');
     }
   }
 

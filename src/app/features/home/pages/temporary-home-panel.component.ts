@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -35,7 +35,7 @@ type LoadState =
       <h2 id="stay-payment-title">Tu pago</h2>
       @switch (state().kind) {
         @case ('loading') {
-          <p class="muted" role="status">Cargando el estado de tu pago…</p>
+          <output class="muted">Cargando el estado de tu pago…</output>
         }
         @case ('no-stay') {
           <p>{{ noStayMessage() }}</p>
@@ -74,7 +74,7 @@ type LoadState =
   `,
   styles: HOME_PANEL_STYLES,
 })
-export class TemporaryHomePanelComponent {
+export class TemporaryHomePanelComponent implements OnInit {
   private readonly payments = inject(TemporaryGuestPaymentsService);
 
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
@@ -107,6 +107,9 @@ export class TemporaryHomePanelComponent {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
     });
+  }
+
+  ngOnInit(): void {
     void this.load();
   }
 
