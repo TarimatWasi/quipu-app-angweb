@@ -1,4 +1,5 @@
 import { Routes } from '@angular/router';
+import { adminGuard } from '@core/guards/admin.guard';
 import { anonymousGuard } from '@core/guards/anonymous.guard';
 import { authGuard } from '@core/guards/auth.guard';
 import { passwordChangeGuard } from '@core/guards/password-change.guard';
@@ -37,6 +38,12 @@ export const routes: Routes = [
       {
         path: 'home',
         loadChildren: () => import('@features/home/home.routes').then((m) => m.HOME_ROUTES),
+      },
+      {
+        path: 'admin/payments',
+        canActivate: [adminGuard],
+        loadChildren: () =>
+          import('@features/payments/payments.routes').then((m) => m.PAYMENTS_ROUTES),
       },
     ],
   },

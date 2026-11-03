@@ -1,0 +1,224 @@
+<section class="page" aria-labelledby="review-title">
+  <header class="head">
+    <div>
+      <a routerLink="/admin/payments">Volver a Pagos</a>
+      <h1 id="review-title">Revisar pago</h1>
+    </div>
+    @if (payment()) {
+      <p [class]="'badge status-' + payment()?.status">{{ statusLabel() }}</p>
+    }
+  </header>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <p class="muted" role="status">Cargando el pago…</p>
+    }
+    @case ('not-found') {
+      <div class="quipu-alert" role="alert">
+        <p>No encontramos el pago.</p>
+        <a routerLink="/admin/payments">Volver a Pagos</a>
+      </div>
+    }
+    @case ('error') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadError() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+  }
+
+  @if (payment(); as p) {
+    @if (outcome(); as done) {
+      <section class="outcome" aria-labelledby="payment-outcome">
+        <h2 id="payment-outcome" tabindex="-1">
+          {{ done === 'APPROVED' ? 'Pago aprobado' : 'Pago rechazado' }}
+        </h2>
+        @if (noneLeft()) {
+          <p role="status">No quedan pagos por revisar.</p>
+        }
+        <div class="actions">
+          @if (!noneLeft()) {
+            <button mat-flat-button type="button" [disabled]="busy()" (click)="reviewNext()">
+              Revisar el siguiente
+            </button>
+          }
+          <a mat-stroked-button routerLink="/admin/payments">Volver a Pagos</a>
+        </div>
+      </section>
+    }
+
+    @if (p.status === 'REJECTED') {
+      <div class="quipu-alert rejected">
+        <p class="strong">
+          Rechazado
+          @if (p.reviewedBy; as by) {
+            por {{ by.name }}
+          }
+          @if (p.reviewedAt; as at) {
+            el {{ formatDateTime(at) }}
+          }
+        </p>
+        @if (p.rejectionReason; as reason) {
+          <p>Motivo: {{ reason }}</p>
+        }
+        @if (balance(); as b) {
+          @if (b.kind === 'short') {
+            <p>Faltan {{ formatMoney(b.difference) }} para cubrir lo que corresponde.</p>
+          }
+        }
+      </div>
+    } @else if (p.status === 'APPROVED') {
+      <p class="info">
+        Aprobado
+        @if (p.reviewedBy; as by) {
+          por {{ by.name }}
+        }
+        @if (p.reviewedAt; as at) {
+          el {{ formatDateTime(at) }}
+        }
+      </p>
+    }
+
+    <section aria-labelledby="what-title">
+      <h2 id="what-title">Lo que se paga</h2>
+      <dl class="facts">
+        <div>
+          <dt>Huésped</dt>
+          <dd>{{ p.guestName ?? 'Sin nombre aún' }}</dd>
+        </div>
+        <div>
+          <dt>Documento</dt>
+          <dd>{{ p.documentNumber }}</dd>
+        </div>
+        <div>
+          <dt>Ambiente</dt>
+          <dd>{{ p.environmentCode ?? '—' }}</dd>
+        </div>
+        <div>
+          <dt>{{ p.guestType === 'TEMPORARY' ? 'Estadía' : 'Período' }}</dt>
+          <dd>{{ period() }}</dd>
+        </div>
+        <div>
+          <dt>{{ p.guestType === 'TEMPORARY' ? 'Monto acordado' : 'Cuota del mes' }}</dt>
+          <dd>{{ formatMoney(p.expectedAmount) }}</dd>
+        </div>
+        @if (p.creditApplied > 0) {
+          <div>
+            <dt>Crédito a favor aplicado</dt>
+            <dd>{{ formatMoney(p.creditApplied) }}</dd>
+          </div>
+        }
+        <div>
+          <dt>Por cobrar</dt>
+          <dd>{{ formatMoney(p.amountDue) }}</dd>
+        </div>
+        <div>
+          <dt>Subido</dt>
+          <dd>{{ formatDateTime(p.submittedAt) }}</dd>
+        </div>
+      </dl>
+    </section>
+
+    <section aria-labelledby="proofs-title">
+      <h2 id="proofs-title">Comprobantes</h2>
+      <ol class="proofs">
+        @for (proof of p.proofs; track proof.id; let i = $index) {
+          <li class="proof">
+            <p class="strong">
+              {{ proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo' }}
+              @if (proof.method; as method) {
+                · {{ method }}
+              }
+            </p>
+            <p class="muted">
+              {{
+                proof.uploadedBy === 'ADMIN'
+                  ? 'Agregado por la administración'
+                  : 'Subido por el huésped'
+              }}
+              · {{ formatDateTime(proof.addedAt) }}
+            </p>
+            <p>Declarado: {{ formatMoney(proof.declaredAmount) }}</p>
+            @if (proof.kind === 'VOUCHER') {
+              @if (proof.fileUrl; as url) {
+                <a [href]="url" target="_blank" rel="noopener noreferrer">
+                  Descargar voucher<span class="visually-hidden"> {{ i + 1 }}</span>
+                  @if (proof.file; as file) {
+                    ({{ file.name }})
+                  }
+                </a>
+              } @else {
+                <p class="muted">El archivo del voucher no está disponible.</p>
+              }
+            }
+            @if (editable()) {
+              <label class="amount" [for]="'verified-' + i">
+                Monto verificado del comprobante {{ i + 1 }} (S/)
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  [id]="'verified-' + i"
+                  [value]="amounts()[proof.id] ?? ''"
+                  [attr.aria-invalid]="invalidIds().has(proof.id) ? 'true' : null"
+                  [attr.aria-describedby]="
+                    invalidIds().has(proof.id) ? 'verified-error-' + i : null
+                  "
+                  (input)="typed(proof.id, $event.target)"
+                />
+              </label>
+              @if (invalidIds().has(proof.id)) {
+                <p class="error" [id]="'verified-error-' + i">Revisa el monto</p>
+              }
+            } @else if (proof.verifiedAmount !== null) {
+              <p>Verificado: {{ formatMoney(proof.verifiedAmount) }}</p>
+            }
+          </li>
+        }
+      </ol>
+    </section>
+
+    <section aria-labelledby="amounts-title">
+      <h2 id="amounts-title">Montos</h2>
+      <dl class="facts">
+        <div>
+          <dt>Declarado</dt>
+          <dd>{{ formatMoney(declaredSum()) }}</dd>
+        </div>
+        <div>
+          <dt>Verificado</dt>
+          <dd>{{ formatMoney(verifiedSum()) }}</dd>
+        </div>
+      </dl>
+      @if (balance(); as b) {
+        <p [class]="'balance ' + b.kind" role="status">{{ balanceText() }}</p>
+      }
+    </section>
+
+    @if (actionError(); as message) {
+      <p id="payment-action-error" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
+    }
+
+    @if (editable()) {
+      <div class="actions decision">
+        <button mat-flat-button type="button" [disabled]="!canApprove()" (click)="approve()">
+          Aprobar
+        </button>
+        <button mat-stroked-button type="button" [disabled]="busy()" (click)="reject()">
+          {{ p.status === 'REJECTED' ? 'Rechazar de nuevo' : 'Rechazar' }}
+        </button>
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="busy() || atProofLimit()"
+          [attr.aria-describedby]="atProofLimit() ? 'proof-limit' : null"
+          (click)="addProof()"
+        >
+          Agregar comprobante
+        </button>
+      </div>
+      @if (atProofLimit()) {
+        <p id="proof-limit" class="muted">Hasta {{ maxProofs }} comprobantes por pago.</p>
+      }
+    }
+  }
+</section>

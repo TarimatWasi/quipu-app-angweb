@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { AuthService, Role } from '@core/services/auth.service';
 import { QuipuComponent } from '@shared/quipu/quipu.component';
 
@@ -9,7 +10,7 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
 
 @Component({
   selector: 'app-home',
-  imports: [QuipuComponent],
+  imports: [QuipuComponent, RouterLink],
   template: `
     <div class="home">
       <div>
@@ -20,6 +21,14 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
             >, rol <strong>{{ roleLabel() }}</strong
             >.
           </p>
+          @if (current.role === 'ADMIN') {
+            <nav class="shortcuts" aria-label="Administración">
+              <a class="card" routerLink="/admin/payments">
+                <span class="card-title">Pagos</span>
+                <span class="card-text">Revisa los pagos enviados y corrige los rechazados.</span>
+              </a>
+            </nav>
+          }
         }
       </div>
       <app-quipu class="quipu" />
@@ -43,6 +52,30 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
       margin: 0;
       max-width: 40ch;
       font-size: 1.25rem;
+    }
+    .shortcuts {
+      margin-top: 2rem;
+    }
+    .card {
+      display: grid;
+      gap: 0.25rem;
+      max-width: 24rem;
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--mat-sys-outline-variant);
+      border-radius: 4px;
+      background: var(--quipu-alpaca);
+      color: var(--mat-sys-on-surface);
+      text-decoration: none;
+    }
+    .card:hover {
+      border-color: var(--mat-sys-primary);
+    }
+    .card-title {
+      color: var(--mat-sys-primary);
+      font-size: 1.25rem;
+    }
+    .card-text {
+      font-weight: 400;
     }
     .quipu {
       --quipu-cord: var(--quipu-obsidiana);

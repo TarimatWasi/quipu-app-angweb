@@ -1,0 +1,85 @@
+<form novalidate (submit)="submit($event)">
+  <h2 mat-dialog-title>Agregar comprobante</h2>
+  <mat-dialog-content>
+    <fieldset>
+      <legend>Tipo de comprobante</legend>
+      <label>
+        <input
+          type="radio"
+          name="proof-kind"
+          value="VOUCHER"
+          [checked]="kind() === 'VOUCHER'"
+          (change)="choose('VOUCHER')"
+        />
+        Con voucher
+      </label>
+      <label>
+        <input
+          type="radio"
+          name="proof-kind"
+          value="CASH"
+          [checked]="kind() === 'CASH'"
+          (change)="choose('CASH')"
+        />
+        Efectivo, sin voucher
+      </label>
+    </fieldset>
+
+    @if (kind() === 'VOUCHER') {
+      <div class="field">
+        <label for="proof-file">Archivo del voucher</label>
+        <input
+          id="proof-file"
+          type="file"
+          accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+          [attr.aria-invalid]="fileError() ? 'true' : null"
+          [attr.aria-describedby]="fileError() ? 'proof-file-error' : 'proof-file-help'"
+          (change)="picked($event.target)"
+        />
+        <p id="proof-file-help" class="help">JPG, PNG o PDF de hasta 5 MB.</p>
+        @if (fileError(); as message) {
+          <p id="proof-file-error" class="error">{{ message }}</p>
+        }
+      </div>
+      <div class="field">
+        <label for="proof-method">Medio de pago (opcional)</label>
+        <input
+          id="proof-method"
+          type="text"
+          maxlength="60"
+          [value]="method()"
+          (input)="typed($event.target, 'method')"
+        />
+        <div class="shortcuts" role="group" aria-label="Medios frecuentes">
+          @for (shortcut of shortcuts; track shortcut) {
+            <button mat-stroked-button type="button" (click)="method.set(shortcut)">
+              {{ shortcut }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+
+    <div class="field">
+      <label for="proof-amount">Monto verificado (S/)</label>
+      <input
+        id="proof-amount"
+        type="text"
+        inputmode="decimal"
+        aria-required="true"
+        [value]="amount()"
+        [attr.aria-invalid]="amountError() ? 'true' : null"
+        [attr.aria-describedby]="amountError() ? 'proof-amount-error' : 'proof-amount-help'"
+        (input)="typed($event.target, 'amount')"
+      />
+      <p id="proof-amount-help" class="help">{{ help }}</p>
+      @if (amountError(); as message) {
+        <p id="proof-amount-error" class="error">{{ message }}</p>
+      }
+    </div>
+  </mat-dialog-content>
+  <mat-dialog-actions>
+    <button mat-button type="button" mat-dialog-close>Cancelar</button>
+    <button mat-flat-button type="submit">Agregar</button>
+  </mat-dialog-actions>
+</form>

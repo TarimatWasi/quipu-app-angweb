@@ -53,4 +53,16 @@ describe('HomeComponent', () => {
 
     expect(ui.getByText('Huésped')).toBeTruthy();
   });
+
+  it('offers the administrator the way to Pagos (A5)', async () => {
+    const { ui } = await setup({ role: 'ADMIN', name: 'admin', mustChangePassword: false });
+
+    expect(ui.getByRole('link', { name: /Pagos/ }).getAttribute('href')).toBe('/admin/payments');
+  });
+
+  it('does not offer Pagos to a guest', async () => {
+    const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
+
+    expect(ui.queryByRole('link', { name: /Pagos/ })).toBeNull();
+  });
 });

@@ -13,7 +13,7 @@ async function setup() {
   });
   const harness = await RouterTestingHarness.create();
   const router = TestBed.inject(Router);
-  const signIn = async (mustChangePassword = false) => {
+  const signIn = async (mustChangePassword = false, role: 'ADMIN' | 'GUEST' = 'ADMIN') => {
     const login = firstValueFrom(
       TestBed.inject(AuthService).login({
         documentType: 'DNI',
@@ -23,7 +23,7 @@ async function setup() {
     );
     TestBed.inject(HttpTestingController)
       .expectOne((req) => req.url.endsWith('/bff/auth/login'))
-      .flush({ role: 'ADMIN', name: 'admin@example.test', mustChangePassword });
+      .flush({ role, name: 'admin@example.test', mustChangePassword });
     await login;
   };
   const text = () => harness.routeNativeElement?.textContent ?? '';
@@ -175,5 +175,39 @@ describe('routes', () => {
 
     await harness.navigateByUrl('/login?updated=1');
     expect(text()).toContain('Contraseña actualizada. Ya puedes iniciar sesión.');
+  });
+
+  it('opens the payments of the administrator (A5) and asks its queue', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn();
+
+    await harness.navigateByUrl('/admin/payments');
+
+    expect(router.url).toBe('/admin/payments');
+    await vi.waitFor(() => {
+      TestBed.inject(HttpTestingController)
+        .expectOne((req) => req.url.endsWith('/bff/admin/payments'))
+        .flush({ content: [], nextCursor: null });
+    });
+  });
+
+  it('sends a guest who opens the payments of the administrator to its own home', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn(false, 'GUEST');
+
+    await harness.navigateByUrl('/admin/payments/pay_1');
+
+    expect(router.url).toBe('/home');
+    TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
+  });
+
+  it('keeps the payments behind the login', async () => {
+    const { harness, router, answerNoSession } = await setup();
+
+    const navigation = harness.navigateByUrl('/admin/payments');
+    await answerNoSession();
+    await navigation;
+
+    expect(router.url).toBe('/login');
   });
 });
