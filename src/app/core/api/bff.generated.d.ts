@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.18.0 (TarimatWasi/quipu-lib-contracts), spec sha256 24fb19513fa60a7527315a3e4e43c2ad40e99f16dacdfdd660c4ee303a37a1aa.
+ * Generated from the BFF contract v0.18.1 (TarimatWasi/quipu-lib-contracts), spec sha256 339f20aa389508c196a8d075deb1bf4426906d089e7ecc8032ddabad8f32fd85.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -231,13 +231,13 @@ export interface paths {
         };
         /**
          * List the administrators, active and inactive (RF-22, TAR-127)
-         * @description Every ADMIN account, active and inactive, ordered by `createdAt` (oldest first). Not paginated: there are never more than the configurable maximum of administrators (5). The document number comes masked and `self` marks the account of the session. Never cacheable (`Cache-Control: no-store`).
+         * @description Every ADMIN account, active and inactive, ordered by `createdAt` (oldest first). Not paginated: the configurable maximum of administrators (5) counts only the active ones, so the list can hold more accounts than that maximum when some are inactive, but it stays small. The document number comes masked and `self` marks the account of the session. Never cacheable (`Cache-Control: no-store`).
          */
         get: operations["listAdministrators"];
         put?: never;
         /**
          * An administrator creates another administrator (RF-22, CU-30)
-         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 administrators may exist (configurable). Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Administrators are listed with `listAdministrators` and deactivated or reactivated with `deactivateAdministrator` and `reactivateAdministrator` (TAR-127).
+         * @description Creates an active ADMIN account with an unusable random password and emails the new administrator a single-use link that expires in 30 minutes to set their own password (the same flow as the first administrator, RF-16, SEG-05). No password, code or link is ever returned. The creator re-authenticates with `currentPassword`. Administrators are equals, without hierarchy (SRS 03). At most 5 active administrators may exist (configurable); inactive administrators do not count toward that maximum. Every other active administrator is notified by email. If the email cannot be sent the account still exists, `emailSent` is false and the new administrator can use "forgot password" later. Administrators are listed with `listAdministrators` and deactivated or reactivated with `deactivateAdministrator` and `reactivateAdministrator` (TAR-127).
          */
         post: operations["createAdministrator"];
         delete?: never;
@@ -277,7 +277,7 @@ export interface paths {
         put?: never;
         /**
          * Reactivate a previously deactivated administrator (RF-22, TAR-127)
-         * @description Reactivates an inactive ADMIN account, effective immediately: it can log in again. The caller re-authenticates with `currentPassword`, checked before anything else. Reactivating an active administrator is idempotent: 204 and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
+         * @description Reactivates an inactive ADMIN account, effective immediately: it can log in again. The caller re-authenticates with `currentPassword`, checked before anything else. Reactivating an active administrator is idempotent: 204 and nothing changes. Inactive administrators do not count toward the configurable maximum of administrators (5); reactivating one when that maximum of active administrators is already reached answers 409 `ADMIN_LIMIT_REACHED` and nothing changes. When the account changes, every other active administrator is notified by email (best-effort). Its own rate limit: 3 requests per minute per session user.
          */
         post: operations["reactivateAdministrator"];
         delete?: never;
@@ -3969,7 +3969,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
-            /** @description `ACCOUNT_DOCUMENT_TAKEN` (the document already belongs to an account, administrator or guest, `field: documentNumber`), `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to an account, `field: email`; a guest contact email is not an account email, D-33) or `ADMIN_LIMIT_REACHED` (the maximum number of administrators already exists) */
+            /** @description `ACCOUNT_DOCUMENT_TAKEN` (the document already belongs to an account, administrator or guest, `field: documentNumber`), `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, already belongs to an account, `field: email`; a guest contact email is not an account email, D-33) or `ADMIN_LIMIT_REACHED` (the maximum number of active administrators already exists; inactive administrators do not count) */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -4067,6 +4067,21 @@ export interface operations {
                 };
             };
             404: components["responses"]["AdministratorNotFound"];
+            /** @description `ADMIN_LIMIT_REACHED` (the maximum number of active administrators already exists; inactive administrators do not count) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    /**
+                     * @example {
+                     *       "code": "ADMIN_LIMIT_REACHED",
+                     *       "message": "Ya hay 5 administradores, el máximo. Desactiva uno antes de crear otro."
+                     *     }
+                     */
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
             429: components["responses"]["TooManyRequests"];
         };
     };
