@@ -19,6 +19,7 @@ import {
   AdminPaymentsService,
   AdminProof,
   PaymentDetail,
+  PaymentSurplus,
   ProofEdit,
 } from '@core/services/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/services/bff-error';
@@ -94,6 +95,19 @@ function balanceText(balance: Balance): string {
           : 'queda como crédito del mes siguiente.'
       }`;
   }
+}
+
+const SURPLUS_TEXTS: Readonly<Record<PaymentSurplus['outcome'], string>> = {
+  CREDIT: 'quedó como crédito del mes siguiente.',
+  REFUND_PENDING: 'devolución pendiente; regístrala en Finanzas.',
+  REFUNDED: 'ya se devolvió.',
+};
+
+/** An approved payment says what the BFF recorded for its surplus, not a projection (RN-38, RN-39). */
+function approvedText(surplus: PaymentSurplus | null | undefined): string {
+  return surplus && surplus.amount > 0
+    ? `Sobran ${formatMoney(surplus.amount)}: ${SURPLUS_TEXTS[surplus.outcome]}`
+    : 'Completo';
 }
 
 /** The text of each verified amount, kept while the page reloads after adding a proof. */
@@ -187,7 +201,11 @@ export class PaymentReviewComponent {
     return payment ? balanceOf(this.verifiedSum(), payment.amountDue, payment.lastPeriod) : null;
   });
   protected readonly balanceText = computed(() => {
+    const payment = this.payment();
     const balance = this.balance();
+    if (payment?.status === 'APPROVED') {
+      return approvedText(payment.surplus);
+    }
     return balance ? balanceText(balance) : '';
   });
   protected readonly loadError = computed(() => {

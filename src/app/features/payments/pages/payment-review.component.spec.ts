@@ -514,6 +514,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
         status: 'APPROVED',
         amountDue: 300,
         proofs: [proof({ declaredAmount: 350, verifiedAmount: 310 })],
+        surplus: { amount: 10, outcome: 'CREDIT' },
       }),
     );
 
@@ -523,7 +524,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
       ' ',
     );
     expect(amounts).toMatch(/Verificado\s*S\/ 310\.00/);
-    expect(amounts).toContain('Sobran S/ 10.00');
+    expect(amounts).toContain('Sobran S/ 10.00: quedó como crédito del mes siguiente.');
   });
 
   it('ignores the answer of a decision once another payment is open', async () => {
@@ -572,6 +573,34 @@ describe('PaymentReviewComponent (A5.2)', () => {
     ).toBe(true);
     await flush(secondPatch, {});
     await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2', status: 'APPROVED' }));
+  });
+
+  it.each([
+    ['CREDIT', 'Sobran S/ 20.00: quedó como crédito del mes siguiente.'],
+    ['REFUND_PENDING', 'Sobran S/ 20.00: devolución pendiente; regístrala en Finanzas.'],
+    ['REFUNDED', 'Sobran S/ 20.00: ya se devolvió.'],
+  ] as const)(
+    'shows what the BFF recorded for the surplus of an approved payment (%s)',
+    async (outcome, text) => {
+      const { page } = await setup(
+        payment({
+          status: 'APPROVED',
+          lastPeriod: true,
+          surplus: { amount: 20, outcome },
+          proofs: [proof({ declaredAmount: 370, verifiedAmount: 370 })],
+        }),
+      );
+
+      expect(present(page().getByRole('status').textContent).trim()).toBe(text);
+    },
+  );
+
+  it('says an approved payment without surplus is complete', async () => {
+    const { page } = await setup(
+      payment({ status: 'APPROVED', surplus: null, proofs: [proof({ verifiedAmount: 350 })] }),
+    );
+
+    expect(present(page().getByRole('status').textContent).trim()).toBe('Completo');
   });
 });
 
