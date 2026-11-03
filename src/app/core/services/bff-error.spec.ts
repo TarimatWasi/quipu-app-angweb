@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, NEVER, timeout } from 'rxjs';
-import { toBffError } from './bff-error';
+import { toBffError, toBffErrorWithServerMessage } from './bff-error';
 
 const bff = (status: number, code: string, message = 'texto del servidor', field?: unknown) =>
   new HttpErrorResponse({ status, error: { code, message, field } });
@@ -203,5 +203,48 @@ describe('toBffError for resolving a payment (TAR-207)', () => {
       code: 'PAYMENT_PERIOD_NOT_PAYABLE',
       message: 'El contrato ya no cobra ese período; rechaza el comprobante indicando el motivo.',
     });
+  });
+});
+
+// QP-UI-17: the payment screens show the BFF's own message, which the contract writes for the UI.
+describe('toBffErrorWithServerMessage', () => {
+  it('keeps the code, the message and the field the BFF sent', () => {
+    expect(
+      toBffErrorWithServerMessage(
+        bff(409, 'PAYMENT_ALREADY_RESOLVED', 'Este pago ya fue resuelto'),
+      ),
+    ).toEqual({ code: 'PAYMENT_ALREADY_RESOLVED', message: 'Este pago ya fue resuelto' });
+    expect(
+      toBffErrorWithServerMessage(
+        bff(400, 'VALIDATION_ERROR', 'Revisa el monto', 'proofs[0].amount'),
+      ),
+    ).toEqual({ code: 'VALIDATION_ERROR', message: 'Revisa el monto', field: 'proofs[0].amount' });
+  });
+
+  it('trims the message it shows', () => {
+    expect(toBffErrorWithServerMessage(bff(409, 'X_CODE', '  Texto  ')).message).toBe('Texto');
+  });
+
+  it('falls back to the local texts when the body has no usable message', () => {
+    expect(toBffErrorWithServerMessage(bff(429, 'RATE_LIMITED', '   '))).toEqual({
+      code: 'RATE_LIMITED',
+      message: 'Demasiados intentos, espera un momento antes de volver a intentar',
+    });
+    expect(
+      toBffErrorWithServerMessage(new HttpErrorResponse({ status: 502, error: '<html>' })),
+    ).toEqual({
+      code: 'UNEXPECTED_ERROR',
+      message: 'Ocurrió un error inesperado. Inténtalo de nuevo.',
+    });
+    expect(toBffErrorWithServerMessage(new HttpErrorResponse({ status: 0 }))).toEqual({
+      code: 'NETWORK_ERROR',
+      message: 'No se pudo conectar con el servidor. Inténtalo de nuevo.',
+    });
+  });
+
+  it('never shows an over-long message', () => {
+    expect(toBffErrorWithServerMessage(bff(409, 'X_CODE', 'a'.repeat(501))).message).toBe(
+      'Ocurrió un error inesperado. Inténtalo de nuevo.',
+    );
   });
 });

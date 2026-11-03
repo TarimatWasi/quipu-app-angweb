@@ -1,0 +1,92 @@
+<section class="page" aria-labelledby="payments-title">
+  <header class="head">
+    <div>
+      <a routerLink="/home">Volver al inicio</a>
+      <h1 id="payments-title">Pagos</h1>
+    </div>
+    @if (oldestId()) {
+      <button mat-flat-button type="button" (click)="openOldest()">Revisar el más antiguo</button>
+    }
+  </header>
+
+  <div class="views" role="group" aria-label="Vista de pagos">
+    @for (option of views; track option.status) {
+      <button
+        mat-stroked-button
+        type="button"
+        [class.current]="option === view()"
+        [attr.aria-pressed]="option === view()"
+        (click)="choose(option)"
+      >
+        {{ option.label }}
+      </button>
+    }
+  </div>
+
+  @if (error(); as message) {
+    <div class="quipu-alert" role="alert">
+      <p>{{ message }}</p>
+      @if (!loaded()) {
+        <button mat-stroked-button type="button" (click)="reload()">Reintentar</button>
+      }
+    </div>
+  }
+
+  @if (rows().length > 0) {
+    <div class="table-wrap">
+      <table>
+        <caption class="visually-hidden">
+          {{
+            view().label
+          }}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Huésped</th>
+            <th scope="col">Ambiente</th>
+            <th scope="col">Período</th>
+            <th scope="col">Subido</th>
+            <th scope="col">Comprobantes</th>
+            <th scope="col"><span class="visually-hidden">Acción</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (item of rows(); track item.id) {
+            <tr>
+              <td>
+                <span class="strong">{{ item.guest }}</span
+                >&ngsp;
+                <span class="muted">{{ item.document }}</span>
+              </td>
+              <td>{{ item.environment }}</td>
+              <td>{{ item.period }}</td>
+              <td>{{ item.submitted }}</td>
+              <td>
+                {{ item.proofs }}
+                @if (item.resolvedBy; as by) {
+                  <span class="muted">{{ by }}</span>
+                }
+              </td>
+              <td>
+                <a
+                  [routerLink]="['/admin/payments', item.id]"
+                  [queryParams]="{ vista: view().param }"
+                >
+                  {{ view().action }}<span class="visually-hidden"> de {{ item.guest }}</span>
+                </a>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (loaded()) {
+    <p class="empty">{{ view().empty }}</p>
+  }
+
+  @if (loading()) {
+    <p class="muted" role="status">Cargando pagos…</p>
+  } @else if (nextCursor()) {
+    <button mat-stroked-button type="button" class="more" (click)="more()">Mostrar más</button>
+  }
+</section>

@@ -123,3 +123,24 @@ export function toBffError(error: unknown): BffError {
   }
   return withField(known(code), fieldOf(body));
 }
+
+// A server text longer than this is not a sentence written for the UI: it is never shown.
+const MAX_SERVER_MESSAGE_LENGTH = 500;
+
+/**
+ * QP-UI-17: the screens whose errors the SRS lists with the BFF's own text (payments, A5.2) show
+ * the `message` the BFF answers, which the contract defines as Spanish ready for the UI. It is
+ * always shown as text (interpolated, never as markup). Without a usable `code` and `message`
+ * (network, timeout, a body that is not the BFF's) it falls back to {@link toBffError}.
+ */
+export function toBffErrorWithServerMessage(error: unknown): BffError {
+  if (error instanceof HttpErrorResponse && error.status !== 0 && isRecord(error.error)) {
+    const body = error.error;
+    const code = body['code'];
+    const message = typeof body['message'] === 'string' ? body['message'].trim() : '';
+    if (typeof code === 'string' && message !== '' && message.length <= MAX_SERVER_MESSAGE_LENGTH) {
+      return withField({ code, message }, fieldOf(body));
+    }
+  }
+  return toBffError(error);
+}
