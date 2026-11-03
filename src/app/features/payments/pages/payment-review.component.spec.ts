@@ -553,6 +553,26 @@ describe('PaymentReviewComponent (A5.2)', () => {
 
     expect(TestBed.inject(Router).url).toBe('/admin/payments');
   });
+
+  it('keeps the new payment locked while its write runs, whatever the previous refresh does', async () => {
+    const { page, click, expect1, flush, harness } = await setup();
+    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await flush(await expect1((req) => req.method === 'PATCH'), {});
+    const oldRefresh = await expect1(detailUrl(ID));
+
+    await harness.navigateByUrl('/admin/payments/pay_2');
+    await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2' }));
+    await click(page().getByRole('button', { name: 'Aprobar' }));
+    const secondPatch = await expect1((req) => req.method === 'PATCH');
+    await flush(oldRefresh, payment({ status: 'APPROVED' }));
+
+    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' }).disabled).toBe(true);
+    expect(
+      page().getByRole<HTMLButtonElement>('button', { name: 'Agregar comprobante' }).disabled,
+    ).toBe(true);
+    await flush(secondPatch, {});
+    await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2', status: 'APPROVED' }));
+  });
 });
 
 async function setupMissing() {

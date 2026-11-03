@@ -358,11 +358,13 @@ export class PaymentReviewComponent {
   }
 
   private async concurrent(): Promise<void> {
+    const visit = this.visit;
     const ref = openConcurrentModificationDialog(this.dialog, {
       title: 'El pago cambió',
       backLabel: 'Volver a Pagos',
     });
     const choice = await firstValueFrom(ref.afterClosed());
+    if (visit !== this.visit) return;
     if (choice === 'reload') {
       await this.load(this.currentId);
     } else if (choice === 'back') {
@@ -371,8 +373,10 @@ export class PaymentReviewComponent {
   }
 
   private async notice(code: string, notice: Notice, message: string): Promise<void> {
+    const visit = this.visit;
     const ref = openPaymentNoticeDialog(this.dialog, { ...notice, message });
     const choice = await firstValueFrom(ref.afterClosed());
+    if (visit !== this.visit) return;
     if (choice === 'back') {
       await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
     } else if (choice === 'reject') {
@@ -390,11 +394,12 @@ export class PaymentReviewComponent {
    * (`keepDrafts`); after a decision the amounts are the ones the BFF saved.
    */
   private async refresh(keepDrafts = false): Promise<void> {
+    const visit = this.visit;
     this.busy.set(true);
     try {
       await this.load(this.currentId, true, keepDrafts);
     } finally {
-      this.busy.set(false);
+      if (visit === this.visit) this.busy.set(false);
     }
   }
 
