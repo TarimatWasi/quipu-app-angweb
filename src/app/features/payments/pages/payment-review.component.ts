@@ -3,6 +3,7 @@ import {
   afterNextRender,
   Component,
   computed,
+  DestroyRef,
   ElementRef,
   inject,
   Injector,
@@ -222,6 +223,10 @@ export class PaymentReviewComponent {
     const route = inject(ActivatedRoute);
     const view = route.snapshot.queryParamMap.get('vista');
     this.backQuery = view !== null && isQueueView(view) ? { vista: view } : {};
+    // Leaving the page counts as another visit too: late answers of this one are ignored.
+    inject(DestroyRef).onDestroy(() => {
+      this.visit++;
+    });
     route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.visit++;
       this.busy.set(false);
@@ -278,19 +283,22 @@ export class PaymentReviewComponent {
   }
 
   protected async reviewNext(): Promise<void> {
+    const visit = this.visit;
     this.busy.set(true);
     this.actionError.set(null);
     try {
       const id = await firstValueFrom(this.payments.oldestPendingId());
+      // The administrator went elsewhere meanwhile: never pull them back into a payment.
+      if (visit !== this.visit) return;
       if (id === null) {
         this.noneLeft.set(true);
       } else {
         await this.router.navigate(['/admin/payments', id], { queryParams: this.backQuery });
       }
     } catch (error: unknown) {
-      this.actionError.set(toBffErrorWithServerMessage(error).message);
+      if (visit === this.visit) this.actionError.set(toBffErrorWithServerMessage(error).message);
     } finally {
-      this.busy.set(false);
+      if (visit === this.visit) this.busy.set(false);
     }
   }
 

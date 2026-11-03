@@ -539,6 +539,20 @@ describe('PaymentReviewComponent (A5.2)', () => {
     expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' }).disabled).toBe(false);
     http.expectNone((req) => req.method === 'GET');
   });
+
+  it('does not pull the administrator back into a payment after leaving', async () => {
+    const { page, click, expect1, flush, harness } = await setup();
+    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await flush(await expect1(detailUrl(ID)), {});
+    await flush(await expect1(detailUrl(ID)), payment({ status: 'APPROVED' }));
+    await click(page().getByRole('button', { name: 'Revisar el siguiente' }));
+    const next = await expect1(isQueue);
+
+    await harness.navigateByUrl('/admin/payments');
+    await flush(next, { content: [{ id: 'pay_2' }], nextCursor: null });
+
+    expect(TestBed.inject(Router).url).toBe('/admin/payments');
+  });
 });
 
 async function setupMissing() {

@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatButton } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -92,9 +93,7 @@ export class PaymentQueueComponent {
   private readonly route = inject(ActivatedRoute);
 
   protected readonly views = VIEWS;
-  protected readonly view = signal<QueueView>(
-    VIEWS.find((v) => v.param === this.route.snapshot.queryParamMap.get('vista')) ?? VIEWS[0],
-  );
+  protected readonly view = signal<QueueView>(VIEWS[0]);
   protected readonly rows = signal<readonly QueueRow[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
   protected readonly loading = signal(false);
@@ -107,20 +106,26 @@ export class PaymentQueueComponent {
 
   // Moves with every new request, so a late answer of a previous view or page is ignored.
   private request = 0;
+  private started = false;
 
   constructor() {
-    void this.load();
+    // The address decides the view (?vista=), also when only it changes on this same page.
+    this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      const view = VIEWS.find((v) => v.param === params.get('vista')) ?? VIEWS[0];
+      if (this.started && view === this.view()) return;
+      this.started = true;
+      this.view.set(view);
+      void this.load();
+    });
   }
 
   protected choose(view: QueueView): void {
     if (view === this.view()) return;
-    this.view.set(view);
     void this.router.navigate([], {
       relativeTo: this.route,
       queryParams: { vista: view.param },
       replaceUrl: true,
     });
-    void this.load();
   }
 
   protected reload(): void {

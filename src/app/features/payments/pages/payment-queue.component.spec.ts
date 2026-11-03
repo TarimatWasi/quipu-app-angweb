@@ -236,6 +236,20 @@ describe('PaymentQueueComponent (A5)', () => {
     expect(ui().getByText('No hay pagos por revisar.')).toBeTruthy();
     expect(ui().queryByRole('table')).toBeNull();
   });
+
+  it('follows the address when only the view changes on this same page', async () => {
+    const { ui, answer, harness } = await setup();
+    await answer({ content: [row()], nextCursor: null });
+
+    await harness.navigateByUrl('/admin/payments?vista=rechazados');
+    const req = await answer({ content: [], nextCursor: null });
+
+    expect(req.request.params.get('status')).toBe('REJECTED');
+    expect(ui().getByRole('button', { name: 'Rechazados' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(ui().getByText('No hay pagos rechazados.')).toBeTruthy();
+  });
 });
 
 /** Fails the test with a clear message instead of a non-null assertion. */
