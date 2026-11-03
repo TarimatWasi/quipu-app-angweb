@@ -67,6 +67,14 @@ describe('PaymentQueueComponent (A5)', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
+  it('offers "Registrar pago directo" (A5.1) in every view', async () => {
+    const { ui, answer } = await setup('/admin/payments?vista=aprobados');
+    await answer({ content: [], nextCursor: null });
+
+    const link = ui().getByRole('link', { name: 'Registrar pago directo' });
+    expect(link.getAttribute('href')).toBe('/admin/payments/new');
+  });
+
   it('asks the pending payments first and shows each row with its columns, without the amount', async () => {
     const { ui, answer } = await setup();
 

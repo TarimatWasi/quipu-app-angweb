@@ -4,9 +4,12 @@
       <a routerLink="/home">Volver al inicio</a>
       <h1 id="payments-title">Pagos</h1>
     </div>
-    @if (oldestId()) {
-      <button mat-flat-button type="button" (click)="openOldest()">Revisar el más antiguo</button>
-    }
+    <div class="actions">
+      <a mat-stroked-button routerLink="/admin/payments/new">Registrar pago directo</a>
+      @if (oldestId()) {
+        <button mat-flat-button type="button" (click)="openOldest()">Revisar el más antiguo</button>
+      }
+    </div>
   </header>
 
   <div class="views" role="group" aria-label="Vista de pagos">

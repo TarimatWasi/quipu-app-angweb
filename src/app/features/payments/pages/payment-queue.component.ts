@@ -1,6 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatButton } from '@angular/material/button';
+import { MatAnchor, MatButton } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -83,7 +83,7 @@ function toRow(item: PaymentQueueItem): QueueRow {
  */
 @Component({
   selector: 'app-payment-queue',
-  imports: [MatButton, RouterLink],
+  imports: [MatAnchor, MatButton, RouterLink],
   templateUrl: './payment-queue.component.html',
   styles: PAYMENT_PAGE_STYLES,
 })
