@@ -15,18 +15,36 @@ export type ProofKind = components['schemas']['ProofKind'];
 export type ProofEdit = components['schemas']['ProofEdit'];
 type ResolveBody = operations['resolvePayment']['requestBody']['content']['application/json'];
 export type VerifiedProof = NonNullable<ResolveBody['proofs']>[number];
+export type PayablePeriod = components['schemas']['PayablePeriod'];
+export type ProofInput = components['schemas']['ProofInput'];
+export type PaymentSummary = components['schemas']['PaymentSummary'];
+
+/** What a direct payment is for: exactly one of a contract month or a stay (DirectPaymentUpload). */
+export type DirectPaymentTarget =
+  | { readonly period: string; readonly stayId?: never }
+  | { readonly stayId: string; readonly period?: never };
+
+/** The fields of `createDirectPayment` other than the files. */
+export interface DirectPayment {
+  readonly guestId: string;
+  readonly target: DirectPaymentTarget;
+  /** yyyy-mm-dd; absent means the day of the registration. */
+  readonly receivedOn?: string;
+  readonly proofs: readonly ProofInput[];
+}
 
 /** Rows asked per page of the queue; "Mostrar más" asks the next page with the cursor. */
 export const PAYMENT_QUEUE_PAGE_SIZE = 20;
 
 /**
- * The administrator's payments (A5 queue, A5.2 review). Ids and cursors are opaque: they are passed
+ * The administrator's payments (A5 queue, A5.1 direct payment, A5.2 review). Ids and cursors are opaque: they are passed
  * back exactly as the BFF gave them, only escaped for the URL.
  */
 @Injectable({ providedIn: 'root' })
 export class AdminPaymentsService {
   private readonly http = inject(HttpClient);
-  private readonly base = `${inject(BFF_BASE_URL)}/bff/admin/payments`;
+  private readonly root = inject(BFF_BASE_URL);
+  private readonly base = `${this.root}/bff/admin/payments`;
 
   /** One page of a view of the queue, oldest first. */
   list(
@@ -75,6 +93,36 @@ export class AdminPaymentsService {
       body.append('files', file, file.name);
     }
     return this.http.put(`${this.url(id)}/proofs`, body);
+  }
+
+  /** What a guest can pay or has pending, for a direct payment (A5.1), oldest first. */
+  payablePeriods(guestId: string): Observable<PayablePeriod[]> {
+    return this.http.get<PayablePeriod[]>(
+      `${this.root}/bff/admin/guests/${encodeURIComponent(guestId)}/payable-periods`,
+    );
+  }
+
+  /**
+   * Registers a direct payment, approved at once (A5.1, RN-23), multipart as DirectPaymentUpload:
+   * `guestId`, exactly one of `period` or `stayId`, `receivedOn` when given, the proofs as a JSON
+   * part and the voucher files in the order their `fileIndex` points to.
+   */
+  createDirect(payment: DirectPayment, files: readonly File[]): Observable<PaymentSummary> {
+    const body = new FormData();
+    body.append('guestId', payment.guestId);
+    if (payment.target.period !== undefined) {
+      body.append('period', payment.target.period);
+    } else {
+      body.append('stayId', payment.target.stayId);
+    }
+    if (payment.receivedOn !== undefined) {
+      body.append('receivedOn', payment.receivedOn);
+    }
+    body.append('proofs', new Blob([JSON.stringify(payment.proofs)], { type: 'application/json' }));
+    for (const file of files) {
+      body.append('files', file, file.name);
+    }
+    return this.http.post<PaymentSummary>(this.base, body);
   }
 
   private url(id: string): string {

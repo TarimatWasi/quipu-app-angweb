@@ -1,0 +1,261 @@
+<section class="page" aria-labelledby="direct-payment-title">
+  <header class="head">
+    <div>
+      <a [routerLink]="backLink()">{{ preselected ? 'Volver' : 'Volver a Pagos' }}</a>
+      <h1 id="direct-payment-title">Registrar pago directo</h1>
+      <p class="muted">El pago queda registrado y aprobado con los montos que ingreses.</p>
+    </div>
+  </header>
+
+  <form novalidate (submit)="submit($event)">
+    @if (preselected) {
+      <div class="field">
+        <span class="strong">Huésped</span>
+        <span>{{ preselectedLabel() ?? '—' }}</span>
+      </div>
+    } @else {
+      <div class="field">
+        <label for="dp-guest">Huésped</label>
+        <select
+          id="dp-guest"
+          aria-required="true"
+          [value]="guestId()"
+          [attr.aria-invalid]="guestError() ? 'true' : null"
+          [attr.aria-describedby]="guestError() ? 'dp-guest-error' : null"
+          (change)="chooseGuest($event.target)"
+        >
+          <option value="">Elige un huésped</option>
+          @for (option of guestOptions(); track option.id) {
+            <option [value]="option.id">{{ option.label }}</option>
+          }
+        </select>
+        @if (guestError(); as message) {
+          <p id="dp-guest-error" class="error">{{ message }}</p>
+        }
+        @switch (guestsState().kind) {
+          @case ('loading') {
+            <p class="help" role="status">Cargando huéspedes…</p>
+          }
+          @case ('error') {
+            <div class="row">
+              <p class="error">{{ guestsLoadError() }}</p>
+              <button mat-stroked-button type="button" (click)="retryGuests()">Reintentar</button>
+            </div>
+          }
+          @default {
+            @if (guestsCursor()) {
+              <div>
+                <button mat-stroked-button type="button" (click)="moreGuests()">
+                  Cargar más huéspedes
+                </button>
+              </div>
+            }
+          }
+        }
+      </div>
+    }
+
+    @if (guestId()) {
+      <div class="field">
+        <label for="dp-period">Período</label>
+        <select
+          id="dp-period"
+          aria-required="true"
+          [value]="periodChoice()"
+          [attr.aria-invalid]="periodError() ? 'true' : null"
+          [attr.aria-describedby]="periodError() ? 'dp-period-error' : 'dp-period-help'"
+          (change)="choosePeriod($event.target)"
+        >
+          <option value="">Elige el período</option>
+          @for (option of options(); track option.key) {
+            <option [value]="option.key">{{ option.label }}</option>
+          }
+        </select>
+        <p id="dp-period-help" class="help">
+          @if (selected(); as item) {
+            Cuota {{ formatMoney(item.expectedAmount) }}
+            @if (item.creditApplied > 0) {
+              · crédito a favor {{ formatMoney(item.creditApplied) }}
+            }
+            · por pagar {{ formatMoney(item.amountDue) }}
+          } @else {
+            Solo los períodos o estadías sin ningún pago.
+          }
+        </p>
+        @if (periodError(); as message) {
+          <p id="dp-period-error" class="error">{{ message }}</p>
+        }
+        @switch (periodsState().kind) {
+          @case ('loading') {
+            <p class="help" role="status">Cargando períodos…</p>
+          }
+          @case ('error') {
+            <div class="row">
+              <p class="error">{{ periodsLoadError() }}</p>
+              <button mat-stroked-button type="button" (click)="retryPeriods()">Reintentar</button>
+            </div>
+          }
+          @case ('ready') {
+            @if (options().length === 0) {
+              <p class="help">Este huésped no tiene períodos por pagar.</p>
+            }
+          }
+        }
+        @if (toComplete().length > 0) {
+          <p class="help">Con un pago por revisar o rechazado, se completan en Revisar pago:</p>
+          <ul class="to-complete">
+            @for (pending of toComplete(); track pending.id) {
+              <li>
+                {{ pending.label }} ·
+                <a [routerLink]="['/admin/payments', pending.id]">Completar en Revisar pago</a>
+              </li>
+            }
+          </ul>
+        }
+      </div>
+    }
+
+    <div class="proofs">
+      @for (proof of proofs(); track proof.key; let i = $index) {
+        <fieldset>
+          <legend>Comprobante {{ i + 1 }}</legend>
+          <div class="kinds">
+            <label>
+              <input
+                type="radio"
+                [name]="'dp-kind-' + proof.key"
+                value="VOUCHER"
+                [checked]="proof.kind === 'VOUCHER'"
+                (change)="kindOf(i, 'VOUCHER')"
+              />
+              Con voucher
+            </label>
+            <label>
+              <input
+                type="radio"
+                [name]="'dp-kind-' + proof.key"
+                value="CASH"
+                [checked]="proof.kind === 'CASH'"
+                (change)="kindOf(i, 'CASH')"
+              />
+              Efectivo, sin voucher
+            </label>
+          </div>
+
+          @if (proof.kind === 'VOUCHER') {
+            <div class="field">
+              <label [for]="'dp-proof-' + proof.key + '-file'">Archivo del voucher</label>
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                [id]="'dp-proof-' + proof.key + '-file'"
+                [attr.aria-invalid]="fileError(i) ? 'true' : null"
+                [attr.aria-describedby]="
+                  'dp-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
+                "
+                (change)="picked(i, $event.target)"
+              />
+              <p class="help" [id]="'dp-proof-' + proof.key + '-file-help'">
+                {{ proof.file ? proof.file.name : 'JPG, PNG o PDF de hasta 5 MB.' }}
+              </p>
+              @if (fileError(i); as message) {
+                <p class="error" [id]="'dp-proof-' + proof.key + '-file-error'">{{ message }}</p>
+              }
+            </div>
+            <div class="field">
+              <label [for]="'dp-proof-' + proof.key + '-method'">Medio de pago (opcional)</label>
+              <input
+                type="text"
+                maxlength="60"
+                [id]="'dp-proof-' + proof.key + '-method'"
+                [value]="proof.method"
+                (input)="typedMethod(i, methodFrom($event.target))"
+              />
+              <div class="shortcuts" role="group" aria-label="Medios frecuentes">
+                @for (shortcut of shortcuts; track shortcut) {
+                  <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
+                    {{ shortcut }}
+                  </button>
+                }
+              </div>
+            </div>
+          }
+
+          <div class="field">
+            <label [for]="'dp-proof-' + proof.key + '-amount'">Monto (S/)</label>
+            <input
+              type="text"
+              inputmode="decimal"
+              aria-required="true"
+              [id]="'dp-proof-' + proof.key + '-amount'"
+              [value]="proof.amount"
+              [attr.aria-invalid]="amountError(i) ? 'true' : null"
+              [attr.aria-describedby]="
+                amountError(i) ? 'dp-proof-' + proof.key + '-amount-error' : null
+              "
+              (input)="typedAmount(i, $event.target)"
+            />
+            @if (amountError(i); as message) {
+              <p class="error" [id]="'dp-proof-' + proof.key + '-amount-error'">{{ message }}</p>
+            }
+          </div>
+
+          @if (proofs().length > 1) {
+            <button mat-button type="button" (click)="removeProof(i)">
+              Quitar<span class="visually-hidden"> comprobante {{ i + 1 }}</span>
+            </button>
+          }
+        </fieldset>
+      }
+
+      <div class="row">
+        <button
+          mat-stroked-button
+          type="button"
+          [disabled]="atProofLimit()"
+          [attr.aria-describedby]="atProofLimit() ? 'dp-proof-limit' : null"
+          (click)="addProof()"
+        >
+          Agregar otro comprobante
+        </button>
+        @if (atProofLimit()) {
+          <p id="dp-proof-limit" class="help">{{ proofLimitText }}</p>
+        }
+      </div>
+      @if (balanceText(); as text) {
+        <p class="strong" role="status">Suma {{ formatMoney(sum()) }} · {{ text }}</p>
+      }
+      @if (proofsError(); as message) {
+        <p class="error" id="dp-proofs-error" tabindex="-1">{{ message }}</p>
+      }
+    </div>
+
+    <div class="field">
+      <label for="dp-received-on">Fecha de recepción (opcional)</label>
+      <input
+        id="dp-received-on"
+        type="date"
+        [max]="today"
+        [value]="receivedOn()"
+        [attr.aria-invalid]="dateError() ? 'true' : null"
+        [attr.aria-describedby]="dateError() ? 'dp-received-on-error' : 'dp-received-on-help'"
+        (input)="typedDate($event.target)"
+      />
+      <p id="dp-received-on-help" class="help">Si la dejas vacía, se usa la fecha de hoy.</p>
+      @if (dateError(); as message) {
+        <p id="dp-received-on-error" class="error">{{ message }}</p>
+      }
+    </div>
+
+    @if (generalError(); as message) {
+      <div class="quipu-alert" role="alert" [id]="generalErrorId" tabindex="-1">
+        <p>{{ message }}</p>
+      </div>
+    }
+
+    <div class="actions">
+      <button mat-flat-button type="submit" [disabled]="busy()">Registrar pago</button>
+      <a mat-button [routerLink]="backLink()">Cancelar</a>
+    </div>
+  </form>
+</section>

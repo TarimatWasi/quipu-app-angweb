@@ -166,3 +166,87 @@ describe('AdminPaymentsService (A5, A5.2)', () => {
     await done;
   });
 });
+
+describe('AdminPaymentsService (A5.1 direct payment)', () => {
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('reads what a guest can pay by its opaque id', async () => {
+    const { service, http } = setup();
+
+    const periods = firstValueFrom(service.payablePeriods('g/1?x'));
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/payable-periods`);
+    expect(req.request.method).toBe('GET');
+    req.flush([]);
+
+    expect(await periods).toEqual([]);
+  });
+
+  it('posts a contract period as multipart with the parts of DirectPaymentUpload, and no stayId', async () => {
+    const { service, http } = setup();
+    const voucher = new File(['%PDF'], 'voucher.pdf', { type: 'application/pdf' });
+
+    const done = firstValueFrom(
+      service.createDirect(
+        {
+          guestId: 'g1',
+          target: { period: '2026-09' },
+          receivedOn: '2026-11-02',
+          proofs: [
+            { kind: 'VOUCHER', amount: 200, method: 'Yape', fileIndex: 0 },
+            { kind: 'CASH', amount: 150 },
+          ],
+        },
+        [voucher],
+      ),
+    );
+    const req = http.expectOne(`${BASE}/bff/admin/payments`);
+    expect(req.request.method).toBe('POST');
+    const body = req.request.body as FormData;
+    expect(body).toBeInstanceOf(FormData);
+    expect([...new Set([...body.keys()])].sort()).toEqual([
+      'files',
+      'guestId',
+      'period',
+      'proofs',
+      'receivedOn',
+    ]);
+    expect(body.get('guestId')).toBe('g1');
+    expect(body.get('period')).toBe('2026-09');
+    expect(body.has('stayId')).toBe(false);
+    expect(body.get('receivedOn')).toBe('2026-11-02');
+    const proofs = body.get('proofs') as Blob;
+    expect(proofs.type).toBe('application/json');
+    expect(JSON.parse(await proofs.text())).toEqual([
+      { kind: 'VOUCHER', amount: 200, method: 'Yape', fileIndex: 0 },
+      { kind: 'CASH', amount: 150 },
+    ]);
+    const files = body.getAll('files') as File[];
+    expect(files).toHaveLength(1);
+    expect(files[0]?.name).toBe('voucher.pdf');
+    req.flush({ id: 'pay_new', status: 'APPROVED' }, { status: 201, statusText: 'Created' });
+
+    expect(await done).toEqual({ id: 'pay_new', status: 'APPROVED' });
+  });
+
+  it('posts a stay with its opaque id and no period, receivedOn nor files when it is all cash', async () => {
+    const { service, http } = setup();
+
+    const done = firstValueFrom(
+      service.createDirect(
+        { guestId: 'g2', target: { stayId: 's/9' }, proofs: [{ kind: 'CASH', amount: 400 }] },
+        [],
+      ),
+    );
+    const req = http.expectOne(`${BASE}/bff/admin/payments`);
+    const body = req.request.body as FormData;
+    expect([...new Set([...body.keys()])].sort()).toEqual(['guestId', 'proofs', 'stayId']);
+    expect(body.get('stayId')).toBe('s/9');
+    expect(body.has('period')).toBe(false);
+    expect(body.has('receivedOn')).toBe(false);
+    expect(body.getAll('files')).toEqual([]);
+    req.flush({ id: 'pay_new' }, { status: 201, statusText: 'Created' });
+    await done;
+  });
+});
