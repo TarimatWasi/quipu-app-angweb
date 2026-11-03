@@ -196,6 +196,7 @@ describe('PaymentQueueComponent (A5)', () => {
     });
 
     expect(req.request.params.get('status')).toBe('REJECTED');
+    expect(TestBed.inject(Router).url).toBe('/admin/payments?vista=rechazados');
     expect(req.request.params.has('after')).toBe(false);
     expect(ui().getByRole('button', { name: 'Rechazados' }).getAttribute('aria-pressed')).toBe(
       'true',

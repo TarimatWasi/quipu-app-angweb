@@ -88,11 +88,11 @@ function toRow(item: PaymentQueueItem): QueueRow {
 export class PaymentQueueComponent {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
 
   protected readonly views = VIEWS;
   protected readonly view = signal<QueueView>(
-    VIEWS.find((v) => v.param === inject(ActivatedRoute).snapshot.queryParamMap.get('vista')) ??
-      VIEWS[0],
+    VIEWS.find((v) => v.param === this.route.snapshot.queryParamMap.get('vista')) ?? VIEWS[0],
   );
   protected readonly rows = signal<readonly QueueRow[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
@@ -114,7 +114,11 @@ export class PaymentQueueComponent {
   protected choose(view: QueueView): void {
     if (view === this.view()) return;
     this.view.set(view);
-    void this.router.navigate([], { queryParams: { vista: view.param }, replaceUrl: true });
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { vista: view.param },
+      replaceUrl: true,
+    });
     void this.load();
   }
 

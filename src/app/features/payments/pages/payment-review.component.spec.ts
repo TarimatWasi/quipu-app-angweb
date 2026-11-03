@@ -332,6 +332,10 @@ describe('PaymentReviewComponent (A5.2)', () => {
     ]);
     expect(body.getAll('files')).toEqual([]);
     await flush(put, {});
+    // Until the new proofs arrive, nothing can be sent from the old list.
+    for (const name of ['Agregar comprobante', 'Aprobar', 'Rechazar']) {
+      expect(page().getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
+    }
     await flush(
       await expect1(detailUrl(ID)),
       payment({

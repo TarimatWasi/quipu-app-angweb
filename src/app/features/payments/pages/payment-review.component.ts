@@ -262,7 +262,7 @@ export class PaymentReviewComponent {
     );
     if (saved) {
       this.snackBar.open('Comprobante agregado.', 'Cerrar', { duration: SNACK_MS });
-      await this.load(this.currentId, true);
+      await this.refresh();
     }
   }
 
@@ -291,7 +291,7 @@ export class PaymentReviewComponent {
     if (await this.run(call)) {
       this.outcome.set(outcome);
       this.focus('#payment-outcome');
-      await this.load(this.currentId, true);
+      await this.refresh();
     }
   }
 
@@ -356,7 +356,21 @@ export class PaymentReviewComponent {
       await this.reject();
     } else if (code === 'PAYMENT_ALREADY_RESOLVED' || code === 'PAYMENT_NOT_CORRECTABLE') {
       // The payment changed state: show it as it is now (read-only once approved).
+      await this.refresh();
+    }
+  }
+
+  /**
+   * Reloads the payment after a write, keeping the page. Every write stays disabled until the new
+   * detail arrives: a correction replaces the whole set of proofs, so one sent from the old list
+   * would drop the proof just added.
+   */
+  private async refresh(): Promise<void> {
+    this.busy.set(true);
+    try {
       await this.load(this.currentId, true);
+    } finally {
+      this.busy.set(false);
     }
   }
 
