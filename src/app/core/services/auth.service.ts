@@ -22,8 +22,16 @@ export type DocumentType = components['schemas']['DocumentType'];
 export type Role = LoginResponse['role'];
 export type LoginRequest = Readonly<LoginOperation['requestBody']['content']['application/json']>;
 
-/** What the BFF answers to a login. The session token itself travels in an HttpOnly cookie. */
-export type Session = Readonly<Pick<LoginResponse, 'role' | 'name' | 'mustChangePassword'>>;
+/** A guest with a contract or a temporary one (RN-13); the administrator has none. */
+export type GuestType = components['schemas']['GuestActiveSession']['guestType'];
+
+/**
+ * What the BFF answers to a login. The session token itself travels in an HttpOnly cookie.
+ * `guestType` comes only with a guest session (SessionInfo); it decides which guest pages open.
+ */
+export type Session = Readonly<
+  Pick<LoginResponse, 'role' | 'name' | 'mustChangePassword'> & { guestType?: GuestType }
+>;
 
 /**
  * How long a login may take. The free Render plan can need 60 to 90 seconds to wake the backend,
@@ -46,6 +54,13 @@ function isRole(value: unknown): value is Role {
   return typeof value === 'string' && Object.hasOwn(ROLES, value);
 }
 
+// One entry per guest type of the contract, as for the roles.
+const GUEST_TYPES: Readonly<Record<GuestType, true>> = { CONTRACT: true, TEMPORARY: true };
+
+function isGuestType(value: unknown): value is GuestType {
+  return typeof value === 'string' && Object.hasOwn(GUEST_TYPES, value);
+}
+
 // Leaving is best-effort: unlike the login it must not make the user wait for a sleeping backend.
 const LOGOUT_TIMEOUT_MS = 10_000;
 
@@ -59,9 +74,12 @@ function isUnreachable(error: unknown): boolean {
 /** Checks a session answer (login or /me) at the boundary: anything unexpected is an error, never a session. */
 function toSession(body: unknown): Session {
   if (typeof body === 'object' && body !== null) {
-    const { role, name, mustChangePassword } = body as Record<string, unknown>;
+    const { role, name, mustChangePassword, guestType } = body as Record<string, unknown>;
     if (isRole(role) && typeof name === 'string' && typeof mustChangePassword === 'boolean') {
-      return { role, name, mustChangePassword };
+      // A guest without a known type keeps its session but opens no guest page.
+      return role === 'GUEST' && isGuestType(guestType)
+        ? { role, name, mustChangePassword, guestType }
+        : { role, name, mustChangePassword };
     }
   }
   throw new Error('Unexpected login response');

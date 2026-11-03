@@ -23,22 +23,22 @@ import {
 } from '@core/services/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/services/bff-error';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { balanceOf, formatMoney, parseAmount, periodLabel } from '../payment-format';
+import { balanceOf, formatMoney, parseAmount, periodLabel } from '@shared/payments/payment-format';
 import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
 import {
   AMOUNT_TEXT,
   INVALID_FILE_TEXT,
+  MAX_PROOFS,
   MISSING_FILE_TEXT,
+  PERIOD_TEXT,
   VOUCHER_MAX_BYTES,
   VOUCHER_TYPES,
-} from './add-proof-dialog.component';
+} from '../proof-rules';
 import { DIRECT_PAYMENT_STYLES } from './direct-payment.styles';
 import { openPaymentNoticeDialog } from './payment-notice-dialog.component';
-import { MAX_PROOFS } from './payment-review.component';
 
 /** Texts of A5.1 in the SRS (Textos de validación). */
 export const GUEST_TEXT = 'Elige un huésped';
-export const PERIOD_TEXT = 'Elige el período';
 export const FUTURE_DATE_TEXT = 'La fecha no puede ser posterior a hoy';
 export const PROOF_LIMIT_TEXT = `Hasta ${String(MAX_PROOFS)} comprobantes por pago.`;
 const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;

@@ -265,6 +265,40 @@ describe('AuthService password recovery (RF-16)', () => {
       expect(service.session()).toEqual(ADMIN);
     });
 
+    it('keeps the type of a guest, which decides its pages', async () => {
+      const { service, controller } = setup();
+
+      const result = firstValueFrom(service.restore());
+      controller.expectOne(ME_URL).flush({
+        role: 'GUEST',
+        guestType: 'TEMPORARY',
+        name: 'Luis',
+        mustChangePassword: false,
+        guestStatus: 'ACTIVE',
+      });
+
+      await expect(result).resolves.toEqual({
+        role: 'GUEST',
+        guestType: 'TEMPORARY',
+        name: 'Luis',
+        mustChangePassword: false,
+      });
+    });
+
+    it('keeps a guest of an unknown type without a type, and never a type for the administrator', async () => {
+      const { service, controller } = setup();
+
+      const guest = firstValueFrom(service.restore());
+      controller
+        .expectOne(ME_URL)
+        .flush({ role: 'GUEST', guestType: 'OWNER', name: 'g', mustChangePassword: false });
+      expect(await guest).toEqual({ role: 'GUEST', name: 'g', mustChangePassword: false });
+
+      const admin = firstValueFrom(service.restore());
+      controller.expectOne(ME_URL).flush({ ...ADMIN, guestType: 'CONTRACT' });
+      expect(await admin).toEqual(ADMIN);
+    });
+
     it('leaves the session empty when the BFF answers 401', async () => {
       const { service, controller } = setup();
 

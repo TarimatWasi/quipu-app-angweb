@@ -32,8 +32,9 @@ import {
   formatMoney,
   parseAmount,
   periodLabel,
-} from '../payment-format';
+} from '@shared/payments/payment-format';
 import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import { MAX_PROOFS } from '../proof-rules';
 import { isQueueView } from '../queue-views';
 import { AddedProof, openAddProofDialog } from './add-proof-dialog.component';
 import { openPaymentNoticeDialog, PaymentNoticeAction } from './payment-notice-dialog.component';
@@ -41,7 +42,6 @@ import { PAYMENT_REVIEW_STYLES } from './payment-review.styles';
 import { openRejectDialog } from './reject-dialog.component';
 
 /** A payment gathers at most 5 proofs (RN-22, decided 2026-10-31). */
-export const MAX_PROOFS = 5;
 
 type LoadState =
   | { readonly kind: 'loading' }

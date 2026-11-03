@@ -13,7 +13,11 @@ async function setup() {
   });
   const harness = await RouterTestingHarness.create();
   const router = TestBed.inject(Router);
-  const signIn = async (mustChangePassword = false, role: 'ADMIN' | 'GUEST' = 'ADMIN') => {
+  const signIn = async (
+    mustChangePassword = false,
+    role: 'ADMIN' | 'GUEST' = 'ADMIN',
+    guestType?: 'CONTRACT' | 'TEMPORARY',
+  ) => {
     const login = firstValueFrom(
       TestBed.inject(AuthService).login({
         documentType: 'DNI',
@@ -23,7 +27,7 @@ async function setup() {
     );
     TestBed.inject(HttpTestingController)
       .expectOne((req) => req.url.endsWith('/bff/auth/login'))
-      .flush({ role, name: 'admin@example.test', mustChangePassword });
+      .flush({ role, name: 'admin@example.test', mustChangePassword, guestType });
     await login;
   };
   const text = () => harness.routeNativeElement?.textContent ?? '';
@@ -209,5 +213,61 @@ describe('routes', () => {
     await navigation;
 
     expect(router.url).toBe('/login');
+  });
+
+  describe('pages of the guests (H3, H4, T2)', () => {
+    const answer = (path: string, body: object) =>
+      vi.waitFor(() => {
+        TestBed.inject(HttpTestingController)
+          .expectOne((req) => req.url.endsWith(path))
+          .flush(body);
+      });
+
+    it('opens the history and the payment of a guest with a contract', async () => {
+      const { harness, router, signIn } = await setup();
+      await signIn(false, 'GUEST', 'CONTRACT');
+
+      await harness.navigateByUrl('/guest/payments');
+      expect(router.url).toBe('/guest/payments');
+      await answer('/bff/guest/payments', { content: [], nextCursor: null, creditBalance: 0 });
+
+      await harness.navigateByUrl('/guest/payments/new');
+      expect(router.url).toBe('/guest/payments/new');
+      await answer('/bff/guest/account-status', []);
+    });
+
+    it('sends a guest with a contract who opens T2 to its own home', async () => {
+      const { harness, router, signIn } = await setup();
+      await signIn(false, 'GUEST', 'CONTRACT');
+
+      await harness.navigateByUrl('/temporary-guest/payment');
+
+      expect(router.url).toBe('/home');
+      await answer('/bff/guest/account-status', []);
+    });
+
+    it('opens T2 for a temporary guest and keeps it away from H3 and H4', async () => {
+      const { harness, router, signIn } = await setup();
+      await signIn(false, 'GUEST', 'TEMPORARY');
+
+      await harness.navigateByUrl('/temporary-guest/payment');
+      expect(router.url).toBe('/temporary-guest/payment');
+      await answer('/bff/temporary-guest/payment-status', { status: 'PAID' });
+
+      await harness.navigateByUrl('/guest/payments/new');
+      expect(router.url).toBe('/home');
+      await answer('/bff/temporary-guest/payment-status', { status: 'PAID' });
+    });
+
+    it('sends the administrator who opens a guest page to its home', async () => {
+      const { harness, router, signIn } = await setup();
+      await signIn();
+
+      await harness.navigateByUrl('/guest/payments');
+      expect(router.url).toBe('/home');
+
+      await harness.navigateByUrl('/temporary-guest/payment/pay_1');
+      expect(router.url).toBe('/home');
+    });
   });
 });

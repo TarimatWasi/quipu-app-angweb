@@ -1,0 +1,83 @@
+<section class="page" aria-labelledby="history-title">
+  <header class="head">
+    <div>
+      <a routerLink="/home">Volver al inicio</a>
+      <h1 id="history-title">Historial de pagos</h1>
+    </div>
+  </header>
+
+  @if (creditBalance() > 0) {
+    <p class="strong">Tienes {{ formatMoney(creditBalance()) }} a favor.</p>
+  }
+
+  @if (items().length > 0) {
+    <ul class="history">
+      @for (item of items(); track $index) {
+        @if (item.kind === 'PAYMENT' && item.payment; as p) {
+          <li>
+            <div class="history-head">
+              <span class="strong">{{ periodOf(p) }}</span>
+              <span [class]="'badge status-' + p.status">{{ statusLabels[p.status] }}</span>
+            </div>
+            <p class="muted">
+              Enviado el {{ formatDateTime(p.submittedAt) }} · declarado
+              {{ formatMoney(p.amount) }}
+              @if (p.verifiedAmount !== null) {
+                · verificado {{ formatMoney(p.verifiedAmount) }}
+              }
+              @if (p.creditApplied > 0) {
+                · crédito aplicado {{ formatMoney(p.creditApplied) }}
+              }
+            </p>
+            <ul class="proof-list">
+              @for (proof of p.proofs; track proof.id) {
+                <li>{{ proofText(proof) }}</li>
+              }
+            </ul>
+            @if (p.surplus; as surplus) {
+              <p>
+                Sobraron {{ formatMoney(surplus.amount) }}: {{ surplusTexts[surplus.outcome] }}.
+              </p>
+            }
+            @if (p.status === 'REJECTED') {
+              @if (p.rejectionReason; as reason) {
+                <p class="reason"><span class="strong">Motivo del rechazo</span> {{ reason }}</p>
+              }
+              <a mat-stroked-button [routerLink]="['/guest/payments', p.id]">Corregir pago</a>
+            } @else if (p.status === 'PENDING') {
+              <a mat-button [routerLink]="['/guest/payments', p.id]">Ver pago</a>
+            }
+          </li>
+        } @else if (item.kind === 'REFUND' && item.refund; as r) {
+          <li>
+            <div class="history-head">
+              <span class="strong">{{ formatDate(r.date) }}</span>
+              <span class="badge">Devuelto</span>
+            </div>
+            <p class="muted">{{ formatMoney(r.amount) }} · {{ r.method }}</p>
+          </li>
+        }
+      }
+    </ul>
+  }
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <p class="muted" role="status">Cargando pagos…</p>
+    }
+    @case ('error') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadError() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+    @case ('ready') {
+      @if (items().length === 0) {
+        <p class="empty">Aún no tienes pagos.</p>
+      }
+      @if (cursor()) {
+        <button mat-stroked-button type="button" class="more" (click)="more()">Mostrar más</button>
+      }
+    }
+  }
+</section>
