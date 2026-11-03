@@ -1,7 +1,7 @@
 <section class="page" aria-labelledby="review-title">
   <header class="head">
     <div>
-      <a routerLink="/admin/payments">Volver a Pagos</a>
+      <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
       <h1 id="review-title">Revisar pago</h1>
     </div>
     @if (payment()) {
@@ -16,7 +16,7 @@
     @case ('not-found') {
       <div class="quipu-alert" role="alert">
         <p>No encontramos el pago.</p>
-        <a routerLink="/admin/payments">Volver a Pagos</a>
+        <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
       </div>
     }
     @case ('error') {
@@ -42,7 +42,9 @@
               Revisar el siguiente
             </button>
           }
-          <a mat-stroked-button routerLink="/admin/payments">Volver a Pagos</a>
+          <a mat-stroked-button routerLink="/admin/payments" [queryParams]="backQuery"
+            >Volver a Pagos</a
+          >
         </div>
       </section>
     }
@@ -163,6 +165,7 @@
                   [attr.aria-describedby]="
                     invalidIds().has(proof.id) ? 'verified-error-' + i : null
                   "
+                  [disabled]="busy()"
                   (input)="typed(proof.id, $event.target)"
                 />
               </label>

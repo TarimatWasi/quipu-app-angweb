@@ -10,12 +10,13 @@ import {
 import { toBffErrorWithServerMessage } from '@core/services/bff-error';
 import { formatDateTime, periodLabel, proofsSummary } from '../payment-format';
 import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import type { QueueViewParam } from '../queue-views';
 
 interface QueueView {
   readonly status: PaymentStatus;
   readonly label: string;
   /** Value of `?vista=` in the address, so "Volver a Pagos" can come back to the same view. */
-  readonly param: string;
+  readonly param: QueueViewParam;
   readonly empty: string;
   readonly action: string;
 }
@@ -136,7 +137,9 @@ export class PaymentQueueComponent {
   protected openOldest(): void {
     const id = this.oldestId();
     if (id !== null) {
-      void this.router.navigate(['/admin/payments', id]);
+      void this.router.navigate(['/admin/payments', id], {
+        queryParams: { vista: this.view().param },
+      });
     }
   }
 

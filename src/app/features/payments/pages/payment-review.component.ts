@@ -32,6 +32,7 @@ import {
   periodLabel,
 } from '../payment-format';
 import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import { isQueueView } from '../queue-views';
 import { AddedProof, openAddProofDialog } from './add-proof-dialog.component';
 import { openPaymentNoticeDialog, PaymentNoticeAction } from './payment-notice-dialog.component';
 import { PAYMENT_REVIEW_STYLES } from './payment-review.styles';
@@ -208,19 +209,22 @@ export class PaymentReviewComponent {
     () => (this.payment()?.proofs.length ?? 0) >= MAX_PROOFS,
   );
 
+  /** The view of A5 the payment was opened from, so "Volver a Pagos" returns to it. */
+  protected readonly backQuery: Readonly<Record<string, string>>;
   private currentId = '';
   // Moves with every load, so a late answer for a previous payment is ignored.
   private request = 0;
 
   constructor() {
-    inject(ActivatedRoute)
-      .paramMap.pipe(takeUntilDestroyed())
-      .subscribe((params) => {
-        this.outcome.set(null);
-        this.noneLeft.set(false);
-        this.actionError.set(null);
-        void this.load(params.get('id') ?? '');
-      });
+    const route = inject(ActivatedRoute);
+    const view = route.snapshot.queryParamMap.get('vista');
+    this.backQuery = view !== null && isQueueView(view) ? { vista: view } : {};
+    route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      this.outcome.set(null);
+      this.noneLeft.set(false);
+      this.actionError.set(null);
+      void this.load(params.get('id') ?? '');
+    });
   }
 
   protected typed(id: string, target: EventTarget | null): void {
@@ -262,7 +266,7 @@ export class PaymentReviewComponent {
     );
     if (saved) {
       this.snackBar.open('Comprobante agregado.', 'Cerrar', { duration: SNACK_MS });
-      await this.refresh();
+      await this.refresh(true);
     }
   }
 
@@ -274,7 +278,7 @@ export class PaymentReviewComponent {
       if (id === null) {
         this.noneLeft.set(true);
       } else {
-        await this.router.navigate(['/admin/payments', id]);
+        await this.router.navigate(['/admin/payments', id], { queryParams: this.backQuery });
       }
     } catch (error: unknown) {
       this.actionError.set(toBffErrorWithServerMessage(error).message);
@@ -327,7 +331,8 @@ export class PaymentReviewComponent {
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
       this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
-      if (notFound) await this.router.navigate(['/admin/payments']);
+      if (notFound)
+        await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
       return;
     }
     this.actionError.set(message);
@@ -343,7 +348,7 @@ export class PaymentReviewComponent {
     if (choice === 'reload') {
       await this.load(this.currentId);
     } else if (choice === 'back') {
-      await this.router.navigate(['/admin/payments']);
+      await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
     }
   }
 
@@ -351,7 +356,7 @@ export class PaymentReviewComponent {
     const ref = openPaymentNoticeDialog(this.dialog, { ...notice, message });
     const choice = await firstValueFrom(ref.afterClosed());
     if (choice === 'back') {
-      await this.router.navigate(['/admin/payments']);
+      await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
     } else if (choice === 'reject') {
       await this.reject();
     } else if (code === 'PAYMENT_ALREADY_RESOLVED' || code === 'PAYMENT_NOT_CORRECTABLE') {
@@ -363,19 +368,20 @@ export class PaymentReviewComponent {
   /**
    * Reloads the payment after a write, keeping the page. Every write stays disabled until the new
    * detail arrives: a correction replaces the whole set of proofs, so one sent from the old list
-   * would drop the proof just added.
+   * would drop the proof just added. The typed amounts are kept only after a correction
+   * (`keepDrafts`); after a decision the amounts are the ones the BFF saved.
    */
-  private async refresh(): Promise<void> {
+  private async refresh(keepDrafts = false): Promise<void> {
     this.busy.set(true);
     try {
-      await this.load(this.currentId, true);
+      await this.load(this.currentId, true, keepDrafts);
     } finally {
       this.busy.set(false);
     }
   }
 
-  /** Loads the payment; `quiet` keeps the page and the typed amounts while it reloads. */
-  private async load(id: string, quiet = false): Promise<void> {
+  /** Loads the payment; `quiet` keeps the page on screen while it reloads. */
+  private async load(id: string, quiet = false, keepDrafts = false): Promise<void> {
     const request = ++this.request;
     this.currentId = id;
     if (!quiet) {
@@ -386,7 +392,7 @@ export class PaymentReviewComponent {
     try {
       const payment = await firstValueFrom(this.payments.get(id));
       if (request !== this.request) return;
-      this.amounts.update((current) => amountTexts(payment.proofs, current));
+      this.amounts.update((current) => amountTexts(payment.proofs, keepDrafts ? current : {}));
       this.payment.set(payment);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {

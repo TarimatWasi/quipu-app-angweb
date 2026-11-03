@@ -71,7 +71,7 @@ async function settle(harness: RouterTestingHarness) {
   await harness.fixture.whenStable();
 }
 
-async function setup(detail: PaymentDetail = payment()) {
+async function setup(detail: PaymentDetail = payment(), query = '') {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -85,7 +85,7 @@ async function setup(detail: PaymentDetail = payment()) {
   });
   const harness = await RouterTestingHarness.create();
   const http = TestBed.inject(HttpTestingController);
-  await harness.navigateByUrl(`/admin/payments/${ID}`);
+  await harness.navigateByUrl(`/admin/payments/${ID}${query}`);
   const expect1 = async (match: (req: HttpRequest<unknown>) => boolean) =>
     vi.waitFor(() => http.expectOne(match));
   const flush = async (req: TestRequest, body: object | null, status = 200) => {
@@ -474,6 +474,56 @@ describe('PaymentReviewComponent (A5.2)', () => {
         .getAllByRole('link', { name: 'Volver a Pagos' })
         .every((link) => link.getAttribute('href') === '/admin/payments'),
     ).toBe(true);
+  });
+
+  it('returns to the view of A5 it was opened from', async () => {
+    const { page } = await setup(payment(), '?vista=rechazados');
+
+    const back = page().getAllByRole('link', { name: 'Volver a Pagos' });
+    expect(back.map((link) => link.getAttribute('href'))).toEqual([
+      '/admin/payments?vista=rechazados',
+    ]);
+  });
+
+  it('does not carry a view it does not know back to A5', async () => {
+    const { page } = await setup(payment(), '?vista=%3Cscript%3E');
+
+    expect(page().getByRole('link', { name: 'Volver a Pagos' }).getAttribute('href')).toBe(
+      '/admin/payments',
+    );
+  });
+
+  it('locks the verified amounts while a decision is on its way and then shows the saved ones', async () => {
+    const { page, click, expect1, flush, harness } = await setup(
+      payment({ amountDue: 300, proofs: [proof({ declaredAmount: 350 })] }),
+    );
+    fireEvent.input(page().getByLabelText(/Monto verificado del comprobante 1/), {
+      target: { value: '320' },
+    });
+    await settle(harness);
+
+    await click(page().getByRole('button', { name: 'Aprobar' }));
+    const patch = await expect1(detailUrl(ID));
+    expect(
+      page().getByLabelText<HTMLInputElement>(/Monto verificado del comprobante 1/).disabled,
+    ).toBe(true);
+    await flush(patch, {});
+    await flush(
+      await expect1(detailUrl(ID)),
+      payment({
+        status: 'APPROVED',
+        amountDue: 300,
+        proofs: [proof({ declaredAmount: 350, verifiedAmount: 310 })],
+      }),
+    );
+
+    expect(page().getByText('Verificado: S/ 310.00')).toBeTruthy();
+    const amounts = present(page().getByRole('region', { name: 'Montos' }).textContent).replace(
+      /\s+/g,
+      ' ',
+    );
+    expect(amounts).toMatch(/Verificado\s*S\/ 310\.00/);
+    expect(amounts).toContain('Sobran S/ 10.00');
   });
 });
 

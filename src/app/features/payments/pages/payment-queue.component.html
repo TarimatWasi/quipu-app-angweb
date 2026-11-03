@@ -68,7 +68,10 @@
                 }
               </td>
               <td>
-                <a [routerLink]="['/admin/payments', item.id]">
+                <a
+                  [routerLink]="['/admin/payments', item.id]"
+                  [queryParams]="{ vista: view().param }"
+                >
                   {{ view().action }}<span class="visually-hidden"> de {{ item.guest }}</span>
                 </a>
               </td>

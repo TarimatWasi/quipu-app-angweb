@@ -115,7 +115,10 @@ describe('PaymentQueueComponent (A5)', () => {
       ui()
         .getAllByRole('link', { name: /Revisar/ })
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/admin/payments/pay_a', '/admin/payments/pay_b']);
+    ).toEqual([
+      '/admin/payments/pay_a?vista=por-revisar',
+      '/admin/payments/pay_b?vista=por-revisar',
+    ]);
   });
 
   it('opens the oldest pending payment with "Revisar el más antiguo"', async () => {
@@ -126,7 +129,7 @@ describe('PaymentQueueComponent (A5)', () => {
     await settle(harness);
 
     await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/admin/payments/pay_old');
+      expect(TestBed.inject(Router).url).toBe('/admin/payments/pay_old?vista=por-revisar');
     });
   });
 
@@ -169,7 +172,10 @@ describe('PaymentQueueComponent (A5)', () => {
       ui()
         .getAllByRole('link', { name: /Revisar/ })
         .map((link) => link.getAttribute('href')),
-    ).toEqual(['/admin/payments/pay_1', '/admin/payments/pay_2']);
+    ).toEqual([
+      '/admin/payments/pay_1?vista=por-revisar',
+      '/admin/payments/pay_2?vista=por-revisar',
+    ]);
     expect(ui().queryByRole('button', { name: 'Mostrar más' })).toBeNull();
   });
 
@@ -209,7 +215,7 @@ describe('PaymentQueueComponent (A5)', () => {
       ui()
         .getByRole('link', { name: /Corregir pago/ })
         .getAttribute('href'),
-    ).toBe('/admin/payments/pay_r');
+    ).toBe('/admin/payments/pay_r?vista=rechazados');
     expect(ui().queryByRole('button', { name: 'Revisar el más antiguo' })).toBeNull();
   });
 
