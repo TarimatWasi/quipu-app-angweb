@@ -214,12 +214,17 @@ export class PaymentReviewComponent {
   private currentId = '';
   // Moves with every load, so a late answer for a previous payment is ignored.
   private request = 0;
+  // Moves each time another payment opens in this same component (history, "Revisar el siguiente"):
+  // a write or a dialog of the previous payment must not act on the new one.
+  private visit = 0;
 
   constructor() {
     const route = inject(ActivatedRoute);
     const view = route.snapshot.queryParamMap.get('vista');
     this.backQuery = view !== null && isQueueView(view) ? { vista: view } : {};
     route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
+      this.visit++;
+      this.busy.set(false);
       this.outcome.set(null);
       this.noneLeft.set(false);
       this.actionError.set(null);
@@ -246,9 +251,10 @@ export class PaymentReviewComponent {
   protected async reject(): Promise<void> {
     const payment = this.payment();
     if (!payment || !this.editable() || this.busy()) return;
+    const visit = this.visit;
     const ref = openRejectDialog(this.dialog, { again: payment.status === 'REJECTED' });
     const reason = await firstValueFrom(ref.afterClosed());
-    if (reason) {
+    if (reason && visit === this.visit) {
       await this.resolve(this.payments.reject(payment.id, reason), 'REJECTED');
     }
   }
@@ -258,8 +264,9 @@ export class PaymentReviewComponent {
     if (!payment || !this.editable() || this.busy() || this.atProofLimit()) return;
     const balance = this.balance();
     const missing = balance?.kind === 'short' ? balance.difference : 0;
+    const visit = this.visit;
     const proof = await firstValueFrom(openAddProofDialog(this.dialog, { missing }).afterClosed());
-    if (!proof) return;
+    if (!proof || visit !== this.visit) return;
     const proofs = [...payment.proofs.map(kept), added(proof)];
     const saved = await this.run(
       this.payments.correctProofs(payment.id, proofs, proof.file ? [proof.file] : []),
@@ -301,6 +308,7 @@ export class PaymentReviewComponent {
 
   /** Runs a write; on failure shows what the BFF said the way the SRS asks, and answers false. */
   private async run(call: Observable<unknown>): Promise<boolean> {
+    const visit = this.visit;
     this.busy.set(true);
     this.actionError.set(null);
     let failure: { readonly error: unknown } | null = null;
@@ -309,8 +317,10 @@ export class PaymentReviewComponent {
     } catch (error: unknown) {
       failure = { error };
     } finally {
-      this.busy.set(false);
+      if (visit === this.visit) this.busy.set(false);
     }
+    // Another payment is open now: this answer belongs to the previous one.
+    if (visit !== this.visit) return false;
     // Handled once the write is over, so a follow-up ("Rechazar con motivo") is not blocked.
     if (failure) {
       await this.failed(failure.error);

@@ -525,6 +525,20 @@ describe('PaymentReviewComponent (A5.2)', () => {
     expect(amounts).toMatch(/Verificado\s*S\/ 310\.00/);
     expect(amounts).toContain('Sobran S/ 10.00');
   });
+
+  it('ignores the answer of a decision once another payment is open', async () => {
+    const { page, click, expect1, flush, harness, http } = await setup();
+    await click(page().getByRole('button', { name: 'Aprobar' }));
+    const patch = await expect1((req) => req.method === 'PATCH');
+
+    await harness.navigateByUrl('/admin/payments/pay_2');
+    await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2' }));
+    await flush(patch, {});
+
+    expect(page().queryByRole('heading', { name: 'Pago aprobado' })).toBeNull();
+    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' }).disabled).toBe(false);
+    http.expectNone((req) => req.method === 'GET');
+  });
 });
 
 async function setupMissing() {
