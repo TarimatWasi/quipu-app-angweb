@@ -532,6 +532,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Tu pago');
       expect(ui.page().getByText('Aprobado')).toBeTruthy();
       expect(ui.page().queryByRole('button', { name: 'Enviar de nuevo' })).toBeNull();
+      // An approved payment owes nothing: what it covered is not shown as «Por pagar».
+      expect(ui.page().queryByText(/Por pagar/)).toBeNull();
+      expect(ui.page().getByText('A cubrir con este pago S/ 350.00')).toBeTruthy();
     });
 
     it('opens a pending payment read-only, without a form', async () => {
@@ -544,16 +547,21 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByText('Pendiente de revisión')).toBeTruthy();
       expect(ui.page().getByText(/Voucher · yape\.png · Yape · S\/ 300\.00/)).toBeTruthy();
       expect(ui.page().queryByRole('group', { name: 'Comprobante 1' })).toBeNull();
+      // A pending payment was already sent: nothing is asked to pay while it is reviewed.
+      expect(ui.page().queryByText(/Por pagar/)).toBeNull();
+      expect(ui.page().getByText('A cubrir con este pago S/ 350.00')).toBeTruthy();
     });
 
-    it('shows what was left to pay and the credit used on a payment read-only', async () => {
+    it('shows what an approved payment covered and the credit used, never «Por pagar»', async () => {
       const ui = await setup('/guest/payments/pay%2F7');
       await ui.flush(
         await ui.expect1(isGet('guest', 'pay%2F7')),
-        payment({ status: 'PENDING', rejectionReason: null, creditApplied: 50, amountDue: 300 }),
+        payment({ status: 'APPROVED', rejectionReason: null, creditApplied: 50, amountDue: 300 }),
       );
 
-      expect(ui.page().getByText('Por pagar S/ 300.00')).toBeTruthy();
+      expect(ui.page().getByText('Aprobado')).toBeTruthy();
+      expect(ui.page().queryByText(/Por pagar/)).toBeNull();
+      expect(ui.page().getByText('A cubrir con este pago S/ 300.00')).toBeTruthy();
       expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
         'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
       );

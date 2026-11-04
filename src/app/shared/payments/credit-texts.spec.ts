@@ -1,4 +1,5 @@
 import {
+  coveredAmountText,
   creditAppliedText,
   creditBalanceText,
   creditUseText,
@@ -28,6 +29,11 @@ describe('credit-texts', () => {
     expect(creditAppliedText(50)).toBe(
       'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
     );
+  });
+
+  it('names what a payment already sent covers, without asking to pay it (H3 read-only)', () => {
+    expect(coveredAmountText(300)).toBe('A cubrir con este pago S/ 300.00');
+    expect(coveredAmountText(300)).not.toContain('Por pagar');
   });
 
   it('breaks what is left to pay into monthly amount and credit only when there is credit', () => {

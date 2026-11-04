@@ -33,6 +33,14 @@ export function creditAppliedText(creditApplied: number): string {
   return `Se descuentan ${formatMoney(creditApplied)} de tu crédito a favor, que sobró de un pago anterior.`;
 }
 
+/**
+ * H3 «Tu pago» (read-only: pending or approved): what the payment had to cover after the credit
+ * (`amountDue`). It is not a balance still owed, so it never says «Por pagar».
+ */
+export function coveredAmountText(amountDue: number): string {
+  return `A cubrir con este pago ${formatMoney(amountDue)}`;
+}
+
 export interface DueParts {
   readonly amount: number;
   readonly creditApplied: number;

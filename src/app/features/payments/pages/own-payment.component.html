@@ -34,7 +34,7 @@
           <p class="strong">{{ label }}</p>
         }
         <p class="muted">Total declarado {{ formatMoney(p.amount) }}</p>
-        <p class="muted">Por pagar {{ formatMoney(p.amountDue) }}</p>
+        <p class="muted">{{ coveredAmountText(p.amountDue) }}</p>
         @if (p.creditApplied > 0) {
           <p class="help" role="note" aria-label="Crédito a favor">
             {{ creditAppliedText(p.creditApplied) }}
