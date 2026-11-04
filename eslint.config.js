@@ -81,6 +81,74 @@ export const MAX_FEATURE_DEPTH = 8;
 // import climbing out of the feature (`../` more times than the file's depth) may only re-enter
 // the same feature. Relative imports below MAX_FEATURE_DEPTH are not covered, so the test
 // "no file under src/app/features is deeper than ..." fails instead of letting them slip through.
+// QP-ANGWEB-ORG-02: inside a feature there are only `<f>.routes.ts` and these layers, and each
+// layer imports only the layers listed here (besides itself, @core/ and @shared/). components/ is
+// pure presentation: it neither injects the router nor reaches a data client or the session; model/
+// is plain TypeScript, without Angular. app-structure.spec.ts checks that a feature holds only
+// these folders; the rules below check the direction of the imports between them.
+export const FEATURE_LAYERS = {
+  pages: ['components', 'data', 'model'],
+  components: ['model'],
+  data: ['model'],
+  model: [],
+};
+const layerNames = Object.keys(FEATURE_LAYERS);
+
+const layerExtras = {
+  components: {
+    paths: [
+      {
+        name: '@angular/router',
+        importNames: ['Router', 'ActivatedRoute'],
+        ...restrict('QP-ANGWEB-ORG-02', 'components/ is presentation; the page owns the router'),
+      },
+    ],
+    patterns: [
+      {
+        group: ['@core/api/clients/*', '@core/auth/*'],
+        ...restrict('QP-ANGWEB-ORG-02', 'components/ is presentation; the page owns the data'),
+      },
+    ],
+  },
+  model: {
+    paths: [],
+    patterns: [
+      {
+        regex: '^@angular/',
+        ...restrict('QP-ANGWEB-ORG-02', 'model/ is plain TypeScript, without Angular'),
+      },
+    ],
+  },
+};
+
+// The layers of the same feature a file of `layer` must not reach: by alias at any depth and,
+// when `depth` (its folders below the feature) is known, by a relative path that climbs back to
+// the feature root (`../data`) or out of the feature and into it again (`../../f/data`).
+const layerPatterns = (feature, layer, depth) => {
+  const extra = layerExtras[layer]?.patterns ?? [];
+  const banned = layerNames.filter(
+    (other) => other !== layer && !FEATURE_LAYERS[layer].includes(other),
+  );
+  if (banned.length === 0) {
+    return extra;
+  }
+  const name = escapeRegex(feature);
+  const layers = `(${banned.join('|')})(/|$)`;
+  const allowed = FEATURE_LAYERS[layer].map((other) => `${other}/`).join(', ') || 'no layer';
+  const message = restrict(
+    'QP-ANGWEB-ORG-02',
+    `${layer}/ may import only ${allowed} of its feature, plus @core/ and @shared/`,
+  );
+  const relative =
+    depth === undefined
+      ? []
+      : [
+          { regex: `^(\\.\\./){${depth}}${layers}`, ...message },
+          { regex: `^(\\.\\./){${depth + 1}}${name}/${layers}`, ...message },
+        ];
+  return [{ regex: `^@features/${name}/${layers}`, ...message }, ...relative, ...extra];
+};
+
 const featureScopes = (feature) => {
   const name = escapeRegex(feature);
   const message = restrict(
@@ -88,25 +156,40 @@ const featureScopes = (feature) => {
     `a feature must not import another feature; use @core/ or @shared/ (this file is in ${feature})`,
   );
   const otherFeatureAlias = { regex: `^@features/(?!${name}(/|$))`, ...message };
+  const base = [...forbidFolders('layout'), otherFeatureAlias];
+  const climbOut = (depth) => ({
+    regex: `^(\\.\\./){${depth + 1},}(?!${name}(/|$))`,
+    ...message,
+  });
+  const root = `src/app/features/${feature}`;
+  // From broad to narrow: the feature, each depth, then each layer and its depths, so that the
+  // last scope matching a file carries every restriction that applies to it.
+  const layerScopes = layerNames.flatMap((layer) => {
+    const paths = layerExtras[layer]?.paths ?? [];
+    return [
+      { dir: `${root}/${layer}/**`, patterns: [...base, ...layerPatterns(feature, layer)], paths },
+      ...Array.from({ length: MAX_FEATURE_DEPTH }, (_, index) => ({
+        dir: `${root}/${layer}${'/*'.repeat(index)}`,
+        patterns: [...base, climbOut(index + 1), ...layerPatterns(feature, layer, index + 1)],
+        paths,
+      })),
+    ];
+  });
   return [
-    {
-      dir: `src/app/features/${feature}/**`,
-      patterns: [...forbidFolders('layout'), otherFeatureAlias],
-    },
+    { dir: `${root}/**`, patterns: base },
     ...Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, depth) => ({
-      dir: `src/app/features/${feature}${'/*'.repeat(depth)}`,
-      patterns: [
-        ...forbidFolders('layout'),
-        otherFeatureAlias,
-        { regex: `^(\\.\\./){${depth + 1},}(?!${name}(/|$))`, ...message },
-      ],
+      dir: `${root}${'/*'.repeat(depth)}`,
+      patterns: [...base, climbOut(depth)],
     })),
+    ...layerScopes,
   ];
 };
 
 const folderScopes = (features) => [
   { dir: 'src/app/shared/**', patterns: forbidFolders('core', 'features', 'layout') },
   { dir: 'src/app/core/**', patterns: forbidFolders('features', 'layout') },
+  // QP-ANGWEB-ORG-01: the shell uses core and shared, never a feature.
+  { dir: 'src/app/layout/**', patterns: forbidFolders('features') },
   { dir: 'src/app/features/**', patterns: forbidFolders('layout') },
   ...features.flatMap(featureScopes),
 ];
@@ -258,12 +341,14 @@ export const createConfig = (features) =>
     // from broad to narrow, and all component blocks come after all plain blocks, so the last match
     // always carries both the folder patterns and the HttpClient restriction.
     { files: ['**/*.component.ts'], rules: folderImports([], [httpClientPath]) },
-    ...folderScopes(features).flatMap(({ dir, patterns }) => [
-      { files: [`${dir}/*.ts`], rules: folderImports(patterns) },
-    ]),
-    ...folderScopes(features).flatMap(({ dir, patterns }) => [
-      { files: [`${dir}/*.component.ts`], rules: folderImports(patterns, [httpClientPath]) },
-    ]),
+    ...folderScopes(features).map(({ dir, patterns, paths = [] }) => ({
+      files: [`${dir}/*.ts`],
+      rules: folderImports(patterns, paths),
+    })),
+    ...folderScopes(features).map(({ dir, patterns, paths = [] }) => ({
+      files: [`${dir}/*.component.ts`],
+      rules: folderImports(patterns, [...paths, httpClientPath]),
+    })),
     {
       files: ['src/app/core/mock/**/*.ts'],
       rules: {
