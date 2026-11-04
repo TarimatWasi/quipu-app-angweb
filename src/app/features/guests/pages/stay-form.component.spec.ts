@@ -535,6 +535,42 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     expect(ui.router.url).toBe('/admin/guests/g1/stays/new');
   });
 
+  it('stops offering the own environment of the stay once the BFF says it is taken in the new dates', async () => {
+    const ui = await correctReady();
+    await ui.type('Salida', '2026-11-20');
+    await ui.flush(await ui.expect1(isEnvironments), FREE);
+    expect(ui.page().getByLabelText<HTMLSelectElement>('Ambiente').value).toBe('env-1');
+    await ui.click(ui.save());
+    await ui.flush(
+      await ui.expect1(isUpdate),
+      { code: 'ENVIRONMENT_OCCUPIED', message: 'El ambiente ya está ocupado en esas fechas' },
+      409,
+    );
+
+    const alert = await screen.findByRole('alertdialog', {
+      name: 'El ambiente ya está ocupado en esas fechas',
+    });
+    await ui.click(within(alert).getByRole('button', { name: 'Elegir otro ambiente' }));
+    await ui.flush(await ui.expect1(isEnvironments), FREE);
+
+    const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
+    expect(select.value).toBe('');
+    expect([...select.options].map((option) => option.textContent.trim())).toEqual([
+      'Elige un ambiente',
+      'Cabaña C1',
+      'Habitación H2',
+    ]);
+    await ui.choose('env-3');
+    await ui.click(ui.save());
+    const patch = await ui.expect1(isUpdate);
+    expect(patch.request.body).toStrictEqual({
+      environmentId: 'env-3',
+      endDate: '2026-11-20',
+      version: 4,
+    });
+    await ui.flush(patch, stayOf({ version: 5 }));
+  });
+
   it.each([
     [
       'GUEST_NOT_ACTIVE',

@@ -190,6 +190,8 @@ export class StayFormComponent implements OnInit {
   protected readonly loaded = signal<Stay | null>(null);
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
   protected readonly free = signal<readonly Environment[]>([]);
+  /** The environment ENVIRONMENT_OCCUPIED rejected for the dates typed; cleared when they change. */
+  private readonly rejected = signal<string | null>(null);
   protected readonly freeState = signal<LoadState>({ kind: 'idle' });
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
@@ -216,10 +218,20 @@ export class StayFormComponent implements OnInit {
   /** A stay registered before TAR-237 has no environment and may keep it that way. */
   protected readonly legacy = computed(() => this.loaded()?.environmentId === null);
   protected readonly options = computed(() => {
-    const options = this.free().map(optionOf);
+    const rejected = this.rejected();
+    const options = this.free()
+      .map(optionOf)
+      .filter((option) => option.id !== rejected);
     const loaded = this.loaded();
     const current = loaded?.environmentId;
-    if (loaded && current && !options.some((option) => option.id === current)) {
+    // The stay's own environment stays on offer (it occupies it itself) unless the BFF just said
+    // it is taken in the dates typed.
+    if (
+      loaded &&
+      current &&
+      current !== rejected &&
+      !options.some((option) => option.id === current)
+    ) {
       return [{ id: current, label: loaded.environmentCode ?? current }, ...options];
     }
     return options;
@@ -303,11 +315,13 @@ export class StayFormComponent implements OnInit {
   }
 
   protected typedStart(target: EventTarget | null): void {
+    this.rejected.set(null);
     this.update({ start: valueOf(target) }, 'dates');
     this.refreshFree();
   }
 
   protected typedEnd(target: EventTarget | null): void {
+    this.rejected.set(null);
     this.update({ end: valueOf(target) }, 'dates');
     this.refreshFree();
   }
@@ -417,6 +431,7 @@ export class StayFormComponent implements OnInit {
     const { code, message, field } = toBffErrorWithServerMessage(error);
     const notice = NOTICES[code];
     if (notice) {
+      if (code === 'ENVIRONMENT_OCCUPIED') this.rejected.set(this.draft().environmentId || null);
       return this.notice(notice, message);
     }
     if (error instanceof HttpErrorResponse && error.status === 404) {
@@ -490,6 +505,7 @@ export class StayFormComponent implements OnInit {
       if (request !== this.stayRequest) return;
       this.timing.stop();
       this.loaded.set(stay);
+      this.rejected.set(null);
       this.draft.set(stay ? draftOf(stay) : EMPTY_DRAFT);
       this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
       if (stay) this.refreshFree();
