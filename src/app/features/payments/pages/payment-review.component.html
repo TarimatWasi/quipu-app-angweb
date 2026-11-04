@@ -86,7 +86,9 @@
       <dl class="facts">
         <div>
           <dt>Huésped</dt>
-          <dd>{{ p.guestName ?? 'Sin nombre aún' }}</dd>
+          <dd>
+            <a [routerLink]="['/admin/guests', p.guestId]">{{ p.guestName ?? 'Sin nombre aún' }}</a>
+          </dd>
         </div>
         <div>
           <dt>Documento</dt>

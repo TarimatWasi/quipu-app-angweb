@@ -1,0 +1,137 @@
+<a class="back" [routerLink]="['/admin/guests', guestId]">
+  <svg
+    aria-hidden="true"
+    width="18"
+    height="18"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2.4"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M15 6l-6 6 6 6" />
+  </svg>
+  {{ backLabel() }}
+</a>
+<div class="title">
+  <h1>Corregir documento</h1>
+  <p class="today">{{ today }}</p>
+</div>
+
+@switch (state().kind) {
+  @case ('loading') {
+    @if (timing.skeleton()) {
+      <div class="layout" aria-busy="true" aria-label="Cargando el documento">
+        <div class="fields">
+          <div class="sk sk-title"></div>
+          @for (field of skeletonRows; track field) {
+            <div>
+              <div class="sk sk-label"></div>
+              <div class="sk sk-field"></div>
+            </div>
+          }
+        </div>
+        <div class="facts">
+          @for (fact of skeletonRows; track fact) {
+            <div class="sk sk-fact"></div>
+          }
+        </div>
+      </div>
+    }
+    @if (timing.slow()) {
+      <output class="notice warn">{{ slowText }}</output>
+    }
+  }
+  @case ('not-found') {
+    <p class="notice error" role="alert">
+      <strong>No encontramos a este huésped.</strong>
+      <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+    </p>
+  }
+  @case ('locked') {
+    <p class="notice warn">{{ lockedText }}</p>
+  }
+  @case ('error') {
+    <p class="notice error" role="alert">
+      <strong>{{ loadError() }}</strong>
+      <button class="link-button" type="button" (click)="retry()">Reintentar</button>
+    </p>
+  }
+  @case ('ready') {
+    <div class="layout">
+      <aside aria-labelledby="side-title">
+        <h2 id="side-title">Cómo está hoy</h2>
+        <dl class="facts">
+          <div class="wide">
+            <dt>Hoy</dt>
+            <dd>{{ currentDocument() }}</dd>
+          </div>
+          <div class="wide">
+            <dt>Estado</dt>
+            <dd class="badge-cell">
+              <span [class]="'badge tone-' + statusBadge.tone">{{ statusBadge.label }}</span>
+            </dd>
+          </div>
+        </dl>
+        <p class="note">
+          Aún no usa su acceso: el documento todavía se puede corregir. El acceso que ya le diste
+          sigue sirviendo.
+        </p>
+      </aside>
+
+      <form novalidate aria-labelledby="form-title" (submit)="submit($event)">
+        <h2 id="form-title">El documento</h2>
+        <div class="fields">
+          <fieldset class="field">
+            <legend>Tipo de documento</legend>
+            <div class="chips">
+              @for (option of documentTypes; track option.value) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="option.value === documentType() ? 'true' : 'false'"
+                  (click)="chooseType(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="document-number">Número de documento</label>
+            <input
+              id="document-number"
+              class="control"
+              maxlength="20"
+              autocomplete="off"
+              aria-required="true"
+              [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
+              [value]="documentNumber()"
+              [attr.aria-invalid]="numberError() ? 'true' : null"
+              [attr.aria-describedby]="describedBy(numberError(), 'document-number')"
+              (input)="typedNumber($event.target)"
+            />
+            @if (numberError(); as message) {
+              <span id="document-number-error" class="error">{{ message }}</span>
+            }
+            <span id="document-number-help" class="help">
+              Con este documento entrará a Quipu. Se puede corregir solo hasta que use su acceso.
+            </span>
+          </div>
+        </div>
+
+        @if (generalError(); as message) {
+          <p [id]="generalErrorId" class="notice error" role="alert" tabindex="-1">
+            {{ message }}
+          </p>
+        }
+
+        <div class="submit">
+          <button mat-flat-button type="submit" [disabled]="!canSave()">{{ saveLabel() }}</button>
+          <a [routerLink]="['/admin/guests', guestId]">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  }
+}

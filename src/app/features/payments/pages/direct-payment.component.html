@@ -11,7 +11,14 @@
     @if (preselected) {
       <div class="field">
         <span class="strong">Huésped</span>
-        <span>{{ preselectedLabel() ?? '—' }}</span>
+        @if (preselectedGuest(); as chosen) {
+          <span
+            ><a [routerLink]="['/admin/guests', preselected]">{{ chosen.name }}</a> ·
+            {{ chosen.detail }}</span
+          >
+        } @else {
+          <span>—</span>
+        }
       </div>
     } @else {
       <div class="field">
@@ -29,6 +36,9 @@
             <option [value]="option.id">{{ option.label }}</option>
           }
         </select>
+        @if (chosenGuest(); as chosen) {
+          <a class="guest-link" [routerLink]="['/admin/guests', chosen.id]">{{ chosen.name }}</a>
+        }
         @if (guestError(); as message) {
           <p id="dp-guest-error" class="error">{{ message }}</p>
         }

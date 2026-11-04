@@ -47,6 +47,11 @@ export const routes: Routes = [
           import('@features/payments/payments.routes').then((m) => m.PAYMENTS_ROUTES),
       },
       {
+        path: 'admin/guests',
+        canActivate: [adminGuard],
+        loadChildren: () => import('@features/guests/guests.routes').then((m) => m.GUESTS_ROUTES),
+      },
+      {
         path: 'guest/payments',
         canActivate: [contractGuestGuard],
         loadChildren: () =>
