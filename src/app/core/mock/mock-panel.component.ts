@@ -1,23 +1,27 @@
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, InjectionToken, signal } from '@angular/core';
+import { Router } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
+import { AuthService } from '@core/services/auth.service';
 import { DEMO_CLAVE, DEMO_USERS, isDemoUserKey } from './data/demo-users';
 import { MockBff } from './mock-bff';
 import { isMockScenario, MOCK_SCENARIOS } from './mock-scenarios';
 
-/** How the panel leaves the page: a full load, so the app asks the BFF again from scratch. */
-export interface MockNavigation {
-  assign(url: string): void;
-  reload(): void;
-}
-
-export const MOCK_NAVIGATION = new InjectionToken<MockNavigation>('MOCK_NAVIGATION', {
+/** Reloads the page, so every screen asks the simulated BFF again. */
+export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
   providedIn: 'root',
-  factory: () => inject(DOCUMENT).location,
+  factory: () => {
+    const location = inject(DOCUMENT).location;
+    return () => {
+      location.reload();
+    };
+  },
 });
 
 /**
  * The floating panel of the `mock` profile: the demo role and the scenario of the simulated BFF.
- * Each change reloads the page, so every screen asks again with the new role or scenario.
+ * A role changes without reloading the page (the session lives in memory, so it works even when
+ * the browser blocks the storage); a scenario reloads it when the choice could be kept.
  */
 @Component({
   selector: 'app-mock-panel',
@@ -103,7 +107,9 @@ export const MOCK_NAVIGATION = new InjectionToken<MockNavigation>('MOCK_NAVIGATI
 })
 export class MockPanelComponent {
   private readonly bff = inject(MockBff);
-  private readonly location = inject(MOCK_NAVIGATION);
+  private readonly auth = inject(AuthService);
+  private readonly router = inject(Router);
+  private readonly reload = inject(MOCK_RELOAD);
 
   protected readonly users = Object.values(DEMO_USERS);
   protected readonly scenarios = Object.entries(MOCK_SCENARIOS).map(([key, label]) => ({
@@ -121,23 +127,40 @@ export class MockPanelComponent {
     this.open.update((open) => !open);
   }
 
-  /** Opens the session of the demo account (or closes it) and goes to its first page. */
   protected chooseRole(event: Event): void {
-    const key = (event.target as HTMLSelectElement).value;
+    void this.switchRole((event.target as HTMLSelectElement).value);
+  }
+
+  /**
+   * Opens the session of the demo account (or closes it) and goes to its first page with the
+   * router: the app learns the new session from /me, as after a reload, but nothing is reloaded.
+   */
+  async switchRole(key: string): Promise<void> {
     if (isDemoUserKey(key)) {
       this.bff.signIn(DEMO_USERS[key]);
-      this.location.assign('/home');
+      await firstValueFrom(this.auth.restore());
+      await this.router.navigateByUrl('/home');
     } else {
       this.bff.signOut();
-      this.location.assign('/login');
+      this.auth.clear();
+      await this.router.navigateByUrl('/login');
     }
   }
 
+  /**
+   * Starts the data of the scenario again and reloads the page so every screen asks anew. When the
+   * browser cannot keep the choice, a reload would lose it: the app goes home instead.
+   */
   protected chooseScenario(event: Event): void {
     const scenario = (event.target as HTMLSelectElement).value;
-    if (isMockScenario(scenario)) {
-      this.bff.setScenario(scenario);
-      this.location.reload();
+    if (!isMockScenario(scenario)) {
+      return;
+    }
+    this.current.set(scenario);
+    if (this.bff.setScenario(scenario)) {
+      this.reload();
+    } else {
+      void this.router.navigateByUrl('/home');
     }
   }
 }

@@ -24,15 +24,21 @@ export function readMockSetting(key: MockSettingKey): string | null {
   }
 }
 
-/** Saves `value`, or forgets the key when it is null. */
-export function writeMockSetting(key: MockSettingKey, value: string | null): void {
+/** Saves `value`, or forgets the key when it is null; false when the storage refused it. */
+export function writeMockSetting(key: MockSettingKey, value: string | null): boolean {
+  const store = storage();
+  if (store === null) {
+    return false;
+  }
   try {
     if (value === null) {
-      storage()?.removeItem(key);
+      store.removeItem(key);
     } else {
-      storage()?.setItem(key, value);
+      store.setItem(key, value);
     }
+    return true;
   } catch {
-    // Full or blocked storage: the choice simply lasts until the reload.
+    // Full or blocked storage: the choice lasts only while the page is open.
+    return false;
   }
 }

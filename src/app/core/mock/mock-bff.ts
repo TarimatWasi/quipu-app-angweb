@@ -67,11 +67,11 @@ export class MockBff implements MockContext {
     return this.currentScenario;
   }
 
-  /** Changes the scenario and starts its data again. */
-  setScenario(scenario: MockScenario): void {
-    writeMockSetting('quipu-mock:scenario', scenario);
+  /** Changes the scenario and starts its data again; true when it will survive a reload. */
+  setScenario(scenario: MockScenario): boolean {
     this.currentScenario = scenario;
     this.database = seedDb(scenario);
+    return writeMockSetting('quipu-mock:scenario', scenario);
   }
 
   user(): DemoUser | null {

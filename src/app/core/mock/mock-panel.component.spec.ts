@@ -1,25 +1,51 @@
-import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { ApplicationRef } from '@angular/core';
+import {
+  HttpClient,
+  HttpErrorResponse,
+  provideHttpClient,
+  withInterceptors,
+} from '@angular/common/http';
+import { ApplicationRef, Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
+import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '@core/services/auth.service';
 import { DEMO_USERS } from './data/demo-users';
 import { MOCK_BUNDLE_MARKER, MOCK_HEADER, MOCK_LATENCY, MockBff } from './mock-bff';
+import { mockBffInterceptor } from './mock-bff.interceptor';
 import { resetMockSettings } from './mock-bff.testing';
-import { MOCK_NAVIGATION, MockPanelComponent } from './mock-panel.component';
+import { MOCK_RELOAD, MockPanelComponent } from './mock-panel.component';
 import { mountMockPanel, withMockBff } from './mock-providers';
 import { readMockSetting } from './mock-storage';
 
-function navigation() {
-  return { assign: vi.fn<(url: string) => void>(), reload: vi.fn<() => void>() };
-}
+@Component({ selector: 'app-blank', template: '' })
+class BlankComponent {}
 
+/** The panel with the router, the session of the app and the simulated BFF without delay. */
 async function renderPanel() {
-  const nav = navigation();
-  await render(MockPanelComponent, { providers: [{ provide: MOCK_NAVIGATION, useValue: nav }] });
+  const reload = vi.fn<() => void>();
+  await render(MockPanelComponent, {
+    providers: [
+      provideRouter([
+        { path: 'home', component: BlankComponent },
+        { path: 'login', component: BlankComponent },
+      ]),
+      provideHttpClient(withInterceptors([mockBffInterceptor])),
+      { provide: MOCK_LATENCY, useValue: { normalMs: 0, slowMs: 0 } },
+      { provide: MOCK_RELOAD, useValue: reload },
+    ],
+  });
   screen.getByRole('button', { name: 'Simulación: Normal' }).click();
   await TestBed.inject(ApplicationRef).whenStable();
-  return nav;
+  return reload;
+}
+
+/** Makes the browser storage refuse every write and forget every read. */
+function blockStorage(): void {
+  vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+    throw new Error('QuotaExceededError');
+  });
+  vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
 }
 
 function choose(label: string, value: string): void {
@@ -34,6 +60,7 @@ describe('MockPanelComponent', () => {
   });
 
   afterEach(() => {
+    vi.restoreAllMocks();
     resetMockSettings();
   });
 
@@ -61,14 +88,38 @@ describe('MockPanelComponent', () => {
     ]);
   });
 
-  it('opens the session of the chosen role and goes home; «Sin sesión» closes it', async () => {
-    const nav = await renderPanel();
+  it('opens the session of the chosen role and goes home without reloading', async () => {
+    const reload = await renderPanel();
+    const router = TestBed.inject(Router);
+    const auth = TestBed.inject(AuthService);
     choose('Rol', 'temporary-guest');
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/home');
+    });
     expect(TestBed.inject(MockBff).user()?.key).toBe('temporary-guest');
-    expect(nav.assign).toHaveBeenCalledWith('/home');
+    expect(auth.session()).toEqual(
+      expect.objectContaining({ role: 'GUEST', guestType: 'TEMPORARY' }),
+    );
     choose('Rol', '');
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/login');
+    });
     expect(TestBed.inject(MockBff).user()).toBeNull();
-    expect(nav.assign).toHaveBeenLastCalledWith('/login');
+    expect(auth.session()).toBeNull();
+    expect(reload).not.toHaveBeenCalled();
+  });
+
+  it('keeps the chosen role when the browser blocks the storage', async () => {
+    const reload = await renderPanel();
+    blockStorage();
+    choose('Rol', 'admin');
+    await vi.waitFor(() => {
+      expect(TestBed.inject(Router).url).toBe('/home');
+    });
+    expect(TestBed.inject(AuthService).session()).toEqual(
+      expect.objectContaining({ role: 'ADMIN' }),
+    );
+    expect(reload).not.toHaveBeenCalled();
   });
 
   it('follows the session opened or closed from the app, not only from the panel', async () => {
@@ -85,13 +136,24 @@ describe('MockPanelComponent', () => {
   });
 
   it('keeps the chosen scenario and reloads the page', async () => {
-    const nav = await renderPanel();
+    const reload = await renderPanel();
     choose('Escenario', 'load-error');
     expect(readMockSetting('quipu-mock:scenario')).toBe('load-error');
     expect(TestBed.inject(MockBff).scenario()).toBe('load-error');
-    expect(nav.reload).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
     choose('Escenario', 'no-existe');
-    expect(nav.reload).toHaveBeenCalledTimes(1);
+    expect(reload).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not reload when the scenario cannot be kept: a reload would lose it', async () => {
+    const reload = await renderPanel();
+    blockStorage();
+    choose('Escenario', 'empty');
+    await vi.waitFor(() => {
+      expect(TestBed.inject(Router).url).toBe('/home');
+    });
+    expect(TestBed.inject(MockBff).scenario()).toBe('empty');
+    expect(reload).not.toHaveBeenCalled();
   });
 });
 
