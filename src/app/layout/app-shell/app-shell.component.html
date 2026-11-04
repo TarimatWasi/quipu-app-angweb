@@ -1,0 +1,140 @@
+<ng-template #sectionList let-place="place">
+  <ul class="sections" [class]="place">
+    @for (entry of sections(); track entry.label) {
+      <li>
+        @if (entry.link; as link) {
+          <a
+            [routerLink]="link"
+            [class.is-current]="current(entry)"
+            [attr.aria-current]="current(entry) ? 'page' : null"
+            (click)="closeMenus()"
+            >{{ entry.label }}</a
+          >
+        } @else {
+          <span class="soon">{{ entry.label }} <span class="help">(pronto)</span></span>
+        }
+      </li>
+    }
+  </ul>
+</ng-template>
+
+<ng-template #accountList>
+  <p class="who">
+    <strong>{{ session()?.name }}</strong>
+    {{ roleLabel() }}
+  </p>
+  <ul class="account-items">
+    @for (entry of accountEntries(); track entry.label) {
+      <li>
+        @if (entry.link; as link) {
+          <a class="item" [routerLink]="link" (click)="closeMenus()">{{ entry.label }}</a>
+        } @else {
+          <span class="item soon"
+            >{{ entry.label }} <span class="help">Disponible pronto</span></span
+          >
+        }
+      </li>
+    }
+    <li>
+      <button class="item leave" type="button" [disabled]="leaving()" (click)="leave()">
+        Salir
+      </button>
+    </li>
+  </ul>
+</ng-template>
+
+<header class="bar">
+  <div class="brand">
+    <img class="emblem" ngSrc="emblema.png" priority alt="" width="132" height="132" />
+    <p class="name">Quipu</p>
+  </div>
+  @if (sections().length > 0) {
+    <nav class="nav wide" aria-label="Principal">
+      <ng-container
+        [ngTemplateOutlet]="sectionList"
+        [ngTemplateOutletContext]="{ place: 'in-bar' }"
+      />
+    </nav>
+    <div class="account wide">
+      <button
+        #accountButton
+        class="me"
+        type="button"
+        [attr.aria-controls]="accountOpen() ? 'account-menu' : null"
+        [attr.aria-expanded]="accountOpen()"
+        (click)="toggleAccount()"
+      >
+        <span class="vh">Tu cuenta:</span> {{ session()?.name }}
+        <svg
+          aria-hidden="true"
+          class="chevron"
+          [class.up]="accountOpen()"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.5"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      @if (accountOpen()) {
+        <div id="account-menu" class="pop">
+          <ng-container [ngTemplateOutlet]="accountList" />
+        </div>
+      }
+    </div>
+    <button
+      #menuButton
+      class="burger narrow"
+      type="button"
+      [attr.aria-controls]="panelOpen() ? 'menu-panel' : null"
+      [attr.aria-expanded]="panelOpen()"
+      [attr.aria-label]="panelOpen() ? 'Cerrar menú' : 'Menú'"
+      (click)="togglePanel()"
+    >
+      <svg
+        aria-hidden="true"
+        width="26"
+        height="26"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+      >
+        @if (panelOpen()) {
+          <path d="M6 6l12 12M18 6L6 18" />
+        } @else {
+          <path d="M4 7h16M4 12h16M4 17h16" />
+        }
+      </svg>
+    </button>
+  } @else {
+    <div class="solo">
+      <span class="solo-name">{{ session()?.name }}</span>
+      <button class="out" type="button" [disabled]="leaving()" (click)="leave()">Salir</button>
+    </div>
+  }
+</header>
+<div class="quipu-band" aria-hidden="true">
+  <span class="quipu-band-threads"></span><span class="quipu-band-red"></span
+  ><span class="quipu-band-gold"></span>
+</div>
+@if (panelOpen()) {
+  <div id="menu-panel" class="panel narrow">
+    <nav aria-label="Principal">
+      <ng-container
+        [ngTemplateOutlet]="sectionList"
+        [ngTemplateOutletContext]="{ place: 'in-panel' }"
+      />
+    </nav>
+    <div class="panel-account">
+      <ng-container [ngTemplateOutlet]="accountList" />
+    </div>
+  </div>
+}
+<main class="content"><router-outlet /></main>
