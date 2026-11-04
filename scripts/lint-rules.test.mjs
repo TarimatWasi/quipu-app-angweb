@@ -145,6 +145,15 @@ const violations = [
   ['src/app/a.ts', 'export const a = () => eval("1");', 'no-eval'],
   ['src/app/a.ts', "export const a = globalThis['localStorage'];", 'FE-ANG-HTTP-02'],
   ['src/app/a.ts', "export const a = 'HTTPS://api.example.org';", 'FE-ANG-HTTP-01'],
+  // The storage exception of the simulated backend is bounded: sessionStorage only, core/mock only.
+  ['src/app/core/mock/a.ts', 'export const a = localStorage;', 'FE-ANG-HTTP-02'],
+  ['src/app/core/mock/a.ts', 'export const a = globalThis.localStorage;', 'FE-ANG-HTTP-02'],
+  ['src/app/core/mock/a.ts', "export const a = window['localStorage'];", 'FE-ANG-HTTP-02'],
+  ['src/app/core/a.ts', 'export const a = globalThis.sessionStorage;', 'FE-ANG-HTTP-02'],
+  ['src/app/core/mocks/a.ts', 'export const a = globalThis.sessionStorage;', 'FE-ANG-HTTP-02'],
+  ['src/app/core/mock/a.spec.ts', 'export const a = globalThis.sessionStorage;', 'FE-ANG-HTTP-02'],
+  ['src/app/core/mock/a.ts', 'export const a = (e: E) => { e.innerHTML = "x"; };', 'FE-ANG-SEC-01'],
+  ['src/app/core/mock/a.ts', "export const a = 'https://api.example.org';", 'FE-ANG-HTTP-01'],
   // Cross-feature imports are rejected at any depth, by alias and by relative path.
   [
     'src/app/features/f/pages/detail/a.ts',
@@ -226,6 +235,9 @@ const controls = [
   ['src/app/features/a.ts', "import { x } from '@features/f/x';\nexport const a = x;"],
   ['src/app/features/a.ts', "import { x } from './f/x';\nexport const a = x;"],
   ['src/app/a.html', '<button type="button">x</button>'],
+  // The simulated backend keeps the demo role and scenario in sessionStorage (TAR-287).
+  ['src/app/core/mock/a.ts', 'export const a = globalThis.sessionStorage;'],
+  ['src/app/core/mock/data/a.ts', 'export const a = sessionStorage;'],
 ];
 
 for (const [filePath, code] of controls) {

@@ -1,0 +1,7 @@
+{
+  "/bff": {
+    "target": "https://quipu-api-dev.onrender.com",
+    "secure": true,
+    "changeOrigin": true
+  }
+}

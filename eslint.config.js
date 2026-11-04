@@ -172,6 +172,24 @@ const restrictedGlobals = ['localStorage', 'sessionStorage'].map((name) => ({
   message: 'FE-ANG-HTTP-02 / FE-ANG-SEC-02: no browser storage for tokens or personal data',
 }));
 
+// Bounded exception for the simulated backend (QP-ANGWEB-ENV-01, TAR-287): core/mock/ only exists
+// in the `mock` build, which never reaches production (scripts/mock-bundle.mjs proves it), and keeps
+// the demo role and scenario in sessionStorage, never a token or personal data. localStorage stays
+// forbidden there too.
+const isSessionStorageRule = ({ selector }) => selector.includes('sessionStorage');
+const mockRestrictedSyntax = [
+  ...restrictedSyntax.filter((rule) => !isSessionStorageRule(rule)),
+  {
+    selector: "MemberExpression[property.name='localStorage']",
+    message: 'FE-ANG-HTTP-02: no localStorage, not even in the simulated backend',
+  },
+  {
+    selector: "MemberExpression[computed=true][property.value='localStorage']",
+    message: 'FE-ANG-HTTP-02: no localStorage, not even in the simulated backend',
+  },
+];
+const mockRestrictedGlobals = restrictedGlobals.filter(({ name }) => name !== 'sessionStorage');
+
 // `features` are the folders under src/app/features; tests pass their own list.
 export const createConfig = (features) =>
   tseslint.config(
@@ -246,6 +264,18 @@ export const createConfig = (features) =>
     ...folderScopes(features).flatMap(({ dir, patterns }) => [
       { files: [`${dir}/*.component.ts`], rules: folderImports(patterns, [httpClientPath]) },
     ]),
+    {
+      files: ['src/app/core/mock/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          ...mockRestrictedSyntax,
+          absoluteUrl,
+          absoluteUrlTemplate,
+        ],
+        'no-restricted-globals': ['error', ...mockRestrictedGlobals],
+      },
+    },
     {
       // Tests: Vitest only (FE-ANG-TST-01); they may use literal URLs and long describe blocks.
       files: ['**/*.spec.ts'],

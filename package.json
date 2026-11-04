@@ -6,8 +6,16 @@
     "ng": "ng",
     "prestart": "node scripts/set-env.mjs",
     "start": "ng serve",
+    "prestart:local": "node scripts/set-env.mjs",
+    "start:local": "ng serve --configuration local",
+    "prestart:dev": "node scripts/set-env.mjs",
+    "start:dev": "ng serve --configuration dev",
+    "prestart:mock": "node scripts/set-env.mjs",
+    "start:mock": "ng serve --configuration mock",
     "prebuild": "node scripts/set-env.mjs",
     "build": "ng build --configuration production",
+    "build:mock": "ng build --configuration mock",
+    "check:mock-bundle": "node scripts/mock-bundle.mjs",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
     "lint": "ng lint",
@@ -17,7 +25,7 @@
     "test:scripts": "node --test \"scripts/*.test.mjs\"",
     "test": "ng test --watch=false --coverage",
     "pretest": "node scripts/set-env.mjs",
-    "verify": "npm run format:check && npm run contract:check && npm run lint && npm run test:scripts && npm run build && npm run test"
+    "verify": "npm run format:check && npm run contract:check && npm run lint && npm run test:scripts && npm run build && npm run build:mock && npm run check:mock-bundle && npm run test"
   },
   "private": true,
   "dependencies": {
