@@ -61,6 +61,33 @@ export function creditLeft(db: MockDb, guestId: string): number {
   return cents(db.credit(guestId).balance - applied);
 }
 
+/**
+ * The payments the credit still to use was left over from, oldest first, with what is left of each
+ * (GuestCredit.origins, TAR-284). The credit is taken oldest first, so what was already used comes
+ * out of the oldest ones; what is left adds up to creditLeft.
+ */
+export function creditOrigins(db: MockDb, guestId: string): Schemas['GuestCredit']['origins'] {
+  const sources = db.data.payments
+    .filter((p) => p.guestId === guestId && p.period !== null && p.surplus?.outcome === 'CREDIT')
+    .sort((a, b) => (a.period ?? '').localeCompare(b.period ?? ''));
+  const left = creditLeft(db, guestId);
+  let used = cents(sources.reduce((sum, p) => sum + (p.surplus?.amount ?? 0), 0) - left);
+  const origins: Schemas['GuestCredit']['origins'] = [];
+  for (const source of sources) {
+    const amount = source.surplus?.amount ?? 0;
+    const taken = Math.min(Math.max(used, 0), amount);
+    used = cents(used - taken);
+    if (amount - taken > 0) {
+      origins.push({
+        paymentId: source.id,
+        period: source.period ?? '',
+        amount: cents(amount - taken),
+      });
+    }
+  }
+  return left > 0 ? origins : [];
+}
+
 export function periodStatus({
   contract,
   period,

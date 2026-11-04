@@ -1,6 +1,7 @@
 import type { components } from '@core/api/bff.generated';
 import { addDays, addMonths, today } from '../data/mock-dates';
 import { ID_KIND, mockId } from '../data/mock-db';
+import { GUEST_IDS } from '../data/demo-users';
 import { STAY_IDS } from '../data/seed-payments';
 import {
   catalogOf,
@@ -229,7 +230,9 @@ describe('credit of the guest in the simulated BFF (RN-38)', () => {
     expect(periods.find((item) => item.period === currentPeriod())).toEqual(
       expect.objectContaining({ status: 'UNPAID', amount: 680, creditApplied: 30, amountDue: 650 }),
     );
-    expect((await mock.get<Schemas['GuestCredit']>('/bff/guest/credit')).balance).toBe(0);
+    const credit = await mock.get<Schemas['GuestCredit']>('/bff/guest/credit');
+    expect(credit.balance).toBe(0);
+    expect(credit.origins).toEqual([]);
     const body = proofsForm([{ kind: 'CASH', amount: 650 }], [], { period: currentPeriod() });
     const summary = await mock.send<Schemas['PaymentSummary']>('POST', '/bff/guest/payments', body);
     await mock.signIn('admin');
@@ -249,12 +252,75 @@ describe('credit of the guest in the simulated BFF (RN-38)', () => {
         paymentId: null,
       }),
     );
-    expect((await mock.get<Schemas['GuestCredit']>('/bff/guest/credit')).balance).toBe(20);
+    const credit = await mock.get<Schemas['GuestCredit']>('/bff/guest/credit');
+    expect(credit.balance).toBe(20);
+    const source = mock.bff.db.data.payments.find((p) => p.surplus?.outcome === 'CREDIT');
+    expect(source?.period).toBe(lastMonth());
+    expect(credit.origins).toEqual([{ paymentId: source?.id, period: lastMonth(), amount: 20 }]);
     const body = proofsForm([{ kind: 'CASH', amount: 680 }], [], { period: currentPeriod() });
     const error = await mock.fail(mock.send('POST', '/bff/guest/payments', body));
     expect(catalogOf(error)).toEqual({
       code: 'PAYMENT_ALREADY_EXISTS_FOR_PERIOD',
       message: SOME_TEXT,
     });
+  });
+});
+
+describe('origins of the credit in the simulated BFF (TAR-284)', () => {
+  afterEach(() => {
+    resetMockSettings();
+  });
+
+  const sum = (origins: Schemas['GuestCredit']['origins']) =>
+    Math.round(origins.reduce((total, origin) => total + origin.amount, 0) * 100) / 100;
+
+  it('lists what is left of each payment that left credit, oldest taken first', async () => {
+    const mock = await signedIn('contract-guest');
+    const { db } = mock.bff;
+    const approved = db.data.payments
+      .filter((p) => p.guestId === GUEST_IDS.luis && p.status === 'APPROVED' && p.period !== null)
+      .sort((a, b) => (a.period ?? '').localeCompare(b.period ?? ''));
+    const [oldest, newer, newest] = approved;
+    if (!oldest || !newer || !newest) throw new Error('the seed needs three approved months');
+    // Kept newest first, so the ledger has to order them by period itself.
+    db.data.payments.reverse();
+    newest.surplus = { amount: 25, outcome: 'CREDIT' };
+    newer.surplus = { amount: 50, outcome: 'CREDIT' };
+    oldest.surplus = { amount: 40, outcome: 'CREDIT' };
+    // 20 of the 115 were already sent with a payment: they come out of the oldest one.
+    db.credit(GUEST_IDS.luis).balance = 95;
+
+    const credit = await mock.get<Schemas['GuestCredit']>('/bff/guest/credit');
+    expect(credit.balance).toBe(95);
+    expect(credit.origins).toEqual([
+      { paymentId: oldest.id, period: oldest.period, amount: 20 },
+      { paymentId: newer.id, period: newer.period, amount: 50 },
+      { paymentId: newest.id, period: newest.period, amount: 25 },
+    ]);
+    expect(sum(credit.origins)).toBe(credit.balance);
+  });
+
+  it('drops a payment whose credit was used whole', async () => {
+    const mock = await signedIn('contract-guest');
+    const { db } = mock.bff;
+    const approved = db.data.payments
+      .filter((p) => p.guestId === GUEST_IDS.luis && p.status === 'APPROVED' && p.period !== null)
+      .sort((a, b) => (a.period ?? '').localeCompare(b.period ?? ''));
+    const [oldest, newer] = approved;
+    if (!oldest || !newer) throw new Error('the seed needs two approved months');
+    oldest.surplus = { amount: 40, outcome: 'CREDIT' };
+    newer.surplus = { amount: 50, outcome: 'CREDIT' };
+    db.credit(GUEST_IDS.luis).balance = 35.5;
+
+    const credit = await mock.get<Schemas['GuestCredit']>('/bff/guest/credit');
+    expect(credit.origins).toEqual([{ paymentId: newer.id, period: newer.period, amount: 35.5 }]);
+    expect(sum(credit.origins)).toBe(credit.balance);
+  });
+
+  it('answers no origins in the empty scenario', async () => {
+    const mock = setUpMockBff('empty');
+    await mock.signIn('contract-guest');
+    const credit = await mock.get<Schemas['GuestCredit']>('/bff/guest/credit');
+    expect(credit).toEqual(expect.objectContaining({ balance: 0, origins: [] }));
   });
 });

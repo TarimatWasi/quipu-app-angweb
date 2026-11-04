@@ -1,11 +1,45 @@
 /**
  * Texts of the credit of a guest with a contract and of the refund of a stay (H1, H3, T1; RN-38,
- * RN-39). They only say what the BFF answers: the BFF does not tell from which month the credit was
- * left over, only that it comes from what was paid over a monthly amount.
+ * RN-39). They only say what the BFF answers: the months the credit still to use was left over
+ * from come in GuestCredit.origins (TAR-284); without them it says «un pago anterior».
  */
-import { formatDate, formatMoney, formatPeriod } from './payment-format';
+import { formatDate, formatMoney, formatPeriod, monthName } from './payment-format';
 
-const ORIGIN = 'Sobró de un pago anterior';
+/** A payment the credit was left over from (GuestCredit.origins); only its month is shown. */
+export interface CreditOrigin {
+  /** The month that payment paid ("2026-10"). */
+  readonly period: string;
+}
+
+const UNKNOWN_ORIGIN = 'de un pago anterior';
+
+/** "a", "a y b", "a, b y c". */
+function spanishList(items: readonly string[]): string {
+  const last = items.at(-1) ?? '';
+  return items.length > 1 ? `${items.slice(0, -1).join(', ')} y ${last}` : last;
+}
+
+/**
+ * Where the credit was left over from: «de tu pago de octubre», «de tus pagos de septiembre y
+ * octubre», or «de un pago anterior» when no month can be told. Each month is named once and in
+ * order; the year is added only when the months span more than one.
+ */
+export function creditOriginText(origins: readonly CreditOrigin[]): string {
+  const known = origins.filter((origin) => monthName(origin.period) !== null);
+  const periods = [...new Set(known.map((origin) => origin.period))].sort((a, b) =>
+    a.localeCompare(b),
+  );
+  if (periods.length === 0) {
+    return UNKNOWN_ORIGIN;
+  }
+  const oneYear = new Set(periods.map((period) => period.slice(0, 4))).size === 1;
+  const names = periods.map((period) => {
+    const name = monthName(period) ?? '';
+    return oneYear ? name : `${name} ${period.slice(0, 4)}`;
+  });
+  const payments = known.length === 1 ? 'tu pago' : 'tus pagos';
+  return `de ${payments} de ${spanishList(names)}`;
+}
 
 /** H1: «Tienes S/ … a favor.» */
 export function creditBalanceText(balance: number): string {
@@ -17,15 +51,18 @@ export interface CreditUse {
   readonly toRefund: boolean;
   /** The month the BFF already discounts it from ("2026-11"), if any. */
   readonly month: string | null;
+  /** The payments it was left over from, oldest first (GuestCredit.origins). */
+  readonly origins: readonly CreditOrigin[];
 }
 
 /** H1: where the credit is discounted, or that it will be refunded. */
-export function creditUseText({ toRefund, month }: CreditUse): string {
+export function creditUseText({ toRefund, month, origins }: CreditUse): string {
+  const origin = `Sobró ${creditOriginText(origins)}`;
   if (toRefund) {
-    return `${ORIGIN} y ya no quedan meses donde descontarlo: te lo devolveremos.`;
+    return `${origin} y ya no quedan meses donde descontarlo: te lo devolveremos.`;
   }
   const where = month === null ? 'tu próxima cuota' : formatPeriod(month);
-  return `${ORIGIN} y se descuenta de ${where}.`;
+  return `${origin} y se descuenta de ${where}.`;
 }
 
 /** H3: the note of the credit discounted from the month or the payment. */

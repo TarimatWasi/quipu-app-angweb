@@ -2,6 +2,7 @@ import type { components } from '@core/api/bff.generated';
 import {
   contractPeriods,
   creditLeft,
+  creditOrigins,
   currentStay,
   periodStatus,
   stayView,
@@ -129,6 +130,7 @@ export const GUEST_ROUTES: readonly MockRoute[] = [
       const body: Schemas['GuestCredit'] = {
         balance: creditLeft(ctx.db, guestId),
         toRefund: false,
+        origins: creditOrigins(ctx.db, guestId),
         lastRefund: ctx.db.credit(guestId).lastRefund,
       };
       return ok(body);

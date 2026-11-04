@@ -86,6 +86,12 @@ export function formatPeriod(period: string): string {
   return parts ? `${MONTHS[parts.month - 1] ?? ''} ${String(parts.year)}` : period;
 }
 
+/** "2026-10" → "octubre", as it goes inside a sentence; null for anything but a month. */
+export function monthName(period: string): string | null {
+  const parts = /^\d{4}-\d{2}$/.test(period) ? dateParts(period) : null;
+  return parts ? (MONTHS[parts.month - 1] ?? '').toLowerCase() : null;
+}
+
 function shortDate({ day, month }: DateParts, year?: number): string {
   const text = `${String(day)} ${SHORT_MONTHS[month - 1] ?? ''}`;
   return year === undefined ? text : `${text} ${String(year)}`;
