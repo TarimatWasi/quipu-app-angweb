@@ -9,7 +9,7 @@ import {
   PaymentStatus,
 } from '@core/services/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { formatDateTime, periodLabel, proofsSummary } from '../payment-format';
+import { formatDateTime, periodLabel, proofsSummary } from '@shared/payments/payment-format';
 import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
 import type { QueueViewParam } from '../queue-views';
 

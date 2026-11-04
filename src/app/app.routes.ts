@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { adminGuard } from '@core/guards/admin.guard';
 import { anonymousGuard } from '@core/guards/anonymous.guard';
 import { authGuard } from '@core/guards/auth.guard';
+import { contractGuestGuard, temporaryGuestGuard } from '@core/guards/guest.guard';
 import { passwordChangeGuard } from '@core/guards/password-change.guard';
 import { AppShellComponent } from '@layout/app-shell/app-shell.component';
 
@@ -44,6 +45,20 @@ export const routes: Routes = [
         canActivate: [adminGuard],
         loadChildren: () =>
           import('@features/payments/payments.routes').then((m) => m.PAYMENTS_ROUTES),
+      },
+      {
+        path: 'guest/payments',
+        canActivate: [contractGuestGuard],
+        loadChildren: () =>
+          import('@features/payments/guest-payments.routes').then((m) => m.GUEST_PAYMENTS_ROUTES),
+      },
+      {
+        path: 'temporary-guest/payment',
+        canActivate: [temporaryGuestGuard],
+        loadChildren: () =>
+          import('@features/payments/guest-payments.routes').then(
+            (m) => m.TEMPORARY_PAYMENT_ROUTES,
+          ),
       },
     ],
   },

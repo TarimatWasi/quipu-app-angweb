@@ -10,7 +10,14 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 import type { ProofKind } from '@core/services/admin-payments.service';
-import { formatMoney, parseAmount } from '../payment-format';
+import { formatMoney, parseAmount } from '@shared/payments/payment-format';
+import {
+  AMOUNT_TEXT,
+  INVALID_FILE_TEXT,
+  MISSING_FILE_TEXT,
+  VOUCHER_MAX_BYTES,
+  VOUCHER_TYPES,
+} from '../proof-rules';
 
 export interface AddProofDialogData {
   /** What is still missing to cover what is due; 0 when nothing is missing. */
@@ -25,12 +32,6 @@ export interface AddedProof {
   readonly file?: File;
 }
 
-/** RF-15: JPG, PNG or PDF of 5 MB at most; the BFF checks them again by content. */
-export const VOUCHER_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'application/pdf'];
-export const VOUCHER_MAX_BYTES = 5 * 1024 * 1024;
-export const INVALID_FILE_TEXT = 'Archivo inválido — sube JPG, PNG o PDF de máx. 5MB';
-export const AMOUNT_TEXT = 'El monto debe ser mayor a 0';
-export const MISSING_FILE_TEXT = 'Sube el archivo del voucher';
 const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 
 /**

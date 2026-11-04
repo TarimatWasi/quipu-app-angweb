@@ -13,7 +13,12 @@ const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login
 @Component({ selector: 'app-login-stub', template: '' })
 class LoginStubComponent {}
 
-async function setup(session: { role: Role; name: string; mustChangePassword: boolean }) {
+async function setup(session: {
+  role: Role;
+  name: string;
+  mustChangePassword: boolean;
+  guestType?: 'CONTRACT' | 'TEMPORARY';
+}) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([{ path: 'login', component: LoginStubComponent }]),
@@ -64,5 +69,51 @@ describe('HomeComponent', () => {
     const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
 
     expect(ui.queryByRole('link', { name: /Pagos/ })).toBeNull();
+  });
+
+  it('shows a guest with a contract its payment entries (H1), from its own account status', async () => {
+    const { fixture, ui } = await setup({
+      role: 'GUEST',
+      guestType: 'CONTRACT',
+      name: 'guest',
+      mustChangePassword: false,
+    });
+    TestBed.inject(HttpTestingController)
+      .expectOne((req) => req.url.endsWith('/bff/guest/account-status'))
+      .flush([]);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(ui.getByRole('link', { name: 'Subir voucher' })).toBeTruthy();
+    expect(ui.getByRole('link', { name: 'Historial de pagos' })).toBeTruthy();
+    TestBed.inject(HttpTestingController).expectNone((req) =>
+      req.url.endsWith('/bff/temporary-guest/payment-status'),
+    );
+  });
+
+  it('shows a temporary guest the state of its stay (T1), not the contract entries', async () => {
+    const { fixture, ui } = await setup({
+      role: 'GUEST',
+      guestType: 'TEMPORARY',
+      name: 'guest',
+      mustChangePassword: false,
+    });
+    TestBed.inject(HttpTestingController)
+      .expectOne((req) => req.url.endsWith('/bff/temporary-guest/payment-status'))
+      .flush({
+        stayId: 's1',
+        startDate: '2026-10-20',
+        endDate: '2026-10-31',
+        status: 'UNPAID',
+        agreedAmount: 400,
+        paymentId: null,
+        rejectionReason: null,
+        surplus: null,
+      });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await fixture.whenStable();
+
+    expect(ui.getByRole('link', { name: 'Subir pago' })).toBeTruthy();
+    expect(ui.queryByRole('link', { name: 'Historial de pagos' })).toBeNull();
   });
 });

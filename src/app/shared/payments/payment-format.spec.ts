@@ -1,12 +1,16 @@
 import {
   balanceOf,
+  formatDate,
   formatDateTime,
   formatMoney,
   formatPeriod,
   formatStay,
+  hasRejectedPayment,
   parseAmount,
+  PERIOD_STATUS_LABELS,
   periodLabel,
   proofsSummary,
+  takesNewPayment,
 } from './payment-format';
 
 describe('payment-format', () => {
@@ -75,5 +79,34 @@ describe('payment-format', () => {
     expect(balanceOf(400, 350, true)).toEqual({ kind: 'over', difference: 50, refund: true });
     // Cents are compared exactly, without floating point drift.
     expect(balanceOf(0.1 + 0.2, 0.3, false)).toEqual({ kind: 'complete', difference: 0 });
+  });
+
+  it('shows a date as day, short month and year, and leaves anything else as it came', () => {
+    expect(formatDate('2026-11-03')).toBe('3 nov 2026');
+    expect(formatDate('2026-01-31')).toBe('31 ene 2026');
+    expect(formatDate('ayer')).toBe('ayer');
+  });
+
+  it('names every state of a period or a stay with its label of the SRS', () => {
+    expect(PERIOD_STATUS_LABELS).toEqual({
+      PAID: 'Pagado',
+      UNDER_REVIEW: 'Pendiente de revisión',
+      UNPAID: 'No pagado',
+      OVERDUE: 'Atrasado',
+    });
+  });
+
+  it('tells a month that takes a first payment from one whose payment was rejected', () => {
+    expect(takesNewPayment({ status: 'UNPAID', paymentId: null })).toBe(true);
+    expect(takesNewPayment({ status: 'OVERDUE' })).toBe(true);
+    expect(takesNewPayment({ status: 'OVERDUE', paymentId: 'p1' })).toBe(false);
+    expect(takesNewPayment({ status: 'UNDER_REVIEW', paymentId: null })).toBe(false);
+    expect(takesNewPayment({ status: 'PAID', paymentId: null })).toBe(false);
+
+    expect(hasRejectedPayment({ status: 'UNPAID', paymentId: 'p1' })).toBe(true);
+    expect(hasRejectedPayment({ status: 'OVERDUE', paymentId: 'p1' })).toBe(true);
+    expect(hasRejectedPayment({ status: 'UNPAID', paymentId: null })).toBe(false);
+    expect(hasRejectedPayment({ status: 'UNDER_REVIEW', paymentId: 'p1' })).toBe(false);
+    expect(hasRejectedPayment({ status: 'PAID', paymentId: 'p1' })).toBe(false);
   });
 });

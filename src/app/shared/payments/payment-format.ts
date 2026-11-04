@@ -1,4 +1,36 @@
-/** Texts and numbers of the payment screens (A5, A5.2), Spanish only (QP-ANGWEB-LNG-01). */
+/**
+ * Texts and numbers of the payment screens (A5, A5.2, H1, H3, H4, T1, T2), Spanish only
+ * (QP-ANGWEB-LNG-01). Shared because the home of each guest shows its payment state too.
+ */
+
+/** Etiquetas de estado of a period of a contract or of a stay (H1, T1). */
+export const PERIOD_STATUS_LABELS: Readonly<
+  Record<'PAID' | 'UNDER_REVIEW' | 'UNPAID' | 'OVERDUE', string>
+> = {
+  PAID: 'Pagado',
+  UNDER_REVIEW: 'Pendiente de revisión',
+  UNPAID: 'No pagado',
+  OVERDUE: 'Atrasado',
+};
+
+/** The state of a month of a contract or of a stay, with its live or last payment (H1, T1). */
+export interface PayableState {
+  readonly status: keyof typeof PERIOD_STATUS_LABELS;
+  readonly paymentId?: string | null;
+}
+
+/** A month or a stay that still takes a first payment: not paid and without any payment. */
+export function takesNewPayment({ status, paymentId }: PayableState): boolean {
+  return (status === 'UNPAID' || status === 'OVERDUE') && !paymentId;
+}
+
+/**
+ * A month or a stay whose payment was rejected: it stays unpaid with its payment, which is
+ * corrected and sent again (RN-05), never replaced by a new one.
+ */
+export function hasRejectedPayment({ status, paymentId }: PayableState): boolean {
+  return (status === 'UNPAID' || status === 'OVERDUE') && !!paymentId;
+}
 
 const MONTHS = [
   'Enero',
@@ -87,6 +119,12 @@ export function periodLabel({ period, stayStartDate, stayEndDate }: PeriodFields
     return formatPeriod(period);
   }
   return stayStartDate && stayEndDate ? formatStay(stayStartDate, stayEndDate) : DASH;
+}
+
+/** "2026-11-03" → "3 nov 2026"; anything else is shown as it came. */
+export function formatDate(isoDate: string): string {
+  const parts = dateParts(isoDate);
+  return parts ? shortDate(parts, parts.year) : isoDate;
 }
 
 /** "2026-11-03T19:05:00Z" → "3 nov 2026, 14:05" (time of Lima). */

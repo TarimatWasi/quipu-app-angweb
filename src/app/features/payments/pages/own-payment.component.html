@@ -1,0 +1,282 @@
+<section class="page" aria-labelledby="own-payment-title">
+  <header class="head">
+    <div>
+      <a [routerLink]="home">Volver al inicio</a>
+      <h1 id="own-payment-title">{{ title() }}</h1>
+    </div>
+    @if (mode() === 'read' && payment(); as p) {
+      <p [class]="'badge status-' + p.status">{{ paymentStatusLabels[p.status] }}</p>
+    }
+  </header>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <output class="muted">Cargando…</output>
+    }
+    @case ('not-found') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ paymentId ? 'No encontramos el pago.' : notFoundMessage() }}</p>
+        <a [routerLink]="home">Volver al inicio</a>
+      </div>
+    }
+    @case ('error') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadErrorMessage() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+  }
+
+  @if (state().kind === 'ready') {
+    @if (mode() === 'read' && payment(); as p) {
+      <section aria-labelledby="own-payment-proofs">
+        @if (labelOf(p); as label) {
+          <p class="strong">{{ label }}</p>
+        }
+        <p class="muted">Total declarado {{ formatMoney(p.amount) }}</p>
+        <h2 id="own-payment-proofs">Comprobantes</h2>
+        <ul class="proof-list">
+          @for (proof of p.proofs; track proof.id) {
+            <li>
+              {{ proofKindLabel(proof) }}
+              @if (proof.file; as file) {
+                · {{ file.name }}
+              }
+              @if (proof.method; as method) {
+                · {{ method }}
+              }
+              · {{ formatMoney(proof.declaredAmount) }}
+              @if (proof.verifiedAmount !== null) {
+                · verificado {{ formatMoney(proof.verifiedAmount) }}
+              }
+            </li>
+          }
+        </ul>
+      </section>
+    }
+
+    @if (mode() === 'correct' && payment(); as p) {
+      <div class="quipu-alert" role="note">
+        <p class="strong">Tu pago no se aprobó</p>
+        @if (p.rejectionReason; as reason) {
+          <p class="reason">{{ reason }}</p>
+        }
+      </div>
+    }
+
+    @if (mode() === 'new' && audience === 'CONTRACT') {
+      @if (toCorrect().length > 0) {
+        <ul class="proof-list">
+          @for (rejected of toCorrect(); track rejected.id) {
+            <li>
+              <a [routerLink]="['/guest/payments', rejected.id]"
+                >Corregir pago de {{ rejected.label }}</a
+              >
+            </li>
+          }
+        </ul>
+      }
+      @if (options().length === 0) {
+        <p class="empty">No tienes meses por pagar.</p>
+      }
+    }
+
+    @if (mode() === 'new' && audience === 'TEMPORARY' && stay(); as s) {
+      <p>
+        <span class="strong">Estadía {{ stayLabel() }}</span>
+        <span [class]="'badge status-' + s.status">{{ statusLabels[s.status] }}</span>
+      </p>
+      @if (!stayTakesPayment() && s.paymentId; as id) {
+        <a mat-stroked-button [routerLink]="['/temporary-guest/payment', id]">
+          {{ s.status === 'UNDER_REVIEW' || s.status === 'PAID' ? 'Ver pago' : 'Corregir pago' }}
+        </a>
+      }
+    }
+
+    @if (showForm()) {
+      <form novalidate (submit)="submit($event)">
+        @if (mode() === 'new' && audience === 'CONTRACT') {
+          <div class="field">
+            <label for="op-period">Mes</label>
+            <select
+              id="op-period"
+              aria-required="true"
+              [attr.aria-invalid]="periodError() ? 'true' : null"
+              [attr.aria-describedby]="periodError() ? 'op-period-error' : 'op-period-help'"
+              (change)="choosePeriod($event.target)"
+            >
+              <option value="" [selected]="periodChoice() === ''">Elige el período</option>
+              @for (option of options(); track option.period) {
+                <option [value]="option.period" [selected]="option.period === periodChoice()">
+                  {{ option.label }}
+                </option>
+              }
+            </select>
+            <p id="op-period-help" class="help">
+              @if (selected(); as item) {
+                Cuota {{ formatMoney(item.amount) }}
+                @if (item.creditApplied > 0) {
+                  · crédito a favor {{ formatMoney(item.creditApplied) }}
+                }
+                · por pagar {{ formatMoney(item.amountDue) }}
+              } @else {
+                Solo los meses sin pagar.
+              }
+            </p>
+            @if (periodError(); as message) {
+              <p id="op-period-error" class="error">{{ message }}</p>
+            }
+          </div>
+        }
+
+        @if (mode() === 'new' && audience === 'TEMPORARY' && stay(); as s) {
+          <p class="help">Monto acordado {{ formatMoney(s.agreedAmount) }}</p>
+        }
+        @if (mode() === 'correct' && payment(); as p) {
+          <p class="help">Por pagar {{ formatMoney(p.amountDue) }}</p>
+        }
+
+        <div class="proofs">
+          @for (proof of proofs(); track proof.key; let i = $index) {
+            <fieldset>
+              <legend>Comprobante {{ i + 1 }}</legend>
+              <div class="kinds">
+                <label>
+                  <input
+                    type="radio"
+                    [name]="'op-kind-' + proof.key"
+                    value="VOUCHER"
+                    [checked]="proof.kind === 'VOUCHER'"
+                    (change)="kindOf(i, 'VOUCHER')"
+                  />
+                  Con voucher
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    [name]="'op-kind-' + proof.key"
+                    value="CASH"
+                    [checked]="proof.kind === 'CASH'"
+                    (change)="kindOf(i, 'CASH')"
+                  />
+                  Efectivo, sin voucher
+                </label>
+              </div>
+
+              @if (proof.kind === 'VOUCHER') {
+                <div class="field">
+                  <label [for]="'op-proof-' + proof.key + '-file'">Archivo del voucher</label>
+                  <input
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                    [id]="'op-proof-' + proof.key + '-file'"
+                    [attr.aria-invalid]="fileError(i) ? 'true' : null"
+                    [attr.aria-describedby]="
+                      'op-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
+                    "
+                    (change)="picked(i, $event.target)"
+                  />
+                  <p class="help" [id]="'op-proof-' + proof.key + '-file-help'">
+                    @if (proof.file) {
+                      {{ proof.file.name }}
+                    } @else if (proof.keptFile) {
+                      Archivo enviado: {{ proof.keptFile }}. Elige otro solo si quieres cambiarlo.
+                    } @else {
+                      JPG, PNG o PDF de hasta 5 MB.
+                    }
+                  </p>
+                  @if (fileError(i); as message) {
+                    <p class="error" [id]="'op-proof-' + proof.key + '-file-error'">
+                      {{ message }}
+                    </p>
+                  }
+                </div>
+                <div class="field">
+                  <label [for]="'op-proof-' + proof.key + '-method'"
+                    >Medio de pago (opcional)</label
+                  >
+                  <input
+                    type="text"
+                    maxlength="60"
+                    [id]="'op-proof-' + proof.key + '-method'"
+                    [value]="proof.method"
+                    (input)="typedMethod(i, methodFrom($event.target))"
+                  />
+                  <fieldset class="shortcuts">
+                    <legend class="visually-hidden">Medios frecuentes</legend>
+                    @for (shortcut of shortcuts; track shortcut) {
+                      <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
+                        {{ shortcut }}
+                      </button>
+                    }
+                  </fieldset>
+                </div>
+              }
+
+              <div class="field">
+                <label [for]="'op-proof-' + proof.key + '-amount'">Monto (S/)</label>
+                <input
+                  type="text"
+                  inputmode="decimal"
+                  aria-required="true"
+                  [id]="'op-proof-' + proof.key + '-amount'"
+                  [value]="proof.amount"
+                  [attr.aria-invalid]="amountError(i) ? 'true' : null"
+                  [attr.aria-describedby]="
+                    amountError(i) ? 'op-proof-' + proof.key + '-amount-error' : null
+                  "
+                  (input)="typedAmount(i, $event.target)"
+                />
+                @if (amountError(i); as message) {
+                  <p class="error" [id]="'op-proof-' + proof.key + '-amount-error'">
+                    {{ message }}
+                  </p>
+                }
+              </div>
+
+              @if (proofs().length > 1) {
+                <button mat-button type="button" (click)="removeProof(i)">
+                  Quitar<span class="visually-hidden"> comprobante {{ i + 1 }}</span>
+                </button>
+              }
+            </fieldset>
+          }
+
+          <div class="row">
+            <button
+              mat-stroked-button
+              type="button"
+              [disabled]="atProofLimit()"
+              [attr.aria-describedby]="atProofLimit() ? 'op-proof-limit' : null"
+              (click)="addProof()"
+            >
+              Agregar otro comprobante
+            </button>
+            @if (atProofLimit()) {
+              <p id="op-proof-limit" class="help">{{ proofLimitText }}</p>
+            }
+          </div>
+          @if (balanceText(); as text) {
+            <output class="strong">Suma {{ formatMoney(sum()) }} · {{ text }}</output>
+          }
+          @if (proofsError(); as message) {
+            <p class="error" id="op-proofs-error">{{ message }}</p>
+          }
+        </div>
+
+        @if (generalError(); as message) {
+          <div class="quipu-alert" role="alert" [id]="generalErrorId" tabindex="-1">
+            <p>{{ message }}</p>
+          </div>
+        }
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="busy()">
+            {{ mode() === 'correct' ? 'Enviar de nuevo' : 'Enviar pago' }}
+          </button>
+          <a mat-button [routerLink]="home">Cancelar</a>
+        </div>
+      </form>
+    }
+  }
+</section>
