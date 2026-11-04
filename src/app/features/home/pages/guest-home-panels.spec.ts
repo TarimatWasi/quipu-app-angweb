@@ -11,7 +11,7 @@ import { TemporaryHomePanelComponent } from './temporary-home-panel.component';
 
 const isStatus = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/account-status');
 const isCredit = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/credit');
-const NO_CREDIT = { balance: 0, toRefund: false, lastRefund: null };
+const NO_CREDIT = { balance: 0, toRefund: false, origins: [], lastRefund: null };
 const isStay = (req: HttpRequest<unknown>) =>
   req.url.endsWith('/bff/temporary-guest/payment-status');
 
@@ -149,7 +149,7 @@ describe('home payment panels', () => {
         period({ period: '2026-10', status: 'OVERDUE', creditApplied: 0, amountDue: 350 }),
         period({ period: '2026-11', status: 'UNPAID', creditApplied: 50, amountDue: 300 }),
       ]);
-      await answer(isCredit, { balance: 50, toRefund: false, lastRefund: null });
+      await answer(isCredit, { balance: 50, toRefund: false, origins: [], lastRefund: null });
 
       expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
         'Tienes S/ 50.00 a favor. Sobró de un pago anterior y se descuenta de Noviembre 2026.',
@@ -166,10 +166,43 @@ describe('home payment panels', () => {
       ]);
     });
 
+    it('says which payments the credit was left over from (TAR-284)', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isStatus, [period({ period: '2026-10', status: 'PAID', paymentId: 'p' })]);
+      await answer(isCredit, {
+        balance: 80,
+        toRefund: false,
+        origins: [
+          { paymentId: 'pay_sep', period: '2026-09', amount: 30 },
+          { paymentId: 'pay_oct', period: '2026-10', amount: 50 },
+        ],
+        lastRefund: null,
+      });
+
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
+        'Tienes S/ 80.00 a favor. Sobró de tus pagos de septiembre y octubre y se descuenta de tu próxima cuota.',
+      );
+    });
+
+    it('names the one payment the credit was left over from', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isStatus, []);
+      await answer(isCredit, {
+        balance: 50,
+        toRefund: false,
+        origins: [{ paymentId: 'pay_oct', period: '2026-10', amount: 50 }],
+        lastRefund: null,
+      });
+
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
+        'Tienes S/ 50.00 a favor. Sobró de tu pago de octubre y se descuenta de tu próxima cuota.',
+      );
+    });
+
     it('says the credit goes to the next monthly amount when no month shows it yet', async () => {
       const { ui, answer } = await render(GuestHomePanelComponent);
       await answer(isStatus, [period({ period: '2026-10', status: 'PAID', paymentId: 'p' })]);
-      await answer(isCredit, { balance: 80.5, toRefund: false, lastRefund: null });
+      await answer(isCredit, { balance: 80.5, toRefund: false, origins: [], lastRefund: null });
 
       expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
         'Tienes S/ 80.50 a favor. Sobró de un pago anterior y se descuenta de tu próxima cuota.',
@@ -179,7 +212,7 @@ describe('home payment panels', () => {
 
     it('says the credit will be refunded when no month is left to use it', async () => {
       const { ui, answer } = await render(GuestHomePanelComponent);
-      await answer(isCredit, { balance: 120, toRefund: true, lastRefund: null });
+      await answer(isCredit, { balance: 120, toRefund: true, origins: [], lastRefund: null });
       await answer(isStatus, [period({ period: '2026-10', status: 'PAID', paymentId: 'p' })]);
 
       expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
@@ -225,7 +258,7 @@ describe('home payment panels', () => {
 
       await click(ui.getByRole('button', { name: 'Reintentar' }));
       await answer(isStatus, []);
-      await answer(isCredit, { balance: 20, toRefund: false, lastRefund: null });
+      await answer(isCredit, { balance: 20, toRefund: false, origins: [], lastRefund: null });
       expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toContain(
         'Tienes S/ 20.00 a favor.',
       );

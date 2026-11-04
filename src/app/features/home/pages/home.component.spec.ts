@@ -83,7 +83,7 @@ describe('HomeComponent', () => {
       .flush([]);
     TestBed.inject(HttpTestingController)
       .expectOne((req) => req.url.endsWith('/bff/guest/credit'))
-      .flush({ balance: 0, toRefund: false, lastRefund: null });
+      .flush({ balance: 0, toRefund: false, origins: [], lastRefund: null });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 

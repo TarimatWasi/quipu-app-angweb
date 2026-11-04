@@ -2,6 +2,7 @@ import {
   coveredAmountText,
   creditAppliedText,
   creditBalanceText,
+  creditOriginText,
   creditUseText,
   dueBreakdownText,
   surplusText,
@@ -13,15 +14,78 @@ describe('credit-texts', () => {
     expect(creditBalanceText(1200.5)).toBe('Tienes S/ 1,200.50 a favor.');
   });
 
+  it('names the month of each payment the credit was left over from, oldest first (TAR-284)', () => {
+    const origin = (period: string, amount = 10) => ({
+      paymentId: `pay_${period}`,
+      period,
+      amount,
+    });
+    expect(creditOriginText([])).toBe('de un pago anterior');
+    expect(creditOriginText([origin('2026-10')])).toBe('de tu pago de octubre');
+    expect(creditOriginText([origin('2026-09'), origin('2026-10')])).toBe(
+      'de tus pagos de septiembre y octubre',
+    );
+    expect(creditOriginText([origin('2026-08'), origin('2026-09'), origin('2026-10')])).toBe(
+      'de tus pagos de agosto, septiembre y octubre',
+    );
+    expect(
+      creditOriginText([
+        origin('2026-07'),
+        origin('2026-08'),
+        origin('2026-09'),
+        origin('2026-10'),
+      ]),
+    ).toBe('de tus pagos de julio, agosto, septiembre y octubre');
+  });
+
+  it('names a month once when two payments of it left credit', () => {
+    const origin = (paymentId: string, period: string) => ({ paymentId, period, amount: 10 });
+    expect(creditOriginText([origin('a', '2026-10'), origin('b', '2026-10')])).toBe(
+      'de tus pagos de octubre',
+    );
+    expect(
+      creditOriginText([origin('a', '2026-09'), origin('b', '2026-10'), origin('c', '2026-10')]),
+    ).toBe('de tus pagos de septiembre y octubre');
+  });
+
+  it('keeps the months in order and adds the year only when they span two years', () => {
+    const origin = (period: string) => ({ paymentId: `pay_${period}`, period, amount: 10 });
+    expect(creditOriginText([origin('2026-10'), origin('2026-09')])).toBe(
+      'de tus pagos de septiembre y octubre',
+    );
+    expect(creditOriginText([origin('2025-12'), origin('2026-01')])).toBe(
+      'de tus pagos de diciembre 2025 y enero 2026',
+    );
+  });
+
+  it('leaves out a period it cannot read, and says «un pago anterior» when none is left', () => {
+    const origin = (period: string) => ({ paymentId: `pay_${period}`, period, amount: 10 });
+    expect(creditOriginText([origin('2026-13'), origin('2026-10')])).toBe('de tu pago de octubre');
+    expect(creditOriginText([origin('octubre')])).toBe('de un pago anterior');
+  });
+
   it('says where the credit is discounted, or that it will be refunded', () => {
-    expect(creditUseText({ toRefund: false, month: '2026-11' })).toBe(
+    expect(creditUseText({ toRefund: false, month: '2026-11', origins: [] })).toBe(
       'Sobró de un pago anterior y se descuenta de Noviembre 2026.',
     );
-    expect(creditUseText({ toRefund: false, month: null })).toBe(
+    expect(creditUseText({ toRefund: false, month: null, origins: [] })).toBe(
       'Sobró de un pago anterior y se descuenta de tu próxima cuota.',
     );
-    expect(creditUseText({ toRefund: true, month: '2026-11' })).toBe(
+    expect(creditUseText({ toRefund: true, month: '2026-11', origins: [] })).toBe(
       'Sobró de un pago anterior y ya no quedan meses donde descontarlo: te lo devolveremos.',
+    );
+  });
+
+  it('says which month the credit was left over from (H1, TAR-284)', () => {
+    const origins = [
+      { paymentId: 'pay_1', period: '2026-09', amount: 20 },
+      { paymentId: 'pay_2', period: '2026-10', amount: 30 },
+    ];
+    expect(creditUseText({ toRefund: false, month: null, origins: origins.slice(1) })).toBe(
+      'Sobró de tu pago de octubre y se descuenta de tu próxima cuota.',
+    );
+    expect(creditUseText({ toRefund: false, month: '2026-11', origins })).toBe(
+      'Sobró de tus pagos de septiembre y octubre y se descuenta de Noviembre 2026.',
     );
   });
 

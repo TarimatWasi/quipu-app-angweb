@@ -151,7 +151,11 @@ export class GuestHomePanelComponent implements OnInit {
     const month = this.periods().find((p) => p.status !== 'PAID' && p.creditApplied > 0);
     return {
       balance: creditBalanceText(credit.balance),
-      use: creditUseText({ toRefund: credit.toRefund, month: month?.period ?? null }),
+      use: creditUseText({
+        toRefund: credit.toRefund,
+        month: month?.period ?? null,
+        origins: credit.origins,
+      }),
     };
   });
 

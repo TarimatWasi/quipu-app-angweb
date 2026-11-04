@@ -63,6 +63,7 @@ describe('GuestPaymentsService (H1, H3, H4)', () => {
     const body = {
       balance: 150,
       toRefund: false,
+      origins: [{ paymentId: 'pay_1', period: '2026-10', amount: 150 }],
       lastRefund: { amount: 120, date: '2026-11-03', method: 'Yape' },
     };
 
