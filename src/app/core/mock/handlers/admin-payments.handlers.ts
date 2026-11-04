@@ -1,5 +1,5 @@
 import type { components, operations } from '@core/api/bff.generated';
-import { payablePeriods } from '../data/account-views';
+import { contractPeriods, payablePeriods } from '../data/account-views';
 import { nowInstant, today } from '../data/mock-dates';
 import type { MockDb, PaymentRecord } from '../data/mock-db';
 import { paymentDetail, paymentSummary, queueItem } from '../data/payment-views';
@@ -69,6 +69,28 @@ function directTarget(
     : { contractId: contract.id, period };
 }
 
+/** What is due for a stay, or for a month after the credit of the guest (RN-38). */
+function chargeOf(db: MockDb, target: PaymentTarget): { amountDue: number; creditApplied: number } {
+  if ('stayId' in target) {
+    return { amountDue: db.stay(target.stayId)?.agreedAmount ?? 0, creditApplied: 0 };
+  }
+  const contract = db.contract(target.contractId);
+  const charged = (contract ? contractPeriods(db, contract) : []).find(
+    (item) => item.period === target.period,
+  );
+  if (charged === undefined) {
+    return invalid('period');
+  }
+  if (charged.status === 'PAID') {
+    raise(
+      409,
+      'PAYMENT_ALREADY_EXISTS_FOR_PERIOD',
+      'El crédito del huésped ya cubre este período.',
+    );
+  }
+  return { amountDue: charged.amountDue, creditApplied: charged.creditApplied };
+}
+
 async function createDirect(db: MockDb, req: MockRequest): Promise<PaymentRecord> {
   const upload = await readProofsUpload(req.body);
   const guestId = upload.field('guestId') ?? invalid('guestId');
@@ -81,15 +103,12 @@ async function createDirect(db: MockDb, req: MockRequest): Promise<PaymentRecord
     invalid('receivedOn');
   }
   checkTargetFree(db, target);
+  const { amountDue, creditApplied } = chargeOf(db, target);
   const proofs = proofsFrom(db, upload, 'ADMIN').map((proof) => ({ ...proof, receivedOn }));
-  const due =
-    'stayId' in target
-      ? (db.stay(target.stayId)?.agreedAmount ?? 0)
-      : (db.contract(target.contractId)?.monthlyAmount ?? 0);
-  if (proofs.reduce((sum, proof) => sum + proof.declaredAmount, 0) < due) {
+  if (proofs.reduce((sum, proof) => sum + proof.declaredAmount, 0) < amountDue) {
     invalid('proofs');
   }
-  const payment = createPayment(db, guestId, target, proofs);
+  const payment = createPayment(db, guestId, target, proofs, creditApplied);
   approve(db, payment, new Map(proofs.map((proof) => [proof.id, proof.declaredAmount])));
   return payment;
 }

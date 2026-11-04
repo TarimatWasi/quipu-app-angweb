@@ -74,11 +74,16 @@ export function checkTargetFree(db: MockDb, target: PaymentTarget): void {
   }
 }
 
+/**
+ * A new pending payment. `creditApplied` is the credit discounted from its period when it is sent:
+ * the payment keeps it and the credit of the guest no longer has it (RN-38).
+ */
 export function createPayment(
   db: MockDb,
   guestId: string,
   target: PaymentTarget,
   proofs: AdminProof[],
+  creditApplied = 0,
 ): PaymentRecord {
   const now = nowInstant();
   const payment: PaymentRecord = {
@@ -96,8 +101,9 @@ export function createPayment(
     surplus: null,
     submittedAt: now,
     createdAt: now,
-    creditApplied: 0,
+    creditApplied,
   };
+  db.credit(guestId).balance -= creditApplied;
   db.data.payments.push(payment);
   return payment;
 }

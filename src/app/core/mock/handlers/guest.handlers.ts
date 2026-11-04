@@ -1,5 +1,11 @@
 import type { components } from '@core/api/bff.generated';
-import { contractPeriods, currentStay, periodStatus, stayView } from '../data/account-views';
+import {
+  contractPeriods,
+  creditLeft,
+  currentStay,
+  periodStatus,
+  stayView,
+} from '../data/account-views';
 import { nowInstant, today } from '../data/mock-dates';
 import type { MockDb, PaymentRecord } from '../data/mock-db';
 import { guestPayment, paymentSummary } from '../data/payment-views';
@@ -64,13 +70,15 @@ async function uploadForPeriod(req: MockRequest, ctx: MockContext) {
   if (contract === undefined) {
     return raise(403, 'VOUCHER_NO_ACTIVE_CONTRACT', 'No tienes un contrato vigente.');
   }
-  const charged = contractPeriods(ctx.db, contract).some((item) => item.period === period);
-  if (!charged) {
-    invalid('period');
-  }
+  const charged =
+    contractPeriods(ctx.db, contract).find((item) => item.period === period) ?? invalid('period');
   const target = { contractId: contract.id, period };
   checkTargetFree(ctx.db, target);
-  const payment = createPayment(ctx.db, guestId, target, proofsFrom(ctx.db, upload, 'GUEST'));
+  if (charged.status === 'PAID') {
+    raise(409, 'PAYMENT_ALREADY_EXISTS_FOR_PERIOD', 'Tu crédito ya cubre este período.');
+  }
+  const proofs = proofsFrom(ctx.db, upload, 'GUEST');
+  const payment = createPayment(ctx.db, guestId, target, proofs, charged.creditApplied);
   return ok(paymentSummary(ctx.db, payment), 201);
 }
 
@@ -117,8 +125,12 @@ export const GUEST_ROUTES: readonly MockRoute[] = [
   {
     key: 'GET /bff/guest/credit',
     handler: (_req, ctx) => {
-      const credit = ctx.db.credit(ctx.requireGuest('CONTRACT').guestId);
-      const body: Schemas['GuestCredit'] = { ...credit, toRefund: false };
+      const { guestId } = ctx.requireGuest('CONTRACT');
+      const body: Schemas['GuestCredit'] = {
+        balance: creditLeft(ctx.db, guestId),
+        toRefund: false,
+        lastRefund: ctx.db.credit(guestId).lastRefund,
+      };
       return ok(body);
     },
   },
@@ -128,7 +140,7 @@ export const GUEST_ROUTES: readonly MockRoute[] = [
       const { guestId } = ctx.requireGuest('CONTRACT');
       const body: Schemas['PagedGuestHistory'] = {
         ...paginate(history(ctx.db, guestId), req.query),
-        creditBalance: ctx.db.credit(guestId).balance,
+        creditBalance: creditLeft(ctx.db, guestId),
       };
       return ok(body);
     },

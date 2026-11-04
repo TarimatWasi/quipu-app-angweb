@@ -51,6 +51,10 @@ export class MockBff implements MockContext {
   private readonly latency = inject(MOCK_LATENCY);
   private currentScenario: MockScenario = this.storedScenario();
   private database: MockDb = seedDb(this.currentScenario);
+  // The session lives here; the storage only carries it across a reload, so a browser that blocks
+  // the storage still keeps the session for as long as the page is open.
+  private currentUser: DemoUser | null = this.storedUser();
+  private changedPassword = readMockSetting('quipu-mock:password') === 'changed';
 
   get db(): MockDb {
     return this.database;
@@ -68,26 +72,30 @@ export class MockBff implements MockContext {
   }
 
   user(): DemoUser | null {
-    const key = readMockSetting('quipu-mock:role');
-    return isDemoUserKey(key) ? DEMO_USERS[key] : null;
+    return this.currentUser;
   }
 
   signIn(user: DemoUser): void {
+    this.currentUser = user;
+    this.changedPassword = false;
     writeMockSetting('quipu-mock:role', user.key);
     writeMockSetting('quipu-mock:password', null);
   }
 
   signOut(): void {
+    this.currentUser = null;
+    this.changedPassword = false;
     writeMockSetting('quipu-mock:role', null);
     writeMockSetting('quipu-mock:password', null);
   }
 
   markPasswordChanged(): void {
+    this.changedPassword = true;
     writeMockSetting('quipu-mock:password', 'changed');
   }
 
   passwordChanged(): boolean {
-    return readMockSetting('quipu-mock:password') === 'changed';
+    return this.changedPassword;
   }
 
   requireAdmin(): DemoUser {
@@ -158,6 +166,11 @@ export class MockBff implements MockContext {
       raise(403, 'AUTH_PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña para continuar');
     }
     return user;
+  }
+
+  private storedUser(): DemoUser | null {
+    const key = readMockSetting('quipu-mock:role');
+    return isDemoUserKey(key) ? DEMO_USERS[key] : null;
   }
 
   private storedScenario(): MockScenario {

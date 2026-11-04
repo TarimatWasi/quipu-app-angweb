@@ -260,3 +260,23 @@ describe('scenarios', () => {
     expect((await mock.fail(mock.get('/bff/temporary-guest/payment-status'))).status).toBe(404);
   });
 });
+
+describe('simulated session without browser storage', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+    resetMockSettings();
+  });
+
+  it('keeps the session in memory while the page is open', async () => {
+    const mock = setUpMockBff();
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    vi.spyOn(Storage.prototype, 'getItem').mockReturnValue(null);
+    await mock.signIn('contract-guest');
+    expect(await mock.get('/bff/auth/me')).toEqual(expect.objectContaining({ role: 'GUEST' }));
+    expect(await mock.get<unknown[]>('/bff/guest/account-status')).not.toHaveLength(0);
+    await mock.send('POST', '/bff/auth/logout', null);
+    expect((await mock.fail(mock.get('/bff/auth/me'))).status).toBe(401);
+  });
+});

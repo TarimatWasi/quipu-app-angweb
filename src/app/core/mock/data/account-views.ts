@@ -5,31 +5,60 @@ import { chargeStatus, ChargeStatus, paymentSummary } from './payment-views';
 
 type Schemas = components['schemas'];
 
-/** A month of a contract with its live payment and its state (H1, A5.1). */
+/** A month of a contract with its live payment, the credit discounted from it and its state. */
 export interface ContractPeriod {
   readonly contract: Contract;
   readonly period: string;
   readonly dueDate: string;
   readonly payment: PaymentRecord | undefined;
+  readonly creditApplied: number;
+  readonly amountDue: number;
   readonly status: ChargeStatus;
 }
 
-/** The months a contract charged up to today (or up to its end), oldest first. */
+function cents(amount: number): number {
+  return Math.round(amount * 100) / 100;
+}
+
+/**
+ * The months a contract charged up to today (or up to its end), oldest first. The credit of the
+ * guest is discounted month by month from the periods without a payment yet; a period it covers
+ * whole is PAID without a payment, and what is left passes on to the next one (RN-38). A payment
+ * keeps the credit it was sent with.
+ */
 export function contractPeriods(db: MockDb, contract: Contract): ContractPeriod[] {
   const current = today().slice(0, 7);
   const end = contract.endDate?.slice(0, 7) ?? current;
   const last = end < current ? end : current;
+  let available = db.credit(contract.guestId).balance;
   return monthsBetween(contract.startDate.slice(0, 7), last).map((period) => {
     const dueDate = dueDay(period, contract.paymentDay);
     const payment = db.paymentFor({ contractId: contract.id, period });
+    const creditApplied = payment?.creditApplied ?? Math.min(available, contract.monthlyAmount);
+    if (payment === undefined) {
+      available = cents(available - creditApplied);
+    }
+    const amountDue = cents(contract.monthlyAmount - creditApplied);
+    const coveredByCredit = payment === undefined && amountDue === 0;
     return {
       contract,
       period,
       dueDate,
       payment,
-      status: chargeStatus(payment, dueDate, contract.graceDays),
+      creditApplied,
+      amountDue,
+      status: coveredByCredit ? 'PAID' : chargeStatus(payment, dueDate, contract.graceDays),
     };
   });
+}
+
+/** The credit of a guest not yet discounted from any charged period (GuestCredit.balance). */
+export function creditLeft(db: MockDb, guestId: string): number {
+  const contract = db.contractOf(guestId);
+  const applied = (contract ? contractPeriods(db, contract) : [])
+    .filter((item) => item.payment === undefined)
+    .reduce((sum, item) => sum + item.creditApplied, 0);
+  return cents(db.credit(guestId).balance - applied);
 }
 
 export function periodStatus({
@@ -37,6 +66,8 @@ export function periodStatus({
   period,
   dueDate,
   payment,
+  creditApplied,
+  amountDue,
   status,
 }: ContractPeriod): Schemas['PeriodStatus'] {
   return {
@@ -44,8 +75,8 @@ export function periodStatus({
     status,
     dueDate,
     amount: contract.monthlyAmount,
-    creditApplied: payment?.creditApplied ?? 0,
-    amountDue: contract.monthlyAmount - (payment?.creditApplied ?? 0),
+    creditApplied,
+    amountDue,
     contractId: contract.id,
     paymentId: payment?.id ?? null,
     rejectionReason: payment?.status === 'REJECTED' ? payment.rejectionReason : null,
@@ -86,25 +117,26 @@ function contractPayables(db: MockDb, guestId: string): PayablePeriod[] {
   if (contract === undefined) {
     return [];
   }
-  return contractPeriods(db, contract).flatMap(({ period, dueDate, payment, status }) =>
-    status === 'PAID'
-      ? []
-      : [
-          {
-            contractId: contract.id,
-            period,
-            stayId: null,
-            stayStartDate: null,
-            stayEndDate: null,
-            status: payment?.status === 'REJECTED' ? 'REJECTED' : status,
-            dueDate,
-            expectedAmount: contract.monthlyAmount,
-            creditApplied: 0,
-            amountDue: contract.monthlyAmount,
-            lastPeriod: contract.endDate?.slice(0, 7) === period,
-            paymentId: payment?.id ?? null,
-          },
-        ],
+  return contractPeriods(db, contract).flatMap(
+    ({ period, dueDate, payment, creditApplied, amountDue, status }) =>
+      status === 'PAID'
+        ? []
+        : [
+            {
+              contractId: contract.id,
+              period,
+              stayId: null,
+              stayStartDate: null,
+              stayEndDate: null,
+              status: payment?.status === 'REJECTED' ? 'REJECTED' : status,
+              dueDate,
+              expectedAmount: contract.monthlyAmount,
+              creditApplied,
+              amountDue,
+              lastPeriod: contract.endDate?.slice(0, 7) === period,
+              paymentId: payment?.id ?? null,
+            },
+          ],
   );
 }
 

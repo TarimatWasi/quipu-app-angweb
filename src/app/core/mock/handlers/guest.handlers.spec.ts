@@ -194,3 +194,67 @@ describe('temporary guest in the simulated BFF', () => {
     );
   });
 });
+
+describe('credit of the guest in the simulated BFF (RN-38)', () => {
+  afterEach(() => {
+    resetMockSettings();
+  });
+
+  /** Approves the pending payment of María for last month with `extra` soles over what is due. */
+  async function approveMariaWithSurplus(extra: number): Promise<MockHarness> {
+    const mock = setUpMockBff();
+    await mock.signIn('admin');
+    const queue = await mock.get<Schemas['PagedPaymentQueue']>('/bff/admin/payments', {
+      status: 'PENDING',
+    });
+    const item = queue.content.find((row) => row.documentNumber === '70000003');
+    const detail = await mock.get<Schemas['Payment']>(`/bff/admin/payments/${item?.id ?? ''}`);
+    await mock.send('PATCH', `/bff/admin/payments/${detail.id}`, {
+      status: 'APPROVED',
+      proofs: detail.proofs.map((proof) => ({
+        id: proof.id,
+        verifiedAmount: proof.declaredAmount + extra,
+      })),
+    });
+    await mock.signIn('temporary-password');
+    await mock.send('POST', '/bff/auth/change-password', { newPassword: 'nueva-clave-1' });
+    return mock;
+  }
+
+  const currentPeriod = () => today().slice(0, 7);
+
+  it('discounts the credit from the next period and the payment keeps it', async () => {
+    const mock = await approveMariaWithSurplus(30);
+    const periods = await mock.get<Schemas['PeriodStatus'][]>('/bff/guest/account-status');
+    expect(periods.find((item) => item.period === currentPeriod())).toEqual(
+      expect.objectContaining({ status: 'UNPAID', amount: 680, creditApplied: 30, amountDue: 650 }),
+    );
+    expect((await mock.get<Schemas['GuestCredit']>('/bff/guest/credit')).balance).toBe(0);
+    const body = proofsForm([{ kind: 'CASH', amount: 650 }], [], { period: currentPeriod() });
+    const summary = await mock.send<Schemas['PaymentSummary']>('POST', '/bff/guest/payments', body);
+    await mock.signIn('admin');
+    const detail = await mock.get<Schemas['Payment']>(`/bff/admin/payments/${summary.id}`);
+    expect(detail).toEqual(expect.objectContaining({ creditApplied: 30, amountDue: 650 }));
+    expect(mock.bff.db.credit(detail.guestId).balance).toBe(0);
+  });
+
+  it('marks a period the credit covers whole as paid, without a payment', async () => {
+    const mock = await approveMariaWithSurplus(700);
+    const periods = await mock.get<Schemas['PeriodStatus'][]>('/bff/guest/account-status');
+    expect(periods.find((item) => item.period === currentPeriod())).toEqual(
+      expect.objectContaining({
+        status: 'PAID',
+        creditApplied: 680,
+        amountDue: 0,
+        paymentId: null,
+      }),
+    );
+    expect((await mock.get<Schemas['GuestCredit']>('/bff/guest/credit')).balance).toBe(20);
+    const body = proofsForm([{ kind: 'CASH', amount: 680 }], [], { period: currentPeriod() });
+    const error = await mock.fail(mock.send('POST', '/bff/guest/payments', body));
+    expect(catalogOf(error)).toEqual({
+      code: 'PAYMENT_ALREADY_EXISTS_FOR_PERIOD',
+      message: SOME_TEXT,
+    });
+  });
+});
