@@ -232,7 +232,12 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     it('sends the chosen month with a voucher and cash, then goes home saying it is pending review', async () => {
       const ui = await newContractPayment('/guest/payments/new?period=2026-11');
       expect(ui.page().getByLabelText<HTMLSelectElement>('Mes').value).toBe('2026-11');
-      expect(ui.page().getByText(/Cuota S\/ 350.00/).textContent).toContain('por pagar S/ 300.00');
+      expect(
+        ui
+          .page()
+          .getByText(/Cuota S\/ 350.00/)
+          .textContent.trim(),
+      ).toBe('Cuota S/ 350.00 · Por pagar S/ 300.00');
 
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
       const shortcuts = within(ui.proof(1).getByRole('group', { name: 'Medios frecuentes' }));
@@ -256,6 +261,32 @@ describe('OwnPaymentComponent (H3, T2)', () => {
 
       expect(TestBed.inject(Router).url).toBe('/home');
       expect(screen.getByText(SENT_TEXT)).toBeTruthy();
+    });
+
+    it('says what is left to pay after the credit and compares the sum with it (RN-38)', async () => {
+      const ui = await newContractPayment('/guest/payments/new?period=2026-11');
+
+      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
+        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
+      );
+      await cash(ui, 1, '350');
+      expect(ui.page().getByRole('status').textContent).toMatch(
+        /Suma S\/ 350.00 · Sobran S\/ 50.00/,
+      );
+      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '300');
+      expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
+
+      await ui.choose(ui.page().getByLabelText('Mes'), '2026-10');
+      expect(
+        ui
+          .page()
+          .getByText(/Cuota S\/ 350.00/)
+          .textContent.trim(),
+      ).toBe('Cuota S/ 350.00 · Por pagar S/ 350.00');
+      expect(ui.page().queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(ui.page().getByRole('status').textContent).toMatch(
+        /Suma S\/ 300.00 · Faltan S\/ 50.00/,
+      );
     });
 
     it('asks for the month, the amount and the voucher file before sending anything', async () => {
@@ -440,6 +471,29 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(screen.getByText(SENT_TEXT)).toBeTruthy();
     });
 
+    it('compares the corrected sum with what is left to pay after the credit (RN-38)', async () => {
+      const ui = await setup('/guest/payments/pay%2F7');
+      await ui.flush(
+        await ui.expect1(isGet('guest', 'pay%2F7')),
+        payment({ creditApplied: 50, amountDue: 300 }),
+      );
+
+      expect(ui.page().getByText('Por pagar S/ 300.00')).toBeTruthy();
+      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
+        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
+      );
+      expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
+    });
+
+    it('shows no credit note on a correction without credit', async () => {
+      const ui = await setup('/guest/payments/pay%2F7');
+      await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
+
+      expect(ui.page().getByText('Por pagar S/ 350.00')).toBeTruthy();
+      expect(ui.page().queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(ui.page().getByRole('status').textContent).toMatch(/Faltan S\/ 50.00/);
+    });
+
     it('replaces the file of a kept voucher only when another one is chosen', async () => {
       const ui = await setup('/guest/payments/pay%2F7');
       await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
@@ -490,6 +544,19 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByText('Pendiente de revisión')).toBeTruthy();
       expect(ui.page().getByText(/Voucher · yape\.png · Yape · S\/ 300\.00/)).toBeTruthy();
       expect(ui.page().queryByRole('group', { name: 'Comprobante 1' })).toBeNull();
+    });
+
+    it('shows what was left to pay and the credit used on a payment read-only', async () => {
+      const ui = await setup('/guest/payments/pay%2F7');
+      await ui.flush(
+        await ui.expect1(isGet('guest', 'pay%2F7')),
+        payment({ status: 'PENDING', rejectionReason: null, creditApplied: 50, amountDue: 300 }),
+      );
+
+      expect(ui.page().getByText('Por pagar S/ 300.00')).toBeTruthy();
+      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
+        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
+      );
     });
 
     it('says it found no payment when the id is not the guest’s', async () => {

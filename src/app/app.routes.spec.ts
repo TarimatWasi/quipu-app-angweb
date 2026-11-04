@@ -244,6 +244,7 @@ describe('routes', () => {
 
       expect(router.url).toBe('/home');
       await answer('/bff/guest/account-status', []);
+      await answer('/bff/guest/credit', { balance: 0, toRefund: false, lastRefund: null });
     });
 
     it('opens T2 for a temporary guest and keeps it away from H3 and H4', async () => {

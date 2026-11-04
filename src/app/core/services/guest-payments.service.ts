@@ -17,6 +17,7 @@ export type PeriodStatus = components['schemas']['PeriodStatus'];
 export type GuestHistoryPage = components['schemas']['PagedGuestHistory'];
 export type GuestHistoryItem = components['schemas']['GuestHistoryItem'];
 export type GuestRefund = components['schemas']['GuestRefund'];
+export type GuestCredit = components['schemas']['GuestCredit'];
 
 /** Items asked per page of the history (H4); "Mostrar más" asks the next page with the cursor. */
 export const GUEST_HISTORY_PAGE_SIZE = 20;
@@ -34,6 +35,11 @@ export class GuestPaymentsService implements OwnPaymentsApi {
   /** Every period of the guest's contracts with its state (H1). */
   accountStatus(): Observable<PeriodStatus[]> {
     return this.http.get<PeriodStatus[]>(`${this.root}/bff/guest/account-status`);
+  }
+
+  /** The own credit and whether Quipu will refund it (getOwnCredit, H1, RN-38). */
+  credit(): Observable<GuestCredit> {
+    return this.http.get<GuestCredit>(`${this.root}/bff/guest/credit`);
   }
 
   /** One page of the own history, newest first (H4). */

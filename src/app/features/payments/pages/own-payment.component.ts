@@ -30,6 +30,7 @@ import {
   TemporaryGuestPaymentsService,
 } from '@core/services/temporary-guest-payments.service';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
+import { creditAppliedText } from '@shared/payments/credit-texts';
 import {
   balanceOf,
   formatMoney,
@@ -164,6 +165,7 @@ export class OwnPaymentComponent implements OnInit {
   protected readonly shortcuts = METHOD_SHORTCUTS;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly formatMoney = formatMoney;
+  protected readonly creditAppliedText = creditAppliedText;
   protected readonly periodLabel = periodLabel;
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
   protected readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;

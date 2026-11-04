@@ -81,6 +81,9 @@ describe('HomeComponent', () => {
     TestBed.inject(HttpTestingController)
       .expectOne((req) => req.url.endsWith('/bff/guest/account-status'))
       .flush([]);
+    TestBed.inject(HttpTestingController)
+      .expectOne((req) => req.url.endsWith('/bff/guest/credit'))
+      .flush({ balance: 0, toRefund: false, lastRefund: null });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
@@ -115,5 +118,9 @@ describe('HomeComponent', () => {
 
     expect(ui.getByRole('link', { name: 'Subir pago' })).toBeTruthy();
     expect(ui.queryByRole('link', { name: 'Historial de pagos' })).toBeNull();
+    // The temporary guest has no credit (RN-38): its own credit is never asked.
+    TestBed.inject(HttpTestingController).expectNone((req) =>
+      req.url.endsWith('/bff/guest/credit'),
+    );
   });
 });

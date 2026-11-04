@@ -10,8 +10,15 @@ import { GuestHomePanelComponent, unpaidText } from './guest-home-panel.componen
 import { TemporaryHomePanelComponent } from './temporary-home-panel.component';
 
 const isStatus = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/account-status');
+const isCredit = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/credit');
+const NO_CREDIT = { balance: 0, toRefund: false, lastRefund: null };
 const isStay = (req: HttpRequest<unknown>) =>
   req.url.endsWith('/bff/temporary-guest/payment-status');
+
+/** The visible text of an element, with its spaces collapsed. */
+const text = (element: HTMLElement) => element.textContent.replaceAll(/\s+/g, ' ').trim();
+/** The texts of the parts of a row, one per child element. */
+const parts = (row: HTMLElement) => [...row.children].map((part) => text(part as HTMLElement));
 
 function period(overrides: Partial<PeriodStatus> = {}): PeriodStatus {
   return {
@@ -88,6 +95,7 @@ describe('home payment panels', () => {
         period({ period: '2026-10', status: 'UNPAID' }),
         period({ period: '2026-11', status: 'UNDER_REVIEW', paymentId: 'pay_rev' }),
       ]);
+      await answer(isCredit, NO_CREDIT);
 
       expect(ui.getByText('Tu pago no se aprobó')).toBeTruthy();
       expect(ui.getByText('El monto no coincide')).toBeTruthy();
@@ -110,6 +118,7 @@ describe('home payment panels', () => {
         period({ period: '2026-10', status: 'OVERDUE' }),
         period({ period: '2026-11' }),
       ]);
+      await answer(isCredit, NO_CREDIT);
 
       expect(ui.queryByText('Tu pago no se aprobó')).toBeNull();
       expect(ui.queryByRole('link', { name: /Corregir pago/ })).toBeNull();
@@ -121,6 +130,7 @@ describe('home payment panels', () => {
     it('keeps «Subir voucher» and the history when the account status cannot be read', async () => {
       const { ui, answer, click, http } = await render(GuestHomePanelComponent);
       await answer(isStatus, { code: 'X', message: 'No se pudo leer tu estado.' }, 500);
+      await answer(isCredit, NO_CREDIT);
 
       expect(ui.getByRole('alert').textContent).toContain('No se pudo leer tu estado.');
       expect(ui.getByRole('link', { name: 'Subir voucher' }).getAttribute('href')).toBe(
@@ -129,6 +139,96 @@ describe('home payment panels', () => {
       expect(ui.getByRole('link', { name: 'Historial de pagos' })).toBeTruthy();
       await click(ui.getByRole('button', { name: 'Reintentar' }));
       http.expectOne(isStatus).flush([]);
+      http.expectOne(isCredit).flush(NO_CREDIT);
+    });
+
+    it('shows the credit in a notice and what is left to pay of each month (RN-38)', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isStatus, [
+        period({ period: '2026-09', status: 'PAID', paymentId: 'pay_ok' }),
+        period({ period: '2026-10', status: 'OVERDUE', creditApplied: 0, amountDue: 350 }),
+        period({ period: '2026-11', status: 'UNPAID', creditApplied: 50, amountDue: 300 }),
+      ]);
+      await answer(isCredit, { balance: 50, toRefund: false, lastRefund: null });
+
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
+        'Tienes S/ 50.00 a favor. Sobró de un pago anterior y se descuenta de Noviembre 2026.',
+      );
+      expect(ui.getByRole('heading', { name: 'Lo que toca ahora' })).toBeTruthy();
+      expect(ui.getAllByRole('listitem').map(parts)).toEqual([
+        ['Octubre 2026', 'Atrasado', 'Por pagar S/ 350.00'],
+        [
+          'Noviembre 2026',
+          'No pagado',
+          'Por pagar S/ 300.00',
+          'Cuota S/ 350.00 − crédito a favor S/ 50.00',
+        ],
+      ]);
+    });
+
+    it('says the credit goes to the next monthly amount when no month shows it yet', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isStatus, [period({ period: '2026-10', status: 'PAID', paymentId: 'p' })]);
+      await answer(isCredit, { balance: 80.5, toRefund: false, lastRefund: null });
+
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
+        'Tienes S/ 80.50 a favor. Sobró de un pago anterior y se descuenta de tu próxima cuota.',
+      );
+      expect(ui.queryByRole('heading', { name: 'Lo que toca ahora' })).toBeNull();
+    });
+
+    it('says the credit will be refunded when no month is left to use it', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isCredit, { balance: 120, toRefund: true, lastRefund: null });
+      await answer(isStatus, [period({ period: '2026-10', status: 'PAID', paymentId: 'p' })]);
+
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toBe(
+        'Tienes S/ 120.00 a favor. Sobró de un pago anterior y ya no quedan meses donde descontarlo: te lo devolveremos.',
+      );
+    });
+
+    it('shows no notice and the whole monthly amount when there is no credit', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isStatus, [period({ period: '2026-11', status: 'UNPAID' })]);
+      await answer(isCredit, NO_CREDIT);
+
+      expect(ui.queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(ui.queryByText(/a favor/)).toBeNull();
+      expect(parts(ui.getByRole('listitem'))).toEqual([
+        'Noviembre 2026',
+        'No pagado',
+        'Por pagar S/ 350.00',
+      ]);
+    });
+
+    it('keeps the home working without the notice when the credit cannot be read', async () => {
+      const { ui, answer } = await render(GuestHomePanelComponent);
+      await answer(isCredit, { code: 'X', message: 'Falló el crédito.' }, 500);
+      await answer(isStatus, [
+        period({ period: '2026-11', status: 'UNPAID', creditApplied: 50, amountDue: 300 }),
+      ]);
+
+      expect(ui.queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(ui.queryByRole('alert')).toBeNull();
+      expect(ui.queryByText('Falló el crédito.')).toBeNull();
+      expect(text(ui.getByRole('listitem'))).toContain('Por pagar S/ 300.00');
+      expect(ui.getByRole('link', { name: 'Subir voucher' }).getAttribute('href')).toBe(
+        '/guest/payments/new?period=2026-11',
+      );
+    });
+
+    it('asks the credit again on «Reintentar» and shows it once it answers', async () => {
+      const { ui, answer, click } = await render(GuestHomePanelComponent);
+      await answer(isStatus, { code: 'X', message: 'No se pudo leer tu estado.' }, 500);
+      await answer(isCredit, { code: 'X', message: 'x' }, 503);
+      expect(ui.queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+
+      await click(ui.getByRole('button', { name: 'Reintentar' }));
+      await answer(isStatus, []);
+      await answer(isCredit, { balance: 20, toRefund: false, lastRefund: null });
+      expect(text(ui.getByRole('note', { name: 'Crédito a favor' }))).toContain(
+        'Tienes S/ 20.00 a favor.',
+      );
     });
   });
 
@@ -168,6 +268,50 @@ describe('home payment panels', () => {
         '/temporary-guest/payment/pay_t',
       );
       expect(first.ui.queryByRole('link', { name: 'Subir pago' })).toBeNull();
+    });
+
+    it('says the refund is pending when more than the agreed amount was paid (RN-39)', async () => {
+      const { ui, answer } = await render(TemporaryHomePanelComponent);
+      await answer(
+        isStay,
+        stay({
+          status: 'PAID',
+          paymentId: 'pay_t',
+          surplus: { amount: 50, refundStatus: 'PENDING', refundedOn: null, refundMethod: null },
+        }),
+      );
+
+      expect(text(ui.getByRole('note', { name: 'Devolución' }))).toBe('Te devolveremos S/ 50.00.');
+    });
+
+    it('says the refund was made, with its method and date', async () => {
+      const { ui, answer } = await render(TemporaryHomePanelComponent);
+      await answer(
+        isStay,
+        stay({
+          status: 'PAID',
+          paymentId: 'pay_t',
+          surplus: {
+            amount: 50,
+            refundStatus: 'REFUNDED',
+            refundedOn: '2026-11-03',
+            refundMethod: 'Yape',
+          },
+        }),
+      );
+
+      expect(text(ui.getByRole('note', { name: 'Devolución' }))).toBe(
+        'Te devolvimos S/ 50.00 el 3 nov 2026 por Yape.',
+      );
+      expect(ui.queryByText(/Te devolveremos/)).toBeNull();
+    });
+
+    it('shows no refund notice when nothing was paid over the agreed amount', async () => {
+      const { ui, answer } = await render(TemporaryHomePanelComponent);
+      await answer(isStay, stay({ status: 'PAID', paymentId: 'pay_t', surplus: null }));
+
+      expect(ui.queryByRole('note', { name: 'Devolución' })).toBeNull();
+      expect(ui.queryByText(/devol/)).toBeNull();
     });
 
     it('shows the BFF text when the guest has no stay yet', async () => {

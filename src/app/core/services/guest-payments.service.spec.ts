@@ -58,6 +58,23 @@ describe('GuestPaymentsService (H1, H3, H4)', () => {
     expect(await status).toEqual([]);
   });
 
+  it('reads the own credit, without any guest id nor query', async () => {
+    const { guest, http } = setup();
+    const body = {
+      balance: 150,
+      toRefund: false,
+      lastRefund: { amount: 120, date: '2026-11-03', method: 'Yape' },
+    };
+
+    const credit = firstValueFrom(guest.credit());
+    const req = http.expectOne(`${BASE}/bff/guest/credit`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.keys()).toEqual([]);
+    req.flush(body);
+
+    expect(await credit).toEqual(body);
+  });
+
   it('asks the first page of the history with the page size and no cursor', async () => {
     const { guest, http } = setup();
 
