@@ -39,6 +39,10 @@ testem.log
 /typings
 __screenshots__/
 
+# Playwright captures of QP-UI-13 (ADR-F7, fase 1): never versioned
+/playwright-output
+/playwright-report
+
 # System files
 .DS_Store
 Thumbs.db
