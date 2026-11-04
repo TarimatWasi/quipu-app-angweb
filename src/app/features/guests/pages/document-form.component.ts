@@ -9,7 +9,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
+import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -26,11 +26,19 @@ import { openConcurrentModificationDialog } from '@shared/concurrent-modificatio
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { GUEST_PAGE_STYLES } from '../guest-page.styles';
 import {
-  DOCUMENT_TYPE_LABELS,
+  describedBy,
+  DOCUMENT_TYPE_CHIPS,
   DOCUMENT_UPDATED_TEXT,
   documentNumberError,
+  documentText,
+  GUEST_STATUS_BADGES,
+  guestName,
+  SKELETON_ROWS,
+  SLOW_TEXT,
   SNACK_MS,
+  todayText,
 } from '../guest-texts';
+import { LoadTiming } from '../load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 
 type LoadState =
@@ -40,29 +48,23 @@ type LoadState =
   | { readonly kind: 'not-found' }
   | { readonly kind: 'error'; readonly message: string };
 
-type FieldKey = 'documentType' | 'documentNumber';
-
 const GENERAL_ERROR_ID = 'document-form-error';
 
 /** RN-36, as the catalog words GUEST_DOCUMENT_LOCKED. */
 const LOCKED_TEXT = 'El documento solo se corrige antes de que el huésped active su acceso';
 
-const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_LABELS) as DocumentType[]).map((value) => ({
+const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map((value) => ({
   value,
-  label: DOCUMENT_TYPE_LABELS[value],
+  label: DOCUMENT_TYPE_CHIPS[value],
 }));
 
-function isDocumentType(value: string): value is DocumentType {
-  return value in DOCUMENT_TYPE_LABELS;
-}
-
 /**
- * A3.5 (RN-36): corrects the document of a guest pending activation, with the `version` it was
- * loaded with (BE-SPR-DAT-13). Only the fields that changed travel. Ids are opaque.
+ * A3.5 (RN-36) on the approved canvas: corrects the document of a guest pending activation, with
+ * the `version` it was loaded with (BE-SPR-DAT-13). Only the fields that changed travel.
  */
 @Component({
   selector: 'app-document-form',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [MatButton, RouterLink],
   templateUrl: './document-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
@@ -78,21 +80,37 @@ export class DocumentFormComponent implements OnInit {
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly documentTypes = DOCUMENT_TYPES;
   protected readonly lockedText = LOCKED_TEXT;
+  protected readonly today = todayText();
+  protected readonly slowText = SLOW_TEXT;
+  protected readonly skeletonRows = SKELETON_ROWS;
+  protected readonly describedBy = describedBy;
+  protected readonly timing = new LoadTiming();
   protected guestId = '';
 
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly loaded = signal<PendingGuestDetail | null>(null);
+  /** The name the back link uses, kept when the guest turns out to be no longer pending. */
+  protected readonly who = signal<string | null>(null);
   protected readonly documentType = signal<DocumentType>('DNI');
   protected readonly documentNumber = signal('');
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
-  protected readonly serverErrors = signal<Readonly<Partial<Record<FieldKey, string>>>>({});
+  protected readonly serverError = signal<string | null>(null);
 
+  protected readonly backLabel = computed(() => {
+    const who = this.who();
+    return who ? `Volver a ${who}` : 'Volver al huésped';
+  });
   protected readonly loadError = computed(() => {
     const state = this.state();
     return state.kind === 'error' ? state.message : '';
   });
+  protected readonly currentDocument = computed(() => {
+    const loaded = this.loaded();
+    return loaded ? documentText(loaded) : '';
+  });
+  protected readonly statusBadge = GUEST_STATUS_BADGES.PENDING_ACTIVATION;
   protected readonly changes = computed<Omit<GuestUpdate, 'version'>>(() => {
     const loaded = this.loaded();
     if (!loaded) return {};
@@ -106,9 +124,11 @@ export class DocumentFormComponent implements OnInit {
   protected readonly canSave = computed(
     () => this.state().kind === 'ready' && !this.busy() && Object.keys(this.changes()).length > 0,
   );
-  protected readonly typeError = computed(() => this.serverErrors().documentType ?? null);
+  protected readonly saveLabel = computed(() =>
+    this.busy() ? 'Guardando…' : 'Corregir documento',
+  );
   protected readonly numberError = computed(() => {
-    const server = this.serverErrors().documentNumber;
+    const server = this.serverError();
     if (server) return server;
     return this.submitted()
       ? documentNumberError(this.documentType(), this.documentNumber())
@@ -121,6 +141,7 @@ export class DocumentFormComponent implements OnInit {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
+      this.timing.stop();
     });
   }
 
@@ -129,15 +150,14 @@ export class DocumentFormComponent implements OnInit {
     void this.load();
   }
 
-  protected chooseType(target: EventTarget | null): void {
-    const value = target instanceof HTMLSelectElement ? target.value : '';
-    if (isDocumentType(value)) this.documentType.set(value);
-    this.serverErrors.set({});
+  protected chooseType(type: DocumentType): void {
+    this.documentType.set(type);
+    this.serverError.set(null);
   }
 
   protected typedNumber(target: EventTarget | null): void {
     this.documentNumber.set(target instanceof HTMLInputElement ? target.value : '');
-    this.serverErrors.set({});
+    this.serverError.set(null);
   }
 
   protected retry(): void {
@@ -150,7 +170,7 @@ export class DocumentFormComponent implements OnInit {
     if (!loaded || !this.canSave()) return;
     this.submitted.set(true);
     this.generalError.set(null);
-    this.serverErrors.set({});
+    this.serverError.set(null);
     if (this.numberError()) {
       focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
       return;
@@ -167,7 +187,7 @@ export class DocumentFormComponent implements OnInit {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(DOCUMENT_UPDATED_TEXT, 'Cerrar', { duration: SNACK_MS });
+    this.snackBar.open(DOCUMENT_UPDATED_TEXT, undefined, { duration: SNACK_MS });
     await this.backToGuest();
   }
 
@@ -175,32 +195,26 @@ export class DocumentFormComponent implements OnInit {
     if (isConcurrentModification(error)) {
       return this.concurrent();
     }
-    const { message, field } = toBffErrorWithServerMessage(error);
+    const { message } = toBffErrorWithServerMessage(error);
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.snackBar.open(message, undefined, { duration: SNACK_MS });
       return this.backToGuest();
     }
     if (error instanceof HttpErrorResponse && (error.status === 400 || error.status === 409)) {
-      // GUEST_DOCUMENT_* and VALIDATION_ERROR go under their field; the number when none is given.
-      const key: FieldKey = field === 'documentType' ? 'documentType' : 'documentNumber';
-      this.serverErrors.set({ [key]: message });
+      // GUEST_DOCUMENT_LOCKED, GUEST_DOCUMENT_TAKEN and VALIDATION_ERROR go under the document.
+      this.serverError.set(message);
     } else {
       this.generalError.set(message);
     }
     focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
   }
 
+  /** The canvas words it "El registro cambió", with "Cerrar" and "Volver a cargar". */
   private async concurrent(): Promise<void> {
-    const ref = openConcurrentModificationDialog(this.dialog, {
-      title: 'El huésped cambió',
-      backLabel: 'Volver al huésped',
-    });
+    const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
-    if (this.destroyed) return;
-    if (choice === 'reload') {
+    if (!this.destroyed && choice === 'reload') {
       await this.load();
-    } else if (choice === 'back') {
-      await this.backToGuest();
     }
   }
 
@@ -212,12 +226,15 @@ export class DocumentFormComponent implements OnInit {
   private async load(): Promise<void> {
     const request = ++this.request;
     this.state.set({ kind: 'loading' });
+    this.timing.start();
     this.submitted.set(false);
-    this.serverErrors.set({});
+    this.serverError.set(null);
     this.generalError.set(null);
     try {
       const guest = await firstValueFrom(this.guests.get(this.guestId));
       if (request !== this.request) return;
+      this.timing.stop();
+      this.who.set(guestName(guest));
       if (guest.status !== 'PENDING_ACTIVATION') {
         this.loaded.set(null);
         this.state.set({ kind: 'locked' });
@@ -229,6 +246,7 @@ export class DocumentFormComponent implements OnInit {
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
       if (request !== this.request) return;
+      this.timing.stop();
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
       this.state.set(
         notFound

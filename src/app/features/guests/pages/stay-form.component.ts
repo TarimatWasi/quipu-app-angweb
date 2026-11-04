@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import {
+  afterNextRender,
   Component,
   computed,
   DestroyRef,
@@ -9,30 +10,42 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
+import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminEnvironmentsService, Environment } from '@core/services/admin-environments.service';
-import { AdminGuestsService, Stay, StayInput } from '@core/services/admin-guests.service';
+import {
+  AdminGuestsService,
+  GuestDetail,
+  Stay,
+  StayInput,
+} from '@core/services/admin-guests.service';
 import { toBffErrorWithServerMessage } from '@core/services/bff-error';
 import { isConcurrentModification, withVersion } from '@core/services/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { parseAmount } from '@shared/payments/payment-format';
+import { formatMoney, formatStay, parseAmount } from '@shared/payments/payment-format';
 import { GUEST_PAGE_STYLES } from '../guest-page.styles';
 import {
   AMOUNT_TEXT,
   DATES_ORDER_TEXT,
   DATES_TEXT,
+  describedBy,
   ENVIRONMENT_TEXT,
   ENVIRONMENT_TYPE_LABELS,
+  guestName,
   NO_ENVIRONMENT,
+  nightsBetween,
+  SKELETON_ROWS,
+  SLOW_TEXT,
   SNACK_MS,
   STAY_CREATED_TEXT,
   STAY_UPDATED_TEXT,
+  todayText,
 } from '../guest-texts';
+import { LoadTiming } from '../load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { openGuestNoticeDialog } from './guest-notice-dialog.component';
 
@@ -55,22 +68,31 @@ const FIELD_KEYS: Readonly<Partial<Record<string, FieldKey>>> = {
 
 interface Notice {
   readonly title: string;
-  readonly mainLabel: string;
-  /** Whether the main action goes back to A3.2 (nothing left to do here). */
+  /** Null: the BFF's own message is shown (QP-UI-17); otherwise the canvas text. */
+  readonly text: string | null;
+  readonly buttonLabel: string;
+  /** Whether the action goes back to A3.2 (nothing left to do here). */
   readonly leaves: boolean;
 }
 
-/** The rejections the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
+/** The rejections shown as a modal: the occupied environment as the canvas words it. */
 const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
-  ENVIRONMENT_OCCUPIED: { title: 'Ambiente ocupado', mainLabel: 'Entendido', leaves: false },
+  ENVIRONMENT_OCCUPIED: {
+    title: 'El ambiente ya está ocupado en esas fechas',
+    text: 'Otra persona lo ocupa en esas fechas. Elige otro ambiente libre.',
+    buttonLabel: 'Elegir otro ambiente',
+    leaves: false,
+  },
   GUEST_NOT_ACTIVE: {
     title: 'El huésped no está activo',
-    mainLabel: 'Volver al huésped',
+    text: null,
+    buttonLabel: 'Volver al huésped',
     leaves: true,
   },
   GUEST_NOT_TEMPORARY: {
     title: 'El huésped no es temporal',
-    mainLabel: 'Volver al huésped',
+    text: null,
+    buttonLabel: 'Volver al huésped',
     leaves: true,
   },
 };
@@ -91,33 +113,27 @@ function draftOf(stay: Stay): Draft {
     start: stay.startDate,
     end: stay.endDate,
     environmentId: stay.environmentId ?? '',
-    amount: String(stay.agreedAmount),
+    amount: stay.agreedAmount.toFixed(2),
   };
 }
 
-interface EnvironmentOption {
+interface Option {
   readonly id: string;
   readonly label: string;
 }
 
-function optionOf(environment: Environment): EnvironmentOption {
+/** A fact of the side panel (P-11); `wide` takes both columns. */
+interface Fact {
+  readonly label: string;
+  readonly value: string;
+  readonly wide: boolean;
+}
+
+function optionOf(environment: Environment): Option {
   return {
     id: environment.id,
-    label: `${environment.code} · ${ENVIRONMENT_TYPE_LABELS[environment.type]}`,
+    label: `${ENVIRONMENT_TYPE_LABELS[environment.type]} ${environment.code}`,
   };
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-/** The guest of the stay that occupies the environment, for "Ver huésped" (TAR-237). */
-function occupyingGuest(error: unknown): string | null {
-  const body: unknown = error instanceof HttpErrorResponse ? error.error : null;
-  const occupant = isRecord(body) ? body['occupant'] : null;
-  if (!isRecord(occupant) || occupant['kind'] !== 'STAY') return null;
-  const guestId = occupant['guestId'];
-  return typeof guestId === 'string' && guestId !== '' ? guestId : null;
 }
 
 /** The fields of a correction that differ from the stay as it was loaded. */
@@ -133,14 +149,19 @@ function changesOf(loaded: Stay, draft: Draft): Partial<StayInput> {
   };
 }
 
+function nightsValue(start: string, end: string): string {
+  const nights = nightsBetween(start, end);
+  return nights === null ? '—' : String(nights);
+}
+
 /**
- * A3.5 (RN-13, RN-17, RN-20, CU-31): registers a stay of a temporary guest, or corrects one with
- * the `version` it was loaded with (BE-SPR-DAT-13). The environment is chosen among the active ones
- * free for the whole stay. Ids are opaque and travel as they came.
+ * A3.5 (RN-13, RN-17, RN-20, CU-31) on the approved canvas: registers a stay of a temporary guest,
+ * or corrects one with the `version` it was loaded with (BE-SPR-DAT-13). The environment is chosen
+ * among the active ones free for the whole stay. Ids are opaque and travel as they came.
  */
 @Component({
   selector: 'app-stay-form',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [MatButton, RouterLink],
   templateUrl: './stay-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
@@ -155,10 +176,16 @@ export class StayFormComponent implements OnInit {
   private readonly injector = inject(Injector);
 
   protected readonly generalErrorId = GENERAL_ERROR_ID;
+  protected readonly today = todayText();
+  protected readonly slowText = SLOW_TEXT;
+  protected readonly skeletonRows = SKELETON_ROWS;
+  protected readonly describedBy = describedBy;
+  protected readonly timing = new LoadTiming();
   protected guestId = '';
   /** The stay being corrected, or null when a new one is registered. */
   protected stayId: string | null = null;
 
+  protected readonly guest = signal<GuestDetail | null>(null);
   protected readonly state = signal<LoadState>({ kind: 'ready' });
   protected readonly loaded = signal<Stay | null>(null);
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
@@ -170,6 +197,10 @@ export class StayFormComponent implements OnInit {
   /** Errors the BFF tied to a field, shown next to it until that field changes. */
   protected readonly serverErrors = signal<Readonly<Partial<Record<FieldKey, string>>>>({});
 
+  protected readonly backLabel = computed(() => {
+    const guest = this.guest();
+    return guest ? `Volver a ${guestName(guest)}` : 'Volver al huésped';
+  });
   protected readonly loadError = computed(() => {
     const state = this.state();
     return state.kind === 'error' ? state.message : '';
@@ -193,6 +224,13 @@ export class StayFormComponent implements OnInit {
     }
     return options;
   });
+  /** The first option of the select: a prompt to register, "Sin ambiente" for an old stay. */
+  protected readonly emptyOption = computed(() => {
+    if (this.stayId === null) return 'Elige un ambiente';
+    return this.legacy() ? NO_ENVIRONMENT : null;
+  });
+  /** "Esta estadía tiene un pago pendiente de revisión" (decided 2026-10-30). */
+  protected readonly paidNote = computed(() => this.loaded()?.paymentStatus === 'UNDER_REVIEW');
   protected readonly dirty = computed(() => {
     const loaded = this.loaded();
     if (!loaded) return true;
@@ -203,13 +241,30 @@ export class StayFormComponent implements OnInit {
   protected readonly canSave = computed(
     () => this.state().kind === 'ready' && !this.busy() && this.dirty(),
   );
+  protected readonly saveLabel = computed(() => {
+    if (this.stayId === null) return this.busy() ? 'Registrando…' : 'Registrar estadía';
+    return this.busy() ? 'Guardando…' : 'Guardar cambios';
+  });
+  protected readonly sideTitle = computed(() =>
+    this.stayId === null ? 'Lo que se va a registrar' : 'Cómo está hoy',
+  );
+  protected readonly sideNote = computed(() =>
+    this.stayId === null
+      ? 'Las noches se calculan de las fechas. Desde la llegada podrá subir su voucher.'
+      : 'Una estadía no se convierte en otra: si vuelve en otras fechas, registra una estadía nueva.',
+  );
+  protected readonly facts = computed<readonly Fact[]>(() => {
+    const loaded = this.loaded();
+    return loaded ? this.loadedFacts(loaded) : this.draftFacts();
+  });
 
   protected readonly datesError = computed(() => {
     const server = this.serverErrors().dates;
     if (server) return server;
+    if (!this.submitted()) return null;
     const { start, end } = this.draft();
-    if (start !== '' && end !== '' && end < start) return DATES_ORDER_TEXT;
-    return this.submitted() && (start === '' || end === '') ? DATES_TEXT : null;
+    if (start === '' || end === '') return DATES_TEXT;
+    return end < start ? DATES_ORDER_TEXT : null;
   });
   protected readonly environmentError = computed(() => {
     const server = this.serverErrors().environment;
@@ -232,6 +287,7 @@ export class StayFormComponent implements OnInit {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
+      this.timing.stop();
     });
   }
 
@@ -239,12 +295,8 @@ export class StayFormComponent implements OnInit {
     const params = this.route.snapshot.paramMap;
     this.guestId = params.get('id') ?? '';
     this.stayId = params.get('stayId');
+    void this.loadGuest();
     if (this.stayId !== null) void this.loadStay(this.stayId);
-  }
-
-  protected noEnvironmentLabel(): string {
-    if (this.legacy()) return NO_ENVIRONMENT;
-    return this.datesReady() ? 'Elige el ambiente' : 'Elige primero la llegada y la salida';
   }
 
   protected typedStart(target: EventTarget | null): void {
@@ -307,10 +359,42 @@ export class StayFormComponent implements OnInit {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(loaded ? STAY_UPDATED_TEXT : STAY_CREATED_TEXT, 'Cerrar', {
+    this.snackBar.open(loaded ? STAY_UPDATED_TEXT : STAY_CREATED_TEXT, undefined, {
       duration: SNACK_MS,
     });
     await this.backToGuest();
+  }
+
+  private loadedFacts(stay: Stay): Fact[] {
+    return [
+      { label: 'Ambiente', value: stay.environmentCode ?? NO_ENVIRONMENT, wide: false },
+      { label: 'Noches', value: nightsValue(stay.startDate, stay.endDate), wide: false },
+      { label: 'Fechas', value: formatStay(stay.startDate, stay.endDate), wide: true },
+      { label: 'Monto acordado', value: formatMoney(stay.agreedAmount), wide: true },
+    ];
+  }
+
+  private draftFacts(): Fact[] {
+    const { start, end, environmentId, amount } = this.draft();
+    const guest = this.guest();
+    const environment = this.options().find((option) => option.id === environmentId);
+    const value = parseAmount(amount);
+    const datesOk = start !== '' && end !== '';
+    return [
+      { label: 'Huésped', value: guest ? guestName(guest) : '—', wide: true },
+      { label: 'Ambiente', value: environment?.label ?? 'Falta elegirlo', wide: false },
+      { label: 'Noches', value: nightsValue(start, end), wide: false },
+      {
+        label: 'Fechas',
+        value: datesOk ? formatStay(start, end) : 'Faltan las fechas',
+        wide: true,
+      },
+      {
+        label: 'Monto acordado',
+        value: value !== null && value > 0 ? formatMoney(value) : 'Falta el monto',
+        wide: true,
+      },
+    ];
   }
 
   private update(changes: Partial<Draft>, field: FieldKey): void {
@@ -330,10 +414,10 @@ export class StayFormComponent implements OnInit {
     const { code, message, field } = toBffErrorWithServerMessage(error);
     const notice = NOTICES[code];
     if (notice) {
-      return this.notice(notice, message, occupyingGuest(error));
+      return this.notice(notice, message);
     }
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.snackBar.open(message, undefined, { duration: SNACK_MS });
       return this.backToGuest();
     }
     const key = code === 'STAY_OVERLAP' ? 'dates' : FIELD_KEYS[field ?? ''];
@@ -345,59 +429,70 @@ export class StayFormComponent implements OnInit {
     focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
   }
 
+  /** The canvas words it "El registro cambió", with "Cerrar" and "Volver a cargar". */
   private async concurrent(): Promise<void> {
-    const ref = openConcurrentModificationDialog(this.dialog, {
-      title: 'La estadía cambió',
-      backLabel: 'Volver al huésped',
-    });
+    const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
-    if (this.destroyed) return;
-    if (choice === 'reload' && this.stayId !== null) {
+    if (!this.destroyed && choice === 'reload' && this.stayId !== null) {
       await this.loadStay(this.stayId);
-    } else if (choice === 'back') {
-      await this.backToGuest();
     }
   }
 
-  private async notice(notice: Notice, message: string, occupant: string | null): Promise<void> {
+  private async notice(notice: Notice, message: string): Promise<void> {
     const ref = openGuestNoticeDialog(this.dialog, {
       title: notice.title,
-      message,
-      mainLabel: notice.mainLabel,
-      ...(occupant === null ? {} : { secondLabel: 'Ver huésped' }),
+      message: notice.text ?? message,
+      buttonLabel: notice.buttonLabel,
     });
-    const choice = await firstValueFrom(ref.afterClosed());
+    await firstValueFrom(ref.afterClosed());
     if (this.destroyed) return;
-    if (choice === 'second' && occupant !== null) {
-      await this.router.navigate(['/admin/guests', occupant]);
-    } else if (notice.leaves) {
+    if (notice.leaves) {
       await this.backToGuest();
-    } else {
-      // The environment was taken meanwhile: show the ones still free.
-      this.refreshFree();
+      return;
     }
+    // The environment was taken meanwhile: show the ones still free and go choose another.
+    this.refreshFree();
+    afterNextRender(
+      () => {
+        this.host.nativeElement.querySelector<HTMLElement>('#stay-environment')?.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   private async backToGuest(): Promise<void> {
     await this.router.navigate(['/admin/guests', this.guestId]);
   }
 
+  /** The guest names the screen and the side panel; without it the form still works. */
+  private async loadGuest(): Promise<void> {
+    try {
+      const guest = await firstValueFrom(this.guests.get(this.guestId));
+      if (!this.destroyed) this.guest.set(guest);
+    } catch {
+      // "Volver al huésped" and "—" stand in for the name; the save says what is wrong.
+    }
+  }
+
   /** Loads the stay to correct with its current `version` and starts the form from it. */
   private async loadStay(stayId: string): Promise<void> {
     const request = ++this.stayRequest;
     this.state.set({ kind: 'loading' });
+    this.timing.start();
     this.submitted.set(false);
     this.serverErrors.set({});
     this.generalError.set(null);
     try {
       const stay = await firstValueFrom(this.guests.findStay(this.guestId, stayId));
       if (request !== this.stayRequest) return;
+      this.timing.stop();
       this.loaded.set(stay);
       this.draft.set(stay ? draftOf(stay) : EMPTY_DRAFT);
       this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
       if (stay) this.refreshFree();
     } catch (error: unknown) {
       if (request !== this.stayRequest) return;
+      this.timing.stop();
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
       this.state.set(
         notFound

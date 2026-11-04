@@ -14,6 +14,8 @@ import type { Environment } from '@core/services/admin-environments.service';
 import type { Stay } from '@core/services/admin-guests.service';
 import { StayFormComponent } from './stay-form.component';
 
+const isGuest = (req: HttpRequest<unknown>) =>
+  req.method === 'GET' && req.url.endsWith('/bff/admin/guests/g1');
 const isStays = (req: HttpRequest<unknown>) =>
   req.method === 'GET' && req.url.endsWith('/bff/admin/guests/g1/stays');
 const isEnvironments = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/admin/environments');
@@ -21,6 +23,21 @@ const isCreate = (req: HttpRequest<unknown>) =>
   req.method === 'POST' && req.url.endsWith('/bff/admin/guests/g1/stays');
 const isUpdate = (req: HttpRequest<unknown>) =>
   req.method === 'PATCH' && req.url.endsWith('/bff/admin/guests/g1/stays/s%2F1');
+
+const AMOUNT = 'Monto acordado';
+const GUEST = {
+  id: 'g1',
+  documentType: 'CE',
+  documentNumber: '001234567',
+  name: 'Luis Mamani',
+  type: 'TEMPORARY',
+  hasLoginAccess: true,
+  phone: '999 111 222',
+  documentCount: 0,
+  paymentHistory: [],
+  status: 'ACTIVE',
+  onboardingProgress: 'COMPLETED',
+};
 
 function stayOf(overrides: Partial<Stay> = {}): Stay {
   return {
@@ -57,12 +74,14 @@ const FREE = {
   freeCount: 2,
 };
 
+const squash = (text: string | null | undefined) => (text ?? '').replace(/\s+/g, ' ').trim();
+
 async function settle(harness: RouterTestingHarness) {
   await new Promise((resolve) => setTimeout(resolve, 0));
   await harness.fixture.whenStable();
 }
 
-async function setup(url: string) {
+async function setup(url: string, guest: object | null = GUEST) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -86,6 +105,11 @@ async function setup(url: string) {
     req.flush(body, { status, statusText: 'x' });
     await settle(harness);
   };
+  if (guest === null) {
+    await flush(await expect1(isGuest), { code: 'GUEST_NOT_FOUND', message: 'x' }, 404);
+  } else {
+    await flush(await expect1(isGuest), guest);
+  }
   const page = () => within(present(harness.routeNativeElement));
   const click = async (element: HTMLElement) => {
     fireEvent.click(element);
@@ -101,12 +125,22 @@ async function setup(url: string) {
     fireEvent.change(select);
     await settle(harness);
   };
-  const save = () => page().getByRole<HTMLButtonElement>('button', { name: 'Guardar' });
-  const describedBy = (label: string) => {
-    const id = page().getByLabelText(label).getAttribute('aria-describedby') ?? '';
-    return document.getElementById(id)?.textContent.trim();
+  const save = () =>
+    page().getByRole<HTMLButtonElement>('button', {
+      name: /^(Registrar estadía|Guardar cambios|Registrando…|Guardando…)$/,
+    });
+  /** The error a field is described by (its help is described too, after it). */
+  const errorOf = (label: string) => {
+    const ids = (page().getByLabelText(label).getAttribute('aria-describedby') ?? '').split(' ');
+    const id = ids.find((each) => each.endsWith('-error'));
+    return id ? document.getElementById(id)?.textContent.trim() : undefined;
   };
-  return { harness, http, router, page, click, type, choose, save, describedBy, expect1, flush };
+  const facts = () =>
+    [...present(page().getByRole('complementary')).querySelectorAll('dl > div')].map((pair) => [
+      squash(pair.querySelector('dt')?.textContent),
+      squash(pair.querySelector('dd')?.textContent),
+    ]);
+  return { harness, http, router, page, click, type, choose, save, errorOf, facts, expect1, flush };
 }
 
 type Ui = Awaited<ReturnType<typeof setup>>;
@@ -128,7 +162,13 @@ async function correctReady(stay: Stay = stayOf()): Promise<Ui> {
   return ui;
 }
 
-describe('StayFormComponent (A3.5 stays)', () => {
+async function fillAndSave(ui: Ui) {
+  await ui.choose('env/2');
+  await ui.type(AMOUNT, '400');
+  await ui.click(ui.save());
+}
+
+describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
@@ -137,28 +177,92 @@ describe('StayFormComponent (A3.5 stays)', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('shows the literal texts of the SRS and sends nothing while the form is empty', async () => {
+  it('shows the header, the help of each field and what is going to be registered', async () => {
     const ui = await setup('/admin/guests/g1/stays/new');
     ui.http.expectNone(isEnvironments);
+
+    expect(ui.page().getByRole('heading', { level: 1, name: 'Registrar estadía' })).toBeTruthy();
+    expect(ui.page().getByText(/^Hoy, \S+ \d{1,2} de \S+$/)).toBeTruthy();
+    expect(ui.page().getByRole('link', { name: 'Volver a Luis Mamani' }).getAttribute('href')).toBe(
+      '/admin/guests/g1',
+    );
+    expect(
+      ui.page().getByRole('heading', { level: 2, name: 'Lo que se va a registrar' }),
+    ).toBeTruthy();
+    expect(ui.facts()).toEqual([
+      ['Huésped', 'Luis Mamani'],
+      ['Ambiente', 'Falta elegirlo'],
+      ['Noches', '—'],
+      ['Fechas', 'Faltan las fechas'],
+      ['Monto acordado', 'Falta el monto'],
+    ]);
+    expect(
+      ui
+        .page()
+        .getByText(
+          'Las noches se calculan de las fechas. Desde la llegada podrá subir su voucher.',
+        ),
+    ).toBeTruthy();
+    const helpOf = (label: string) => {
+      const ids = ui.page().getByLabelText(label).getAttribute('aria-describedby') ?? '';
+      return squash(document.getElementById(ids)?.textContent);
+    };
+    expect(helpOf('Ambiente')).toBe(
+      'Solo los ambientes activos y libres en esas fechas. Lo ocupa durante la estadía.',
+    );
+    expect(helpOf('Llegada')).toBe(
+      'No puede cruzarse con otra estadía del huésped. Puedes registrar una próxima mientras la actual sigue.',
+    );
+    expect(helpOf(AMOUNT)).toBe('Lo que paga por toda la estadía, en un solo pago.');
+    expect(ui.page().getByRole('link', { name: 'Cancelar' }).getAttribute('href')).toBe(
+      '/admin/guests/g1',
+    );
+  });
+
+  it('names the guest by its document while it has no name, and works without it', async () => {
+    const ui = await setup('/admin/guests/g1/stays/new', null);
+
+    expect(ui.page().getByRole('link', { name: 'Volver al huésped' })).toBeTruthy();
+    expect(ui.facts()[0]).toEqual(['Huésped', '—']);
+    expect(ui.save().disabled).toBe(false);
+  });
+
+  it('shows the literal texts of the SRS and sends nothing while the form is empty', async () => {
+    const ui = await setup('/admin/guests/g1/stays/new');
 
     await ui.click(ui.save());
 
-    expect(ui.describedBy('Llegada')).toBe('Elige la llegada y la salida.');
+    expect(ui.errorOf('Llegada')).toBe('Elige la llegada y la salida.');
     expect(ui.page().getByLabelText('Llegada').getAttribute('aria-invalid')).toBe('true');
     expect(ui.page().getByLabelText('Salida').getAttribute('aria-invalid')).toBe('true');
-    expect(ui.describedBy('Ambiente')).toBe('Elige el ambiente de la estadía.');
-    expect(ui.describedBy('Monto acordado (S/)')).toBe('Escribe un monto mayor que 0.');
-    expect(document.activeElement).toBe(ui.page().getByLabelText('Llegada'));
+    expect(ui.errorOf('Ambiente')).toBe('Elige el ambiente de la estadía.');
+    expect(ui.errorOf(AMOUNT)).toBe('Escribe un monto mayor que 0.');
+    expect(document.activeElement).toBe(ui.page().getByLabelText('Ambiente'));
     ui.http.expectNone(isCreate);
   });
 
-  it('says the exit cannot be before the arrival and asks no environments for those dates', async () => {
+  it('says the exit cannot be before the arrival once it tries to save, asking no environments', async () => {
     const ui = await setup('/admin/guests/g1/stays/new');
     await ui.type('Llegada', '2026-11-15');
     await ui.type('Salida', '2026-11-10');
+    expect(ui.errorOf('Salida')).toBeUndefined();
 
-    expect(ui.describedBy('Salida')).toBe('La salida no puede ser antes de la llegada.');
+    await ui.click(ui.save());
+
+    expect(ui.errorOf('Salida')).toBe('La salida no puede ser antes de la llegada.');
+    expect(ui.facts()[2]).toEqual(['Noches', '—']);
     ui.http.expectNone(isEnvironments);
+    ui.http.expectNone(isCreate);
+  });
+
+  it('rejects an amount of zero with the literal text', async () => {
+    const ui = await registerReady();
+    await ui.choose('env/2');
+    await ui.type(AMOUNT, '0');
+    await ui.click(ui.save());
+
+    expect(ui.errorOf(AMOUNT)).toBe('Escribe un monto mayor que 0.');
+    ui.http.expectNone(isCreate);
   });
 
   it('keeps a choice from a later page of environments while the new dates are checked', async () => {
@@ -194,16 +298,6 @@ describe('StayFormComponent (A3.5 stays)', () => {
     expect(ui.page().getByLabelText<HTMLSelectElement>('Ambiente').value).toBe('env-9');
   });
 
-  it('rejects an amount of zero with the literal text', async () => {
-    const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '0');
-    await ui.click(ui.save());
-
-    expect(ui.describedBy('Monto acordado (S/)')).toBe('Escribe un monto mayor que 0.');
-    ui.http.expectNone(isCreate);
-  });
-
   it('registers a stay in a free environment and goes back to A3.2 with the aviso', async () => {
     const ui = await setup('/admin/guests/g1/stays/new');
     await ui.type('Llegada', '2026-11-10');
@@ -215,15 +309,24 @@ describe('StayFormComponent (A3.5 stays)', () => {
     await ui.flush(environments, FREE);
     const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
     expect([...select.options].map((option) => option.textContent.trim())).toEqual([
-      'Elige el ambiente',
-      'C1 · Cabaña',
-      'H2 · Habitación',
+      'Elige un ambiente',
+      'Cabaña C1',
+      'Habitación H2',
     ]);
 
     await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400,50');
+    await ui.type(AMOUNT, '400,50');
+    expect(ui.facts()).toEqual([
+      ['Huésped', 'Luis Mamani'],
+      ['Ambiente', 'Cabaña C1'],
+      ['Noches', '5'],
+      ['Fechas', '10 – 15 nov'],
+      ['Monto acordado', 'S/ 400.50'],
+    ]);
     await ui.click(ui.save());
     const post = await ui.expect1(isCreate);
+    expect(ui.save().textContent.trim()).toBe('Registrando…');
+    expect(ui.save().disabled).toBe(true);
     expect(post.request.body).toStrictEqual({
       environmentId: 'env/2',
       startDate: '2026-11-10',
@@ -236,7 +339,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
     expect(screen.getByText('Estadía registrada.')).toBeTruthy();
   });
 
-  it('loads the stay to correct, keeps Guardar disabled without changes and sends the version', async () => {
+  it('loads the stay to correct, keeps "Guardar cambios" disabled without changes and sends the version', async () => {
     const ui = await setup('/admin/guests/g1/stays/s%2F1');
     const list = await ui.expect1(isStays);
     expect(list.request.params.get('limit')).toBe('100');
@@ -244,25 +347,58 @@ describe('StayFormComponent (A3.5 stays)', () => {
     await ui.flush(await ui.expect1(isEnvironments), FREE);
 
     expect(ui.page().getByRole('heading', { level: 1, name: 'Corregir estadía' })).toBeTruthy();
+    expect(ui.page().getByRole('heading', { level: 2, name: 'Cómo está hoy' })).toBeTruthy();
+    expect(ui.facts()).toEqual([
+      ['Ambiente', 'H1'],
+      ['Noches', '5'],
+      ['Fechas', '10 – 15 nov'],
+      ['Monto acordado', 'S/ 400.00'],
+    ]);
+    expect(
+      ui
+        .page()
+        .getByText(
+          'Una estadía no se convierte en otra: si vuelve en otras fechas, registra una estadía nueva.',
+        ),
+    ).toBeTruthy();
+    expect(ui.page().queryByText(/pago pendiente de revisión/)).toBeNull();
     expect(ui.page().getByLabelText<HTMLInputElement>('Llegada').value).toBe('2026-11-10');
     expect(ui.page().getByLabelText<HTMLInputElement>('Salida').value).toBe('2026-11-15');
-    expect(ui.page().getByLabelText<HTMLSelectElement>('Ambiente').value).toBe('env-1');
-    expect(ui.page().getByLabelText<HTMLInputElement>('Monto acordado (S/)').value).toBe('400');
+    const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
+    expect(select.value).toBe('env-1');
+    expect([...select.options].map((option) => option.textContent.trim())).toEqual([
+      'H1',
+      'Cabaña C1',
+      'Habitación H2',
+    ]);
+    expect(ui.page().getByLabelText<HTMLInputElement>(AMOUNT).value).toBe('400.00');
+    expect(ui.save().textContent.trim()).toBe('Guardar cambios');
     expect(ui.save().disabled).toBe(true);
 
-    await ui.type('Monto acordado (S/)', '450');
+    await ui.type(AMOUNT, '450');
     expect(ui.save().disabled).toBe(false);
-    await ui.type('Monto acordado (S/)', '400');
+    await ui.type(AMOUNT, '400.00');
     expect(ui.save().disabled).toBe(true);
-    await ui.type('Monto acordado (S/)', '450');
+    await ui.type(AMOUNT, '450');
 
     await ui.click(ui.save());
     const patch = await ui.expect1(isUpdate);
+    expect(ui.save().textContent.trim()).toBe('Guardando…');
     expect(patch.request.body).toStrictEqual({ agreedAmount: 450, version: 4 });
     await ui.flush(patch, stayOf({ agreedAmount: 450, version: 5 }));
 
     expect(ui.router.url).toBe('/admin/guests/g1');
     expect(screen.getByText('Estadía corregida.')).toBeTruthy();
+  });
+
+  it('warns that a stay with a payment under review compares it with the new amount', async () => {
+    const ui = await correctReady(stayOf({ paymentStatus: 'UNDER_REVIEW', paymentId: 'p1' }));
+
+    expect(
+      squash(ui.page().getByText(/pago pendiente de revisión/).parentElement?.textContent),
+    ).toBe(
+      'Esta estadía tiene un pago pendiente de revisión. Si cambias el monto acordado, la revisión compara el pago con el monto nuevo.',
+    );
   });
 
   it('sends only the dates and the environment that changed, with the version', async () => {
@@ -283,7 +419,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
 
   it('opens the shared dialog on 409 and reloads the stay with its new version', async () => {
     const ui = await correctReady();
-    await ui.type('Monto acordado (S/)', '450');
+    await ui.type(AMOUNT, '450');
     await ui.click(ui.save());
     await ui.flush(
       await ui.expect1(isUpdate),
@@ -291,7 +427,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
       409,
     );
 
-    const alert = await screen.findByRole('alertdialog', { name: 'La estadía cambió' });
+    const alert = await screen.findByRole('alertdialog', { name: 'El registro cambió' });
     expect(alert.textContent).toContain(
       'El registro cambió mientras lo editabas; vuelve a cargarlo e inténtalo de nuevo',
     );
@@ -302,9 +438,9 @@ describe('StayFormComponent (A3.5 stays)', () => {
     });
     await ui.flush(await ui.expect1(isEnvironments), FREE);
 
-    expect(ui.page().getByLabelText<HTMLInputElement>('Monto acordado (S/)').value).toBe('420');
+    expect(ui.page().getByLabelText<HTMLInputElement>(AMOUNT).value).toBe('420.00');
     expect(ui.save().disabled).toBe(true);
-    await ui.type('Monto acordado (S/)', '450');
+    await ui.type(AMOUNT, '450');
     await ui.click(ui.save());
     const patch = await ui.expect1(isUpdate);
     expect(patch.request.body).toStrictEqual({ agreedAmount: 450, version: 5 });
@@ -312,9 +448,9 @@ describe('StayFormComponent (A3.5 stays)', () => {
     expect(ui.router.url).toBe('/admin/guests/g1');
   });
 
-  it('goes back to A3.2 from the 409 dialog without saving', async () => {
+  it('keeps the form as it was after "Cerrar" on the 409 dialog, saving nothing', async () => {
     const ui = await correctReady();
-    await ui.type('Monto acordado (S/)', '450');
+    await ui.type(AMOUNT, '450');
     await ui.click(ui.save());
     await ui.flush(
       await ui.expect1(isUpdate),
@@ -322,83 +458,58 @@ describe('StayFormComponent (A3.5 stays)', () => {
       409,
     );
 
-    const alert = await screen.findByRole('alertdialog', { name: 'La estadía cambió' });
-    await ui.click(within(alert).getByRole('button', { name: 'Volver al huésped' }));
+    const alert = await screen.findByRole('alertdialog', { name: 'El registro cambió' });
+    await ui.click(within(alert).getByRole('button', { name: 'Cerrar' }));
 
-    expect(ui.router.url).toBe('/admin/guests/g1');
+    expect(ui.router.url).toBe('/admin/guests/g1/stays/s%2F1');
+    expect(ui.page().getByLabelText<HTMLInputElement>(AMOUNT).value).toBe('450');
     ui.http.expectNone(isStays);
+    ui.http.expectNone(isUpdate);
   });
 
   it('shows STAY_OVERLAP with the BFF message under the dates, not in a dialog', async () => {
     const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400');
-    await ui.click(ui.save());
+    await fillAndSave(ui);
     const message =
       'Estas fechas se cruzan con otra estadía del huésped: del 01/11/2026 al 12/11/2026';
     await ui.flush(await ui.expect1(isCreate), { code: 'STAY_OVERLAP', message }, 409);
 
-    expect(ui.describedBy('Llegada')).toBe(message);
+    expect(ui.errorOf('Llegada')).toBe(message);
     expect(ui.page().getByLabelText('Salida').getAttribute('aria-invalid')).toBe('true');
     expect(document.body.querySelector('mat-dialog-container')).toBeNull();
     expect(ui.router.url).toBe('/admin/guests/g1/stays/new');
 
     await ui.type('Salida', '2026-11-14');
-    expect(ui.describedBy('Llegada')).toBeUndefined();
+    expect(ui.errorOf('Llegada')).toBeUndefined();
     await ui.flush(await ui.expect1(isEnvironments), FREE);
   });
 
-  it('shows ENVIRONMENT_OCCUPIED in a dialog that links to the guest of the stay', async () => {
+  it('shows ENVIRONMENT_OCCUPIED as the canvas words it and asks the free environments again', async () => {
     const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400');
-    await ui.click(ui.save());
-    await ui.flush(
-      await ui.expect1(isCreate),
-      {
-        code: 'ENVIRONMENT_OCCUPIED',
-        message: 'El ambiente ya está ocupado en esas fechas',
-        occupant: {
-          kind: 'STAY',
-          guestId: 'g/9',
-          guestName: 'Otro huésped',
-          contractId: null,
-          stayId: 's7',
-          startDate: '2026-11-09',
-          endDate: '2026-11-12',
-        },
-      },
-      409,
-    );
-
-    const alert = await screen.findByRole('alertdialog', { name: 'Ambiente ocupado' });
-    expect(alert.textContent).toContain('El ambiente ya está ocupado en esas fechas');
-    await ui.click(within(alert).getByRole('button', { name: 'Ver huésped' }));
-
-    expect(ui.router.url).toBe('/admin/guests/g%2F9');
-  });
-
-  it('asks the free environments again after "Entendido" on ENVIRONMENT_OCCUPIED', async () => {
-    const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400');
-    await ui.click(ui.save());
+    await fillAndSave(ui);
     await ui.flush(
       await ui.expect1(isCreate),
       { code: 'ENVIRONMENT_OCCUPIED', message: 'El ambiente ya está ocupado en esas fechas' },
       409,
     );
 
-    const alert = await screen.findByRole('alertdialog', { name: 'Ambiente ocupado' });
-    expect(within(alert).queryByRole('button', { name: 'Ver huésped' })).toBeNull();
-    await ui.click(within(alert).getByRole('button', { name: 'Entendido' }));
+    const alert = await screen.findByRole('alertdialog', {
+      name: 'El ambiente ya está ocupado en esas fechas',
+    });
+    expect(alert.textContent).toContain(
+      'Otra persona lo ocupa en esas fechas. Elige otro ambiente libre.',
+    );
+    expect(within(alert).getAllByRole('button')).toHaveLength(1);
+    await ui.click(within(alert).getByRole('button', { name: 'Elegir otro ambiente' }));
     await ui.flush(await ui.expect1(isEnvironments), {
       content: [environment({ id: 'env-3', code: 'H2', type: 'ROOM' })],
       nextCursor: null,
       freeCount: 1,
     });
 
-    expect(ui.page().getByLabelText<HTMLSelectElement>('Ambiente').value).toBe('');
+    const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
+    expect(select.value).toBe('');
+    expect(document.activeElement).toBe(select);
     expect(ui.router.url).toBe('/admin/guests/g1/stays/new');
   });
 
@@ -417,9 +528,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
     'shows %s in a dialog with the BFF message and goes back to A3.2',
     async (code, title, message) => {
       const ui = await registerReady();
-      await ui.choose('env/2');
-      await ui.type('Monto acordado (S/)', '400');
-      await ui.click(ui.save());
+      await fillAndSave(ui);
       await ui.flush(await ui.expect1(isCreate), { code, message, guestId: 'g1' }, 409);
 
       const alert = await screen.findByRole('alertdialog', { name: title });
@@ -432,9 +541,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
 
   it('shows a field error of the BFF next to its field', async () => {
     const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400');
-    await ui.click(ui.save());
+    await fillAndSave(ui);
     await ui.flush(
       await ui.expect1(isCreate),
       {
@@ -445,15 +552,13 @@ describe('StayFormComponent (A3.5 stays)', () => {
       400,
     );
 
-    expect(ui.describedBy('Monto acordado (S/)')).toBe('El monto admite hasta dos decimales');
-    expect(document.activeElement).toBe(ui.page().getByLabelText('Monto acordado (S/)'));
+    expect(ui.errorOf(AMOUNT)).toBe('El monto admite hasta dos decimales');
+    expect(document.activeElement).toBe(ui.page().getByLabelText(AMOUNT));
   });
 
   it('shows an error without a field above the actions', async () => {
     const ui = await registerReady();
-    await ui.choose('env/2');
-    await ui.type('Monto acordado (S/)', '400');
-    await ui.click(ui.save());
+    await fillAndSave(ui);
     await ui.flush(
       await ui.expect1(isCreate),
       { code: 'RATE_LIMITED', message: 'Demasiados intentos, espera un momento' },
@@ -465,6 +570,20 @@ describe('StayFormComponent (A3.5 stays)', () => {
     );
   });
 
+  it('goes back to A3.2 with the BFF message when the stay is gone on save', async () => {
+    const ui = await correctReady();
+    await ui.type(AMOUNT, '450');
+    await ui.click(ui.save());
+    await ui.flush(
+      await ui.expect1(isUpdate),
+      { code: 'STAY_NOT_FOUND', message: 'La estadía no existe' },
+      404,
+    );
+
+    expect(ui.router.url).toBe('/admin/guests/g1');
+    expect(screen.getByText('La estadía no existe')).toBeTruthy();
+  });
+
   it('says so when the stay to correct does not exist', async () => {
     const ui = await setup('/admin/guests/g1/stays/s%2F1');
     await ui.flush(await ui.expect1(isStays), {
@@ -473,7 +592,7 @@ describe('StayFormComponent (A3.5 stays)', () => {
     });
 
     expect(ui.page().getByText('No encontramos la estadía.')).toBeTruthy();
-    expect(ui.page().queryByRole('button', { name: 'Guardar' })).toBeNull();
+    expect(ui.page().queryByRole('button', { name: 'Guardar cambios' })).toBeNull();
     expect(
       ui.page().getAllByRole('link', { name: 'Volver al huésped' })[0]?.getAttribute('href'),
     ).toBe('/admin/guests/g1');
@@ -485,7 +604,8 @@ describe('StayFormComponent (A3.5 stays)', () => {
     const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
     expect(select.value).toBe('');
     expect(select.options[0]?.textContent.trim()).toBe('Sin ambiente');
-    await ui.type('Monto acordado (S/)', '410');
+    expect(ui.facts()[0]).toEqual(['Ambiente', 'Sin ambiente']);
+    await ui.type(AMOUNT, '410');
     await ui.click(ui.save());
     const patch = await ui.expect1(isUpdate);
     expect(patch.request.body).toStrictEqual({ agreedAmount: 410, version: 4 });

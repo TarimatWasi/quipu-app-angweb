@@ -10,22 +10,18 @@ import {
   MatDialogTitle,
 } from '@angular/material/dialog';
 
-/** What the person chose: the main action, or the optional second one. */
-export type GuestNoticeChoice = 'main' | 'second';
-
 export interface GuestNoticeData {
   readonly title: string;
-  /** The BFF's own message (QP-UI-17), always interpolated as text. */
+  /** Always interpolated as text. */
   readonly message: string;
-  readonly mainLabel: string;
-  readonly secondLabel?: string;
+  readonly buttonLabel: string;
 }
 
 const NOTICE_TEXT_ID = 'guest-notice-text';
 
 /**
- * A3.5: the rejections the SRS shows as a modal (environment occupied, guest not active, guest not
- * temporary), with the BFF's message. It answers which action was taken; dismissed, undefined.
+ * A3.5: the rejections shown as a modal (environment occupied, guest not active, guest not
+ * temporary), with a single action. It answers true when that action is taken; dismissed, undefined.
  */
 @Component({
   selector: 'app-guest-notice-dialog',
@@ -36,17 +32,26 @@ const NOTICE_TEXT_ID = 'guest-notice-text';
       <p [id]="textId">{{ data.message }}</p>
     </mat-dialog-content>
     <mat-dialog-actions>
-      <button mat-flat-button type="button" mat-dialog-close="main" cdkFocusInitial>
-        {{ data.mainLabel }}
+      <button mat-flat-button type="button" [mat-dialog-close]="true" cdkFocusInitial>
+        {{ data.buttonLabel }}
       </button>
-      @if (data.secondLabel; as label) {
-        <button mat-button type="button" mat-dialog-close="second">{{ label }}</button>
-      }
     </mat-dialog-actions>
   `,
   styles: `
+    h2 {
+      font-family: 'Fraunces', Georgia, serif;
+      font-size: 28px;
+      font-weight: 600;
+      line-height: 1.15;
+    }
+    p {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.5;
+    }
     mat-dialog-actions {
-      gap: 0.5rem;
+      justify-content: end;
+      padding: 0 1.5rem 1.5rem;
     }
   `,
 })
@@ -58,8 +63,8 @@ export class GuestNoticeDialogComponent {
 export function openGuestNoticeDialog(
   dialog: MatDialog,
   data: GuestNoticeData,
-): MatDialogRef<GuestNoticeDialogComponent, GuestNoticeChoice> {
-  return dialog.open<GuestNoticeDialogComponent, GuestNoticeData, GuestNoticeChoice>(
+): MatDialogRef<GuestNoticeDialogComponent, boolean> {
+  return dialog.open<GuestNoticeDialogComponent, GuestNoticeData, boolean>(
     GuestNoticeDialogComponent,
     {
       role: 'alertdialog',
