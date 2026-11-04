@@ -51,24 +51,41 @@
               "optimization": false,
               "extractLicenses": false,
               "sourceMap": true
+            },
+            "mock": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true,
+              "outputPath": "dist/quipu-app-angweb-mock",
+              "browser": "src/main.mock.ts"
             }
           },
           "defaultConfiguration": "production"
         },
         "serve": {
           "builder": "@angular/build:dev-server",
-          "options": {
-            "proxyConfig": "proxy.conf.json"
-          },
           "configurations": {
             "production": {
-              "buildTarget": "quipu-app-angweb:build:production"
+              "buildTarget": "quipu-app-angweb:build:production",
+              "proxyConfig": "proxy.conf.json"
             },
             "development": {
-              "buildTarget": "quipu-app-angweb:build:development"
+              "buildTarget": "quipu-app-angweb:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "local": {
+              "buildTarget": "quipu-app-angweb:build:development",
+              "proxyConfig": "proxy.conf.json"
+            },
+            "dev": {
+              "buildTarget": "quipu-app-angweb:build:development",
+              "proxyConfig": "proxy.dev.conf.json"
+            },
+            "mock": {
+              "buildTarget": "quipu-app-angweb:build:mock"
             }
           },
-          "defaultConfiguration": "development"
+          "defaultConfiguration": "local"
         },
         "test": {
           "builder": "@angular/build:unit-test",
