@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { routes } from './app.routes';
 
 async function setup() {
@@ -287,6 +287,30 @@ describe('routes', () => {
       await harness.navigateByUrl('/guest/payments/new');
       expect(router.url).toBe('/home');
       await answer('/bff/temporary-guest/payment-status', { status: 'PAID' });
+    });
+
+    it('shows the panels of my-account inside the home of dashboard, at /home', async () => {
+      const { harness, router, signIn, text } = await setup();
+      await signIn(false, 'GUEST', 'TEMPORARY');
+
+      await harness.navigateByUrl('/home');
+      await answer('/bff/temporary-guest/payment-status', {
+        stayId: 's1',
+        startDate: '2026-10-20',
+        endDate: '2026-10-31',
+        status: 'UNPAID',
+        agreedAmount: 400,
+        paymentId: null,
+        rejectionReason: null,
+        surplus: null,
+      });
+
+      expect(router.url).toBe('/home');
+      await vi.waitFor(() => {
+        harness.detectChanges();
+        expect(text()).toContain('Inicio');
+        expect(text()).toContain('Subir pago');
+      });
     });
 
     it('sends the administrator who opens a guest page to its home', async () => {

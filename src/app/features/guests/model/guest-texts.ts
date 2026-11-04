@@ -1,6 +1,6 @@
-import type { DocumentType, GuestDetail, Stay } from '@core/services/admin-guests.service';
-import type { Environment } from '@core/services/admin-environments.service';
+import type { DocumentType, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
 import { formatStay } from '@shared/payments/payment-format';
+import type { Environment } from './environment';
 
 /** Texts of A3.2 and A3.5 as the approved canvas words them, Spanish only (QP-ANGWEB-LNG-01). */
 

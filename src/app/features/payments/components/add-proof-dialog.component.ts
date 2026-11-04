@@ -9,7 +9,7 @@ import {
   MatDialogRef,
   MatDialogTitle,
 } from '@angular/material/dialog';
-import type { ProofKind } from '@core/services/admin-payments.service';
+import type { ProofKind } from '../model/proof-kind';
 import { formatMoney, parseAmount } from '@shared/payments/payment-format';
 import {
   AMOUNT_TEXT,
@@ -17,7 +17,7 @@ import {
   MISSING_FILE_TEXT,
   VOUCHER_MAX_BYTES,
   VOUCHER_TYPES,
-} from '../proof-rules';
+} from '@shared/payments/proof-rules';
 
 export interface AddProofDialogData {
   /** What is still missing to cover what is due; 0 when nothing is missing. */

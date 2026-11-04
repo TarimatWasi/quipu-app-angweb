@@ -5,8 +5,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, Role } from '@core/services/auth.service';
-import { HomeComponent } from './home.component';
+import { AuthService, Role } from '@core/auth/auth.service';
+import { AccountHomeComponent } from './account-home.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
 
@@ -32,43 +32,14 @@ async function setup(session: {
   );
   TestBed.inject(HttpTestingController).expectOne(isLogin).flush(session);
   await login;
-  const fixture = TestBed.createComponent(HomeComponent);
+  const fixture = TestBed.createComponent(AccountHomeComponent);
   await fixture.whenStable();
   return { auth, fixture, ui: within(fixture.nativeElement as HTMLElement) };
 }
 
-describe('HomeComponent', () => {
+describe('AccountHomeComponent', () => {
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
-  });
-
-  it('greets the logged user by name and shows the role in Spanish', async () => {
-    const { ui } = await setup({
-      role: 'ADMIN',
-      name: 'admin@example.test',
-      mustChangePassword: false,
-    });
-
-    expect(ui.getByText('admin@example.test')).toBeTruthy();
-    expect(ui.getByText('Administrador')).toBeTruthy();
-  });
-
-  it('shows the Spanish label for a guest', async () => {
-    const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
-
-    expect(ui.getByText('Huésped')).toBeTruthy();
-  });
-
-  it('offers the administrator the way to Pagos (A5)', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'admin', mustChangePassword: false });
-
-    expect(ui.getByRole('link', { name: /Pagos/ }).getAttribute('href')).toBe('/admin/payments');
-  });
-
-  it('does not offer Pagos to a guest', async () => {
-    const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
-
-    expect(ui.queryByRole('link', { name: /Pagos/ })).toBeNull();
   });
 
   it('shows a guest with a contract its payment entries (H1), from its own account status', async () => {
@@ -122,5 +93,12 @@ describe('HomeComponent', () => {
     TestBed.inject(HttpTestingController).expectNone((req) =>
       req.url.endsWith('/bff/guest/credit'),
     );
+  });
+
+  it('shows the administrator nothing and asks nothing of the guest', async () => {
+    const { fixture } = await setup({ role: 'ADMIN', name: 'admin', mustChangePassword: false });
+
+    expect((fixture.nativeElement as HTMLElement).textContent.trim()).toBe('');
+    TestBed.inject(HttpTestingController).expectNone(() => true);
   });
 });

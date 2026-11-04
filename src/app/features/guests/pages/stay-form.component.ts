@@ -15,19 +15,19 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AdminEnvironmentsService, Environment } from '@core/services/admin-environments.service';
+import { AdminEnvironmentsService, Environment } from '../data/admin-environments.service';
 import {
   AdminGuestsService,
   GuestDetail,
   Stay,
   StayInput,
-} from '@core/services/admin-guests.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { isConcurrentModification, withVersion } from '@core/services/concurrent-modification';
+} from '@core/api/clients/admin-guests.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { formatMoney, formatStay, parseAmount } from '@shared/payments/payment-format';
-import { GUEST_PAGE_STYLES } from '../guest-page.styles';
+import { GUEST_PAGE_STYLES } from './guest-page.styles';
 import {
   AMOUNT_TEXT,
   DATES_ORDER_TEXT,
@@ -44,10 +44,10 @@ import {
   STAY_CREATED_TEXT,
   STAY_UPDATED_TEXT,
   todayText,
-} from '../guest-texts';
-import { LoadTiming } from '../load-timing';
+} from '../model/guest-texts';
+import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
-import { openGuestNoticeDialog } from './guest-notice-dialog.component';
+import { openGuestNoticeDialog } from '../components/guest-notice-dialog.component';
 
 type LoadState =
   | { readonly kind: 'idle' }

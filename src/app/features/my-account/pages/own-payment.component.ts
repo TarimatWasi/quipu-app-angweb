@@ -14,9 +14,9 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
-import type { GuestType } from '@core/services/auth.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { GuestPaymentsService, PeriodStatus } from '@core/services/guest-payments.service';
+import type { GuestType } from '@core/auth/auth.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { GuestPaymentsService, PeriodStatus } from '../data/guest-payments.service';
 import type {
   GuestPayment,
   GuestProof,
@@ -24,11 +24,11 @@ import type {
   OwnPaymentSummary,
   OwnProofEdit,
   OwnProofInput,
-} from '@core/services/own-payments';
+} from '../data/own-payments';
 import {
   StayPaymentStatus,
   TemporaryGuestPaymentsService,
-} from '@core/services/temporary-guest-payments.service';
+} from '../data/temporary-guest-payments.service';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { coveredAmountText, creditAppliedText } from '@shared/payments/credit-texts';
 import {
@@ -42,8 +42,8 @@ import {
   periodLabel,
   takesNewPayment,
 } from '@shared/payments/payment-format';
-import { PAYMENT_STATUS_LABELS } from '../own-payment-labels';
-import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import { PAYMENT_STATUS_LABELS } from '../model/own-payment-labels';
+import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
 import {
   AMOUNT_TEXT,
   INVALID_FILE_TEXT,
@@ -51,10 +51,10 @@ import {
   MAX_PROOFS,
   MISSING_FILE_TEXT,
   PERIOD_TEXT,
-} from '../proof-rules';
-import { DIRECT_PAYMENT_STYLES } from './direct-payment.styles';
+} from '@shared/payments/proof-rules';
+import { DIRECT_PAYMENT_STYLES } from '@shared/payments/direct-payment.styles';
 import { OWN_PAYMENT_STYLES } from './own-payment.styles';
-import { openPaymentNoticeDialog } from './payment-notice-dialog.component';
+import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
 export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;

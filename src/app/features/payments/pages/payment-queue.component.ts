@@ -7,11 +7,11 @@ import {
   AdminPaymentsService,
   PaymentQueueItem,
   PaymentStatus,
-} from '@core/services/admin-payments.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
+} from '../data/admin-payments.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { formatDateTime, periodLabel, proofsSummary } from '@shared/payments/payment-format';
-import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
-import type { QueueViewParam } from '../queue-views';
+import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
+import type { QueueViewParam } from '../model/queue-views';
 
 interface QueueView {
   readonly status: PaymentStatus;

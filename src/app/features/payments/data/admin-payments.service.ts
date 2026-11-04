@@ -11,7 +11,7 @@ export type PaymentQueuePage = components['schemas']['PagedPaymentQueue'];
 export type PaymentDetail = components['schemas']['Payment'];
 export type AdminProof = components['schemas']['AdminProof'];
 export type PaymentSurplus = components['schemas']['PaymentSurplus'];
-export type ProofKind = components['schemas']['ProofKind'];
+export type { ProofKind } from '../model/proof-kind';
 export type ProofEdit = components['schemas']['ProofEdit'];
 type ResolveBody = operations['resolvePayment']['requestBody']['content']['application/json'];
 export type VerifiedProof = NonNullable<ResolveBody['proofs']>[number];

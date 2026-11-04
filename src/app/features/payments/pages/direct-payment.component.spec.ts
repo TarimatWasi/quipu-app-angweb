@@ -10,8 +10,8 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
-import type { GuestSummary } from '@core/services/admin-guests.service';
-import type { PayablePeriod } from '@core/services/admin-payments.service';
+import type { GuestSummary } from '@core/api/clients/admin-guests.service';
+import type { PayablePeriod } from '../data/admin-payments.service';
 import { DirectPaymentComponent } from './direct-payment.component';
 
 const isGuests = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/admin/guests');

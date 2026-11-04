@@ -21,9 +21,9 @@ import {
   PaymentDetail,
   PaymentSurplus,
   ProofEdit,
-} from '@core/services/admin-payments.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { isConcurrentModification } from '@core/services/concurrent-modification';
+} from '../data/admin-payments.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { isConcurrentModification } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import {
   Balance,
@@ -33,13 +33,16 @@ import {
   parseAmount,
   periodLabel,
 } from '@shared/payments/payment-format';
-import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
-import { MAX_PROOFS } from '../proof-rules';
-import { isQueueView } from '../queue-views';
-import { AddedProof, openAddProofDialog } from './add-proof-dialog.component';
-import { openPaymentNoticeDialog, PaymentNoticeAction } from './payment-notice-dialog.component';
+import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
+import { MAX_PROOFS } from '@shared/payments/proof-rules';
+import { isQueueView } from '../model/queue-views';
+import { AddedProof, openAddProofDialog } from '../components/add-proof-dialog.component';
+import {
+  openPaymentNoticeDialog,
+  PaymentNoticeAction,
+} from '@shared/payments/payment-notice-dialog.component';
 import { PAYMENT_REVIEW_STYLES } from './payment-review.styles';
-import { openRejectDialog } from './reject-dialog.component';
+import { openRejectDialog } from '../components/reject-dialog.component';
 
 /** A payment gathers at most 5 proofs (RN-22, decided 2026-10-31). */
 

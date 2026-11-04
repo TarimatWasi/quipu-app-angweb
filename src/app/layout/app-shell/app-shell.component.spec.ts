@@ -5,7 +5,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, GuestType, Role } from '@core/services/auth.service';
+import { AuthService, GuestType, Role } from '@core/auth/auth.service';
 import { accountEntriesFor, isCurrent, sectionsFor } from './app-nav';
 import { AppShellComponent } from './app-shell.component';
 

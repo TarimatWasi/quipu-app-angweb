@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 
 /** Keeps a user who is already signed in away from the login page. */
 export const anonymousGuard: CanActivateFn = () =>

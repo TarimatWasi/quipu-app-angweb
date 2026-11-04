@@ -9,7 +9,7 @@ import {
   RouterStateSnapshot,
 } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { anonymousGuard } from './anonymous.guard';
 import { authGuard } from './auth.guard';

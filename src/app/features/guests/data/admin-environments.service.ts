@@ -3,9 +3,10 @@ import { inject, Injectable } from '@angular/core';
 import { EMPTY, expand, Observable, reduce } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
+import type { Environment } from '../model/environment';
 
 // Every type comes from the contract (TAR-23).
-export type Environment = components['schemas']['Environment'];
+export type { Environment };
 export type EnvironmentPage = components['schemas']['PagedEnvironments'];
 
 /** Environments asked per page of the picker of A3.5: the most the contract allows. */

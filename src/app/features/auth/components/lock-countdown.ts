@@ -1,5 +1,5 @@
 import { computed, signal } from '@angular/core';
-import type { AccountLock } from '@core/services/bff-error';
+import type { AccountLock } from '@core/http/bff-error';
 
 const LIMA_CLOCK = new Intl.DateTimeFormat('es-PE', {
   hour: '2-digit',

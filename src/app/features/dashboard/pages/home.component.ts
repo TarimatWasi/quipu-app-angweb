@@ -1,9 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { AuthService, Role } from '@core/services/auth.service';
+import { RouterLink, RouterOutlet } from '@angular/router';
+import { AuthService, Role } from '@core/auth/auth.service';
 import { QuipuComponent } from '@shared/quipu/quipu.component';
-import { GuestHomePanelComponent } from './guest-home-panel.component';
-import { TemporaryHomePanelComponent } from './temporary-home-panel.component';
 
 const ROLE_LABELS: Readonly<Record<Role, string>> = {
   ADMIN: 'Administrador',
@@ -12,7 +10,7 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
 
 @Component({
   selector: 'app-home',
-  imports: [QuipuComponent, RouterLink, GuestHomePanelComponent, TemporaryHomePanelComponent],
+  imports: [QuipuComponent, RouterLink, RouterOutlet],
   template: `
     <div class="home">
       <div>
@@ -30,10 +28,9 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
                 <span class="card-text">Revisa los pagos enviados y corrige los rechazados.</span>
               </a>
             </nav>
-          } @else if (current.guestType === 'CONTRACT') {
-            <app-guest-home-panel />
-          } @else if (current.guestType === 'TEMPORARY') {
-            <app-temporary-home-panel />
+          } @else {
+            <!-- The guest's panels (H1, T1) come from my-account as a child route. -->
+            <router-outlet />
           }
         }
       </div>

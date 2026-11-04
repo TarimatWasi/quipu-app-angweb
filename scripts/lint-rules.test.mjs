@@ -193,6 +193,125 @@ const violations = [
   ],
   // Files directly under features/ are not part of a feature but still never use the layout.
   ['src/app/features/a.ts', "import { x } from '@layout/x';\nexport const a = x;", 'FE-ANG-ORG-02'],
+  // QP-ANGWEB-ORG-01: the shell (layout/) never reaches into a feature.
+  [
+    'src/app/layout/a.ts',
+    "import { x } from '@features/f/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/layout/a.component.ts',
+    "import { x } from '../features/f/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  // QP-ANGWEB-ORG-02: the layers of a feature (pages -> components, data, model; components ->
+  // model; data -> model; model without Angular), by relative path and by alias, at any depth.
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '../data/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '../pages/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '@features/f/data/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '../../f/data/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/b/a.ts',
+    "import { x } from '../../data';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a/b/c/d/e/h/i/j/a.ts',
+    "import { x } from '@features/f/pages/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { x } from '../data/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { Router } from '@angular/router';\nexport const a = Router;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { ActivatedRoute } from '@angular/router';\nexport const a = ActivatedRoute;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { x } from '@core/api/clients/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { x } from '@core/auth/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  // The layer rules add to the folder ones: a component keeps the HttpClient and feature rules.
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { HttpClient } from '@angular/common/http';\nexport const a = HttpClient;",
+    'FE-ANG-DI-03',
+  ],
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '@features/g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/components/a.ts',
+    "import { x } from '../../g/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/model/a.ts',
+    "import { x } from '@layout/x';\nexport const a = x;",
+    'FE-ANG-ORG-02',
+  ],
+  [
+    'src/app/features/f/data/a.ts',
+    "import { x } from '../pages/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/data/a.ts',
+    "import { x } from '../components/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/model/a.ts',
+    "import { x } from '../data/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/model/a.ts',
+    "import { x } from '../components/x';\nexport const a = x;",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/model/a.ts',
+    "import { signal } from '@angular/core';\nexport const a = signal(1);",
+    'QP-ANGWEB-ORG-02',
+  ],
+  [
+    'src/app/features/f/model/a.spec.ts',
+    "import { TestBed } from '@angular/core/testing';\nexport const a = TestBed;",
+    'QP-ANGWEB-ORG-02',
+  ],
   ['src/app/a.spec.ts', 'export const a = jasmine;', 'FE-ANG-TST-01'],
   // Templates.
   ['src/app/a.html', '<button>x</button>', 'button-has-type'],
@@ -235,6 +354,37 @@ const controls = [
   ['src/app/features/a.ts', "import { x } from '@features/f/x';\nexport const a = x;"],
   ['src/app/features/a.ts', "import { x } from './f/x';\nexport const a = x;"],
   ['src/app/a.html', '<button type="button">x</button>'],
+  // QP-ANGWEB-ORG-02: what each layer may import.
+  ['src/app/features/f/pages/a.ts', "import { x } from '../data/x';\nexport const a = x;"],
+  ['src/app/features/f/pages/a.ts', "import { x } from '../model/x';\nexport const a = x;"],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { Router } from '@angular/router';\nexport const a = Router;",
+  ],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { x } from '@core/auth/x';\nexport const a = x;",
+  ],
+  ['src/app/features/f/components/a.ts', "import { x } from '../model/x';\nexport const a = x;"],
+  ['src/app/features/f/components/a.ts', "import { x } from './b';\nexport const a = x;"],
+  ['src/app/features/f/components/b/a.ts', "import { x } from '../data/x';\nexport const a = x;"],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { RouterLink } from '@angular/router';\nexport const a = RouterLink;",
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { x } from '@shared/x';\nexport const a = x;",
+  ],
+  ['src/app/features/f/data/a.ts', "import { x } from '../model/x';\nexport const a = x;"],
+  ['src/app/features/f/data/a.ts', "import { x } from '@core/api/clients/x';\nexport const a = x;"],
+  [
+    'src/app/features/f/model/a.ts',
+    "import type { x } from '@core/api/bff.generated';\nexport type A = x;",
+  ],
+  ['src/app/features/f/model/a.ts', "import { x } from './b';\nexport const a = x;"],
+  ['src/app/features/f/f.routes.ts', "import { x } from './pages/x';\nexport const a = x;"],
+  ['src/app/layout/a.ts', "import { x } from '@core/x';\nexport const a = x;"],
   // The simulated backend keeps the demo role and scenario in sessionStorage (TAR-287).
   ['src/app/core/mock/a.ts', 'export const a = globalThis.sessionStorage;'],
   ['src/app/core/mock/data/a.ts', 'export const a = sessionStorage;'],

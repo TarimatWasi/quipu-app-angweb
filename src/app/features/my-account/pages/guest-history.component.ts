@@ -2,17 +2,17 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { GuestHistoryItem, GuestPaymentsService } from '@core/services/guest-payments.service';
-import type { GuestPayment, GuestProof } from '@core/services/own-payments';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { GuestHistoryItem, GuestPaymentsService } from '../data/guest-payments.service';
+import type { GuestPayment, GuestProof } from '../data/own-payments';
 import {
   formatDate,
   formatDateTime,
   formatMoney,
   periodLabel,
 } from '@shared/payments/payment-format';
-import { PAYMENT_STATUS_LABELS } from '../own-payment-labels';
-import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import { PAYMENT_STATUS_LABELS } from '../model/own-payment-labels';
+import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
 import { OWN_PAYMENT_STYLES } from './own-payment.styles';
 
 type LoadState =

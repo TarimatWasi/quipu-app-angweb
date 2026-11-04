@@ -4,7 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
-import type { PaymentQueueItem } from '@core/services/admin-payments.service';
+import type { PaymentQueueItem } from '../data/admin-payments.service';
 import { PaymentQueueComponent } from './payment-queue.component';
 
 // The component awaits the BFF's answer as a promise: let it land before the view is checked.

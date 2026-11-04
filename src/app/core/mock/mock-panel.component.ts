@@ -2,7 +2,7 @@ import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, InjectionToken, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { DEMO_CLAVE, DEMO_USERS, isDemoUserKey } from './data/demo-users';
 import { MockBff } from './mock-bff';
 import { isMockScenario, MOCK_SCENARIOS } from './mock-scenarios';

@@ -4,7 +4,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { environment } from '../../../environments/environment';
 import { credentialsInterceptor } from './credentials.interceptor';
 import { sessionExpiredInterceptor } from './session-expired.interceptor';

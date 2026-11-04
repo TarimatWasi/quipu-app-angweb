@@ -8,7 +8,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
-import type { Stay } from '@core/services/admin-guests.service';
+import type { Stay } from '@core/api/clients/admin-guests.service';
 import { GuestDetailComponent } from './guest-detail.component';
 
 const isGuest = (id: string) => (req: HttpRequest<unknown>) =>

@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Keeps the administration pages for the administrator (FE-ANG-RUT-02: it improves the experience;

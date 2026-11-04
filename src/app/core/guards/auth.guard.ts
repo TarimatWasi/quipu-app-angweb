@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Improves the experience only; the real protection is the BFF's (FE-ANG-RUT-02). A session that

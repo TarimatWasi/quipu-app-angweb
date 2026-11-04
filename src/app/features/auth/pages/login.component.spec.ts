@@ -6,7 +6,7 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
-import { AuthService, LOGIN_TIMING, LoginTiming } from '@core/services/auth.service';
+import { AuthService, LOGIN_TIMING, LoginTiming } from '@core/auth/auth.service';
 import { LoginComponent } from './login.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
