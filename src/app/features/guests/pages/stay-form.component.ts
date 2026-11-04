@@ -224,10 +224,13 @@ export class StayFormComponent implements OnInit {
     }
     return options;
   });
-  /** The first option of the select: a prompt to register, "Sin ambiente" for an old stay. */
+  /**
+   * The first option of the select: "Sin ambiente" for an old stay, and a prompt whenever nothing
+   * is chosen (to register, or after the dates dropped the choice), so what shows is what is sent.
+   */
   protected readonly emptyOption = computed(() => {
-    if (this.stayId === null) return 'Elige un ambiente';
-    return this.legacy() ? NO_ENVIRONMENT : null;
+    if (this.legacy()) return NO_ENVIRONMENT;
+    return this.stayId === null || this.draft().environmentId === '' ? 'Elige un ambiente' : null;
   });
   /** "Esta estadía tiene un pago pendiente de revisión" (decided 2026-10-30). */
   protected readonly paidNote = computed(() => this.loaded()?.paymentStatus === 'UNDER_REVIEW');

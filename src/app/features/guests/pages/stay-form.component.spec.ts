@@ -417,6 +417,28 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     await ui.flush(patch, stayOf({ version: 5 }));
   });
 
+  it('prompts again when new dates drop the environment chosen in a correction', async () => {
+    const ui = await correctReady();
+    await ui.choose('env-3');
+    await ui.type('Salida', '2026-11-20');
+    await ui.flush(await ui.expect1(isEnvironments), {
+      content: [environment()],
+      nextCursor: null,
+      freeCount: 1,
+    });
+
+    const select = ui.page().getByLabelText<HTMLSelectElement>('Ambiente');
+    expect(select.value).toBe('');
+    expect([...select.options].map((option) => option.textContent.trim())).toEqual([
+      'Elige un ambiente',
+      'H1',
+      'Cabaña C1',
+    ]);
+    await ui.click(ui.save());
+    expect(ui.errorOf('Ambiente')).toBe('Elige el ambiente de la estadía.');
+    ui.http.expectNone(isUpdate);
+  });
+
   it('opens the shared dialog on 409 and reloads the stay with its new version', async () => {
     const ui = await correctReady();
     await ui.type(AMOUNT, '450');
