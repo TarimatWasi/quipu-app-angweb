@@ -8,6 +8,7 @@ import {
   StayPaymentStatus,
   TemporaryGuestPaymentsService,
 } from '@core/services/temporary-guest-payments.service';
+import { surplusText } from '@shared/payments/credit-texts';
 import {
   formatStay,
   hasRejectedPayment,
@@ -26,6 +27,8 @@ type LoadState =
  * The payment entry of the home of a temporary guest (T1, CU-21): the state of the stay in force
  * (otherwise the next one, otherwise the last one) and the way to T2: «Subir pago» when it is not
  * paid, «Corregir pago» with the reason when its payment was rejected, «Ver pago» while it waits.
+ * What was paid over the agreed amount is refunded, never kept as credit: a notice says whether the
+ * refund is pending or was made, with its method and date (RN-38, RN-39).
  */
 @Component({
   selector: 'app-temporary-home-panel',
@@ -52,6 +55,11 @@ type LoadState =
           <span class="strong">Estadía {{ stayLabel() }}</span>
           <span [class]="'badge status-' + s.status">{{ statusLabels[s.status] }}</span>
         </p>
+        @if (refundNotice(); as notice) {
+          <div class="notice" role="note" aria-label="Devolución">
+            <p>{{ notice }}</p>
+          </div>
+        }
         @if (rejected() && s.paymentId; as id) {
           <div class="quipu-alert">
             <p class="strong">Tu pago no se aprobó</p>
@@ -91,6 +99,10 @@ export class TemporaryHomePanelComponent implements OnInit {
   protected readonly stayLabel = computed(() => {
     const stay = this.stay();
     return stay ? formatStay(stay.startDate, stay.endDate) : '';
+  });
+  protected readonly refundNotice = computed(() => {
+    const surplus = this.stay()?.surplus;
+    return surplus && surplus.amount > 0 ? surplusText(surplus) : null;
   });
   protected readonly rejected = computed(() => {
     const stay = this.stay();

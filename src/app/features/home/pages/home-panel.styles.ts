@@ -30,6 +30,30 @@ export const HOME_PANEL_STYLES = `
   .quipu-alert a {
     justify-self: start;
   }
+  /* Aviso amarillo (crédito a favor, devolución): q'olle aclarado con texto obsidiana. */
+  .notice {
+    padding: 0.75rem 1rem;
+    border-left: 4px solid var(--quipu-qolle);
+    border-radius: 4px;
+    background: color-mix(in srgb, var(--quipu-qolle) 22%, var(--quipu-alpaca));
+    color: var(--quipu-obsidiana);
+  }
+  h3 {
+    margin: 0 0 0.5rem;
+    font: var(--mat-sys-title-medium);
+  }
+  .due-list {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .due-list > li {
+    display: grid;
+    gap: 0.25rem;
+    justify-items: start;
+  }
   .actions {
     display: flex;
     flex-wrap: wrap;

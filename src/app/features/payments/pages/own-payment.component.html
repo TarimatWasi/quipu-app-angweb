@@ -34,6 +34,12 @@
           <p class="strong">{{ label }}</p>
         }
         <p class="muted">Total declarado {{ formatMoney(p.amount) }}</p>
+        <p class="muted">{{ coveredAmountText(p.amountDue) }}</p>
+        @if (p.creditApplied > 0) {
+          <p class="help" role="note" aria-label="Crédito a favor">
+            {{ creditAppliedText(p.creditApplied) }}
+          </p>
+        }
         <h2 id="own-payment-proofs">Comprobantes</h2>
         <ul class="proof-list">
           @for (proof of p.proofs; track proof.id) {
@@ -114,15 +120,18 @@
             </select>
             <p id="op-period-help" class="help">
               @if (selected(); as item) {
-                Cuota {{ formatMoney(item.amount) }}
-                @if (item.creditApplied > 0) {
-                  · crédito a favor {{ formatMoney(item.creditApplied) }}
-                }
-                · por pagar {{ formatMoney(item.amountDue) }}
+                Cuota {{ formatMoney(item.amount) }} · Por pagar {{ formatMoney(item.amountDue) }}
               } @else {
                 Solo los meses sin pagar.
               }
             </p>
+            @if (selected(); as item) {
+              @if (item.creditApplied > 0) {
+                <p class="help" role="note" aria-label="Crédito a favor">
+                  {{ creditAppliedText(item.creditApplied) }}
+                </p>
+              }
+            }
             @if (periodError(); as message) {
               <p id="op-period-error" class="error">{{ message }}</p>
             }
@@ -134,6 +143,11 @@
         }
         @if (mode() === 'correct' && payment(); as p) {
           <p class="help">Por pagar {{ formatMoney(p.amountDue) }}</p>
+          @if (p.creditApplied > 0) {
+            <p class="help" role="note" aria-label="Crédito a favor">
+              {{ creditAppliedText(p.creditApplied) }}
+            </p>
+          }
         }
 
         <div class="proofs">
