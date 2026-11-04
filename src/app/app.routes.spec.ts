@@ -205,6 +205,30 @@ describe('routes', () => {
     TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
   });
 
+  it('opens the detail of a guest (A3.2) for the administrator and asks it', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn();
+
+    await harness.navigateByUrl('/admin/guests/g1');
+
+    expect(router.url).toBe('/admin/guests/g1');
+    await vi.waitFor(() => {
+      TestBed.inject(HttpTestingController)
+        .expectOne((req) => req.url.endsWith('/bff/admin/guests/g1'))
+        .flush({ code: 'GUEST_NOT_FOUND', message: 'x' }, { status: 404, statusText: 'x' });
+    });
+  });
+
+  it('sends a guest who opens the guests of the administrator to its own home', async () => {
+    const { harness, router, signIn } = await setup();
+    await signIn(false, 'GUEST');
+
+    await harness.navigateByUrl('/admin/guests/g1/stays/new');
+
+    expect(router.url).toBe('/home');
+    TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
+  });
+
   it('keeps the payments behind the login', async () => {
     const { harness, router, answerNoSession } = await setup();
 

@@ -141,6 +141,9 @@ describe('PaymentReviewComponent (A5.2)', () => {
       ['Por cobrar', 'S/ 350.00'],
       ['Subido', '3 nov 2026, 14:05'],
     ]);
+    expect(within(region).getByRole('link', { name: 'Ana Quispe' }).getAttribute('href')).toBe(
+      '/admin/guests/g1',
+    );
     const links = page().getAllByRole('link', { name: /Descargar voucher/ });
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe('https://r2.example.test/signed?sig=abc');

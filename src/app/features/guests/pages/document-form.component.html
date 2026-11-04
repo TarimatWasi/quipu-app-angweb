@@ -1,0 +1,81 @@
+<section class="page" aria-labelledby="document-title">
+  <header class="head">
+    <div>
+      <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+      <h1 id="document-title">Corregir documento</h1>
+    </div>
+  </header>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <output class="muted">Cargando el huésped…</output>
+    }
+    @case ('not-found') {
+      <div class="quipu-alert" role="alert">
+        <p>No encontramos al huésped.</p>
+        <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+      </div>
+    }
+    @case ('locked') {
+      <div class="quipu-alert">
+        <p>{{ lockedText }}</p>
+      </div>
+    }
+    @case ('error') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadError() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+    @case ('ready') {
+      <form novalidate (submit)="submit($event)">
+        <div class="field">
+          <label for="document-type">Tipo de documento</label>
+          <select
+            id="document-type"
+            aria-required="true"
+            [value]="documentType()"
+            [attr.aria-invalid]="typeError() ? 'true' : null"
+            [attr.aria-describedby]="typeError() ? 'document-type-error' : null"
+            (change)="chooseType($event.target)"
+          >
+            @for (option of documentTypes; track option.value) {
+              <option [value]="option.value" [selected]="option.value === documentType()">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+          @if (typeError(); as message) {
+            <p id="document-type-error" class="error">{{ message }}</p>
+          }
+        </div>
+
+        <div class="field">
+          <label for="document-number">Número de documento</label>
+          <input
+            id="document-number"
+            type="text"
+            autocomplete="off"
+            aria-required="true"
+            [value]="documentNumber()"
+            [attr.aria-invalid]="numberError() ? 'true' : null"
+            [attr.aria-describedby]="numberError() ? 'document-number-error' : null"
+            (input)="typedNumber($event.target)"
+          />
+          @if (numberError(); as message) {
+            <p id="document-number-error" class="error">{{ message }}</p>
+          }
+        </div>
+
+        @if (generalError(); as message) {
+          <p [id]="generalErrorId" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
+        }
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="!canSave()">Guardar</button>
+          <a mat-stroked-button [routerLink]="['/admin/guests', guestId]">Cancelar</a>
+        </div>
+      </form>
+    }
+  }
+</section>

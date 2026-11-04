@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
-import { AdminGuestsService, GUEST_PICKER_PAGE_SIZE } from './admin-guests.service';
+import { AdminGuestsService, GUEST_PICKER_PAGE_SIZE, STAY_PAGE_SIZE } from './admin-guests.service';
 
 const BASE = 'https://bff.example.test';
 
@@ -60,5 +60,119 @@ describe('AdminGuestsService (A5.1 guest picker)', () => {
     req.flush({ id: 'g/1?x' });
 
     expect(await guest).toEqual({ id: 'g/1?x' });
+  });
+});
+
+describe('AdminGuestsService (A3.2 and A3.5 stays and document)', () => {
+  afterEach(() => {
+    TestBed.inject(HttpTestingController).verify();
+  });
+
+  const stay = (id: string, version = 1) => ({
+    id,
+    environmentId: 'env-1',
+    environmentCode: 'H1',
+    startDate: '2026-11-10',
+    endDate: '2026-11-15',
+    agreedAmount: 400,
+    paymentStatus: 'UNPAID',
+    paymentId: null,
+    version,
+  });
+
+  it('asks one page of the stays with the page size and no cursor', async () => {
+    const { service, http } = setup();
+
+    const page = firstValueFrom(service.stays('g/1'));
+    const req = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g%2F1/stays`);
+    expect(req.request.method).toBe('GET');
+    expect(req.request.params.keys()).toEqual(['limit']);
+    expect(req.request.params.get('limit')).toBe(String(STAY_PAGE_SIZE));
+    const body = { content: [stay('s1')], nextCursor: 'c+1' };
+    req.flush(body);
+
+    expect(await page).toEqual(body);
+  });
+
+  it('passes the cursor of the stays as it came', async () => {
+    const { service, http } = setup();
+
+    const page = firstValueFrom(service.stays('g1', 'opaque+cursor/=='));
+    const req = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`);
+    expect(req.request.params.get('after')).toBe('opaque+cursor/==');
+    req.flush({ content: [], nextCursor: null });
+    await page;
+  });
+
+  it('finds one stay walking the pages until it appears, with the largest page', async () => {
+    const { service, http } = setup();
+
+    const found = firstValueFrom(service.findStay('g1', 's3'));
+    const first = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`);
+    expect(first.request.params.get('limit')).toBe('100');
+    expect(first.request.params.has('after')).toBe(false);
+    first.flush({ content: [stay('s1'), stay('s2')], nextCursor: 'next/1' });
+    const second = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`);
+    expect(second.request.params.get('after')).toBe('next/1');
+    second.flush({ content: [stay('s3', 7)], nextCursor: 'never-asked' });
+
+    expect(await found).toEqual(stay('s3', 7));
+  });
+
+  it('answers null when no page has the stay', async () => {
+    const { service, http } = setup();
+
+    const found = firstValueFrom(service.findStay('g1', 'missing'));
+    http
+      .expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`)
+      .flush({ content: [stay('s1')], nextCursor: null });
+
+    expect(await found).toBeNull();
+  });
+
+  it('registers a stay with exactly the fields of StayInput', async () => {
+    const { service, http } = setup();
+    const input = {
+      environmentId: 'env/1',
+      startDate: '2026-11-10',
+      endDate: '2026-11-15',
+      agreedAmount: 400.5,
+    };
+
+    const created = firstValueFrom(service.createStay('g/1', input));
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1/stays`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual(input);
+    req.flush(stay('s9'), { status: 201, statusText: 'Created' });
+
+    expect(await created).toEqual(stay('s9'));
+  });
+
+  it('corrects a stay sending the changes and the version loaded, nothing else', async () => {
+    const { service, http } = setup();
+
+    const updated = firstValueFrom(
+      service.updateStay('g/1', 's/2', { version: 4, agreedAmount: 450 }),
+    );
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1/stays/s%2F2`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toStrictEqual({ version: 4, agreedAmount: 450 });
+    req.flush(stay('s/2', 5));
+
+    expect(await updated).toEqual(stay('s/2', 5));
+  });
+
+  it('corrects the document of a pending guest with the version loaded', async () => {
+    const { service, http } = setup();
+
+    const updated = firstValueFrom(
+      service.updateGuest('g/1', { version: 3, documentNumber: '87654321' }),
+    );
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1`);
+    expect(req.request.method).toBe('PATCH');
+    expect(req.request.body).toStrictEqual({ version: 3, documentNumber: '87654321' });
+    req.flush({ id: 'g/1' });
+
+    expect(await updated).toEqual({ id: 'g/1' });
   });
 });

@@ -1,0 +1,131 @@
+<section class="page" aria-labelledby="stay-title">
+  <header class="head">
+    <div>
+      <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+      <h1 id="stay-title">{{ stayId === null ? 'Registrar estadía' : 'Corregir estadía' }}</h1>
+    </div>
+  </header>
+
+  @switch (state().kind) {
+    @case ('loading') {
+      <output class="muted">Cargando la estadía…</output>
+    }
+    @case ('not-found') {
+      <div class="quipu-alert" role="alert">
+        <p>No encontramos la estadía.</p>
+        <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+      </div>
+    }
+    @case ('error') {
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadError() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+    @case ('ready') {
+      <form novalidate (submit)="submit($event)">
+        <fieldset>
+          <legend>Llegada y salida</legend>
+          <div class="field">
+            <label for="stay-start">Llegada</label>
+            <input
+              id="stay-start"
+              type="date"
+              aria-required="true"
+              [value]="draft().start"
+              [attr.aria-invalid]="datesError() ? 'true' : null"
+              [attr.aria-describedby]="datesError() ? 'stay-dates-error' : null"
+              (input)="typedStart($event.target)"
+            />
+          </div>
+          <div class="field">
+            <label for="stay-end">Salida</label>
+            <input
+              id="stay-end"
+              type="date"
+              aria-required="true"
+              [value]="draft().end"
+              [min]="draft().start"
+              [attr.aria-invalid]="datesError() ? 'true' : null"
+              [attr.aria-describedby]="datesError() ? 'stay-dates-error' : null"
+              (input)="typedEnd($event.target)"
+            />
+          </div>
+          @if (datesError(); as message) {
+            <p id="stay-dates-error" class="error">{{ message }}</p>
+          }
+        </fieldset>
+
+        <div class="field">
+          <label for="stay-environment">Ambiente</label>
+          <select
+            id="stay-environment"
+            [attr.aria-required]="legacy() ? null : 'true'"
+            [value]="draft().environmentId"
+            [attr.aria-invalid]="environmentError() ? 'true' : null"
+            [attr.aria-describedby]="environmentError() ? 'stay-environment-error' : null"
+            (change)="chooseEnvironment($event.target)"
+          >
+            <option value="">{{ noEnvironmentLabel() }}</option>
+            @for (option of options(); track option.id) {
+              <option [value]="option.id" [selected]="option.id === draft().environmentId">
+                {{ option.label }}
+              </option>
+            }
+          </select>
+          @if (environmentError(); as message) {
+            <p id="stay-environment-error" class="error">{{ message }}</p>
+          }
+          @switch (freeState().kind) {
+            @case ('loading') {
+              <output class="help">Buscando ambientes libres…</output>
+            }
+            @case ('error') {
+              <div class="row">
+                <p class="error">{{ freeError() }}</p>
+                <button mat-stroked-button type="button" (click)="retryFree()">Reintentar</button>
+              </div>
+            }
+            @case ('ready') {
+              @if (freeCursor()) {
+                <div>
+                  <button mat-stroked-button type="button" (click)="moreFree()">
+                    Cargar más ambientes
+                  </button>
+                </div>
+              } @else if (options().length === 0) {
+                <p class="help">No hay ambientes libres en esas fechas.</p>
+              }
+            }
+          }
+        </div>
+
+        <div class="field">
+          <label for="stay-amount">Monto acordado (S/)</label>
+          <input
+            id="stay-amount"
+            type="text"
+            inputmode="decimal"
+            aria-required="true"
+            [value]="draft().amount"
+            [attr.aria-invalid]="amountError() ? 'true' : null"
+            [attr.aria-describedby]="amountError() ? 'stay-amount-error' : null"
+            (input)="typedAmount($event.target)"
+          />
+          @if (amountError(); as message) {
+            <p id="stay-amount-error" class="error">{{ message }}</p>
+          }
+        </div>
+
+        @if (generalError(); as message) {
+          <p [id]="generalErrorId" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
+        }
+
+        <div class="actions">
+          <button mat-flat-button type="submit" [disabled]="!canSave()">Guardar</button>
+          <a mat-stroked-button [routerLink]="['/admin/guests', guestId]">Cancelar</a>
+        </div>
+      </form>
+    }
+  }
+</section>

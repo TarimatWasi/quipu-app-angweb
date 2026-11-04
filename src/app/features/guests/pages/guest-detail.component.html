@@ -1,0 +1,115 @@
+<section class="page" aria-labelledby="guest-title">
+  @switch (state().kind) {
+    @case ('loading') {
+      <h1 id="guest-title" class="visually-hidden">Huésped</h1>
+      <output class="muted">Cargando el huésped…</output>
+    }
+    @case ('not-found') {
+      <h1 id="guest-title" class="visually-hidden">Huésped</h1>
+      <div class="quipu-alert" role="alert">
+        <p>No encontramos al huésped.</p>
+        <a routerLink="/admin/payments">Volver a Pagos</a>
+      </div>
+    }
+    @case ('error') {
+      <h1 id="guest-title" class="visually-hidden">Huésped</h1>
+      <div class="quipu-alert" role="alert">
+        <p>{{ loadError() }}</p>
+        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+      </div>
+    }
+  }
+
+  @if (guest(); as g) {
+    <header class="head">
+      <h1 id="guest-title">{{ name() }}</h1>
+      @if (documentCorrectable()) {
+        <a mat-stroked-button [routerLink]="['/admin/guests', g.id, 'document']"
+          >Corregir documento</a
+        >
+      }
+    </header>
+    <dl class="facts">
+      <div>
+        <dt>Documento</dt>
+        <dd>{{ documentText() }}</dd>
+      </div>
+      <div>
+        <dt>Tipo</dt>
+        <dd>{{ typeText() }}</dd>
+      </div>
+      <div>
+        <dt>Estado</dt>
+        <dd>
+          <span class="badge">{{ statusText() }}</span>
+        </dd>
+      </div>
+    </dl>
+
+    @if (temporary()) {
+      <section class="stays" aria-labelledby="stays-title">
+        <div class="section-head">
+          <h2 id="stays-title">Estadías</h2>
+          <a mat-flat-button [routerLink]="['/admin/guests', g.id, 'stays', 'new']"
+            >Registrar estadía</a
+          >
+        </div>
+
+        @if (stays().length > 0) {
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Ambiente</th>
+                  <th scope="col">Fechas</th>
+                  <th scope="col">Monto acordado</th>
+                  <th scope="col">Pago</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (stay of stays(); track stay.id) {
+                  <tr>
+                    <td>{{ stay.environment }}</td>
+                    <td>{{ stay.dates }}</td>
+                    <td>{{ stay.amount }}</td>
+                    <td>{{ stay.payment }}</td>
+                    <td>
+                      <a [routerLink]="['/admin/guests', g.id, 'stays', stay.id]"
+                        >Corregir<span class="visually-hidden">
+                          estadía del {{ stay.dates }}</span
+                        ></a
+                      >
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+
+        @switch (staysState().kind) {
+          @case ('loading') {
+            <output class="muted">Cargando estadías…</output>
+          }
+          @case ('error') {
+            <div class="quipu-alert" role="alert">
+              <p>{{ staysError() }}</p>
+              <button mat-stroked-button type="button" (click)="retryStays()">Reintentar</button>
+            </div>
+          }
+          @default {
+            @if (stays().length === 0) {
+              <p class="empty">Aún no tiene estadías registradas.</p>
+            }
+            @if (staysCursor()) {
+              <button mat-stroked-button type="button" class="more" (click)="moreStays()">
+                Cargar más estadías
+              </button>
+            }
+          }
+        }
+      </section>
+    }
+  }
+</section>

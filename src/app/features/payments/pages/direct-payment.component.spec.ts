@@ -197,7 +197,18 @@ describe('DirectPaymentComponent (A5.1)', () => {
     const select = ui.page().getByLabelText('Huésped');
     expect(select.getAttribute('aria-invalid')).toBe('true');
     expect(ui.page().getByText('Elige un huésped', { selector: 'p' })).toBeTruthy();
+    expect(ui.page().queryByRole('link', { name: 'Ana Quispe' })).toBeNull();
     ui.http.expectNone(isCreate);
+  });
+
+  it('links the name of the chosen guest to its detail (A3.2)', async () => {
+    const ui = await setup();
+    await chooseGuest(ui, 'g2', [STAY]);
+
+    expect(ui.page().getByRole('link', { name: 'Luis Mamani' }).getAttribute('href')).toBe(
+      '/admin/guests/g2',
+    );
+    expect(ui.page().queryByRole('link', { name: 'Ana Quispe' })).toBeNull();
   });
 
   it('asks the next page of guests with the cursor the BFF gave', async () => {
@@ -394,7 +405,11 @@ describe('DirectPaymentComponent (A5.1)', () => {
 
     ui.http.expectNone(isGuests);
     expect(ui.page().queryByLabelText('Huésped')).toBeNull();
-    expect(ui.page().getByText('Rosa Huamán · 44556677 · Con contrato')).toBeTruthy();
+    const link = ui.page().getByRole('link', { name: 'Rosa Huamán' });
+    expect(link.getAttribute('href')).toBe('/admin/guests/g%2F9');
+    expect(link.parentElement?.textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Rosa Huamán · 44556677 · Con contrato',
+    );
 
     await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-07');
     await cash(ui, '350');

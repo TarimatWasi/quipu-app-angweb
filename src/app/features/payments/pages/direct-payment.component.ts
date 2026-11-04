@@ -66,8 +66,22 @@ interface GuestLike {
   readonly type: GuestSummary['type'];
 }
 
+/** The name of a guest, which links to its detail (A3.2), and the rest of its label. */
+interface GuestText {
+  readonly name: string;
+  readonly detail: string;
+}
+
+function guestText(guest: GuestLike): GuestText {
+  return {
+    name: guest.name ?? 'Sin nombre aún',
+    detail: `${guest.documentNumber} · ${TYPE_LABELS[guest.type]}`,
+  };
+}
+
 function guestLabel(guest: GuestLike): string {
-  return `${guest.name ?? 'Sin nombre aún'} · ${guest.documentNumber} · ${TYPE_LABELS[guest.type]}`;
+  const { name, detail } = guestText(guest);
+  return `${name} · ${detail}`;
 }
 
 /** The value of a period in the select; a month and a stay id never collide. */
@@ -152,8 +166,14 @@ export class DirectPaymentComponent {
 
   /** The guest that came in the address, or null when it is chosen on this page. */
   protected readonly preselected: string | null;
-  protected readonly preselectedLabel = signal<string | null>(null);
-  protected readonly guestOptions = signal<readonly { id: string; label: string }[]>([]);
+  protected readonly preselectedGuest = signal<GuestText | null>(null);
+  protected readonly guestOptions = signal<readonly { id: string; label: string; name: string }[]>(
+    [],
+  );
+  /** The guest chosen in the picker, whose name links to its detail (A3.2). */
+  protected readonly chosenGuest = computed(
+    () => this.guestOptions().find((option) => option.id === this.guestId()) ?? null,
+  );
   protected readonly guestsCursor = signal<string | null>(null);
   protected readonly guestsState = signal<LoadState>({ kind: 'idle' });
 
@@ -498,7 +518,11 @@ export class DirectPaymentComponent {
     try {
       const page = await firstValueFrom(this.guests.list(after));
       if (request !== this.guestsRequest) return;
-      const options = page.content.map((guest) => ({ id: guest.id, label: guestLabel(guest) }));
+      const options = page.content.map((guest) => ({
+        id: guest.id,
+        label: guestLabel(guest),
+        name: guestText(guest).name,
+      }));
       this.guestOptions.update((current) =>
         after === undefined ? options : [...current, ...options],
       );
@@ -513,10 +537,10 @@ export class DirectPaymentComponent {
   private async loadPreselected(id: string): Promise<void> {
     try {
       const guest = await firstValueFrom(this.guests.get(id));
-      this.preselectedLabel.set(guestLabel(guest));
+      this.preselectedGuest.set(guestText(guest));
     } catch {
       // The periods say whether the guest exists; the label is only a help.
-      this.preselectedLabel.set(null);
+      this.preselectedGuest.set(null);
     }
   }
 
