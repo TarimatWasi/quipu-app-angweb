@@ -38,14 +38,19 @@ describe('SkeletonComponent (P-12 cargando)', () => {
   });
 
   it('adds the yellow notice of the server waking up at 8 s, not before', async () => {
-    const { advance } = await renderSkeleton('list');
+    const { advance, container } = await renderSkeleton('list');
 
     advance(7_999);
     expect(screen.queryByText(SLOW_SERVER_NOTICE)).toBeNull();
+    // The live region is already there, empty and outside the busy region, before the text comes.
+    const live = container.querySelector(':scope > output');
+    expect(live?.textContent.trim()).toBe('');
+    expect(live?.closest('[aria-busy]')).toBeNull();
 
     advance(1);
     const notice = screen.getByText(SLOW_SERVER_NOTICE);
-    expect(notice.closest('output')).toBeTruthy();
+    expect(notice.closest('output')).toBe(live);
+    expect(notice.closest('[aria-busy]')).toBeNull();
     expect(notice.closest('app-page-notice')?.classList).toContain('tone-info');
     expect(notice.closest('[role="alert"]')).toBeNull();
   });

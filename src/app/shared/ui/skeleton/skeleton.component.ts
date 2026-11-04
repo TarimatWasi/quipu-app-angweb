@@ -97,12 +97,13 @@ const FIVE = [1, 2, 3, 4, 5] as const;
           }
         }
       }
-      @if (slow()) {
-        <output class="slow"
-          ><app-page-notice tone="info">{{ slowNotice }}</app-page-notice></output
-        >
-      }
     </section>
+    <!-- Outside the busy region, and always there, so the notice is announced when it comes. -->
+    <output class="slow">
+      @if (slow()) {
+        <app-page-notice tone="info">{{ slowNotice }}</app-page-notice>
+      }
+    </output>
   `,
   styles: `
     :host {
@@ -192,6 +193,8 @@ const FIVE = [1, 2, 3, 4, 5] as const;
     }
     .slow {
       display: block;
+    }
+    .slow app-page-notice {
       margin-top: 1.5rem;
     }
     @media (max-width: 599.98px) {
