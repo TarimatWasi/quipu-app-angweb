@@ -6,7 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
 import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { ChangePasswordComponent } from './change-password.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');

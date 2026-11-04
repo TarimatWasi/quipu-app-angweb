@@ -3,7 +3,7 @@ import { inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 
 /**
  * A 401 from the BFF on any call other than the login and /me means the session cookie is gone or expired:

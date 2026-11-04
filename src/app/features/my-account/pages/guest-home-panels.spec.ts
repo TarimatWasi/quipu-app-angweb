@@ -4,8 +4,8 @@ import { Type } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
-import type { PeriodStatus } from '@core/services/guest-payments.service';
-import type { StayPaymentStatus } from '@core/services/temporary-guest-payments.service';
+import type { PeriodStatus } from '../data/guest-payments.service';
+import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
 import { GuestHomePanelComponent, unpaidText } from './guest-home-panel.component';
 import { TemporaryHomePanelComponent } from './temporary-home-panel.component';
 

@@ -15,19 +15,16 @@ export const routes: Routes = [
   {
     path: 'forgot-password',
     canActivate: [anonymousGuard],
-    loadChildren: () =>
-      import('@features/auth/recovery.routes').then((m) => m.FORGOT_PASSWORD_ROUTES),
+    loadChildren: () => import('@features/auth/auth.routes').then((m) => m.FORGOT_PASSWORD_ROUTES),
   },
   {
     path: 'reset-password',
-    loadChildren: () =>
-      import('@features/auth/recovery.routes').then((m) => m.RESET_PASSWORD_ROUTES),
+    loadChildren: () => import('@features/auth/auth.routes').then((m) => m.RESET_PASSWORD_ROUTES),
   },
   {
     path: 'change-password',
     canActivate: [passwordChangeGuard],
-    loadChildren: () =>
-      import('@features/auth/change-password.routes').then((m) => m.CHANGE_PASSWORD_ROUTES),
+    loadChildren: () => import('@features/auth/auth.routes').then((m) => m.CHANGE_PASSWORD_ROUTES),
   },
   { path: '', pathMatch: 'full', redirectTo: 'login' },
   // Pages behind the login share the app bar (layout/), which is their parent route.
@@ -38,7 +35,7 @@ export const routes: Routes = [
     children: [
       {
         path: 'home',
-        loadChildren: () => import('@features/home/home.routes').then((m) => m.HOME_ROUTES),
+        loadChildren: () => import('./home.routes').then((m) => m.HOME_ROUTES),
       },
       {
         path: 'admin/payments',
@@ -55,15 +52,13 @@ export const routes: Routes = [
         path: 'guest/payments',
         canActivate: [contractGuestGuard],
         loadChildren: () =>
-          import('@features/payments/guest-payments.routes').then((m) => m.GUEST_PAYMENTS_ROUTES),
+          import('@features/my-account/my-account.routes').then((m) => m.GUEST_PAYMENTS_ROUTES),
       },
       {
         path: 'temporary-guest/payment',
         canActivate: [temporaryGuestGuard],
         loadChildren: () =>
-          import('@features/payments/guest-payments.routes').then(
-            (m) => m.TEMPORARY_PAYMENT_ROUTES,
-          ),
+          import('@features/my-account/my-account.routes').then((m) => m.TEMPORARY_PAYMENT_ROUTES),
       },
     ],
   },

@@ -1,4 +1,4 @@
-import type { Session } from '@core/services/auth.service';
+import type { Session } from '@core/auth/auth.service';
 
 /**
  * One entry of the menu of the bar (P-01). `link` is null while its screen does not exist yet: the

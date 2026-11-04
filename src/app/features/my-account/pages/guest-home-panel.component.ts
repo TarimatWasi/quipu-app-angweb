@@ -2,12 +2,8 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import {
-  GuestCredit,
-  GuestPaymentsService,
-  PeriodStatus,
-} from '@core/services/guest-payments.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { GuestCredit, GuestPaymentsService, PeriodStatus } from '../data/guest-payments.service';
 import { creditBalanceText, creditUseText, dueBreakdownText } from '@shared/payments/credit-texts';
 import {
   formatMoney,

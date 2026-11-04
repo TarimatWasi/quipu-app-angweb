@@ -4,10 +4,10 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatAnchor } from '@angular/material/button';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AdminGuestsService, GuestDetail, Stay } from '@core/services/admin-guests.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
+import { AdminGuestsService, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { formatMoney } from '@shared/payments/payment-format';
-import { GUEST_PAGE_STYLES } from '../guest-page.styles';
+import { GUEST_PAGE_STYLES } from './guest-page.styles';
 import {
   Badge,
   documentText,
@@ -21,8 +21,8 @@ import {
   STAY_PAYMENT_BADGES,
   stayDatesWithYear,
   todayText,
-} from '../guest-texts';
-import { LoadTiming } from '../load-timing';
+} from '../model/guest-texts';
+import { LoadTiming } from './load-timing';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
 
 type LoadState =

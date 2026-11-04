@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-import { AuthService, GuestType } from '@core/services/auth.service';
+import { AuthService, GuestType } from '@core/auth/auth.service';
 
 /**
  * Keeps the pages of one kind of guest for that kind (RN-09, RN-13; FE-ANG-RUT-02: it improves the

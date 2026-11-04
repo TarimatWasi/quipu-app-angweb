@@ -10,7 +10,7 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
-import type { AdminProof, PaymentDetail } from '@core/services/admin-payments.service';
+import type { AdminProof, PaymentDetail } from '../data/admin-payments.service';
 import { PaymentReviewComponent } from './payment-review.component';
 
 const ID = 'pay_1';

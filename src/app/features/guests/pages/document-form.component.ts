@@ -19,12 +19,12 @@ import {
   DocumentType,
   GuestUpdate,
   PendingGuestDetail,
-} from '@core/services/admin-guests.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
-import { isConcurrentModification, withVersion } from '@core/services/concurrent-modification';
+} from '@core/api/clients/admin-guests.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { GUEST_PAGE_STYLES } from '../guest-page.styles';
+import { GUEST_PAGE_STYLES } from './guest-page.styles';
 import {
   describedBy,
   DOCUMENT_TYPE_CHIPS,
@@ -37,8 +37,8 @@ import {
   SLOW_TEXT,
   SNACK_MS,
   todayText,
-} from '../guest-texts';
-import { LoadTiming } from '../load-timing';
+} from '../model/guest-texts';
+import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 
 type LoadState =

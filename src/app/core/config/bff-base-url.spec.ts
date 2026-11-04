@@ -6,7 +6,7 @@ import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
 import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
-import { AuthService } from '@core/services/auth.service';
+import { AuthService } from '@core/auth/auth.service';
 import { BFF_BASE_URL } from './bff-base-url';
 
 const ABSOLUTE = 'https://api.example.org';

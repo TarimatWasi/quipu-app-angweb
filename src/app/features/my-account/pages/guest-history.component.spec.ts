@@ -8,8 +8,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
-import type { GuestHistoryItem } from '@core/services/guest-payments.service';
-import type { GuestPayment } from '@core/services/own-payments';
+import type { GuestHistoryItem } from '../data/guest-payments.service';
+import type { GuestPayment } from '../data/own-payments';
 import { GuestHistoryComponent } from './guest-history.component';
 
 const isHistory = (req: HttpRequest<unknown>) =>

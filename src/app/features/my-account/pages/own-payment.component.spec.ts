@@ -10,9 +10,9 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
-import type { PeriodStatus } from '@core/services/guest-payments.service';
-import type { GuestPayment } from '@core/services/own-payments';
-import type { StayPaymentStatus } from '@core/services/temporary-guest-payments.service';
+import type { PeriodStatus } from '../data/guest-payments.service';
+import type { GuestPayment } from '../data/own-payments';
+import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
 import { OWN_PROOF_LIMIT_TEXT, OwnPaymentComponent, SENT_TEXT } from './own-payment.component';
 
 const isStatus = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/account-status');

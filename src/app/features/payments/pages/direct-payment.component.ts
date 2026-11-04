@@ -13,18 +13,18 @@ import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { AdminGuestsService, GuestSummary } from '@core/services/admin-guests.service';
+import { AdminGuestsService, GuestSummary } from '@core/api/clients/admin-guests.service';
 import {
   AdminPaymentsService,
   DirectPayment,
   PayablePeriod,
   ProofInput,
   ProofKind,
-} from '@core/services/admin-payments.service';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
+} from '../data/admin-payments.service';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { balanceOf, formatMoney, parseAmount, periodLabel } from '@shared/payments/payment-format';
-import { PAYMENT_PAGE_STYLES } from '../payment-page.styles';
+import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
 import {
   AMOUNT_TEXT,
   INVALID_FILE_TEXT,
@@ -33,9 +33,9 @@ import {
   PERIOD_TEXT,
   VOUCHER_MAX_BYTES,
   VOUCHER_TYPES,
-} from '../proof-rules';
-import { DIRECT_PAYMENT_STYLES } from './direct-payment.styles';
-import { openPaymentNoticeDialog } from './payment-notice-dialog.component';
+} from '@shared/payments/proof-rules';
+import { DIRECT_PAYMENT_STYLES } from '@shared/payments/direct-payment.styles';
+import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 
 /** Texts of A5.1 in the SRS (Textos de validación). */
 export const GUEST_TEXT = 'Elige un huésped';

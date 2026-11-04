@@ -26,13 +26,13 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
-import { AuthService, DocumentType, LOGIN_TIMING } from '@core/services/auth.service';
-import { AccountLock, BffError, toBffError } from '@core/services/bff-error';
+import { AuthService, DocumentType, LOGIN_TIMING } from '@core/auth/auth.service';
+import { AccountLock, BffError, toBffError } from '@core/http/bff-error';
 import {
   ACCOUNT_LOCKED_TEXT_ID,
   AccountLockedDialogComponent,
-} from './account-locked-dialog.component';
-import { LockCountdown } from './lock-countdown';
+} from '../components/account-locked-dialog.component';
+import { LockCountdown } from '../components/lock-countdown';
 
 interface LoginModel {
   documentType: DocumentType;

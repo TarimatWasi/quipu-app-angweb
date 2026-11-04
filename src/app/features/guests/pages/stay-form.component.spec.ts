@@ -10,8 +10,8 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
-import type { Environment } from '@core/services/admin-environments.service';
-import type { Stay } from '@core/services/admin-guests.service';
+import type { Environment } from '../data/admin-environments.service';
+import type { Stay } from '@core/api/clients/admin-guests.service';
 import { StayFormComponent } from './stay-form.component';
 
 const isGuest = (req: HttpRequest<unknown>) =>

@@ -3,11 +3,11 @@ import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angula
 import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/services/bff-error';
+import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import {
   StayPaymentStatus,
   TemporaryGuestPaymentsService,
-} from '@core/services/temporary-guest-payments.service';
+} from '../data/temporary-guest-payments.service';
 import { surplusText } from '@shared/payments/credit-texts';
 import {
   formatStay,
