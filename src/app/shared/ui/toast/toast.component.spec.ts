@@ -10,23 +10,25 @@ describe('ToastComponent (P-17)', () => {
     vi.useRealTimers();
   });
 
-  it('is an <output> that stays in the page, closed while there is no message', async () => {
+  it('is an <output> that stays in the page (never display:none), empty while there is no message', async () => {
     const { container } = await render(ToastComponent);
 
     const output = container.querySelector('output');
     expect(output).toBeTruthy();
-    expect(output?.classList).not.toContain('open');
+    expect(output?.querySelector('.box')).toBeNull();
+    expect(output && getComputedStyle(output).display).not.toBe('none');
     expect(output?.textContent.trim()).toBe('');
   });
 
   it('without an action asks to go away after 5 s, not before', async () => {
     const dismissed = vi.fn<() => void>();
-    const { fixture } = await render(ToastComponent, {
+    const { fixture, container } = await render(ToastComponent, {
       inputs: { message: 'Pago aprobado.' },
       on: { dismissed },
     });
 
-    expect(screen.getByText('Pago aprobado.').closest('output')?.classList).toContain('open');
+    const output = container.querySelector('output');
+    expect(screen.getByText('Pago aprobado.').closest('.box')?.parentElement).toBe(output);
     vi.advanceTimersByTime(4_999);
     expect(dismissed).not.toHaveBeenCalled();
     vi.advanceTimersByTime(1);

@@ -15,28 +15,35 @@ export const TOAST_DURATION_MS = new InjectionToken<number>('TOAST_DURATION_MS',
 @Component({
   selector: 'app-toast',
   template: `
-    <output class="toast" [class.open]="message() !== null">
+    <output class="toast">
       @if (message(); as text) {
-        <span>{{ text }}</span>
-        @if (actionLabel(); as label) {
-          <button type="button" (click)="action.emit()">{{ label }}</button>
-        }
+        <span class="box">
+          <span>{{ text }}</span>
+          @if (actionLabel(); as label) {
+            <button type="button" (click)="action.emit()">{{ label }}</button>
+          }
+        </span>
       }
     </output>
   `,
+  // The <output> is never display:none: an idle live region stays in the accessibility tree, so
+  // the text put into it is announced. Only the box inside is drawn, and only with a message.
   styles: `
     .toast {
       position: fixed;
       inset: auto 1rem 1.5rem;
       z-index: 30;
-      display: none;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .box {
+      display: flex;
       flex-wrap: wrap;
       align-items: center;
       justify-content: center;
       gap: 0.25rem 1rem;
-      width: fit-content;
       max-width: min(36rem, calc(100vw - 2rem));
-      margin-inline: auto;
       padding: 0.75rem 1.25rem;
       border-radius: 4px;
       background: var(--quipu-obsidiana);
@@ -44,9 +51,7 @@ export const TOAST_DURATION_MS = new InjectionToken<number>('TOAST_DURATION_MS',
       font-size: 1rem;
       line-height: 1.4;
       box-shadow: var(--quipu-sombra-flotante);
-    }
-    .open {
-      display: flex;
+      pointer-events: auto;
       animation: enter var(--quipu-duracion-entrada) var(--quipu-ease-entrada);
     }
     @keyframes enter {
@@ -71,7 +76,7 @@ export const TOAST_DURATION_MS = new InjectionToken<number>('TOAST_DURATION_MS',
       outline-color: var(--quipu-foco-sobre-oscuro);
     }
     @media (prefers-reduced-motion: reduce) {
-      .open {
+      .box {
         animation: none;
       }
     }
