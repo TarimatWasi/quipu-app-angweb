@@ -1,23 +1,55 @@
 import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
-import { TestBed } from '@angular/core/testing';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
-import { AuthService, Role } from '@core/services/auth.service';
+import { AuthService, GuestType, Role } from '@core/services/auth.service';
+import { accountEntriesFor, isCurrent, sectionsFor } from './app-nav';
 import { AppShellComponent } from './app-shell.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
 const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
 
-@Component({ selector: 'app-login-stub', template: '' })
-class LoginStubComponent {}
+@Component({ selector: 'app-page-stub', template: '' })
+class PageStubComponent {}
 
-async function setup(session: { role: Role; name: string; mustChangePassword: boolean }) {
+const PATHS = [
+  'login',
+  'home',
+  'admin/payments',
+  'guest/payments',
+  'guest/payments/new',
+  'temporary-guest/payment',
+];
+
+interface SessionAnswer {
+  role: Role;
+  name: string;
+  mustChangePassword: boolean;
+  guestType?: GuestType;
+}
+
+const ADMIN: SessionAnswer = { role: 'ADMIN', name: 'Rosa Quispe', mustChangePassword: false };
+const CONTRACT: SessionAnswer = {
+  role: 'GUEST',
+  name: 'Ana Quispe',
+  mustChangePassword: false,
+  guestType: 'CONTRACT',
+};
+const TEMPORARY: SessionAnswer = {
+  role: 'GUEST',
+  name: 'Diego Rojas',
+  mustChangePassword: false,
+  guestType: 'TEMPORARY',
+};
+const NO_SECTIONS: SessionAnswer = { role: 'GUEST', name: 'Luz Mamani', mustChangePassword: false };
+
+async function setup(session: SessionAnswer, url = '/home') {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: 'login', component: LoginStubComponent }]),
+      provideRouter(PATHS.map((path) => ({ path, component: PageStubComponent }))),
       provideHttpClient(),
       provideHttpClientTesting(),
     ],
@@ -28,63 +60,293 @@ async function setup(session: { role: Role; name: string; mustChangePassword: bo
   );
   TestBed.inject(HttpTestingController).expectOne(isLogin).flush(session);
   await login;
+  await TestBed.inject(Router).navigateByUrl(url);
   const fixture = TestBed.createComponent(AppShellComponent);
   await fixture.whenStable();
-  return { auth, fixture, ui: within(fixture.nativeElement as HTMLElement) };
+  const root = fixture.nativeElement as HTMLElement;
+  return { auth, fixture, root, ui: within(root) };
 }
 
-describe('AppShellComponent', () => {
+function element(root: HTMLElement, selector: string): HTMLElement {
+  const found = root.querySelector<HTMLElement>(selector);
+  if (!found) throw new Error(`nothing matches ${selector}`);
+  return found;
+}
+
+/** The menu of the bar on a wide screen (the phone's panel has its own copy). */
+function barNav(root: HTMLElement) {
+  const nav = root.querySelector<HTMLElement>('header nav');
+  if (!nav) throw new Error('no menu in the bar');
+  return within(nav);
+}
+
+function sectionTexts(root: HTMLElement): string[] {
+  return [...root.querySelectorAll('header nav li')].map((li) => li.textContent.trim());
+}
+
+async function openAccount(fixture: ComponentFixture<AppShellComponent>, name: string) {
+  const ui = within(fixture.nativeElement as HTMLElement);
+  const button = ui.getByRole('button', { name: `Tu cuenta: ${name}` });
+  fireEvent.click(button);
+  await fixture.whenStable();
+  return button;
+}
+
+describe('AppShellComponent (P-01)', () => {
   afterEach(() => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('tells the BFF to close the session, forgets it and goes to /login when the user leaves', async () => {
-    const { auth, ui, fixture } = await setup({
-      role: 'ADMIN',
-      name: 'a',
-      mustChangePassword: false,
+  describe('menu by role', () => {
+    it('the administrator has Inicio, Ambientes, Huéspedes, Contratos, Pagos and Finanzas; only the ones with a screen are links', async () => {
+      const { root } = await setup(ADMIN, '/admin/payments');
+
+      expect(sectionTexts(root)).toEqual([
+        'Inicio',
+        'Ambientes (pronto)',
+        'Huéspedes (pronto)',
+        'Contratos (pronto)',
+        'Pagos',
+        'Finanzas (pronto)',
+      ]);
+      const nav = barNav(root);
+      expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
+        '/home',
+        '/admin/payments',
+      ]);
+      expect(nav.queryByRole('link', { name: /Ambientes/ })).toBeNull();
     });
 
-    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
-    TestBed.inject(HttpTestingController)
-      .expectOne(isLogout)
-      .flush(null, { status: 204, statusText: 'No Content' });
-    await fixture.whenStable();
+    it('marks the current section with aria-current="page" and only that one', async () => {
+      const { root } = await setup(ADMIN, '/admin/payments');
 
-    expect(auth.session()).toBeNull();
-    await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/login');
+      const nav = barNav(root);
+      const pagos = nav.getByRole('link', { name: 'Pagos' });
+      expect(pagos.getAttribute('aria-current')).toBe('page');
+      expect(pagos.classList).toContain('is-current');
+      expect(nav.getByRole('link', { name: 'Inicio' }).hasAttribute('aria-current')).toBe(false);
+    });
+
+    it('the guest with a contract has Estado de cuenta, Mi contrato, Historial de pagos and Mis datos; a child page keeps its section', async () => {
+      const { root } = await setup(CONTRACT, '/guest/payments/new');
+
+      expect(sectionTexts(root)).toEqual([
+        'Estado de cuenta',
+        'Mi contrato (pronto)',
+        'Historial de pagos',
+        'Mis datos (pronto)',
+      ]);
+      const nav = barNav(root);
+      expect(
+        nav.getByRole('link', { name: 'Historial de pagos' }).getAttribute('aria-current'),
+      ).toBe('page');
+      expect(nav.getByRole('link', { name: 'Estado de cuenta' }).getAttribute('href')).toBe(
+        '/home',
+      );
+    });
+
+    it('the temporary guest has Estado de pago and Mis datos; sending the payment is part of Estado de pago', async () => {
+      const { root } = await setup(TEMPORARY, '/temporary-guest/payment');
+
+      expect(sectionTexts(root)).toEqual(['Estado de pago', 'Mis datos (pronto)']);
+      expect(
+        barNav(root).getByRole('link', { name: 'Estado de pago' }).getAttribute('aria-current'),
+      ).toBe('page');
+    });
+
+    it('without sections (a guest of unknown type) there is no menu, only the name and «Salir»', async () => {
+      const { root, ui } = await setup(NO_SECTIONS);
+
+      expect(root.querySelector('nav')).toBeNull();
+      expect(ui.queryByRole('button', { name: 'Menú' })).toBeNull();
+      expect(ui.queryByRole('button', { name: /Tu cuenta/ })).toBeNull();
+      expect(ui.getByText('Luz Mamani')).toBeTruthy();
+      expect(ui.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    });
+
+    it('has the band of 20 px under the bar, hidden from assistive technologies, and one main', async () => {
+      const { root } = await setup(ADMIN);
+
+      const band = root.querySelector('header + .quipu-band');
+      expect(band?.getAttribute('aria-hidden')).toBe('true');
+      expect(root.querySelectorAll('main')).toHaveLength(1);
     });
   });
 
-  it('asks the BFF to close the session once, however many times "Salir" is clicked', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'a', mustChangePassword: false });
+  describe('account menu', () => {
+    it('opens from the name: the administrator sees Cambiar contraseña (pronto) and Salir', async () => {
+      const { fixture, root } = await setup(ADMIN);
+      const ui = within(root);
 
-    const leave = ui.getByRole('button', { name: 'Salir' });
-    fireEvent.click(leave);
-    fireEvent.click(leave);
+      const button = ui.getByRole('button', { name: 'Tu cuenta: Rosa Quispe' });
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(root.querySelector('#account-menu')).toBeNull();
+      await openAccount(fixture, 'Rosa Quispe');
 
-    const requests = TestBed.inject(HttpTestingController).match(isLogout);
-    expect(requests).toHaveLength(1);
-    for (const request of requests) {
-      request.flush(null, { status: 204, statusText: 'No Content' });
-    }
+      expect(button.getAttribute('aria-expanded')).toBe('true');
+      expect(button.getAttribute('aria-controls')).toBe('account-menu');
+      const menu = within(element(root, '#account-menu'));
+      expect(menu.getByText('Administración')).toBeTruthy();
+      expect(menu.getByText('Cambiar contraseña').textContent).toContain('Disponible pronto');
+      expect(menu.queryByRole('link')).toBeNull();
+      expect(menu.queryByText('Administradores')).toBeNull();
+      expect(menu.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    });
+
+    it('a guest sees «Huésped» under the name', async () => {
+      const { fixture, root } = await setup(CONTRACT);
+
+      await openAccount(fixture, 'Ana Quispe');
+
+      expect(within(element(root, '#account-menu')).getByText('Huésped')).toBeTruthy();
+    });
+
+    it('Escape closes it and gives the focus back to the name', async () => {
+      const { fixture, root } = await setup(ADMIN);
+      const button = await openAccount(fixture, 'Rosa Quispe');
+
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await fixture.whenStable();
+
+      expect(root.querySelector('#account-menu')).toBeNull();
+      expect(button.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(button);
+    });
+
+    it('a click outside closes it; a click inside does not', async () => {
+      const { fixture, root } = await setup(ADMIN);
+      await openAccount(fixture, 'Rosa Quispe');
+
+      fireEvent.click(element(root, '#account-menu .who'));
+      await fixture.whenStable();
+      expect(root.querySelector('#account-menu')).toBeTruthy();
+
+      fireEvent.click(element(root, 'main'));
+      await fixture.whenStable();
+      expect(root.querySelector('#account-menu')).toBeNull();
+    });
   });
 
-  it('leaves even when the BFF cannot be reached', async () => {
-    const { auth, ui, fixture } = await setup({
-      role: 'ADMIN',
-      name: 'a',
-      mustChangePassword: false,
+  describe('on a phone', () => {
+    it('«Menú» (48 px) opens a panel with the sections and then the account', async () => {
+      const { fixture, root, ui } = await setup(ADMIN, '/home');
+
+      const menu = ui.getByRole('button', { name: 'Menú' });
+      expect(menu.getAttribute('aria-expanded')).toBe('false');
+      expect(root.querySelector('#menu-panel')).toBeNull();
+      fireEvent.click(menu);
+      await fixture.whenStable();
+
+      expect(menu.getAttribute('aria-expanded')).toBe('true');
+      expect(menu.getAttribute('aria-label')).toBe('Cerrar menú');
+      expect(menu.getAttribute('aria-controls')).toBe('menu-panel');
+      const panel = within(element(root, '#menu-panel'));
+      expect(panel.getByRole('navigation', { name: 'Principal' })).toBeTruthy();
+      expect(panel.getByRole('link', { name: 'Inicio' }).getAttribute('aria-current')).toBe('page');
+      expect(panel.getByText('Rosa Quispe')).toBeTruthy();
+      expect(panel.getByRole('button', { name: 'Salir' })).toBeTruthy();
     });
 
-    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
-    TestBed.inject(HttpTestingController).expectOne(isLogout).error(new ProgressEvent('error'));
-    await fixture.whenStable();
+    it('Escape closes the panel and gives the focus back to «Menú»', async () => {
+      const { fixture, root, ui } = await setup(TEMPORARY);
+      const menu = ui.getByRole('button', { name: 'Menú' });
+      fireEvent.click(menu);
+      await fixture.whenStable();
 
-    expect(auth.session()).toBeNull();
-    await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/login');
+      fireEvent.keyDown(document, { key: 'Escape' });
+      await fixture.whenStable();
+
+      expect(root.querySelector('#menu-panel')).toBeNull();
+      expect(menu.getAttribute('aria-expanded')).toBe('false');
+      expect(document.activeElement).toBe(menu);
     });
+
+    it('following a link of the panel closes it', async () => {
+      const { fixture, root, ui } = await setup(CONTRACT);
+      fireEvent.click(ui.getByRole('button', { name: 'Menú' }));
+      await fixture.whenStable();
+
+      const panel = within(element(root, '#menu-panel'));
+      fireEvent.click(panel.getByRole('link', { name: 'Historial de pagos' }));
+      await fixture.whenStable();
+
+      expect(root.querySelector('#menu-panel')).toBeNull();
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/guest/payments');
+      });
+    });
+  });
+
+  describe('leaving', () => {
+    it('tells the BFF to close the session, forgets it and goes to /login', async () => {
+      const { auth, fixture, root } = await setup(ADMIN);
+      await openAccount(fixture, 'Rosa Quispe');
+
+      fireEvent.click(within(root).getByRole('button', { name: 'Salir' }));
+      TestBed.inject(HttpTestingController)
+        .expectOne(isLogout)
+        .flush(null, { status: 204, statusText: 'No Content' });
+      await fixture.whenStable();
+
+      expect(auth.session()).toBeNull();
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/login');
+      });
+    });
+
+    it('asks the BFF to close the session once, however many times «Salir» is clicked', async () => {
+      const { ui } = await setup(NO_SECTIONS);
+
+      const leave = ui.getByRole('button', { name: 'Salir' });
+      fireEvent.click(leave);
+      fireEvent.click(leave);
+
+      const requests = TestBed.inject(HttpTestingController).match(isLogout);
+      expect(requests).toHaveLength(1);
+      for (const request of requests) {
+        request.flush(null, { status: 204, statusText: 'No Content' });
+      }
+    });
+
+    it('leaves even when the BFF cannot be reached', async () => {
+      const { auth, ui, fixture } = await setup(NO_SECTIONS);
+
+      fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
+      TestBed.inject(HttpTestingController).expectOne(isLogout).error(new ProgressEvent('error'));
+      await fixture.whenStable();
+
+      expect(auth.session()).toBeNull();
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/login');
+      });
+    });
+  });
+});
+
+describe('app-nav', () => {
+  it('has no sections without a session', () => {
+    expect(sectionsFor(null)).toEqual([]);
+  });
+
+  it('a section without a screen is never current', () => {
+    expect(isCurrent({ label: 'Ambientes', link: null }, '/admin/environments')).toBe(false);
+  });
+
+  it('a section is current on its own path and below it, not on a path that only starts alike', () => {
+    const pagos = { label: 'Pagos', link: '/admin/payments' };
+
+    expect(isCurrent(pagos, '/admin/payments')).toBe(true);
+    expect(isCurrent(pagos, '/admin/payments/42')).toBe(true);
+    expect(isCurrent(pagos, '/admin/payments?status=OVERDUE')).toBe(true);
+    expect(isCurrent(pagos, '/admin/paymentsx')).toBe(false);
+  });
+
+  it('the account menu has «Cambiar contraseña» for every role, without a link while A0.6 has no own route', () => {
+    expect(accountEntriesFor(null)).toEqual([{ label: 'Cambiar contraseña', link: null }]);
+    expect(
+      accountEntriesFor({ role: 'ADMIN', name: 'a', mustChangePassword: false }).map(
+        (entry) => entry.label,
+      ),
+    ).toEqual(['Cambiar contraseña']);
   });
 });

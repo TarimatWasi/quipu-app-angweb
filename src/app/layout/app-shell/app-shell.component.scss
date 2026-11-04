@@ -1,0 +1,310 @@
+// P-01. The bar and the content share the side margins: 48 px, 16 on a phone.
+$narrow: 'max-width: 47.99rem';
+$wide: 'min-width: 48rem';
+$side: clamp(1rem, 4vw, 3rem);
+
+:host {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+.bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 2.5rem;
+  padding: 0.75rem $side;
+  background: var(--quipu-obsidiana);
+  color: var(--quipu-alpaca);
+}
+
+// On the obsidian the chilca ring does not reach 3:1, so the focus is q'olle here.
+.bar :focus-visible {
+  outline-color: var(--quipu-foco-sobre-oscuro);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.emblem {
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.name {
+  margin: 0;
+  font-family: 'Fraunces', Georgia, serif;
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.nav {
+  flex: 1 1 auto;
+}
+
+.sections,
+.account-items {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.in-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1.75rem;
+
+  a,
+  .soon {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    color: var(--quipu-alpaca);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
+  a:hover,
+  .is-current {
+    text-decoration: underline;
+    text-underline-offset: 8px;
+  }
+
+  .is-current {
+    text-decoration-color: var(--quipu-qolle);
+    text-decoration-thickness: 3px;
+  }
+
+  .soon {
+    gap: 0.25rem;
+    opacity: 0.8;
+  }
+}
+
+.help {
+  font-size: 0.875rem;
+  font-weight: 400;
+}
+
+.account {
+  position: relative;
+}
+
+.me,
+.out,
+.burger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+  min-height: 44px;
+  padding: 0 0.75rem 0 0.875rem;
+  border: 1px solid var(--quipu-alpaca);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--quipu-alpaca);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform var(--quipu-duracion-presion) var(--quipu-ease-presion),
+    background-color var(--quipu-duracion-hover) var(--quipu-ease-hover),
+    color var(--quipu-duracion-hover) var(--quipu-ease-hover);
+}
+
+.me:hover,
+.out:hover:not(:disabled) {
+  background: var(--quipu-alpaca);
+  color: var(--quipu-obsidiana);
+}
+
+:is(.me, .out, .burger):active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.burger {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border-color: transparent;
+}
+
+.chevron {
+  transition: transform var(--quipu-duracion-hover) var(--quipu-ease-hover);
+}
+
+.chevron.up {
+  transform: rotate(180deg);
+}
+
+.pop,
+.panel {
+  background: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  box-shadow: var(--quipu-sombra-flotante);
+  animation: enter var(--quipu-duracion-presion) var(--quipu-ease-presion);
+}
+
+.pop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  width: 17.5rem;
+  padding: 0.5rem 0;
+  border-radius: 6px;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.who {
+  margin: 0;
+  padding: 0.625rem 1.125rem 0.75rem;
+  font-size: 0.875rem;
+  line-height: 1.4;
+  color: var(--quipu-tinta-secundaria);
+
+  strong {
+    display: block;
+    font-size: 1rem;
+    color: var(--quipu-tinta);
+  }
+}
+
+.item,
+.in-panel a,
+.in-panel .soon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.5rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 1.25rem;
+  border: 0;
+  background: none;
+  color: var(--quipu-tinta);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 700;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color var(--quipu-duracion-hover) var(--quipu-ease-hover);
+}
+
+:is(a.item, button.item, .in-panel a):hover {
+  background: var(--quipu-piedra-oscura);
+}
+
+.soon {
+  cursor: default;
+
+  .help {
+    color: var(--quipu-tinta-secundaria);
+  }
+}
+
+.in-bar .soon .help {
+  color: inherit;
+}
+
+.in-panel .is-current {
+  background: var(--quipu-piedra-oscura);
+  box-shadow: inset 4px 0 0 var(--quipu-qolle);
+}
+
+.leave {
+  border-top: 1px solid var(--quipu-piedra-oscura);
+}
+
+.panel {
+  padding: 0.5rem 0 0.75rem;
+}
+
+.panel-account {
+  margin-top: 0.5rem;
+  border-top: 3px solid var(--quipu-piedra-oscura);
+}
+
+.solo {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.9375rem;
+}
+
+.out {
+  padding: 0 1.125rem;
+}
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.content {
+  flex: 1 0 auto;
+  padding: clamp(2rem, 6vw, 4.5rem) $side;
+}
+
+@media (#{$narrow}) {
+  .bar {
+    padding-block: 0.625rem;
+  }
+
+  .emblem {
+    width: 2.5rem;
+    height: 2.5rem;
+  }
+
+  .name {
+    font-size: 1.625rem;
+  }
+
+  .wide,
+  .solo-name {
+    display: none;
+  }
+}
+
+@media (#{$wide}) {
+  .narrow {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.me, .out, .burger):active:not(:disabled) {
+    transform: none;
+  }
+
+  .chevron,
+  .pop,
+  .panel {
+    transition: none;
+    animation: none;
+  }
+
+  .chevron.up {
+    transform: rotate(180deg);
+  }
+}
