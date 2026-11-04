@@ -3,6 +3,7 @@ import { ApplicationRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { render, screen } from '@testing-library/angular';
 import { firstValueFrom } from 'rxjs';
+import { DEMO_USERS } from './data/demo-users';
 import { MOCK_BUNDLE_MARKER, MOCK_HEADER, MOCK_LATENCY, MockBff } from './mock-bff';
 import { resetMockSettings } from './mock-bff.testing';
 import { MOCK_NAVIGATION, MockPanelComponent } from './mock-panel.component';
@@ -68,6 +69,19 @@ describe('MockPanelComponent', () => {
     choose('Rol', '');
     expect(TestBed.inject(MockBff).user()).toBeNull();
     expect(nav.assign).toHaveBeenLastCalledWith('/login');
+  });
+
+  it('follows the session opened or closed from the app, not only from the panel', async () => {
+    await renderPanel();
+    const roles = screen.getByLabelText<HTMLSelectElement>('Rol');
+    expect(roles.value).toBe('');
+    const bff = TestBed.inject(MockBff);
+    bff.signIn(DEMO_USERS.admin);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(roles.value).toBe('admin');
+    bff.signOut();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(roles.value).toBe('');
   });
 
   it('keeps the chosen scenario and reloads the page', async () => {

@@ -1,5 +1,5 @@
 import type { HttpParams } from '@angular/common/http';
-import { inject, Injectable, InjectionToken } from '@angular/core';
+import { inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { DEMO_USERS, isDemoUserKey } from './data/demo-users';
 import type { DemoUser } from './data/demo-users';
 import type { MockDb } from './data/mock-db';
@@ -53,8 +53,11 @@ export class MockBff implements MockContext {
   private database: MockDb = seedDb(this.currentScenario);
   // The session lives here; the storage only carries it across a reload, so a browser that blocks
   // the storage still keeps the session for as long as the page is open.
-  private currentUser: DemoUser | null = this.storedUser();
+  private readonly currentUser = signal<DemoUser | null>(this.storedUser());
   private changedPassword = readMockSetting('quipu-mock:password') === 'changed';
+
+  /** The demo user of the session, as a signal: the panel shows the role in force. */
+  readonly sessionUser = this.currentUser.asReadonly();
 
   get db(): MockDb {
     return this.database;
@@ -72,18 +75,18 @@ export class MockBff implements MockContext {
   }
 
   user(): DemoUser | null {
-    return this.currentUser;
+    return this.currentUser();
   }
 
   signIn(user: DemoUser): void {
-    this.currentUser = user;
+    this.currentUser.set(user);
     this.changedPassword = false;
     writeMockSetting('quipu-mock:role', user.key);
     writeMockSetting('quipu-mock:password', null);
   }
 
   signOut(): void {
-    this.currentUser = null;
+    this.currentUser.set(null);
     this.changedPassword = false;
     writeMockSetting('quipu-mock:role', null);
     writeMockSetting('quipu-mock:password', null);

@@ -112,7 +112,8 @@ export class MockPanelComponent {
   }));
   protected readonly clave = DEMO_CLAVE;
   protected readonly open = signal(false);
-  protected readonly role = signal(this.bff.user()?.key ?? '');
+  /** The role of the session in force, also when it was opened or closed from the app's screens. */
+  protected readonly role = computed(() => this.bff.sessionUser()?.key ?? '');
   protected readonly current = signal(this.bff.scenario());
   protected readonly scenarioLabel = computed(() => MOCK_SCENARIOS[this.current()]);
 
