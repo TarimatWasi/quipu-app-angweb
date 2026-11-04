@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable } from 'rxjs';
+import { EMPTY, expand, Observable, reduce } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
@@ -28,5 +28,18 @@ export class AdminEnvironmentsService {
       params = params.set('after', after);
     }
     return this.http.get<EnvironmentPage>(this.base, { params });
+  }
+
+  /**
+   * Every active environment free from `freeFrom` to `freeTo`, walking the pages with the cursor:
+   * a choice is only known to be taken once the whole list is in.
+   */
+  allFree(freeFrom: string, freeTo: string): Observable<Environment[]> {
+    return this.listFree(freeFrom, freeTo).pipe(
+      expand((page) =>
+        page.nextCursor === null ? EMPTY : this.listFree(freeFrom, freeTo, page.nextCursor),
+      ),
+      reduce<EnvironmentPage, Environment[]>((all, page) => all.concat(page.content), []),
+    );
   }
 }

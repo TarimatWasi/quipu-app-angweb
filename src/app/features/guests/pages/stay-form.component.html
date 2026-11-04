@@ -87,13 +87,7 @@
               </div>
             }
             @case ('ready') {
-              @if (freeCursor()) {
-                <div>
-                  <button mat-stroked-button type="button" (click)="moreFree()">
-                    Cargar más ambientes
-                  </button>
-                </div>
-              } @else if (options().length === 0) {
+              @if (options().length === 0) {
                 <p class="help">No hay ambientes libres en esas fechas.</p>
               }
             }

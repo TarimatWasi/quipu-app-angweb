@@ -55,4 +55,21 @@ describe('AdminEnvironmentsService (A3.5 environment picker)', () => {
     req.flush({ content: [], nextCursor: null, freeCount: 0 });
     await page;
   });
+
+  it('gathers every page of free environments, following the cursor as it came', async () => {
+    const { service, http } = setup();
+    const env = (id: string) => ({ id, code: id, type: 'ROOM', status: 'ACTIVE' });
+
+    const all = firstValueFrom(service.allFree('2026-11-10', '2026-11-15'));
+    const first = http.expectOne((r) => r.url === `${BASE}/bff/admin/environments`);
+    expect(first.request.params.has('after')).toBe(false);
+    first.flush({ content: [env('a'), env('b')], nextCursor: 'next/1==', freeCount: 3 });
+    const second = http.expectOne((r) => r.url === `${BASE}/bff/admin/environments`);
+    expect(second.request.params.get('after')).toBe('next/1==');
+    expect(second.request.params.get('freeFrom')).toBe('2026-11-10');
+    expect(second.request.params.get('freeTo')).toBe('2026-11-15');
+    second.flush({ content: [env('c')], nextCursor: null, freeCount: 3 });
+
+    expect((await all).map((environment) => environment.id)).toEqual(['a', 'b', 'c']);
+  });
 });

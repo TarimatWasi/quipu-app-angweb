@@ -163,7 +163,6 @@ export class StayFormComponent implements OnInit {
   protected readonly loaded = signal<Stay | null>(null);
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
   protected readonly free = signal<readonly Environment[]>([]);
-  protected readonly freeCursor = signal<string | null>(null);
   protected readonly freeState = signal<LoadState>({ kind: 'idle' });
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
@@ -272,11 +271,6 @@ export class StayFormComponent implements OnInit {
 
   protected retryFree(): void {
     this.refreshFree();
-  }
-
-  protected moreFree(): void {
-    const cursor = this.freeCursor();
-    if (cursor !== null) void this.loadFree(cursor);
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -421,23 +415,21 @@ export class StayFormComponent implements OnInit {
     }
     this.freeRequest++;
     this.free.set([]);
-    this.freeCursor.set(null);
     this.freeState.set({ kind: 'idle' });
     this.keepChoiceIfOffered();
   }
 
-  private async loadFree(after?: string): Promise<void> {
+  /** Every free environment for the dates, all pages; the choice is checked once all are in. */
+  private async loadFree(): Promise<void> {
     const request = ++this.freeRequest;
     const { start, end } = this.draft();
-    if (after === undefined) this.free.set([]);
     this.freeState.set({ kind: 'loading' });
     try {
-      const page = await firstValueFrom(this.environments.listFree(start, end, after));
+      const free = await firstValueFrom(this.environments.allFree(start, end));
       if (request !== this.freeRequest) return;
-      this.free.update((current) => [...current, ...page.content]);
-      this.freeCursor.set(page.nextCursor);
+      this.free.set(free);
       this.freeState.set({ kind: 'ready' });
-      if (after === undefined) this.keepChoiceIfOffered();
+      this.keepChoiceIfOffered();
     } catch (error: unknown) {
       if (request !== this.freeRequest) return;
       this.freeState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });

@@ -161,6 +161,39 @@ describe('StayFormComponent (A3.5 stays)', () => {
     ui.http.expectNone(isEnvironments);
   });
 
+  it('keeps a choice from a later page of environments while the new dates are checked', async () => {
+    const ui = await setup('/admin/guests/g1/stays/new');
+    await ui.type('Llegada', '2026-11-10');
+    await ui.type('Salida', '2026-11-15');
+    await ui.flush(await ui.expect1(isEnvironments), {
+      content: [environment()],
+      nextCursor: 'page/2',
+      freeCount: 2,
+    });
+    const second = await ui.expect1(isEnvironments);
+    expect(second.request.params.get('after')).toBe('page/2');
+    await ui.flush(second, {
+      content: [environment({ id: 'env-9', code: 'H9', type: 'ROOM' })],
+      nextCursor: null,
+      freeCount: 2,
+    });
+    await ui.choose('env-9');
+
+    await ui.type('Salida', '2026-11-16');
+    await ui.flush(await ui.expect1(isEnvironments), {
+      content: [environment()],
+      nextCursor: 'page/2',
+      freeCount: 2,
+    });
+    await ui.flush(await ui.expect1(isEnvironments), {
+      content: [environment({ id: 'env-9', code: 'H9', type: 'ROOM' })],
+      nextCursor: null,
+      freeCount: 2,
+    });
+
+    expect(ui.page().getByLabelText<HTMLSelectElement>('Ambiente').value).toBe('env-9');
+  });
+
   it('rejects an amount of zero with the literal text', async () => {
     const ui = await registerReady();
     await ui.choose('env/2');
