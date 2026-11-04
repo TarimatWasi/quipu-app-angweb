@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.18.1 (TarimatWasi/quipu-lib-contracts), spec sha256 339f20aa389508c196a8d075deb1bf4426906d089e7ecc8032ddabad8f32fd85.
+ * Generated from the BFF contract v0.19.0 (TarimatWasi/quipu-lib-contracts), spec sha256 dfb1fcb03929ad21dfbc77229c1ea2217002900a875533311e83f43be395d7f5.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -2910,6 +2910,21 @@ export interface components {
             balance: number;
             /** @description true when no period is left where to use it, so Quipu refunds it (A6.5) */
             toRefund: boolean;
+            /** @description The payments the credit the guest still uses in the coming periods was left over from (`balance` while `toRefund` is false), and how much each one adds, oldest first (H1 «Tienes S/ … a favor.» says which month it was left over from, RN-38, TAR-284). Credit that already passed to be refunded is not listed here. Empty when there is none. */
+            origins: {
+                /**
+                 * Format: uuid
+                 * @description The payment the credit was left over from
+                 */
+                paymentId: string;
+                /**
+                 * @description Period of that payment
+                 * @example 2026-09
+                 */
+                period: string;
+                /** @description Credit left over from that payment that is still to be used */
+                amount: number;
+            }[];
             /** @description The last refund Quipu made to the guest (H1 «Te devolvimos S/ 120.00 el 3 de noviembre por Yape») */
             lastRefund: {
                 amount: number;
