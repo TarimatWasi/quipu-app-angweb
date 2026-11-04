@@ -95,7 +95,7 @@ function updateGuest(db: MockDb, guest: GuestRecord, body: Record<string, unknow
 
 /** Checks a stay as it would be saved: dates, amount, own overlaps and the environment (RN-20). */
 function checkStay(db: MockDb, guest: GuestRecord, fields: StayFields, stayId?: string): void {
-  if (!(fields.agreedAmount > 0)) {
+  if (!Number.isFinite(fields.agreedAmount) || fields.agreedAmount <= 0) {
     invalid('agreedAmount');
   }
   if (fields.endDate < fields.startDate) {

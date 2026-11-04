@@ -48,7 +48,8 @@ async function proofsOf(part: FormDataEntryValue | null): Promise<ProofEdit[]> {
 /** Checks each proof against the files sent: amount above zero, one file per new voucher. */
 function checkProofs(proofs: readonly ProofEdit[], files: readonly ProofFileInfo[]): void {
   for (const [index, proof] of proofs.entries()) {
-    if (typeof proof.amount !== 'number' || !(proof.amount > 0)) {
+    // Number.isFinite also rejects NaN and anything that is not a number.
+    if (!Number.isFinite(proof.amount) || proof.amount <= 0) {
       invalid(`proofs[${String(index)}].amount`);
     }
     const needsFile = proof.kind === 'VOUCHER' && proof.id === undefined;
@@ -74,7 +75,7 @@ export async function readProofsUpload(body: unknown): Promise<ProofsUpload> {
   const files = body
     .getAll('files')
     .filter((entry): entry is File => entry instanceof File)
-    .map(fileInfo);
+    .map((file, index) => fileInfo(file, index));
   const proofs = await proofsOf(body.get('proofs'));
   checkProofs(proofs, files);
   return {
