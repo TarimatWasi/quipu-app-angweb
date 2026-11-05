@@ -15,7 +15,6 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { openAccountEmailDialog } from '../components/account-email-dialog.component';
 import { openDeactivateGuestDialog } from '../components/deactivate-guest-dialog.component';
 import { DetailNowPanelComponent } from '../components/detail-now-panel.component';
@@ -42,6 +41,7 @@ import { callFailure, pendingDebt, REACTIVATED_TEXT, reactivateProblem } from '.
 import { toPeriodRow } from '../model/period-rows';
 import { toStayRow } from '../model/stay-rows';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
 /** What the left column shows: the months, the stays, the activation still to do, or nothing. */
@@ -51,11 +51,6 @@ interface DetailView {
   readonly guest: GuestDetail;
   readonly panel: DetailPanel;
   readonly left: LeftColumn;
-}
-
-interface Toast {
-  readonly text: string;
-  readonly tone: 'success' | null;
 }
 
 const LOAD_ERROR_TEXT = 'No se pudo cargar el huésped.';
@@ -93,7 +88,6 @@ function chargesKind(guest: GuestDetail): 'periods' | 'stays' | null {
     PeriodPaymentsComponent,
     RouterLink,
     SkeletonComponent,
-    ToastComponent,
   ],
   templateUrl: './guest-detail.component.html',
   styles: GUEST_DETAIL_STYLES,
@@ -115,7 +109,7 @@ export class GuestDetailComponent implements OnInit {
   /** Reactivated from this page: an expired access then says it expired while inactive. */
   private readonly reactivated = signal(false);
   protected readonly busy = signal(false);
-  protected readonly toast = signal<Toast | null>(null);
+  private readonly toasts = inject(ToastService);
 
   protected readonly title = computed(() => {
     const guest = this.guest();
@@ -287,7 +281,7 @@ export class GuestDetailComponent implements OnInit {
   }
 
   private say(text: string, tone: 'success' | null = 'success'): void {
-    this.toast.set({ text, tone });
+    this.toasts.show(text, { tone });
   }
 
   /** A3.4: the access goes to A3.7 in memory only; the address carries just the guest id. */

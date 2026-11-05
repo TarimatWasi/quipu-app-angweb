@@ -6,6 +6,7 @@ import { fireEvent, within } from '@testing-library/dom';
 import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import type { AccessHandoff } from '../data/access-handoff.service';
 import { AccessComponent } from './access.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 const squash = (text: string | null | undefined) => (text ?? '').replace(/\s+/g, ' ').trim();
 const MINUTE = 60_000;
@@ -70,7 +71,7 @@ async function setup(given: AccessHandoff | null, copies = true) {
       squash(tile.querySelector('dt')?.textContent),
       squash(tile.querySelector('dd')?.textContent).replace(/\s/g, ' '),
     ]);
-  const toast = () => squash(root().querySelector('app-toast output')?.textContent);
+  const toast = () => TestBed.inject(ToastService).current()?.text ?? '';
   return { harness, clipboard, page, root, click, facts, toast };
 }
 

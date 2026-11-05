@@ -141,4 +141,10 @@
   </div>
 }
 <main class="content"><router-outlet /></main>
-<app-toast tone="success" [message]="toast()" (dismissed)="toast.set(null)" />
+<app-toast
+  [message]="toasts.current()?.text ?? null"
+  [tone]="toasts.current()?.tone ?? null"
+  [actionLabel]="toasts.current()?.actionLabel ?? null"
+  (action)="toasts.act()"
+  (dismissed)="toasts.dismiss()"
+/>

@@ -9,10 +9,13 @@ import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { fireEvent, screen, within } from '@testing-library/dom';
+import { fireEvent, within } from '@testing-library/dom';
 import type { GuestSummary } from '@core/api/clients/admin-guests.service';
 import type { PayablePeriod } from '../data/admin-payments.service';
 import { DirectPaymentComponent } from './direct-payment.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
+/** The text of the toast the screen asked for, or '' when there is none. */
+const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
 
 const isGuests = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/admin/guests');
 const isGuest = (id: string) => (req: HttpRequest<unknown>) =>
@@ -174,9 +177,6 @@ async function bodyOf(req: TestRequest) {
 describe('DirectPaymentComponent (A5.1)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
-      el.remove();
-    });
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -305,7 +305,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
     await ui.flush(req, { id: 'pay_new', status: 'APPROVED' }, 201);
 
     expect(TestBed.inject(Router).url).toBe('/admin/payments');
-    expect(screen.getByText('Pago de Septiembre 2026 registrado y aprobado.')).toBeTruthy();
+    expect(toastText()).toBe('Pago de Septiembre 2026 registrado y aprobado.');
   });
 
   it('registers the stay of a temporary guest with a voucher: stayId, no period, the file at its index', async () => {
@@ -328,7 +328,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
     expect((body.getAll('files') as File[]).map((file) => file.name)).toEqual(['voucher.png']);
     await ui.flush(req, { id: 'pay_new', status: 'APPROVED' }, 201);
 
-    expect(screen.getByText('Pago de 20 – 31 oct registrado y aprobado.')).toBeTruthy();
+    expect(toastText()).toBe('Pago de 20 – 31 oct registrado y aprobado.');
   });
 
   it('points each voucher to its own file when cash sits between them', async () => {
@@ -436,7 +436,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
     await ui.flush(req, { id: 'pay_new' }, 201);
 
     expect(TestBed.inject(Router).url).toBe('/origin');
-    expect(screen.getByText('Pago de Julio 2026 registrado y aprobado.')).toBeTruthy();
+    expect(toastText()).toBe('Pago de Julio 2026 registrado y aprobado.');
   });
 
   it('paints a field error of the BFF next to its field, with its text', async () => {
@@ -568,7 +568,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
     );
 
     expect(TestBed.inject(Router).url).toBe('/admin/payments');
-    expect(screen.getByText('El huésped no existe')).toBeTruthy();
+    expect(toastText()).toBe('El huésped no existe');
   });
 
   it('does not send twice while the payment is on its way', async () => {

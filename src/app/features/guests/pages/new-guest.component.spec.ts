@@ -15,6 +15,9 @@ import type {
 } from '@core/api/clients/admin-guests.service';
 import { AccessHandoffService } from '../data/access-handoff.service';
 import { NewGuestComponent } from './new-guest.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
+/** The text of the toast the screen asked for, or '' when there is none. */
+const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
 
 const squash = (text: string | null | undefined) => (text ?? '').replace(/\s+/g, ' ').trim();
 
@@ -138,9 +141,6 @@ async function setup() {
 describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
-      el.remove();
-    });
   });
 
   it('shows the header, the three sections with their defaults and the empty summary', async () => {
@@ -397,9 +397,7 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
       await settle(ui.harness);
       expect(ui.router.url).toBe('/admin/guests/g9');
     });
-    expect(document.body.querySelector('mat-snack-bar-container')?.textContent).toContain(
-      'Huésped reactivado.',
-    );
+    expect(toastText()).toContain('Huésped reactivado.');
   });
 
   it('keeps the dialog with a red notice when the reactivation fails', async () => {

@@ -13,6 +13,9 @@ import { fireEvent, screen, within } from '@testing-library/dom';
 import type { Environment } from '../data/admin-environments.service';
 import type { Stay } from '@core/api/clients/admin-guests.service';
 import { StayFormComponent } from './stay-form.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
+/** The text of the toast the screen asked for, or '' when there is none. */
+const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
 
 const isGuest = (req: HttpRequest<unknown>) =>
   req.method === 'GET' && req.url.endsWith('/bff/admin/guests/g1');
@@ -171,9 +174,6 @@ async function fillAndSave(ui: Ui) {
 describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
-      el.remove();
-    });
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -336,7 +336,7 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     await ui.flush(post, stayOf({ id: 's9' }), 201);
 
     expect(ui.router.url).toBe('/admin/guests/g1');
-    expect(screen.getByText('Estadía registrada.')).toBeTruthy();
+    expect(toastText()).toBe('Estadía registrada.');
   });
 
   it('loads the stay to correct, keeps "Guardar cambios" disabled without changes and sends the version', async () => {
@@ -388,7 +388,7 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     await ui.flush(patch, stayOf({ agreedAmount: 450, version: 5 }));
 
     expect(ui.router.url).toBe('/admin/guests/g1');
-    expect(screen.getByText('Estadía corregida.')).toBeTruthy();
+    expect(toastText()).toBe('Estadía corregida.');
   });
 
   it('warns that a stay with a payment under review compares it with the new amount', async () => {
@@ -639,7 +639,7 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     );
 
     expect(ui.router.url).toBe('/admin/guests/g1');
-    expect(screen.getByText('La estadía no existe')).toBeTruthy();
+    expect(toastText()).toBe('La estadía no existe');
   });
 
   it('says so when the stay to correct does not exist', async () => {

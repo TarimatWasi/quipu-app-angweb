@@ -51,9 +51,3 @@
     }
   }
 }
-
-<app-toast
-  [tone]="toast()?.tone ?? null"
-  [message]="toast()?.text ?? null"
-  (dismissed)="toast.set(null)"
-/>

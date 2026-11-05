@@ -10,7 +10,6 @@ import {
   signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -34,11 +33,11 @@ import {
   guestName,
   SKELETON_ROWS,
   SLOW_TEXT,
-  SNACK_MS,
   todayText,
 } from '../model/guest-texts';
 import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 type LoadState =
   | { readonly kind: 'loading' }
@@ -72,7 +71,7 @@ export class DocumentFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -186,7 +185,7 @@ export class DocumentFormComponent implements OnInit {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(DOCUMENT_UPDATED_TEXT, undefined, { duration: SNACK_MS });
+    this.toasts.show(DOCUMENT_UPDATED_TEXT);
     await this.backToGuest();
   }
 
@@ -196,7 +195,7 @@ export class DocumentFormComponent implements OnInit {
     }
     const { message } = toBffErrorWithServerMessage(error);
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.snackBar.open(message, undefined, { duration: SNACK_MS });
+      this.toasts.show(message);
       return this.backToGuest();
     }
     if (error instanceof HttpErrorResponse && (error.status === 400 || error.status === 409)) {

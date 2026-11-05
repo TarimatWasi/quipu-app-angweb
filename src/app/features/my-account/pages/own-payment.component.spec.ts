@@ -9,11 +9,14 @@ import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
-import { fireEvent, screen, within } from '@testing-library/dom';
+import { fireEvent, within } from '@testing-library/dom';
 import type { PeriodStatus } from '../data/guest-payments.service';
 import type { GuestPayment } from '../data/own-payments';
 import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
 import { OWN_PROOF_LIMIT_TEXT, OwnPaymentComponent, SENT_TEXT } from './own-payment.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
+/** The text of the toast the screen asked for, or '' when there is none. */
+const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
 
 const isStatus = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/account-status');
 const isStay = (req: HttpRequest<unknown>) =>
@@ -206,9 +209,6 @@ const send = (ui: Ui, name = 'Enviar pago') => ui.click(ui.page().getByRole('but
 describe('OwnPaymentComponent (H3, T2)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
-      el.remove();
-    });
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -260,7 +260,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await ui.flush(req, { id: 'pay_new', status: 'PENDING' }, 201);
 
       expect(TestBed.inject(Router).url).toBe('/home');
-      expect(screen.getByText(SENT_TEXT)).toBeTruthy();
+      expect(toastText()).toBe(SENT_TEXT);
     });
 
     it('says what is left to pay after the credit and compares the sum with it (RN-38)', async () => {
@@ -468,7 +468,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await ui.flush(req, { id: 'pay/7', status: 'PENDING' });
 
       expect(TestBed.inject(Router).url).toBe('/home');
-      expect(screen.getByText(SENT_TEXT)).toBeTruthy();
+      expect(toastText()).toBe(SENT_TEXT);
     });
 
     it('compares the corrected sum with what is left to pay after the credit (RN-38)', async () => {
@@ -603,7 +603,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await ui.flush(req, { id: 'pay_new', status: 'PENDING' }, 201);
 
       expect(TestBed.inject(Router).url).toBe('/home');
-      expect(screen.getByText(SENT_TEXT)).toBeTruthy();
+      expect(toastText()).toBe(SENT_TEXT);
     });
 
     it('shows «Ya subiste un voucher para esta estadía» with the BFF text and loads the stay again', async () => {

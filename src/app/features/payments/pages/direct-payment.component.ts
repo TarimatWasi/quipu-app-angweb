@@ -9,7 +9,6 @@ import {
   signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminGuestsService, GuestSummary } from '@core/api/clients/admin-guests.service';
@@ -42,6 +41,7 @@ import { payingNote, payingTiles, receivedNotice } from '../model/direct-payment
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 /** Texts of A5.1 in the SRS (Textos de validación). */
 export const GUEST_TEXT = 'Elige un huésped';
@@ -49,7 +49,6 @@ export const FUTURE_DATE_TEXT = 'La fecha no puede ser posterior a hoy';
 export const PROOF_LIMIT_TEXT = `Hasta ${String(MAX_PROOFS)} comprobantes por pago.`;
 const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 const GENERAL_ERROR_ID = 'direct-payment-error';
-const SNACK_MS = 6000;
 /** How many guests the picker lists at once, before narrowing them with «Huésped». */
 const GUESTS_SHOWN = 6;
 
@@ -168,7 +167,7 @@ export class DirectPaymentComponent {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -450,9 +449,7 @@ export class DirectPaymentComponent {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(`Pago de ${label} registrado y aprobado.`, 'Cerrar', {
-      duration: SNACK_MS,
-    });
+    this.toasts.show(`Pago de ${label} registrado y aprobado.`);
     await this.leave();
   }
 
@@ -517,7 +514,7 @@ export class DirectPaymentComponent {
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.toasts.show(message);
       if (notFound) await this.leave();
       return;
     }

@@ -12,7 +12,6 @@ import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { openAccountChangeDialog } from '../components/account-change-dialog.component';
 import { AdministratorsListComponent } from '../components/administrators-list.component';
 import { openNewAdministratorDialog } from '../components/new-administrator-dialog.component';
@@ -33,6 +32,7 @@ import {
   pendingSummary,
   ROOM_HELP_TEXT,
 } from '../model/administrator-texts';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 type View = 'loading' | 'error' | 'ready';
 
@@ -53,7 +53,6 @@ const NO_ADMINISTRATORS: readonly AdministratorSummary[] = [];
     PageNoticeComponent,
     PendingSummaryComponent,
     SkeletonComponent,
-    ToastComponent,
   ],
   templateUrl: './administrators.component.html',
   styleUrl: './administrators.component.scss',
@@ -71,7 +70,7 @@ export class AdministratorsComponent {
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly footer = FOOTER_TEXT;
   protected readonly unsentHeading = EMAIL_NOT_SENT_HEADING;
-  protected readonly toast = signal<string | null>(null);
+  private readonly toasts = inject(ToastService);
   /** The email of an administrator just created whose link could not be sent; null otherwise. */
   protected readonly unsentEmail = signal<string | null>(null);
 
@@ -141,7 +140,7 @@ export class AdministratorsComponent {
       .subscribe((done) => {
         if (done !== true) return;
         this.list.reload();
-        this.toast.set(texts.done);
+        this.toasts.show(texts.done, { tone: 'success' });
       });
   }
 
@@ -151,9 +150,9 @@ export class AdministratorsComponent {
     this.checkFocus.set(true);
     if (emailSent) {
       this.unsentEmail.set(null);
-      this.toast.set(CREATED_TEXT);
+      this.toasts.show(CREATED_TEXT, { tone: 'success' });
     } else {
-      this.toast.set(null);
+      this.toasts.dismiss();
       this.unsentEmail.set(email);
     }
   }

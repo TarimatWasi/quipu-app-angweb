@@ -11,7 +11,6 @@ import {
 } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AdminPaymentsService } from '../data/admin-payments.service';
@@ -47,6 +46,7 @@ import {
   resolvedText,
   verifiedTotal,
 } from '../model/payment-review';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 /** A payment gathers at most 5 proofs (RN-22, decided 2026-10-31). */
 
@@ -79,8 +79,6 @@ const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
   },
   PAYMENT_NOT_CORRECTABLE: { title: 'Este pago ya no se puede corregir', actions: [OK] },
 };
-
-const SNACK_MS = 6000;
 
 /** The text of each verified amount, kept while the page reloads after adding a proof. */
 function amountTexts(
@@ -140,7 +138,7 @@ export class PaymentReviewComponent {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -294,7 +292,7 @@ export class PaymentReviewComponent {
       this.payments.correctProofs(payment.id, proofs, proof.file ? [proof.file] : []),
     );
     if (saved) {
-      this.snackBar.open('Comprobante agregado.', 'Cerrar', { duration: SNACK_MS });
+      this.toasts.show('Comprobante agregado.');
       await this.refresh(true);
     }
   }
@@ -365,7 +363,7 @@ export class PaymentReviewComponent {
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.toasts.show(message);
       if (notFound)
         await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
       return;
