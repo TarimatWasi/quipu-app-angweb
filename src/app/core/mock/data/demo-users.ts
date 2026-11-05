@@ -41,6 +41,11 @@ export const GUEST_IDS = {
   expired: mockId(ID_KIND.guest, 7),
   onboarding: mockId(ID_KIND.guest, 8),
   owing: mockId(ID_KIND.guest, 9),
+  // A3.2: one guest per state of «Lo que toca ahora» that the others do not cover.
+  reviewing: mockId(ID_KIND.guest, 10),
+  upToDate: mockId(ID_KIND.guest, 11),
+  noContract: mockId(ID_KIND.guest, 12),
+  lapsed: mockId(ID_KIND.guest, 13),
 } as const;
 
 export const DEMO_USERS: Readonly<Record<DemoUserKey, DemoUser>> = {

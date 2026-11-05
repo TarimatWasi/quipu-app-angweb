@@ -94,15 +94,26 @@ export function isAccessExpired(expiresAt: string | null | undefined, now: Date)
   return !Number.isNaN(instant.getTime()) && instant.getTime() <= now.getTime();
 }
 
+/** The day of an instant in Lima, yyyy-mm-dd; null when the instant is not valid. */
+export function limaDay(instant: string): string | null {
+  const date = new Date(instant);
+  return Number.isNaN(date.getTime()) ? null : limaParts(date).day;
+}
+
+/** When an instant falls, seen from `now` in Lima: «hoy a las 16:05» or «el 6 nov 2026 a las 10:00». */
+export function whenText(instant: Date, now: Date): string {
+  const when = limaParts(instant);
+  const day = when.day === limaParts(now).day ? 'hoy' : `el ${formatDate(when.day)}`;
+  return `${day} a las ${when.time}`;
+}
+
 /** «Acceso vence hoy a las 16:05», «Acceso vence el 6 nov 2026 a las 10:00» or «Acceso vencido». */
 export function accessText(expiresAt: string | null | undefined, now: Date): AccessText | null {
   if (expiresAt === null || expiresAt === undefined) return null;
   const instant = new Date(expiresAt);
   if (Number.isNaN(instant.getTime())) return null;
   if (isAccessExpired(expiresAt, now)) return { text: ACCESS_EXPIRED_TEXT, expired: true };
-  const when = limaParts(instant);
-  const day = when.day === limaParts(now).day ? 'hoy' : `el ${formatDate(when.day)}`;
-  return { text: `Acceso vence ${day} a las ${when.time}`, expired: false };
+  return { text: `Acceso vence ${whenText(instant, now)}`, expired: false };
 }
 
 /** «Lo que toca ahora» of A3: the figure, what it counts and what to do. */

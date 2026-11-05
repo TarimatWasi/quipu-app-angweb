@@ -5,21 +5,22 @@ export type FactTileSurface = 'paper' | 'stone';
 /**
  * P-11 Ficha de dato: the label in secondary ink and the value in Fraunces (40 px, 30 on a phone),
  * on paper or on dark stone. Each tile is its own term and description; the screen lays them out
- * in a grid with 3 px between them.
+ * in a grid with 3 px between them. Its figure follows --quipu-cifra-ficha, so a summary can make it
+ * smaller.
  */
 @Component({
   selector: 'app-fact-tile',
   template: `
     <dl>
       <dt>{{ label() }}</dt>
-      <dd>{{ value() }}</dd>
+      <dd>{{ value() }}<ng-content /></dd>
     </dl>
   `,
   host: { '[class]': '"surface-" + surface()' },
   styles: `
     :host {
       display: block;
-      padding: 1.125rem 1.25rem 1.25rem;
+      padding: var(--quipu-relleno-ficha);
       border-radius: var(--quipu-radio);
       background: var(--quipu-alpaca);
     }
@@ -44,7 +45,7 @@ export type FactTileSurface = 'paper' | 'stone';
     }
     @media (max-width: 599.98px) {
       :host {
-        padding: 0.875rem 1rem 1rem;
+        padding: var(--quipu-relleno-ficha-movil);
       }
       dd {
         font-size: var(--quipu-cifra-ficha-movil);
@@ -54,6 +55,7 @@ export type FactTileSurface = 'paper' | 'stone';
 })
 export class FactTileComponent {
   readonly label = input.required<string>();
-  readonly value = input.required<string>();
+  /** The value in words; a badge or another piece can be projected instead, with no value. */
+  readonly value = input('');
   readonly surface = input<FactTileSurface>('paper');
 }

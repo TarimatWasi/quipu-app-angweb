@@ -21,6 +21,8 @@ export type GuestAlreadyRegistered = components['schemas']['GuestAlreadyRegister
 export type AccessGrant = components['schemas']['AccessGrant'];
 export type NonInactiveGuestSummary = components['schemas']['NonInactiveGuestSummary'];
 export type PendingDebtError = components['schemas']['GuestHasPendingDebtError'];
+export type PeriodStatus = components['schemas']['PeriodStatus'];
+export type AccessMode = components['schemas']['AccessMode'];
 
 /** Guests asked per page of the picker of A5.1: the most the contract allows. */
 export const GUEST_PICKER_PAGE_SIZE = 100;
@@ -31,8 +33,9 @@ const MAX_PAGE_SIZE = 100;
 
 /**
  * The guests of the administrator: the reads the payment screens need (A5.1), the detail (A3.2),
- * the stays and document corrections of A3.5, the registration of A3.1 and the reactivation. Ids and cursors are opaque: they are passed back
- * exactly as the BFF gave them, only escaped for the URL.
+ * the stays and document corrections of A3.5, the registration of A3.1, the reactivation and the
+ * actions of A3.2 (deactivate, a new access, the account email). Ids and cursors are opaque: they
+ * are passed back exactly as the BFF gave them, only escaped for the URL.
  */
 @Injectable({ providedIn: 'root' })
 export class AdminGuestsService {
@@ -67,6 +70,26 @@ export class AdminGuestsService {
   /** Reactivates an inactive guest (CU-28); a 409 GUEST_HAS_PENDING_DEBT lists what it owes. */
   reactivate(id: string): Observable<NonInactiveGuestSummary> {
     return this.http.post<NonInactiveGuestSummary>(`${this.guestUrl(id)}/reactivate`, null);
+  }
+
+  /** Deactivates a guest (CU-10); a 409 GUEST_HAS_ACTIVE_CONTRACT says it has a contract in force. */
+  deactivate(id: string): Observable<null> {
+    return this.http.post<null>(`${this.guestUrl(id)}/deactivate`, null);
+  }
+
+  /** A new access for a guest that is not inactive (A3.4, CU-13); the previous one stops working. */
+  generateAccess(id: string, accessMode: AccessMode): Observable<AccessGrant> {
+    return this.http.post<AccessGrant>(`${this.guestUrl(id)}/access`, { accessMode });
+  }
+
+  /** Sets or changes the account email, the one the password recovery writes to (RF-16). */
+  setAccountEmail(id: string, email: string): Observable<null> {
+    return this.http.put<null>(`${this.guestUrl(id)}/account-email`, { email });
+  }
+
+  /** The state of every month the contracts of the guest charge, as the guest sees it (RF-06). */
+  accountStatus(id: string): Observable<PeriodStatus[]> {
+    return this.http.get<PeriodStatus[]>(`${this.guestUrl(id)}/account-status`);
   }
 
   /** Corrects the document of a guest pending activation (RN-36), with the `version` loaded. */

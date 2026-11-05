@@ -1,111 +1,46 @@
-/** What only A3.2 needs on top of the guest page layout. */
+/**
+ * The layout of A3.2: the panel, then two columns (the payments or stays at 1.4fr and the facts at
+ * 320 px or more), one column on a phone. Panel, tables, cards, tiles, badges, notices and buttons
+ * are the kit's (styles.scss, shared/ui); here only places and gaps (QP-UI-01).
+ */
 export const GUEST_DETAIL_STYLES = `
-  .layout.single {
-    grid-template-columns: minmax(0, 40rem);
+  :host {
+    display: block;
   }
-  .section-head {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px 24px;
-    margin-bottom: 14px;
+  .state {
+    display: block;
+    margin-top: 1.5rem;
   }
-  .section-head h2 {
-    margin: 0;
+  .now {
+    margin-top: 1.75rem;
   }
-  .stays {
+  .layout {
     display: grid;
-    gap: 3px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+    grid-template-columns: minmax(0, 1.4fr) minmax(var(--quipu-columna-resumen), 1fr);
+    align-items: start;
+    gap: 2.5rem 3.5rem;
+    margin-top: 2.5rem;
   }
-  .stays li {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px 20px;
-    padding: 16px 20px;
-    border-radius: 4px;
-    background: #f4f1ea;
+  .layout.single {
+    grid-template-columns: minmax(0, var(--quipu-columna-formulario));
   }
-  .when {
-    flex: 1 1 220px;
+  .layout > * {
     min-width: 0;
   }
-  .when strong {
-    display: block;
-    font-size: 17px;
+  .blocked {
+    display: grid;
+    gap: 1rem;
   }
-  .sub {
-    font-size: 14px;
-    color: var(--mat-sys-on-surface-variant);
+  .blocked h2 {
+    margin: 0;
   }
-  .amount {
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
+  aside {
+    display: grid;
+    gap: 2rem;
   }
-  .acts {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0 20px;
-  }
-  .acts a {
-    display: inline-flex;
-    align-items: center;
-    height: 44px;
-    font-weight: 700;
-    text-underline-offset: 4px;
-  }
-  .box {
-    padding: 32px 20px;
-    border-radius: 4px;
-    text-align: center;
-    background: #f4f1ea;
-  }
-  .box p {
-    margin: 0 auto 8px;
-    max-width: 520px;
-    line-height: 1.5;
-  }
-  .box .strong {
-    font-size: 18px;
-    font-weight: 700;
-  }
-  .more {
-    margin-top: 12px;
-  }
-  .action {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    gap: 0 10px;
-    margin: 20px 0 0;
-  }
-  .action a {
-    display: inline-flex;
-    align-items: center;
-    height: 44px;
-    font-weight: 700;
-  }
-  .action span {
-    font-size: 14px;
-    color: var(--mat-sys-on-surface-variant);
-  }
-  .layout-gap {
-    margin-top: 32px;
-  }
-  .sk-panel {
-    height: 132px;
-    margin-top: 28px;
-  }
-  .sk-main {
-    height: 420px;
-    background: #f4f1ea;
-  }
-  .sk-side {
-    height: 360px;
+  @media (max-width: 900px) {
+    .layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
   }
 `;

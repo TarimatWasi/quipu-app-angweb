@@ -26,6 +26,15 @@ export interface ScreenCapture {
 // Ids of the seeded data (src/app/core/mock/data): mockId(kind, n) of mock-db.ts.
 const PENDING_PAYMENT_OF_LUIS = '00000005-0000-4000-8000-000000000005';
 const TEMPORARY_GUEST_ANA = '00000001-0000-4000-8000-000000000003';
+// A3.2: one guest per state of «Lo que toca ahora» (GUEST_IDS of demo-users.ts).
+const GUEST_LUIS_OWING = '00000001-0000-4000-8000-000000000001';
+const GUEST_PENDING = '00000001-0000-4000-8000-000000000005';
+const GUEST_ONBOARDING = '00000001-0000-4000-8000-000000000008';
+const GUEST_INACTIVE_OWING = '00000001-0000-4000-8000-000000000009';
+const GUEST_UP_TO_DATE = '00000001-0000-4000-8000-000000000011';
+const GUEST_WITHOUT_CONTRACT = '00000001-0000-4000-8000-000000000012';
+
+const guestPage = (id: string) => `/admin/guests/${id}`;
 
 export const SCREENS: readonly ScreenCapture[] = [
   { id: 'a0-login', path: '/login', role: 'anonymous', scenarios: ['normal'] },
@@ -110,18 +119,39 @@ export const SCREENS: readonly ScreenCapture[] = [
   },
   { id: 'a3-1-nuevo-huesped', path: '/admin/guests/new', role: 'admin', scenarios: ['normal'] },
   {
-    id: 'a3-2-huesped-temporal',
-    path: `/admin/guests/${TEMPORARY_GUEST_ANA}`,
+    id: 'a3-2-temporal',
+    path: guestPage(TEMPORARY_GUEST_ANA),
     role: 'admin',
-    scenarios: ['normal'],
+    scenarios: ['normal', 'load-error'],
   },
-  // «Servidor lento»: the skeleton of P-12 (A5 has none yet), captured while the answer is on its way.
+  // «Servidor lento»: the skeleton of P-12, captured while the answer is on its way.
   {
-    id: 'a3-2-huesped-temporal',
-    path: `/admin/guests/${TEMPORARY_GUEST_ANA}`,
+    id: 'a3-2-temporal',
+    path: guestPage(TEMPORARY_GUEST_ANA),
     role: 'admin',
     scenarios: ['slow'],
     readiness: 'skeleton',
+  },
+  { id: 'a3-2-con-deuda', path: guestPage(GUEST_LUIS_OWING), role: 'admin', scenarios: ['normal'] },
+  { id: 'a3-2-al-dia', path: guestPage(GUEST_UP_TO_DATE), role: 'admin', scenarios: ['normal'] },
+  { id: 'a3-2-pendiente', path: guestPage(GUEST_PENDING), role: 'admin', scenarios: ['normal'] },
+  {
+    id: 'a3-2-onboarding',
+    path: guestPage(GUEST_ONBOARDING),
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a3-2-inactivo-deuda',
+    path: guestPage(GUEST_INACTIVE_OWING),
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a3-2-sin-contrato',
+    path: guestPage(GUEST_WITHOUT_CONTRACT),
+    role: 'admin',
+    scenarios: ['normal'],
   },
   {
     id: 'a7-administradores',

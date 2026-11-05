@@ -1,162 +1,180 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatAnchor } from '@angular/material/button';
-import { ActivatedRoute, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AdminGuestsService, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { formatMoney } from '@shared/payments/payment-format';
-import { GUEST_PAGE_STYLES } from './guest-page.styles';
+import { MatDialog } from '@angular/material/dialog';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { firstValueFrom, of } from 'rxjs';
+import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
+import type {
+  AccessGrant,
+  GuestDetail,
+  PeriodStatus,
+  Stay,
+  StayPage,
+} from '@core/api/clients/admin-guests.service';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { ToastComponent } from '@shared/ui/toast/toast.component';
+import { openAccountEmailDialog } from '../components/account-email-dialog.component';
+import { openDeactivateGuestDialog } from '../components/deactivate-guest-dialog.component';
+import { DetailNowPanelComponent } from '../components/detail-now-panel.component';
+import { openGenerateAccessDialog } from '../components/generate-access-dialog.component';
+import { GuestFactsComponent } from '../components/guest-facts.component';
+import { GuestStaysComponent } from '../components/guest-stays.component';
+import { MoreActionsComponent } from '../components/more-actions.component';
+import { openPendingDebtDialog } from '../components/pending-debt-dialog.component';
+import { PeriodPaymentsComponent } from '../components/period-payments.component';
+import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import {
-  Badge,
-  documentText,
-  GUEST_STATUS_BADGES,
-  GUEST_TYPE_LABELS,
-  guestName,
-  NO_ENVIRONMENT,
-  nightsBetween,
-  nightsText,
-  SLOW_TEXT,
-  STAY_PAYMENT_BADGES,
-  stayDatesWithYear,
-  todayText,
-} from '../model/guest-texts';
-import { LoadTiming } from './load-timing';
+  DEACTIVATED_TEXT,
+  DETAIL_DEBT_TEXT,
+  EMAIL_SAVED_TEXT,
+  REACTIVATED_EXPIRED_TEXT,
+} from '../model/detail-actions';
+import { detailPanel, owesAnything } from '../model/detail-panel';
+import type { DetailPanel, PanelAction } from '../model/detail-panel';
+import { isAccessExpired } from '../model/guest-list-texts';
+import { documentText, guestName } from '../model/guest-texts';
+import { moreActions } from '../model/more-actions';
+import type { DialogActionKind } from '../model/more-actions';
+import { callFailure, pendingDebt, REACTIVATED_TEXT, reactivateProblem } from '../model/new-guest';
+import { toPeriodRow } from '../model/period-rows';
+import { toStayRow } from '../model/stay-rows';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
 
-type LoadState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'not-found' }
-  | { readonly kind: 'error'; readonly message: string };
+type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
+/** What the left column shows: the months, the stays, the activation still to do, or nothing. */
+type LeftColumn = 'periods' | 'stays' | 'blocked' | 'none';
 
-/** The payment action of a stay: to its payment (A5.2) or to register one (A5.1). */
-interface PaymentAction {
-  readonly label: string;
-  readonly link: readonly string[];
-  readonly query: Readonly<Record<string, string>> | null;
+interface DetailView {
+  readonly guest: GuestDetail;
+  readonly panel: DetailPanel;
+  readonly left: LeftColumn;
 }
 
-interface StayRow {
-  readonly id: string;
-  readonly dates: string;
-  readonly sub: string;
-  readonly amount: string;
-  readonly badge: Badge;
-  readonly payment: PaymentAction;
+interface Toast {
+  readonly text: string;
+  readonly tone: 'success' | null;
 }
 
-const PAID_LABELS: Readonly<Record<Stay['paymentStatus'], string>> = {
-  UNDER_REVIEW: 'Revisar pago',
-  PAID: 'Ver pago',
-  // With a payment, unpaid or overdue means it was rejected: it is corrected (RN-05, RN-15).
-  UNPAID: 'Corregir pago',
-  OVERDUE: 'Corregir pago',
-};
+const LOAD_ERROR_TEXT = 'No se pudo cargar el huésped.';
 
-function paymentAction(stay: Stay, guestId: string): PaymentAction {
-  if (stay.paymentId !== null) {
-    return {
-      label: PAID_LABELS[stay.paymentStatus],
-      link: ['/admin/payments', stay.paymentId],
-      query: null,
-    };
-  }
-  return { label: 'Registrar pago', link: ['/admin/payments/new'], query: { guestId } };
+function leftColumn(guest: GuestDetail, periods: readonly PeriodStatus[]): LeftColumn {
+  if (guest.status === 'PENDING_ACTIVATION' || guest.status === 'ONBOARDING') return 'blocked';
+  if (guest.type === 'TEMPORARY') return 'stays';
+  return guest.status === 'ACTIVE' || periods.length > 0 ? 'periods' : 'none';
 }
 
-function rowOf(stay: Stay, guestId: string): StayRow {
-  const nights = nightsBetween(stay.startDate, stay.endDate);
-  const environment = stay.environmentCode ?? NO_ENVIRONMENT;
-  return {
-    id: stay.id,
-    dates: stayDatesWithYear(stay.startDate, stay.endDate),
-    sub: nights === null ? environment : `${environment} · ${nightsText(nights)}`,
-    amount: formatMoney(stay.agreedAmount),
-    badge: STAY_PAYMENT_BADGES[stay.paymentStatus],
-    payment: paymentAction(stay, guestId),
-  };
+/** Whether the guest has months or stays to read besides its detail. */
+function chargesKind(guest: GuestDetail): 'periods' | 'stays' | null {
+  if (guest.status !== 'ACTIVE' && guest.status !== 'INACTIVE') return null;
+  return guest.type === 'CONTRACT' ? 'periods' : 'stays';
 }
 
 /**
- * A3.2, minimal (TAR-213), on the approved canvas: who the guest is (name, document, type and state)
- * and, for a temporary guest, its stays with "Registrar estadía" and "Corregir estadía" (A3.5). A
- * guest pending activation offers "Corregir documento" (RN-36). Ids are opaque.
+ * A3.2 «Detalle del huésped» (CU-06, RF-10) on the canvas «HuespedDetalle»: what comes first for
+ * this guest, its months or stays, its facts, its contract and its registration, and the actions
+ * of the administrator: deactivate (A3.3), a new access (A3.4, handed to A3.7 in memory), the
+ * account email, reactivate (A3.6, with its debt first) and the stays of A3.5. Ids are opaque.
  */
 @Component({
   selector: 'app-guest-detail',
-  imports: [MatAnchor, RouterLink],
+  imports: [
+    DetailNowPanelComponent,
+    EmptyStateComponent,
+    GuestFactsComponent,
+    GuestStaysComponent,
+    LoadErrorComponent,
+    MoreActionsComponent,
+    PageHeaderComponent,
+    PeriodPaymentsComponent,
+    RouterLink,
+    SkeletonComponent,
+    ToastComponent,
+  ],
   templateUrl: './guest-detail.component.html',
-  styles: [GUEST_PAGE_STYLES, GUEST_DETAIL_STYLES],
+  styles: GUEST_DETAIL_STYLES,
 })
 export class GuestDetailComponent implements OnInit {
   private readonly guests = inject(AdminGuestsService);
+  private readonly handoff = inject(AccessHandoffService);
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
 
-  protected readonly today = todayText();
-  protected readonly slowText = SLOW_TEXT;
-  protected readonly timing = new LoadTiming();
+  protected readonly loadErrorText = LOAD_ERROR_TEXT;
+  protected readonly state = signal<LoadState>('loading');
   protected readonly guest = signal<GuestDetail | null>(null);
-  protected readonly state = signal<LoadState>({ kind: 'loading' });
-  protected readonly stays = signal<readonly StayRow[]>([]);
+  private readonly periods = signal<readonly PeriodStatus[]>([]);
+  private readonly stays = signal<readonly Stay[]>([]);
   protected readonly staysCursor = signal<string | null>(null);
-  protected readonly staysState = signal<LoadState>({ kind: 'loading' });
+  protected readonly loadingMore = signal(false);
+  protected readonly moreError = signal(false);
+  private readonly now = signal(new Date());
+  /** Reactivated from this page: an expired access then says it expired while inactive. */
+  private readonly reactivated = signal(false);
+  protected readonly busy = signal(false);
+  protected readonly toast = signal<Toast | null>(null);
 
   protected readonly title = computed(() => {
     const guest = this.guest();
     return guest ? guestName(guest) : 'Huésped';
   });
-  protected readonly documentText = computed(() => {
+  protected readonly view = computed<DetailView | null>(() => {
     const guest = this.guest();
-    return guest ? documentText(guest) : '';
+    if (guest === null) return null;
+    const panel = detailPanel({
+      guest,
+      periods: this.periods(),
+      stays: this.stays(),
+      now: this.now(),
+      reactivated: this.reactivated(),
+    });
+    return { guest, panel, left: leftColumn(guest, this.periods()) };
   });
-  protected readonly typeText = computed(() => {
-    const guest = this.guest();
-    return guest ? GUEST_TYPE_LABELS[guest.type] : '';
-  });
-  protected readonly statusBadge = computed(() => {
-    const guest = this.guest();
-    return guest ? GUEST_STATUS_BADGES[guest.status] : null;
-  });
-  protected readonly temporary = computed(() => this.guest()?.type === 'TEMPORARY');
-  /** A temporary guest still activating its account takes no stay yet (RN-35): the canvas says so. */
-  protected readonly blocked = computed(() => {
-    const guest = this.guest();
-    return (
-      guest?.type === 'TEMPORARY' &&
-      (guest.status === 'PENDING_ACTIVATION' || guest.status === 'ONBOARDING')
-    );
-  });
-  protected readonly showStays = computed(() => this.temporary() && !this.blocked());
-  /** Only an active guest takes a new stay (RN-35); an inactive one keeps its history. */
-  protected readonly canRegister = computed(() => this.guest()?.status === 'ACTIVE');
-  /** Only a guest pending activation can have its document corrected (RN-36). */
-  protected readonly documentCorrectable = computed(
-    () => this.guest()?.status === 'PENDING_ACTIVATION',
+  protected readonly periodRows = computed(() =>
+    this.periods().map((item) => toPeriodRow(item, this.currentId)),
   );
-  protected readonly dataNote = computed(() =>
-    this.guest()?.status === 'PENDING_ACTIVATION'
-      ? 'Su nombre y sus datos los completa el huésped al activar su acceso.'
-      : 'Sus datos de contacto los cambia solo el huésped, desde Mis datos.',
+  protected readonly stayRows = computed(() =>
+    this.stays().map((stay) => toStayRow(stay, this.currentId)),
   );
-  protected readonly staysError = computed(() => {
-    const state = this.staysState();
-    return state.kind === 'error' ? state.message : '';
+  protected readonly blocked = computed(() =>
+    this.guest()?.type === 'TEMPORARY'
+      ? {
+          title: 'Estadías y pagos',
+          text: 'Hasta que termine su registro no se le puede registrar una estadía ni pagos.',
+        }
+      : {
+          title: 'Contrato y pagos',
+          text: 'Hasta que termine su registro no se le puede cargar un contrato ni registrar pagos.',
+        },
+  );
+  protected readonly actions = computed(() => {
+    const view = this.view();
+    if (view === null) return [];
+    return moreActions({
+      guest: view.guest,
+      panelGenerates: view.panel.action?.kind === 'generate-access',
+      owes: owesAnything({ guest: view.guest, periods: this.periods(), stays: this.stays() }),
+    });
   });
 
   private currentId = '';
-  // Each one moves with every load, so a late answer for a previous guest or page is ignored.
+  // Moves with every load, so a late answer for a previous guest is ignored.
   private request = 0;
+  // Moves with every page of stays, so a late page of a previous load is ignored.
   private staysRequest = 0;
-  // The cursor of the last page asked, so "Reintentar" asks that same page again.
-  private staysAfter: string | undefined;
+  /**
+   * A3.7 asked for «Generar otro acceso»: it opens once the guest is loaded. Read while the page is
+   * created, when the navigation that brings it is still the current one.
+   */
+  private accessAsked =
+    this.router.currentNavigation()?.extras.state?.[GENERATE_ACCESS_STATE] === true;
 
   ngOnInit(): void {
-    this.destroyRef.onDestroy(() => {
-      this.timing.stop();
-    });
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       void this.load(params.get('id') ?? '');
     });
@@ -166,57 +184,198 @@ export class GuestDetailComponent implements OnInit {
     void this.load(this.currentId);
   }
 
-  protected retryStays(): void {
-    void this.loadStays(this.currentId, this.staysAfter);
+  protected onPanelAction(action: PanelAction): void {
+    if (action.kind === 'generate-access') this.openAccess();
+    if (action.kind === 'reactivate') void this.reactivate();
   }
 
-  protected moreStays(): void {
+  protected onMoreAction(kind: DialogActionKind): void {
+    switch (kind) {
+      case 'generate-access':
+        this.openAccess();
+        return;
+      case 'account-email':
+        this.openAccountEmail();
+        return;
+      case 'deactivate':
+        this.openDeactivate();
+        return;
+      case 'reactivate':
+        void this.reactivate();
+    }
+  }
+
+  protected async moreStays(): Promise<void> {
     const cursor = this.staysCursor();
-    if (cursor !== null) void this.loadStays(this.currentId, cursor);
+    if (cursor === null || this.loadingMore()) return;
+    const request = ++this.staysRequest;
+    this.loadingMore.set(true);
+    this.moreError.set(false);
+    try {
+      const page = await firstValueFrom(this.guests.stays(this.currentId, cursor));
+      if (request !== this.staysRequest) return;
+      this.stays.update((current) => [...current, ...page.content]);
+      this.staysCursor.set(page.nextCursor);
+    } catch {
+      if (request === this.staysRequest) this.moreError.set(true);
+    } finally {
+      if (request === this.staysRequest) this.loadingMore.set(false);
+    }
   }
 
-  private async load(id: string): Promise<void> {
+  /** Loads the guest and what its panel needs; `quiet` keeps the page on screen meanwhile. */
+  private async load(id: string, quiet = false): Promise<void> {
     const request = ++this.request;
-    this.currentId = id;
-    this.state.set({ kind: 'loading' });
-    this.timing.start();
-    this.guest.set(null);
     this.staysRequest++;
-    this.stays.set([]);
-    this.staysCursor.set(null);
+    this.currentId = id;
+    if (!quiet) this.reset();
     try {
       const guest = await firstValueFrom(this.guests.get(id));
+      const kind = chargesKind(guest);
+      const [periods, page] = await Promise.all([
+        firstValueFrom(kind === 'periods' ? this.guests.accountStatus(id) : of([])),
+        firstValueFrom(kind === 'stays' ? this.guests.stays(id) : of<StayPage | null>(null)),
+      ]);
       if (request !== this.request) return;
-      this.timing.stop();
-      this.guest.set(guest);
-      this.state.set({ kind: 'ready' });
-      if (this.showStays()) await this.loadStays(id);
+      this.show(guest, periods, page);
     } catch (error: unknown) {
       if (request !== this.request) return;
-      this.timing.stop();
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set(
-        notFound
-          ? { kind: 'not-found' }
-          : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-      );
+      this.state.set(notFound ? 'not-found' : 'error');
+      if (!notFound) this.guest.set(null);
     }
   }
 
-  private async loadStays(id: string, after?: string): Promise<void> {
-    const request = ++this.staysRequest;
-    this.staysAfter = after;
-    this.staysState.set({ kind: 'loading' });
-    try {
-      const page = await firstValueFrom(this.guests.stays(id, after));
-      if (request !== this.staysRequest) return;
-      const rows = page.content.map((stay) => rowOf(stay, id));
-      this.stays.update((current) => (after === undefined ? rows : [...current, ...rows]));
-      this.staysCursor.set(page.nextCursor);
-      this.staysState.set({ kind: 'ready' });
-    } catch (error: unknown) {
-      if (request !== this.staysRequest) return;
-      this.staysState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+  private reset(): void {
+    this.state.set('loading');
+    this.guest.set(null);
+    this.periods.set([]);
+    this.stays.set([]);
+    this.staysCursor.set(null);
+    this.reactivated.set(false);
+  }
+
+  private show(guest: GuestDetail, periods: readonly PeriodStatus[], page: StayPage | null): void {
+    this.now.set(new Date());
+    this.guest.set(guest);
+    this.periods.set(periods);
+    this.stays.set(page?.content ?? []);
+    this.staysCursor.set(page?.nextCursor ?? null);
+    this.loadingMore.set(false);
+    this.moreError.set(false);
+    this.state.set('ready');
+    if (this.accessAsked) {
+      this.accessAsked = false;
+      if (guest.status !== 'INACTIVE') this.openAccess();
     }
+  }
+
+  private say(text: string, tone: 'success' | null = 'success'): void {
+    this.toast.set({ text, tone });
+  }
+
+  /** A3.4: the access goes to A3.7 in memory only; the address carries just the guest id. */
+  private openAccess(): void {
+    const guest = this.guest();
+    if (guest === null) return;
+    openGenerateAccessDialog(this.dialog, {
+      active: guest.status === 'ACTIVE',
+      generate: (mode) => this.guests.generateAccess(guest.id, mode),
+    })
+      .afterClosed()
+      .subscribe((access) => {
+        if (access) void this.handOver(guest, access);
+      });
+  }
+
+  private async handOver(guest: GuestDetail, access: AccessGrant): Promise<void> {
+    this.handoff.put({
+      guestId: guest.id,
+      documentType: guest.documentType,
+      documentNumber: guest.documentNumber,
+      type: guest.type,
+      phone: guest.phone?.trim() ? guest.phone.trim() : null,
+      // The access also goes to the account email, if it has one (RF-16).
+      contactEmail: guest.accountEmail ?? null,
+      access,
+      regenerated: true,
+    });
+    await this.router.navigate(['/admin/guests', guest.id, 'access']);
+  }
+
+  private openAccountEmail(): void {
+    const guest = this.guest();
+    if (guest === null) return;
+    openAccountEmailDialog(this.dialog, {
+      current: guest.accountEmail ?? null,
+      save: (email) => this.guests.setAccountEmail(guest.id, email),
+    })
+      .afterClosed()
+      .subscribe((saved) => {
+        if (saved !== true) return;
+        this.say(EMAIL_SAVED_TEXT);
+        void this.load(guest.id, true);
+      });
+  }
+
+  private openDeactivate(): void {
+    const guest = this.guest();
+    if (guest === null) return;
+    openDeactivateGuestDialog(this.dialog, {
+      who: guestName(guest),
+      blocked: guest.contract?.status === 'ACTIVE',
+      deactivate: () => this.guests.deactivate(guest.id),
+    })
+      .afterClosed()
+      .subscribe((done) => {
+        if (done !== true) return;
+        this.say(DEACTIVATED_TEXT);
+        void this.load(guest.id, true);
+      });
+  }
+
+  /** A3.6, without a confirmation (CU-28): a debt is explained first (RN-35). */
+  private async reactivate(): Promise<void> {
+    const guest = this.guest();
+    if (guest === null || this.busy()) return;
+    this.busy.set(true);
+    try {
+      const summary = await firstValueFrom(this.guests.reactivate(guest.id));
+      this.reactivated.set(true);
+      await this.load(guest.id, true);
+      const expiresAt = this.guest()?.accessExpiresAt ?? null;
+      const expired =
+        summary.status === 'PENDING_ACTIVATION' &&
+        (expiresAt === null || isAccessExpired(expiresAt, new Date()));
+      this.say(expired ? REACTIVATED_EXPIRED_TEXT : REACTIVATED_TEXT);
+    } catch (error: unknown) {
+      this.reactivateFailed(guest, error);
+    } finally {
+      this.busy.set(false);
+    }
+  }
+
+  private reactivateFailed(guest: GuestDetail, error: unknown): void {
+    // A 401 is the session interceptor's: it already goes to the login.
+    if (error instanceof HttpErrorResponse && error.status === 401) return;
+    const failure = callFailure(error);
+    const debt = pendingDebt(failure);
+    if (debt === null) {
+      this.say(reactivateProblem(failure), null);
+      return;
+    }
+    openPendingDebtDialog(this.dialog, {
+      document: documentText(guest),
+      debt,
+      text: DETAIL_DEBT_TEXT,
+    })
+      .afterClosed()
+      .subscribe((pay) => {
+        if (pay === true) {
+          void this.router.navigate(['/admin/payments/new'], {
+            queryParams: { guestId: guest.id },
+          });
+        }
+      });
   }
 }

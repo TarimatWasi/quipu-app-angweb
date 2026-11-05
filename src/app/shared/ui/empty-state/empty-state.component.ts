@@ -4,8 +4,9 @@ let nextId = 0;
 
 /**
  * P-12 Vacío: a centered block of paper that says what is happening (the heading) and what to do
- * (the projected text). With `filtered`, it is the «Ningún … coincide» of a filter without
- * results and offers «Quitar filtros», which emits `clearFilters`.
+ * (the projected text). An `[emptyAction]` element goes under the text («Volver a Huéspedes»).
+ * With `filtered`, it is the «Ningún … coincide» of a filter without results and offers «Quitar
+ * filtros», which emits `clearFilters`.
  */
 @Component({
   selector: 'app-empty-state',
@@ -13,6 +14,7 @@ let nextId = 0;
     <section [attr.aria-labelledby]="headingId">
       <h2 [id]="headingId">{{ heading() }}</h2>
       <p class="text"><ng-content /></p>
+      <div class="action"><ng-content select="[emptyAction]" /></div>
       @if (filtered()) {
         <button
           class="quipu-button quipu-button--secondary"
@@ -49,8 +51,12 @@ let nextId = 0;
     .text:empty {
       display: none;
     }
-    button {
+    button,
+    .action {
       margin-top: 1.25rem;
+    }
+    .action:empty {
+      display: none;
     }
   `,
 })

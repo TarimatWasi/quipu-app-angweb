@@ -13,12 +13,20 @@ export const ENVIRONMENT_IDS = {
   room203: mockId(ID_KIND.environment, 5),
   cabinC3: mockId(ID_KIND.environment, 6),
   room204: mockId(ID_KIND.environment, 7),
+  // A3.2: the rooms of the contracts of Carmen and Julia, always occupied.
+  room205: mockId(ID_KIND.environment, 8),
+  room206: mockId(ID_KIND.environment, 9),
 } as const;
 
 export const CONTRACT_IDS = {
   luis: mockId(ID_KIND.contract, 1),
   maria: mockId(ID_KIND.contract, 2),
+  reviewing: mockId(ID_KIND.contract, 3),
+  upToDate: mockId(ID_KIND.contract, 4),
 } as const;
+
+/** How long the access of the guest pending activation still lasts when the data is seeded. */
+const PENDING_ACCESS_MINUTES = 18;
 
 function environment(id: string, code: string, type: Environment['type']): Environment {
   return {
@@ -42,6 +50,8 @@ export function seedEnvironments(): Environment[] {
     environment(ENVIRONMENT_IDS.cabinC2, 'C2', 'CABIN'),
     environment(ENVIRONMENT_IDS.room203, '203', 'ROOM'),
     environment(ENVIRONMENT_IDS.cabinC3, 'C3', 'CABIN'),
+    environment(ENVIRONMENT_IDS.room205, '205', 'ROOM'),
+    environment(ENVIRONMENT_IDS.room206, '206', 'ROOM'),
     {
       ...environment(ENVIRONMENT_IDS.room204, '204', 'ROOM'),
       status: 'INACTIVE',
@@ -80,6 +90,7 @@ function contractGuests(): GuestRecord[] {
       contactEmail: 'luis.huaman@example.com',
       accountEmail: 'luis.huaman@example.com',
       documentCount: 2,
+      emergencyContact: { name: 'Rosa Ccori', relationship: 'madre', phone: '984 112 233' },
     }),
     guest({
       id: GUEST_IDS.maria,
@@ -99,17 +110,67 @@ function contractGuests(): GuestRecord[] {
       status: 'PENDING_ACTIVATION',
       hasLoginAccess: false,
       documentCount: 0,
-      accessExpiresAt: instantOn(addDays(today(), 1)),
+      accessExpiresAt: new Date(Date.now() + PENDING_ACCESS_MINUTES * 60_000).toISOString(),
     }),
-    // A3: one in onboarding, who set a password but has not completed its data yet.
+    // A3 and A3.2: one in onboarding, who saved its data (2 of 4 steps) but not its consent yet.
     guest({
       id: GUEST_IDS.onboarding,
       documentType: 'DNI',
       documentNumber: '70000008',
-      name: null,
+      name: 'Carlos Ttito Huallpa',
       type: 'CONTRACT',
       status: 'ONBOARDING',
+      phone: '921 098 765',
       documentCount: 0,
+      onboardingProgress: 'PERSONAL_DATA_SAVED',
+    }),
+    ...detailContractGuests(),
+  ];
+}
+
+/** A3.2: a payment under review, a guest up to date and an active guest still without a contract. */
+function detailContractGuests(): GuestRecord[] {
+  return [
+    guest({
+      id: GUEST_IDS.reviewing,
+      documentType: 'DNI',
+      documentNumber: '70000010',
+      name: 'Carmen Rosa Quispe Huamán',
+      type: 'CONTRACT',
+      phone: '910 987 654',
+      contactEmail: 'carmen.quispe@example.com',
+    }),
+    guest({
+      id: GUEST_IDS.upToDate,
+      documentType: 'CE',
+      documentNumber: '002345678',
+      name: 'Julia Condori Pari',
+      type: 'CONTRACT',
+      phone: '909 876 543',
+      documentCount: 3,
+      emergencyContact: { name: 'Mario Condori', relationship: 'hermano', phone: '908 765 432' },
+    }),
+    guest({
+      id: GUEST_IDS.noContract,
+      documentType: 'DNI',
+      documentNumber: '70000012',
+      name: 'Diego Huanca Flores',
+      type: 'CONTRACT',
+      phone: '907 654 321',
+      documentCount: 0,
+    }),
+    // Deactivated before it ever used its access, which expired meanwhile (CU-28).
+    guest({
+      id: GUEST_IDS.lapsed,
+      documentType: 'DNI',
+      documentNumber: '70000013',
+      name: null,
+      type: 'CONTRACT',
+      status: 'INACTIVE',
+      hasLoginAccess: false,
+      documentCount: 0,
+      accessExpiresAt: instantOn(addDays(today(), -25), 11),
+      deactivatedAt: instantOn(addDays(today(), -20)),
     }),
   ];
 }
@@ -229,6 +290,18 @@ export function seedContracts(
     return [];
   }
   return [
+    ...seedMainContracts(luis, maria, room201, room202),
+    ...detailContracts(guests, environments),
+  ];
+}
+
+function seedMainContracts(
+  luis: GuestRecord,
+  maria: GuestRecord,
+  room201: Environment,
+  room202: Environment,
+): Contract[] {
+  return [
     contract({
       id: CONTRACT_IDS.luis,
       guest: luis,
@@ -244,6 +317,38 @@ export function seedContracts(
       monthlyAmount: 680,
       paymentDay: 10,
       monthsAgo: 6,
+    }),
+  ];
+}
+
+/** A3.2: the contracts of the guest with a payment under review and of the one up to date. */
+function detailContracts(
+  guests: readonly GuestRecord[],
+  environments: readonly Environment[],
+): Contract[] {
+  const reviewing = guests.find((item) => item.id === GUEST_IDS.reviewing);
+  const upToDate = guests.find((item) => item.id === GUEST_IDS.upToDate);
+  const room205 = environments.find((item) => item.id === ENVIRONMENT_IDS.room205);
+  const room206 = environments.find((item) => item.id === ENVIRONMENT_IDS.room206);
+  if (!reviewing || !upToDate || !room205 || !room206) {
+    return [];
+  }
+  return [
+    contract({
+      id: CONTRACT_IDS.reviewing,
+      guest: reviewing,
+      environment: room205,
+      monthlyAmount: 820,
+      paymentDay: 5,
+      monthsAgo: 2,
+    }),
+    contract({
+      id: CONTRACT_IDS.upToDate,
+      guest: upToDate,
+      environment: room206,
+      monthlyAmount: 800,
+      paymentDay: 1,
+      monthsAgo: 3,
     }),
   ];
 }

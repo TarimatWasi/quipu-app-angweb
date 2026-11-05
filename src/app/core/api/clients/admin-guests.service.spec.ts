@@ -224,4 +224,61 @@ describe('AdminGuestsService (A3.2 and A3.5 stays and document)', () => {
 
     expect(await reactivated).toEqual({ id: 'g/1?x', status: 'ACTIVE' });
   });
+
+  it('deactivates a guest by its opaque id, without a body', async () => {
+    const { service, http } = setup();
+
+    const done = firstValueFrom(service.deactivate('g/1?x'), { defaultValue: undefined });
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/deactivate`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBeNull();
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await done).toBeNull();
+  });
+
+  it('generates a new access with only the access mode', async () => {
+    const { service, http } = setup();
+    const grant = {
+      mode: 'TEMPORARY_PASSWORD',
+      temporaryPassword: 'K7-q2x9m',
+      expiresAt: '2026-11-05T16:05:00Z',
+      emailSent: false,
+      shareMessage: 'Entra con K7-q2x9m',
+    };
+
+    const answer = firstValueFrom(service.generateAccess('g/1?x', 'TEMPORARY_PASSWORD'));
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/access`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ accessMode: 'TEMPORARY_PASSWORD' });
+    req.flush(grant);
+
+    expect(await answer).toEqual(grant);
+  });
+
+  it('puts the account email with only the email', async () => {
+    const { service, http } = setup();
+
+    const done = firstValueFrom(service.setAccountEmail('g/1?x', 'ana@example.com'), {
+      defaultValue: undefined,
+    });
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/account-email`);
+    expect(req.request.method).toBe('PUT');
+    expect(req.request.body).toEqual({ email: 'ana@example.com' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+
+    expect(await done).toBeNull();
+  });
+
+  it('reads the state of every month of the guest', async () => {
+    const { service, http } = setup();
+    const months = [{ period: '2026-10', status: 'PAID' }];
+
+    const answer = firstValueFrom(service.accountStatus('g/1?x'));
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/account-status`);
+    expect(req.request.method).toBe('GET');
+    req.flush(months);
+
+    expect(await answer).toEqual(months);
+  });
 });

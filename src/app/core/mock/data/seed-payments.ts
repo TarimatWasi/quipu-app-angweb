@@ -191,8 +191,23 @@ function stayPayments(): SeedPayment[] {
   ];
 }
 
+/** A3.2: Carmen sent this month two days ago (under review); Julia paid every month. */
+function detailPayments(): SeedPayment[] {
+  const carmen = { id: CONTRACT_IDS.reviewing, day: 5, amount: 820 };
+  const julia = { id: CONTRACT_IDS.upToDate, day: 1, amount: 800 };
+  return [
+    ...[2, 1].map((ago, index) => monthly(15 + index, GUEST_IDS.reviewing, carmen, ago)),
+    {
+      ...monthly(17, GUEST_IDS.reviewing, carmen, 0),
+      status: 'PENDING',
+      sentOn: addDays(today(), -2),
+    },
+    ...[3, 2, 1, 0].map((ago, index) => monthly(18 + index, GUEST_IDS.upToDate, julia, ago)),
+  ];
+}
+
 export function seedPayments(): PaymentRecord[] {
-  return [...contractPayments(), ...stayPayments()].map(payment);
+  return [...contractPayments(), ...stayPayments(), ...detailPayments()].map(payment);
 }
 
 /** A refund of the surplus of an old payment of Luis (RN-39), so H1 and H4 show one. */

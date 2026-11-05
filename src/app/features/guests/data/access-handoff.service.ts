@@ -21,6 +21,12 @@ export interface AccessHandoff {
 }
 
 /**
+ * The navigation state A3.7 sends to the guest's page so it opens «Generar otro acceso» (A3.4):
+ * a flag of the navigation, never in the address.
+ */
+export const GENERATE_ACCESS_STATE = 'generateAccess';
+
+/**
  * Hands an access from the screen that generated it to A3.7 (FE-ANG-SEC-02). It never goes to the
  * address, the history state, localStorage, sessionStorage or a log: it is a plain field of a
  * singleton, and reading it empties it, so a reload or a second visit of A3.7 finds nothing.

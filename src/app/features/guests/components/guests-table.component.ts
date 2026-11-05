@@ -28,14 +28,14 @@ const COLUMNS: readonly { readonly key: SortKey; readonly label: string }[] = [
             @for (column of columns; track column.key) {
               <th scope="col" [attr.aria-sort]="ariaSort(column.key)">
                 <button
-                  class="sort"
+                  class="quipu-sort"
                   type="button"
                   [class.active]="sort().key === column.key"
                   (click)="sortBy.emit(column.key)"
                 >
                   {{ column.label }}
                   <svg
-                    class="arrow"
+                    class="quipu-sort-arrow"
                     [class.down]="sort().key === column.key && sort().direction === 'desc'"
                     aria-hidden="true"
                     width="16"
@@ -125,37 +125,13 @@ const COLUMNS: readonly { readonly key: SortKey; readonly label: string }[] = [
       }
     </ul>
   `,
-  // The table, the cards and the names are the kit's (styles.scss); here only what A3 adds.
+  // The table, its sortable headers, the cards and the names are the kit's (styles.scss); here only what A3 adds.
   styles: `
     :host {
       display: block;
     }
     table {
       min-width: 900px;
-    }
-    .sort {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.375rem;
-      padding: 0.25rem 0;
-      border: 0;
-      background: none;
-      color: var(--quipu-tinta-secundaria);
-      font: inherit;
-      cursor: pointer;
-    }
-    .sort.active {
-      color: var(--quipu-tinta);
-    }
-    .arrow {
-      flex: none;
-      transition: transform var(--quipu-duracion-hover) var(--quipu-ease);
-    }
-    .sort:not(.active) .arrow {
-      opacity: var(--quipu-opacidad-inactivo);
-    }
-    .arrow.down {
-      transform: rotate(180deg);
     }
     .detail {
       display: block;
@@ -194,11 +170,6 @@ const COLUMNS: readonly { readonly key: SortKey; readonly label: string }[] = [
     }
     .card-name {
       font-size: var(--quipu-texto-intro-size);
-    }
-    @media (prefers-reduced-motion: reduce) {
-      .arrow {
-        transition: none;
-      }
     }
   `,
 })

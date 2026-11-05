@@ -40,4 +40,19 @@ describe('EmptyStateComponent (P-12 vacío)', () => {
     expect(new Set(ids).size).toBe(2);
     expect(screen.getByRole('region', { name: 'Dos' })).toBeTruthy();
   });
+
+  it('puts a projected action under the text (A3.2 «No encontramos a este huésped.»)', async () => {
+    await render(
+      `<app-empty-state heading="No encontramos a este huésped.">
+        <a emptyAction href="/admin/guests">Volver a Huéspedes</a>
+      </app-empty-state>`,
+      { imports: [EmptyStateComponent] },
+    );
+
+    const region = screen.getByRole('region', { name: 'No encontramos a este huésped.' });
+    const link = screen.getByRole('link', { name: 'Volver a Huéspedes' });
+    expect(link.closest('.action')).not.toBeNull();
+    expect(region.contains(link)).toBe(true);
+    expect(region.querySelector('.text')?.textContent.trim()).toBe('');
+  });
 });

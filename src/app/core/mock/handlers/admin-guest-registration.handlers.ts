@@ -1,17 +1,15 @@
 import type { components } from '@core/api/bff.generated';
+import { accessGrant } from '../data/access-grants';
 import { payablePeriods } from '../data/account-views';
 import { findDemoUserByDocument } from '../data/demo-users';
 import { today } from '../data/mock-dates';
 import { ID_KIND } from '../data/mock-db';
 import type { DocumentType, GuestRecord, MockDb } from '../data/mock-db';
-import { UNSENT_EMAIL_MARK } from '../data/seed-administrators';
 import { invalid, MockFailure, notFound, ok, raise } from '../mock-reply';
 import type { MockRequest, MockRoute } from '../mock-types';
 
 type Schemas = components['schemas'];
 
-/** How long an access lasts (RN-32). */
-const ACCESS_MINUTES = 30;
 const DOCUMENT_TYPES = new Set<unknown>(['DNI', 'CE', 'PASSPORT']);
 const GUEST_TYPES = new Set<unknown>(['CONTRACT', 'TEMPORARY']);
 const ACCESS_MODES = new Set<unknown>(['LINK', 'TEMPORARY_PASSWORD']);
@@ -116,21 +114,6 @@ function checkEmail(db: MockDb, email: string | undefined): void {
   }
 }
 
-/** The first access of a new guest: made-up secrets, valid 30 minutes (RN-32). */
-function accessFor(guest: GuestRecord, input: GuestInput): Schemas['AccessGrant'] {
-  const expiresAt = new Date(Date.now() + ACCESS_MINUTES * 60_000).toISOString();
-  const email = input.contactEmail;
-  const emailSent = email !== undefined && !email.toLowerCase().includes(UNSENT_EMAIL_MARK);
-  if (input.accessMode === 'LINK') {
-    const activationUrl = `${globalThis.location.origin}/activate#token=demo-${guest.id.slice(-4)}`;
-    const shareMessage = `Hola, este es tu acceso a Quipu: ${activationUrl}\nÁbrelo en los próximos 30 minutos para elegir tu contraseña. Sirve una sola vez.`;
-    return { mode: 'LINK', activationUrl, expiresAt, emailSent, shareMessage };
-  }
-  const temporaryPassword = `demo-${guest.id.slice(-4)}`;
-  const shareMessage = `Hola, entra a Quipu con tu número de documento y esta clave temporal: ${temporaryPassword}\nVence en 30 minutos y sirve una sola vez; luego eliges tu contraseña.`;
-  return { mode: 'TEMPORARY_PASSWORD', temporaryPassword, expiresAt, emailSent, shareMessage };
-}
-
 /**
  * createGuest (RN-18, RN-31): a document already registered answers its guest (200) or, inactive,
  * a 409 GUEST_INACTIVE with its id; an administrator's document is GUEST_DOCUMENT_TAKEN; otherwise
@@ -174,7 +157,7 @@ function createGuest(db: MockDb, body: Record<string, unknown>) {
     deactivatedAt: null,
     documentCount: 0,
   };
-  const access = accessFor(guest, input);
+  const access = accessGrant(guest, input.accessMode, input.contactEmail);
   db.data.guests.push({ ...guest, accessExpiresAt: access.expiresAt });
   const created: Schemas['GuestCreated'] = {
     guest: { ...nonInactive(guest), name: null, status: 'PENDING_ACTIVATION' },

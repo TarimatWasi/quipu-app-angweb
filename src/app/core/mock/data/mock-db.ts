@@ -23,11 +23,14 @@ export interface GuestRecord {
   status: Schemas['GuestStatus'];
   readonly phone: string | null;
   readonly contactEmail: string | null;
-  readonly accountEmail: string | null;
+  accountEmail: string | null;
   readonly hasLoginAccess: boolean;
-  readonly accessExpiresAt: string | null;
+  accessExpiresAt: string | null;
   deactivatedAt: string | null;
   readonly documentCount: number;
+  /** Where the onboarding goes (RN-33); by default none for a guest without a name, else all. */
+  readonly onboardingProgress?: Schemas['OnboardingProgress'];
+  readonly emergencyContact?: Schemas['EmergencyContact'];
 }
 
 /** A stay without what is derived from its payment (`paymentStatus`, `paymentId`). */
