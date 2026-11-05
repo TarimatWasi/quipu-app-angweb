@@ -63,7 +63,7 @@ const ERROR_ID = 'deactivate-guest-error';
             Cancelar
           </button>
           <button
-            class="quipu-button quipu-button--danger"
+            class="quipu-button quipu-button--primary"
             type="button"
             cdkFocusInitial
             [disabled]="busy()"

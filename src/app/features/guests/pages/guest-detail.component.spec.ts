@@ -243,6 +243,12 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       ['Día de pago', '5 de cada mes'],
       ['Vigencia', '1 jul 2026 – 30 jun 2027'],
     ]);
+    const contractBadge = ui
+      .page()
+      .getByRole('region', { name: 'Contrato' })
+      .querySelector('app-status-badge');
+    expect(contractBadge?.classList.contains('tone-paid')).toBe(true);
+    expect(squash(contractBadge?.textContent)).toBe('Activo');
     expect(ui.page().queryByRole('link', { name: 'Ver contrato' })).toBeNull();
     expect(ui.page().queryByRole('region', { name: 'Su registro' })).toBeNull();
     expect(ui.more()).toEqual([
@@ -529,7 +535,10 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       ),
     ).toBeTruthy();
     ui.service.get.mockReturnValue(of(guestOf({ status: 'INACTIVE', contract: undefined })));
-    await ui.click(dialog.getByRole('button', { name: 'Desactivar huésped' }));
+    const confirm = dialog.getByRole('button', { name: 'Desactivar huésped' });
+    // On the canvas the confirmation is the green primary button.
+    expect(confirm.classList.contains('quipu-button--primary')).toBe(true);
+    await ui.click(confirm);
 
     expect(ui.service.deactivate).toHaveBeenCalledWith('g1');
     await vi.waitFor(() => {

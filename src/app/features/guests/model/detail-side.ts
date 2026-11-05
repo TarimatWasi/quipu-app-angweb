@@ -98,17 +98,37 @@ function validity(contract: Contract): string {
   return end === null ? `Desde ${start}` : `${start} – ${formatDate(end)}`;
 }
 
-export function contractFacts(contract: Contract): readonly DetailFact[] {
-  return [
-    fact(
-      'Ambiente',
-      `${ENVIRONMENT_TYPE_LABELS[contract.environmentType]} ${contract.environmentCode}`,
-    ),
-    fact('Estado', contract.status === 'ACTIVE' ? 'Activo' : 'Finalizado'),
-    fact('Cuota', formatMoney(contract.monthlyAmount)),
-    fact('Día de pago', `${String(contract.paymentDay)} de cada mes`),
-    fact('Vigencia', validity(contract), true),
-  ];
+/**
+ * «Contrato»: the facts before its state badge (Ambiente) and after it (Cuota, Día de pago,
+ * Vigencia). The badge goes in between, as in «Sus datos».
+ */
+export function contractFacts(contract: Contract): {
+  readonly before: readonly DetailFact[];
+  readonly after: readonly DetailFact[];
+} {
+  return {
+    before: [
+      fact(
+        'Ambiente',
+        `${ENVIRONMENT_TYPE_LABELS[contract.environmentType]} ${contract.environmentCode}`,
+      ),
+    ],
+    after: [
+      fact('Cuota', formatMoney(contract.monthlyAmount)),
+      fact('Día de pago', `${String(contract.paymentDay)} de cada mes`),
+      fact('Vigencia', validity(contract), true),
+    ],
+  };
+}
+
+/** The state of a contract as a badge: «Activo» in green, «Finalizado» in grey. */
+export function contractStatusBadge(contract: Contract): {
+  readonly label: string;
+  readonly tone: StatusTone;
+} {
+  return contract.status === 'ACTIVE'
+    ? { label: 'Activo', tone: 'paid' }
+    : { label: 'Finalizado', tone: 'unpaid' };
 }
 
 /** One step of the registration of the guest (P-25), in the order the guest takes them (RN-33). */

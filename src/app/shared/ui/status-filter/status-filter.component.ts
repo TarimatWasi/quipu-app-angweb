@@ -21,7 +21,7 @@ export class BarShareDirective {
 /**
  * P-05 Barra de estados and P-06 Filtro por estado: a bar split in proportion to how many items
  * each state has, and a tile per state with its figure in Fraunces (40 px, 30 on a phone) after
- * «Todos». A segment or a tile pressed filters by its state (`chosen` emits its key; «Todos»
+ * «Todos», on dark stone (Atrasado in dark red ink). A segment or a tile pressed filters by its state (`chosen` emits its key; «Todos»
  * emits null); the one in force goes in obsidian. The color of the bar is never the only cue:
  * every segment says its state and count to a screen reader, and the tiles say them in words.
  */
@@ -116,14 +116,14 @@ export class BarShareDirective {
       padding: var(--quipu-relleno-ficha);
       border: 0;
       border-radius: var(--quipu-radio);
-      background: var(--quipu-alpaca);
+      background: var(--quipu-piedra-oscura);
       color: var(--quipu-tinta);
       text-align: left;
       cursor: pointer;
       transition: background-color var(--quipu-duracion-hover) var(--quipu-ease-hover);
     }
     .tile:hover:not([aria-pressed='true']) {
-      background: var(--quipu-hover-fila);
+      background: var(--quipu-hover-cifra);
     }
     .label {
       font: var(--mat-sys-label-medium);
@@ -135,6 +135,7 @@ export class BarShareDirective {
       line-height: 1;
       font-variant-numeric: tabular-nums;
     }
+    .tile.tone-overdue .label,
     .tile.tone-overdue .figure {
       color: var(--quipu-estado-atrasado-texto);
     }

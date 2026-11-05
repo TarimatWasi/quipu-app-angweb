@@ -27,7 +27,6 @@ import type { DialogActionKind, MoreAction } from '../model/more-actions';
                 <button
                   class="quipu-button quipu-button--tertiary"
                   type="button"
-                  [class.danger]="action.kind === 'deactivate'"
                   [disabled]="busy()"
                   (click)="emit(action)"
                 >
@@ -68,9 +67,6 @@ import type { DialogActionKind, MoreAction } from '../model/more-actions';
       align-items: center;
       min-height: var(--quipu-toque);
       font: var(--mat-sys-label-large);
-    }
-    .danger {
-      color: var(--quipu-estado-atrasado-texto);
     }
     .hint {
       font: var(--mat-sys-body-small);

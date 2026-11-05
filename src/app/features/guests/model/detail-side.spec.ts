@@ -1,6 +1,7 @@
 import type { GuestDetail } from '@core/api/clients/admin-guests.service';
 import {
   contractFacts,
+  contractStatusBadge,
   contractTitle,
   dataFacts,
   dataNote,
@@ -113,13 +114,14 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
 
   it('words the contract in force and the last one', () => {
     expect(contractTitle(contractOf())).toBe('Contrato');
-    expect(plain(contractFacts(contractOf()))).toEqual([
-      ['Ambiente', 'Habitación 201'],
-      ['Estado', 'Activo'],
+    const facts = contractFacts(contractOf());
+    expect(plain(facts.before)).toEqual([['Ambiente', 'Habitación 201']]);
+    expect(plain(facts.after)).toEqual([
       ['Cuota', 'S/ 800.00'],
       ['Día de pago', '5 de cada mes'],
       ['Vigencia', '1 jul 2026 – 30 jun 2027'],
     ]);
+    expect(contractStatusBadge(contractOf())).toEqual({ label: 'Activo', tone: 'paid' });
     const ended = contractOf({
       status: 'TERMINATED',
       terminatedAt: '2026-10-15',
@@ -127,14 +129,12 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
       environmentCode: 'C3',
     });
     expect(contractTitle(ended)).toBe('Último contrato');
-    expect(plain(contractFacts(ended))).toEqual([
-      ['Ambiente', 'Cabaña C3'],
-      ['Estado', 'Finalizado'],
-      ['Cuota', 'S/ 800.00'],
-      ['Día de pago', '5 de cada mes'],
-      ['Vigencia', '1 jul 2026 – 15 oct 2026'],
-    ]);
-    expect(contractFacts(contractOf({ endDate: null })).at(-1)?.value).toBe('Desde 1 jul 2026');
+    expect(plain(contractFacts(ended).before)).toEqual([['Ambiente', 'Cabaña C3']]);
+    expect(contractFacts(ended).after.at(-1)?.value).toBe('1 jul 2026 – 15 oct 2026');
+    expect(contractStatusBadge(ended)).toEqual({ label: 'Finalizado', tone: 'unpaid' });
+    expect(contractFacts(contractOf({ endDate: null })).after.at(-1)?.value).toBe(
+      'Desde 1 jul 2026',
+    );
   });
 
   it('marks the steps of the registration taken so far', () => {

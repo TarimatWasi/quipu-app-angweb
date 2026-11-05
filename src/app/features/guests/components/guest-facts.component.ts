@@ -4,6 +4,7 @@ import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.compo
 import { StepListComponent } from '@shared/ui/step-list/step-list.component';
 import {
   contractFacts,
+  contractStatusBadge,
   contractTitle,
   dataFacts,
   dataNote,
@@ -53,7 +54,22 @@ import type { GuestDetail } from '../model/detail-side';
       <section class="block" aria-labelledby="contract-title">
         <h2 id="contract-title">{{ contractHeading() }}</h2>
         <div class="facts">
-          @for (fact of contractData(); track fact.label) {
+          @for (fact of contractData().before; track fact.label) {
+            <app-fact-tile
+              surface="stone"
+              [class.wide]="fact.wide"
+              [class.long]="fact.long"
+              [label]="fact.label"
+              [value]="fact.value"
+            />
+          }
+          <app-fact-tile surface="stone" class="badge" label="Estado">
+            <app-status-badge
+              [tone]="contractStatus(contract).tone"
+              [label]="contractStatus(contract).label"
+            />
+          </app-fact-tile>
+          @for (fact of contractData().after; track fact.label) {
             <app-fact-tile
               surface="stone"
               [class.wide]="fact.wide"
@@ -121,9 +137,10 @@ export class GuestFactsComponent {
     const contract = this.guest().contract;
     return contract ? contractTitle(contract) : '';
   });
+  protected readonly contractStatus = contractStatusBadge;
   protected readonly contractData = computed(() => {
     const contract = this.guest().contract;
-    return contract ? contractFacts(contract) : [];
+    return contract ? contractFacts(contract) : { before: [], after: [] };
   });
   /** Pending activation or in the onboarding: its registration is still under way. */
   protected readonly registering = computed(
