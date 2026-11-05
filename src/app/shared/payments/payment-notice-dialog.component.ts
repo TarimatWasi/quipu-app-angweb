@@ -1,14 +1,6 @@
 import { Component, inject } from '@angular/core';
-import { MatButton } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogActions,
-  MatDialogClose,
-  MatDialogContent,
-  MatDialogRef,
-  MatDialogTitle,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
+import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
 export interface PaymentNoticeAction {
   readonly label: string;
@@ -31,29 +23,37 @@ export const PAYMENT_NOTICE_TEXT_ID = 'payment-notice-text';
  */
 @Component({
   selector: 'app-payment-notice-dialog',
-  imports: [MatButton, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose],
+  imports: [DialogFrameComponent, MatDialogClose],
   template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <p [id]="textId">{{ data.message }}</p>
-    </mat-dialog-content>
-    <mat-dialog-actions>
-      @for (action of data.actions; track action.value; let first = $first) {
-        @if (first) {
-          <button mat-flat-button type="button" [mat-dialog-close]="action.value" cdkFocusInitial>
-            {{ action.label }}
-          </button>
-        } @else {
-          <button mat-button type="button" [mat-dialog-close]="action.value">
-            {{ action.label }}
-          </button>
+    <app-dialog-frame [heading]="data.title">
+      <p class="text" [id]="textId">{{ data.message }}</p>
+      <ng-container dialogActions>
+        @for (action of data.actions; track action.value; let first = $first) {
+          @if (first) {
+            <button
+              class="quipu-button quipu-button--primary"
+              type="button"
+              cdkFocusInitial
+              [mat-dialog-close]="action.value"
+            >
+              {{ action.label }}
+            </button>
+          } @else {
+            <button
+              class="quipu-button quipu-button--tertiary"
+              type="button"
+              [mat-dialog-close]="action.value"
+            >
+              {{ action.label }}
+            </button>
+          }
         }
-      }
-    </mat-dialog-actions>
+      </ng-container>
+    </app-dialog-frame>
   `,
   styles: `
-    mat-dialog-actions {
-      gap: 0.5rem;
+    .text {
+      margin: 0;
     }
   `,
 })

@@ -495,6 +495,14 @@ fieldset.quipu-field > legend {
   font: var(--mat-sys-body-large);
 }
 
+// Un texto de varias líneas (el motivo de A5.2): crece con sus filas en vez de la altura del control.
+.quipu-input--multiline {
+  height: auto;
+  min-height: var(--quipu-alto-control);
+  padding-block: 0.75rem;
+  resize: vertical;
+}
+
 // Un filtro de lista (A3) va sobre la piedra de la página, no sobre papel: mismo borde y medida.
 .quipu-input--filter {
   background-color: var(--quipu-piedra);

@@ -33,9 +33,14 @@ for (const { screen, scenario, name } of captures) {
     }
     await waitUntilStable(page, screen.readiness ?? 'content');
     ensureOn(page, screen.path);
+    if (screen.open !== undefined) {
+      await page.getByRole('button', { name: screen.open, exact: true }).first().click();
+      await page.getByRole('dialog').waitFor();
+    }
     await page.screenshot({
       path: `${SCREENSHOT_DIR}/${name}__${String(width)}.png`,
-      fullPage: true,
+      // A dialog is captured over the screen as it is seen, not over the whole page.
+      fullPage: screen.open === undefined,
       animations: 'disabled',
       caret: 'hide',
       style: CAPTURE_STYLE,

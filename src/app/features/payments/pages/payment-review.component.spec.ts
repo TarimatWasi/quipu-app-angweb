@@ -246,6 +246,12 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await click(dialog().getByRole('button', { name: 'No se lee el voucher' }));
     const reason = dialog().getByLabelText<HTMLTextAreaElement>('Motivo');
     expect(reason.value).toBe('No se lee el voucher');
+    expect(
+      dialog().getByRole('button', { name: 'No se lee el voucher' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(dialog().getByText(/verá el motivo en su inicio, solo en la app/)).toBeTruthy();
+    expect(dialog().getByText(/20 de 500 caracteres/).id).toBe('reject-reason-help');
+    expect(reason.getAttribute('maxlength')).toBe('500');
     fireEvent.input(reason, { target: { value: 'No se lee el voucher, está borroso ' } });
     await settle(harness);
     await click(dialog().getByRole('button', { name: 'Rechazar pago' }));
@@ -324,13 +330,13 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await click(page().getByRole('button', { name: 'Agregar comprobante' }));
     expect(dialog().getByText('Faltan S/ 50.00 para cubrir lo que corresponde.')).toBeTruthy();
 
-    fireEvent.click(dialog().getByLabelText('Efectivo, sin voucher'));
+    fireEvent.click(dialog().getByRole('button', { name: 'Efectivo, sin voucher' }));
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
     expect(dialog().getByText('El monto debe ser mayor a 0')).toBeTruthy();
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '50' } });
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '50' } });
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
 
     const put = await expect1((req) => req.url.endsWith(`/bff/admin/payments/${ID}/proofs`));
     expect(put.request.method).toBe('PUT');
@@ -376,8 +382,8 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await settle(harness);
 
     expect(dialog().getByText('Archivo inválido — sube JPG, PNG o PDF de máx. 5MB')).toBeTruthy();
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '10' } });
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '10' } });
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
     http.expectNone((req) => req.method === 'PUT');
   });
 
@@ -399,10 +405,10 @@ describe('PaymentReviewComponent (A5.2)', () => {
   it('opens the shared dialog on 409 CONCURRENT_MODIFICATION and reloads on "Volver a cargar"', async () => {
     const { page, click, dialog, expect1, flush, harness } = await setup();
     await click(page().getByRole('button', { name: 'Agregar comprobante' }));
-    fireEvent.click(dialog().getByLabelText('Efectivo, sin voucher'));
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '5' } });
+    fireEvent.click(dialog().getByRole('button', { name: 'Efectivo, sin voucher' }));
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '5' } });
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
 
     const put = await expect1((req) => req.url.endsWith('/proofs'));
     await flush(put, { code: 'CONCURRENT_MODIFICATION', message: 'x' }, 409);

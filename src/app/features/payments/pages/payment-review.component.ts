@@ -271,7 +271,10 @@ export class PaymentReviewComponent {
     const payment = this.payment();
     if (!payment || !this.editable() || this.busy()) return;
     const visit = this.visit;
-    const ref = openRejectDialog(this.dialog, { again: payment.status === 'REJECTED' });
+    const ref = openRejectDialog(this.dialog, {
+      again: payment.status === 'REJECTED',
+      guest: payment.guestName?.split(' ')[0] ?? null,
+    });
     const reason = await firstValueFrom(ref.afterClosed());
     if (reason && visit === this.visit) {
       await this.resolve(this.payments.reject(payment.id, reason), 'REJECTED');
