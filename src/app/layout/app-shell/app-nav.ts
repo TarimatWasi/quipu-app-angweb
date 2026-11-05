@@ -36,13 +36,17 @@ const SECTIONS: Readonly<Record<Audience, readonly NavEntry[]>> = {
   ],
 };
 
-// A0.6 exists only as the forced change of the first login (its guard sends any other session to
-// /home), so «Cambiar contraseña» waits for its own route. A7 does not exist yet: while this is
-// null, «Administradores» is left out of the administrator's account menu.
-const ACCOUNT_LINKS: Readonly<Record<'changePassword' | 'administrators', string | null>> = {
-  changePassword: null,
-  administrators: null,
-};
+/**
+ * One entry of the account menu besides «Salir»: a link to a page, or an action of the bar.
+ * «Cambiar contraseña» (A0.6) is an action: it opens a dialog over the current page.
+ */
+export type AccountEntry =
+  | { readonly kind: 'link'; readonly label: string; readonly link: string }
+  | { readonly kind: 'changePassword'; readonly label: string };
+
+// A7 does not exist yet: while this is null, «Administradores» is left out of the administrator's
+// account menu.
+const ACCOUNT_LINKS: Readonly<Record<'administrators', string | null>> = { administrators: null };
 
 function audienceOf(session: Session): Audience | null {
   if (session.role === 'ADMIN') return 'ADMIN';
@@ -56,14 +60,11 @@ export function sectionsFor(session: Session | null): readonly NavEntry[] {
 }
 
 /** The account menu without «Salir», which is always last and is a button. */
-export function accountEntriesFor(session: Session | null): readonly NavEntry[] {
-  const changePassword: NavEntry = {
-    label: 'Cambiar contraseña',
-    link: ACCOUNT_LINKS.changePassword,
-  };
+export function accountEntriesFor(session: Session | null): readonly AccountEntry[] {
+  const changePassword: AccountEntry = { kind: 'changePassword', label: 'Cambiar contraseña' };
   const administrators = ACCOUNT_LINKS.administrators;
   return session?.role === 'ADMIN' && administrators !== null
-    ? [changePassword, { label: 'Administradores', link: administrators }]
+    ? [changePassword, { kind: 'link', label: 'Administradores', link: administrators }]
     : [changePassword];
 }
 

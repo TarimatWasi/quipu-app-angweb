@@ -94,17 +94,32 @@ export const AUTH_ROUTES: readonly MockRoute[] = [
   },
   {
     key: 'POST /bff/auth/change-password',
+    // A0.1 (the change is pending) sends only the new password. A0.6 (from the account menu) also
+    // sends the current one, which must be the demo password.
     handler: (req, ctx) => {
-      if (ctx.user() === null) {
+      const session = sessionOf(ctx);
+      if (session === null) {
         return failure(401, 'AUTH_NO_SESSION', 'No hay una sesión activa.');
       }
-      const newPassword = text(fieldsOf(req.body), 'newPassword');
+      const fields = fieldsOf(req.body);
+      const newPassword = text(fields, 'newPassword');
+      const pending = session.mustChangePassword;
+      if (!pending && fields['currentPassword'] !== DEMO_CLAVE) {
+        return failure(
+          403,
+          'AUTH_INVALID_CREDENTIALS',
+          'La contraseña actual no es correcta',
+          'currentPassword',
+        );
+      }
       checkNewPassword(newPassword);
       if (newPassword === DEMO_CLAVE) {
         return failure(
           400,
           'AUTH_PASSWORD_UNCHANGED',
-          'Elige una contraseña distinta de la temporal',
+          pending
+            ? 'Elige una contraseña distinta de la temporal'
+            : 'Elige una contraseña distinta de la actual',
           'newPassword',
         );
       }
