@@ -96,24 +96,41 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       }
     </ul>
   `,
+  // The canvas «Administradores»: rows on alpaca separated by 3 px of the page's stone, the header
+  // row on dark stone; on a phone, alpaca cards 3 px apart. No line of grey.
   styles: `
     :host {
       display: block;
     }
+    .wide {
+      overflow-x: auto;
+      border-radius: var(--quipu-radio);
+    }
     table {
       width: 100%;
+      min-width: 860px;
       border-collapse: collapse;
+      background: var(--quipu-alpaca);
     }
     th,
     td {
-      padding: 0.875rem 0.75rem;
-      border-bottom: var(--quipu-borde-ancho) solid var(--quipu-borde-suave);
+      padding: 14px 20px;
       text-align: left;
       vertical-align: middle;
     }
+    thead tr {
+      background: var(--quipu-piedra-oscura);
+    }
     thead th {
-      font: var(--mat-sys-label-medium);
-      color: var(--quipu-tinta-secundaria);
+      font-size: 15px;
+      font-weight: var(--quipu-peso-fuerte);
+      color: var(--quipu-tinta);
+    }
+    tbody tr {
+      border-top: 3px solid var(--quipu-piedra);
+    }
+    tbody tr:hover {
+      background: var(--quipu-hover-fila);
     }
     tbody th {
       font-weight: normal;
@@ -145,6 +162,8 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       font: var(--mat-sys-label-medium);
     }
     .cards {
+      display: grid;
+      gap: 3px;
       margin: 0;
       padding: 0;
       list-style: none;
@@ -152,8 +171,9 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     .card {
       display: grid;
       gap: 0.5rem;
-      padding: 1rem 0;
-      border-bottom: var(--quipu-borde-ancho) solid var(--quipu-borde-suave);
+      padding: 14px 16px;
+      border-radius: var(--quipu-radio);
+      background: var(--quipu-alpaca);
     }
     .card p {
       margin: 0;
@@ -179,7 +199,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
         display: none;
       }
       .narrow {
-        display: block;
+        display: grid;
       }
     }
   `,

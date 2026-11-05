@@ -37,7 +37,7 @@
           <p id="new-administrator-help" class="quipu-field-help">{{ newHelp() }}</p>
         </div>
       </div>
-      <p class="count">{{ countText() }}</p>
+      <p #countLine class="count" tabindex="-1">{{ countText() }}</p>
       <app-administrators-list [rows]="rows()" (act)="change($event)" />
     </section>
 

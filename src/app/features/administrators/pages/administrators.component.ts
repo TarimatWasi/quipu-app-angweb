@@ -1,4 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import {
+  afterRenderEffect,
+  Component,
+  computed,
+  ElementRef,
+  inject,
+  signal,
+  viewChild,
+} from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
@@ -56,6 +64,9 @@ export class AdministratorsComponent {
 
   protected readonly list = this.administrators.list();
   private readonly retried = signal(false);
+  /** Set by a creation: once the list is read again, the focus may have to leave «Nuevo». */
+  private readonly checkFocus = signal(false);
+  private readonly countElement = viewChild<ElementRef<HTMLElement>>('countLine');
 
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly footer = FOOTER_TEXT;
@@ -82,6 +93,16 @@ export class AdministratorsComponent {
   protected readonly countText = computed(() => countLine(this.counts()));
   protected readonly full = computed(() => !hasRoom(this.counts()));
   protected readonly newHelp = computed(() => (this.full() ? FULL_HELP_TEXT : ROOM_HELP_TEXT));
+
+  constructor() {
+    // The creation that fills the 5th place disables «Nuevo administrador», where the dialog gave
+    // the focus back: it goes to the count instead, which says why.
+    afterRenderEffect(() => {
+      if (!this.checkFocus() || this.list.isLoading()) return;
+      this.checkFocus.set(false);
+      if (this.full()) this.countElement()?.nativeElement.focus();
+    });
+  }
 
   protected unsentText(email: string): string {
     return emailNotSentText(email);
@@ -127,6 +148,7 @@ export class AdministratorsComponent {
   /** The toast, or the yellow notice that stays when the link could not be emailed. */
   private created({ email, emailSent }: NewAdministratorResult): void {
     this.list.reload();
+    this.checkFocus.set(true);
     if (emailSent) {
       this.unsentEmail.set(null);
       this.toast.set(CREATED_TEXT);

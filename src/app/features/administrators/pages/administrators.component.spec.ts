@@ -261,10 +261,13 @@ describe('AdministratorsComponent (A7) changes', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  async function createOne(emailSent: boolean) {
+  async function createOne(emailSent: boolean, before: AdministratorSummary[] = FOUR) {
     const page = await setup();
-    await page.answerList(FOUR);
-    await page.click(within(page.root).getByRole('button', { name: 'Nuevo administrador' }));
+    await page.answerList(before);
+    // As a person does: the button has the focus, so the dialog gives it back there.
+    const opener = within(page.root).getByRole('button', { name: 'Nuevo administrador' });
+    opener.focus();
+    await page.click(opener);
     await page.type('Número de documento', '12345678');
     await page.type('Correo de su cuenta', 'otro@example.com');
     await page.type('Tu contraseña', 'Quipu2026');
@@ -281,9 +284,33 @@ describe('AdministratorsComponent (A7) changes', () => {
       currentPassword: 'Quipu2026',
     });
     post.flush({ id: 'a9', emailSent }, { status: 201, statusText: 'Created' });
-    await page.answerList([...FOUR, admin({ id: 'a9', name: null, email: 'otro@example.com' })]);
+    await page.answerList([...before, admin({ id: 'a9', name: null, email: 'otro@example.com' })]);
     return page;
   }
+
+  it('takes the focus to the count when the new one fills the 5th place and «Nuevo» turns disabled', async () => {
+    const { root } = await createOne(true, [ROSA, JULIO, PENDING, admin({ id: 'a5' }), CARMEN]);
+
+    const count = root.querySelector<HTMLElement>('.count');
+    expect(count?.textContent.trim()).toBe('6 administradores · 5 de 5 activos');
+    expect(
+      within(root).getByRole('button', { name: 'Nuevo administrador' }).hasAttribute('disabled'),
+    ).toBe(true);
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(count);
+    });
+    expect(count?.getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('leaves the focus on «Nuevo administrador» while there is still room', async () => {
+    const { root } = await createOne(true);
+
+    const button = within(root).getByRole('button', { name: 'Nuevo administrador' });
+    await vi.waitFor(() => {
+      expect(document.activeElement).toBe(button);
+    });
+    expect(button.hasAttribute('disabled')).toBe(false);
+  });
 
   it('creates, reads the list again and says so with a toast', async () => {
     const { root, toast } = await createOne(true);

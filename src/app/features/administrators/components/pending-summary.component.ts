@@ -2,7 +2,7 @@ import { Component, input } from '@angular/core';
 import type { PendingSummary } from '../model/administrator-texts';
 
 /**
- * A7 «Lo que toca ahora»: one card on alpaca with the figure in Fraunces, the key sentence in bold
+ * A7 «Lo que toca ahora»: one card on dark stone with the figure in Fraunces, the key sentence in bold
  * and what to do. With accounts not yet activated it says whose; otherwise, that nothing waits.
  */
 @Component({
@@ -27,9 +27,9 @@ import type { PendingSummary } from '../model/administrator-texts';
     .card {
       display: grid;
       gap: 0.5rem;
-      padding: 1.25rem 1.5rem;
+      padding: 28px 32px;
       border-radius: var(--quipu-radio);
-      background: var(--quipu-alpaca);
+      background: var(--quipu-piedra-oscura);
     }
     p {
       margin: 0;
@@ -50,7 +50,7 @@ import type { PendingSummary } from '../model/administrator-texts';
     }
     @media (max-width: 599.98px) {
       .card {
-        padding: 1rem;
+        padding: 20px 18px;
       }
       .figure {
         font-size: var(--quipu-cifra-ficha-movil);
