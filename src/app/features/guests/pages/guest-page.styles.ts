@@ -24,11 +24,6 @@ export const GUEST_PAGE_STYLES = `
   }
   h1 {
     margin: 0;
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 600;
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
   }
   .today {
     margin: 0;
