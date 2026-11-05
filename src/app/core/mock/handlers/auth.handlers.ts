@@ -6,6 +6,7 @@ import type { MockContext, MockRoute } from '../mock-types';
 type SessionInfo = components['schemas']['SessionInfo'];
 
 const MIN_PASSWORD_LENGTH = 8;
+const MAX_NAME_LENGTH = 100;
 
 function fieldsOf(body: unknown): Record<string, unknown> {
   return typeof body === 'object' && body !== null ? (body as Record<string, unknown>) : {};
@@ -28,6 +29,14 @@ function sessionOf(ctx: MockContext): SessionInfo | null {
 function checkNewPassword(newPassword: string): void {
   if (newPassword.length < MIN_PASSWORD_LENGTH) {
     raise(400, 'AUTH_WEAK_PASSWORD', 'Mínimo 8 caracteres', 'newPassword');
+  }
+}
+
+/** The name an administrator writes when activating the account (A0.5), checked like the BFF does. */
+function checkAdminName(name: unknown): void {
+  const trimmed = typeof name === 'string' ? name.trim() : '';
+  if (trimmed === '' || trimmed.length > MAX_NAME_LENGTH) {
+    raise(400, 'VALIDATION_ERROR', 'Escribe tu nombre completo', 'name');
   }
 }
 
@@ -96,12 +105,16 @@ export const AUTH_ROUTES: readonly MockRoute[] = [
     },
   },
   {
-    // The code «vencido» stands for an expired or used link; any other code is accepted.
+    // The code «vencido» stands for an expired or used link; any other code is accepted. A code
+    // that starts with «admin» is the link of an administrator without a name (A0.5): it needs one.
     key: 'POST /bff/auth/reset-password',
     handler: (req) => {
       const fields = fieldsOf(req.body);
       const code = text(fields, 'code');
       checkNewPassword(text(fields, 'newPassword'));
+      if (code.startsWith('admin')) {
+        checkAdminName(fields['name']);
+      }
       return code === 'vencido'
         ? failure(
             400,

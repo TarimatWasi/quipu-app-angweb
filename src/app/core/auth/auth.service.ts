@@ -176,10 +176,15 @@ export class AuthService {
       .pipe(timeout({ first: this.timing.timeoutMs }));
   }
 
-  /** RF-16. The person signs in afterwards: a reset does not start a session. */
-  resetPassword(code: string, newPassword: string): Observable<null> {
+  /**
+   * RF-16. The person signs in afterwards: a reset does not start a session. `name` is only for an
+   * administrator that activates the account another one created (A0.5, RF-22); the recovery of any
+   * other account leaves it out.
+   */
+  resetPassword(code: string, newPassword: string, name?: string): Observable<null> {
+    const body = name === undefined ? { code, newPassword } : { code, newPassword, name };
     return this.http
-      .post<null>(`${this.bffBaseUrl}/bff/auth/reset-password`, { code, newPassword })
+      .post<null>(`${this.bffBaseUrl}/bff/auth/reset-password`, body)
       .pipe(timeout({ first: this.timing.timeoutMs }));
   }
 

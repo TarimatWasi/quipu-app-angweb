@@ -219,6 +219,26 @@ describe('simulated session', () => {
       message: SOME_TEXT,
       code: 'AUTH_INVALID_OR_EXPIRED_CODE',
     });
+    // A0.5: the link of an administrator without a name needs one.
+    const noName = await mock.fail(
+      mock.send('POST', '/bff/auth/reset-password', {
+        code: 'admin-nuevo',
+        newPassword: 'nueva-clave-1',
+        name: '   ',
+      }),
+    );
+    expect(catalogOf(noName)).toEqual({
+      message: SOME_TEXT,
+      code: 'VALIDATION_ERROR',
+      field: 'name',
+    });
+    expect(
+      await mock.send('POST', '/bff/auth/reset-password', {
+        code: 'admin-nuevo',
+        newPassword: 'nueva-clave-1',
+        name: 'Carmen Rojas',
+      }),
+    ).toBeNull();
   });
 
   it('keeps the role across a reload of the page (a new MockBff)', async () => {

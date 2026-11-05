@@ -21,6 +21,15 @@ export const RESET_PASSWORD_ROUTES: Routes = [
   },
 ];
 
+/** A0.5: the link of the email that gives an administrator access (RF-22). */
+export const ACTIVATE_ADMIN_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./pages/activate-admin.component').then((m) => m.ActivateAdminComponent),
+  },
+];
+
 export const CHANGE_PASSWORD_ROUTES: Routes = [
   {
     path: '',

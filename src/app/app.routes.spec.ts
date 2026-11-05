@@ -146,6 +146,17 @@ describe('routes', () => {
     expect(text()).toContain('Este enlace no es válido');
   });
 
+  it('opens the activation of an administrator (A0.5) without a session and cleans the code', async () => {
+    const { harness, router, text } = await setup();
+
+    await harness.navigateByUrl('/activate-admin?code=abc-DEF_123');
+
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/activate-admin');
+    });
+    expect(text()).toContain('Activa tu cuenta de administrador');
+  });
+
   it('keeps a signed-in user away from the request page but not from the emailed link', async () => {
     const { harness, router, signIn } = await setup();
     await signIn();

@@ -238,6 +238,22 @@ describe('AuthService password recovery (RF-16)', () => {
     expect(service.session()).toBeNull();
   });
 
+  it('sends the name of an administrator that activates the account (A0.5)', async () => {
+    const { service, controller } = setup();
+
+    const done = firstValueFrom(service.resetPassword('el-codigo', 'Nueva12345', 'Carmen Rojas'));
+    const req = controller.expectOne(`${environment.bffBaseUrl}/bff/auth/reset-password`);
+    expect(req.request.body).toEqual({
+      code: 'el-codigo',
+      newPassword: 'Nueva12345',
+      name: 'Carmen Rojas',
+    });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+
+    expect(service.session()).toBeNull();
+  });
+
   it('lets the HTTP error through so the screen can map its code', async () => {
     const { service, controller } = setup();
 
