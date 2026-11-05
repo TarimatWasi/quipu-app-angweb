@@ -1,5 +1,13 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+} from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
@@ -103,6 +111,8 @@ export class NewGuestComponent {
   private readonly snackBar = inject(MatSnackBar);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  /** Set when the page goes away: a late answer then neither navigates nor opens a dialog. */
+  private destroyed = false;
 
   protected readonly guestTypes = GUEST_TYPE_OPTIONS;
   protected readonly documentTypes = DOCUMENT_TYPE_OPTIONS;
@@ -152,6 +162,12 @@ export class NewGuestComponent {
   protected readonly emailError = computed(() => firstError(this.guestForm.contactEmail));
   protected readonly saving = computed(() => this.guestForm().submitting());
 
+  constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.destroyed = true;
+    });
+  }
+
   protected chooseType(type: GuestType): void {
     this.model.update((model) => ({ ...model, type }));
   }
@@ -172,8 +188,9 @@ export class NewGuestComponent {
     try {
       answer = await firstValueFrom(this.guests.create(input));
     } catch (error: unknown) {
-      return this.failed(error, input);
+      return this.destroyed ? undefined : this.failed(error, input);
     }
+    if (this.destroyed) return undefined;
     if (answer.alreadyRegistered) {
       this.alreadyRegistered(answer);
     } else {

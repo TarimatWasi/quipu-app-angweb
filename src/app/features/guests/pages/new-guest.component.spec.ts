@@ -120,6 +120,7 @@ async function setup() {
     harness,
     router,
     service,
+    creates,
     reactivations,
     page,
     click,
@@ -469,5 +470,20 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
     await ui.click(debt.getByRole('button', { name: 'Registrar pago' }));
 
     expect(ui.router.url).toBe('/admin/payments/new?guestId=g9');
+  });
+
+  it('ignores a late answer once the administrator left the page', async () => {
+    const ui = await setup();
+    await ui.type('Número de documento', '70412233');
+    await ui.submit();
+    await ui.harness.navigateByUrl('/admin/guests');
+
+    ui.creates.next(CREATED);
+    ui.creates.complete();
+    await settle(ui.harness);
+
+    expect(ui.router.url).toBe('/admin/guests');
+    expect(TestBed.inject(AccessHandoffService).take('g/new')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
