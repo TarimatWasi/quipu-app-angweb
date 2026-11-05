@@ -1,0 +1,48 @@
+<app-page-header heading="Administradores" />
+
+@if (unsentEmail(); as email) {
+  <app-page-notice class="unsent" tone="info" [heading]="unsentHeading">{{
+    unsentText(email)
+  }}</app-page-notice>
+}
+
+@switch (view()) {
+  @case ('loading') {
+    <app-skeleton class="state" subject="Administradores" />
+  }
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
+  }
+  @case ('ready') {
+    <app-pending-summary class="pending" [summary]="summary()" />
+
+    <section class="all" aria-labelledby="all-administrators-title">
+      <div class="all-head">
+        <h2 id="all-administrators-title">Todos los administradores</h2>
+        <div class="new">
+          <button
+            class="quipu-button quipu-button--secondary"
+            type="button"
+            aria-describedby="new-administrator-help"
+            [disabled]="full()"
+            (click)="openNew()"
+          >
+            Nuevo administrador
+          </button>
+          <p id="new-administrator-help" class="quipu-field-help">{{ newHelp() }}</p>
+        </div>
+      </div>
+      <p class="count">{{ countText() }}</p>
+      <app-administrators-list [rows]="rows()" (act)="change($event)" />
+    </section>
+
+    <p class="footer">{{ footer }}</p>
+  }
+}
+
+<app-toast tone="success" [message]="toast()" (dismissed)="toast.set(null)" />

@@ -59,6 +59,14 @@ export const routes: Routes = [
         loadChildren: () => import('@features/guests/guests.routes').then((m) => m.GUESTS_ROUTES),
       },
       {
+        path: 'admin/administrators',
+        canActivate: [adminGuard],
+        loadChildren: () =>
+          import('@features/administrators/administrators.routes').then(
+            (m) => m.ADMINISTRATORS_ROUTES,
+          ),
+      },
+      {
         path: 'guest/payments',
         canActivate: [contractGuestGuard],
         loadChildren: () =>

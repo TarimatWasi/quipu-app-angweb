@@ -1,4 +1,5 @@
 import type { MockRoute } from '../mock-types';
+import { ADMIN_ADMINISTRATOR_ROUTES } from './admin-administrators.handlers';
 import { ADMIN_GUEST_ROUTES } from './admin-guests.handlers';
 import { ADMIN_PAYMENT_ROUTES } from './admin-payments.handlers';
 import { AUTH_ROUTES } from './auth.handlers';
@@ -12,5 +13,6 @@ export const MOCK_ROUTES: readonly MockRoute[] = [
   ...AUTH_ROUTES,
   ...ADMIN_PAYMENT_ROUTES,
   ...ADMIN_GUEST_ROUTES,
+  ...ADMIN_ADMINISTRATOR_ROUTES,
   ...GUEST_ROUTES,
 ];

@@ -563,6 +563,17 @@ a {
   color: var(--quipu-tinta);
 }
 
+// Peligro: cochinilla llena (alpaca sobre cochinilla 6.3:1) para la acción que quita algo, como
+// «Desactivar» en A7. Ocupa el lugar del principal: uno por zona.
+.quipu-button--danger {
+  background: var(--quipu-cochinilla);
+  color: var(--quipu-alpaca);
+}
+
+.quipu-button--danger:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--quipu-rojo-texto);
+}
+
 .quipu-button--row {
   min-height: var(--quipu-toque);
   padding-block: 2px;
@@ -589,6 +600,36 @@ a {
 
   .quipu-button:active:not(:disabled, [aria-disabled='true']) {
     transform: none;
+  }
+}
+
+// Control segmentado: una opción de pocas, botones pegados con aria-pressed (A7 «Tipo de
+// documento»). La elegida va en obsidiana; las otras en piedra oscura. Uso:
+// <div class="quipu-segmented" role="group"><button type="button" aria-pressed="true">…</button></div>
+.quipu-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+
+  button {
+    min-height: var(--quipu-toque);
+    padding: 0 var(--quipu-relleno-campo);
+    border: 0;
+    border-radius: var(--quipu-radio);
+    background: var(--quipu-piedra-oscura);
+    color: var(--quipu-tinta);
+    font: var(--mat-sys-label-large);
+    cursor: pointer;
+  }
+
+  button[aria-pressed='true'] {
+    background: var(--quipu-obsidiana);
+    color: var(--quipu-alpaca);
+  }
+
+  button:disabled {
+    opacity: var(--quipu-opacidad-inactivo);
+    cursor: not-allowed;
   }
 }
 

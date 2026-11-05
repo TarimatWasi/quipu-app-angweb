@@ -1,0 +1,56 @@
+// A7: only the layout of the page. Header, notices, skeleton, badges and buttons are the kit's.
+:host {
+  display: block;
+}
+
+.unsent,
+.state {
+  margin-top: 1.5rem;
+}
+
+.pending {
+  margin-top: 2rem;
+}
+
+.all {
+  margin-top: 2.5rem;
+}
+
+.all-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+h2 {
+  margin: 0;
+}
+
+.new {
+  display: grid;
+  gap: var(--quipu-espacio-campo);
+  justify-items: end;
+  text-align: right;
+}
+
+.count {
+  margin: 0.5rem 0 1rem;
+  color: var(--quipu-tinta-secundaria);
+  font-variant-numeric: tabular-nums;
+}
+
+.footer {
+  max-width: 72ch;
+  margin: 1.5rem 0 0;
+  color: var(--quipu-tinta-secundaria);
+}
+
+@media (max-width: 599.98px) {
+  .new {
+    width: 100%;
+    justify-items: stretch;
+    text-align: left;
+  }
+}

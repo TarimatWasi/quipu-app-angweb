@@ -110,6 +110,19 @@ export const SCREENS: readonly ScreenCapture[] = [
     readiness: 'skeleton',
   },
   {
+    id: 'a7-administradores',
+    path: '/admin/administrators',
+    role: 'admin',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'a7-administradores',
+    path: '/admin/administrators',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
     id: 'a3-5-estadia-nueva',
     path: `/admin/guests/${TEMPORARY_GUEST_ANA}/stays/new`,
     role: 'admin',

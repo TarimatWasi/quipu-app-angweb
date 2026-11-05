@@ -39,6 +39,13 @@ const KNOWN_TEXTS = new Map<string, string>([
     'PAYMENT_PERIOD_NOT_PAYABLE',
     'El contrato ya no cobra ese período; rechaza el comprobante indicando el motivo.',
   ],
+  // A7 (RF-22, TAR-127): the administrators. The dialogs word some of them for their context.
+  ['ACCOUNT_DOCUMENT_TAKEN', 'Ese documento ya pertenece a una cuenta'],
+  ['ACCOUNT_EMAIL_TAKEN', 'Ese correo ya está en uso por otra cuenta'],
+  ['ADMIN_LIMIT_REACHED', 'Ya hay 5 administradores activos, el máximo.'],
+  ['ADMIN_SELF_DEACTIVATION', 'No puedes desactivar tu propia cuenta.'],
+  ['LAST_ACTIVE_ADMIN', 'No puedes desactivar al último administrador activo.'],
+  ['ADMIN_NOT_FOUND', 'Ese administrador no existe.'],
   ['NETWORK_ERROR', 'No se pudo conectar con el servidor. Inténtalo de nuevo.'],
   ['TIMEOUT', 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'],
   ['UNEXPECTED_ERROR', 'Ocurrió un error inesperado. Inténtalo de nuevo.'],
