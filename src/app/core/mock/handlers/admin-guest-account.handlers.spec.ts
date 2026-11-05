@@ -42,21 +42,25 @@ describe('the actions of A3.2 in the simulated BFF', () => {
     expect((await mock.fail(months(mock, 'nadie'))).status).toBe(404);
   });
 
-  it('discounts the credit of a guest once even with a past contract', async () => {
+  it('lists the months of every contract and discounts the credit only once', async () => {
     const mock = await admin();
     const db = mock.bff.db;
     const current = db.contractOf(GUEST_IDS.reviewing);
     if (current === undefined) throw new Error('expected the contract of Carmen');
-    db.data.contracts.push({ ...current, id: 'old-contract', status: 'EXPIRED' });
-    db.credit(GUEST_IDS.reviewing).balance = 820;
+    // Two contracts of Diego without payments, one past and one in force, and S/ 1,000 of credit.
+    const base = { ...current, guestId: GUEST_IDS.noContract, monthlyAmount: 800 };
+    db.data.contracts.push(
+      { ...base, id: 'old', status: 'EXPIRED', startDate: '2020-01-01', endDate: '2020-02-29' },
+      { ...base, id: 'new', status: 'EXPIRED', startDate: '2020-03-01', endDate: '2020-03-31' },
+    );
+    db.credit(GUEST_IDS.noContract).balance = 1000;
 
-    const all = await months(mock, GUEST_IDS.reviewing);
+    const all = await months(mock, GUEST_IDS.noContract);
 
-    // Only the contract in force is charged, so its months come once and the credit once.
-    expect(all.map((item) => [item.contractId, item.status])).toEqual([
-      [current.id, 'PAID'],
-      [current.id, 'PAID'],
-      [current.id, 'UNDER_REVIEW'],
+    expect(all.map((item) => [item.contractId, item.period, item.creditApplied])).toEqual([
+      ['old', '2020-01', 800],
+      ['old', '2020-02', 200],
+      ['new', '2020-03', 0],
     ]);
   });
 
