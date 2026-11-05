@@ -130,8 +130,9 @@ html {
   --quipu-relleno-mostrar: 96px;
   --quipu-opacidad-inactivo: 0.6;
   --quipu-subrayado-offset: 4px;
-  // Un ícono junto a su texto (el check del aviso emergente de éxito, P-17): 10 px, en negrita.
+  // Un ícono junto a su texto (el check del aviso emergente de éxito, P-17): a 10 px.
   --quipu-espacio-icono: 10px;
+  // Peso de énfasis del kit: el texto en negrita de las clases globales y de los componentes.
   --quipu-peso-enfasis: 700;
   // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
   --quipu-titulo-tracking: -0.03em;
@@ -318,7 +319,7 @@ app-auth-shell h1 {
 
 a {
   color: var(--mat-sys-primary);
-  font-weight: 700;
+  font-weight: var(--quipu-peso-enfasis);
   text-decoration: underline;
   text-underline-offset: var(--quipu-subrayado-offset);
 }
@@ -475,7 +476,7 @@ a {
   background: transparent;
   color: var(--quipu-chilca);
   font: var(--mat-sys-body-medium);
-  font-weight: 700;
+  font-weight: var(--quipu-peso-enfasis);
   text-decoration: underline;
   text-underline-offset: var(--quipu-subrayado-offset);
   cursor: pointer;
