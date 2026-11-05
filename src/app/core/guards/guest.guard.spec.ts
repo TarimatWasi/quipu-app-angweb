@@ -5,6 +5,7 @@ import {
   ActivatedRouteSnapshot,
   CanActivateFn,
   provideRouter,
+  RedirectCommand,
   Router,
   RouterStateSnapshot,
 } from '@angular/router';
@@ -13,9 +14,11 @@ import { contractGuestGuard, temporaryGuestGuard } from './guest.guard';
 
 const ME_URL = `${environment.bffBaseUrl}/bff/auth/me`;
 
+const ASKED = '/guest/payments/new';
+
 const run = (guard: CanActivateFn) =>
   TestBed.runInInjectionContext(() =>
-    guard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+    guard({} as ActivatedRouteSnapshot, { url: ASKED } as RouterStateSnapshot),
   );
 
 const CONTRACT = { role: 'GUEST', guestType: 'CONTRACT', name: 'g', mustChangePassword: false };
@@ -37,7 +40,9 @@ describe('guest guards', () => {
   const answerMe = (body: object) => {
     TestBed.inject(HttpTestingController).expectOne(ME_URL).flush(body);
   };
-  const home = () => TestBed.inject(Router).createUrlTree(['/home']);
+  // A0.7: «Sin acceso» under the address that was asked for.
+  const noAccess = () =>
+    new RedirectCommand(TestBed.inject(Router).parseUrl('/no-access'), { browserUrl: ASKED });
 
   describe('contractGuestGuard (H3, H4)', () => {
     it('lets a guest with a contract through', async () => {
@@ -51,11 +56,11 @@ describe('guest guards', () => {
       ['a temporary guest', TEMPORARY],
       ['the administrator', ADMIN],
       ['a guest whose type is unknown', UNTYPED],
-    ])('sends %s to its own home', async (_, body) => {
+    ])('shows «Sin acceso» to %s and keeps the address', async (_, body) => {
       const result = run(contractGuestGuard);
       answerMe(body);
 
-      expect(await result).toEqual(home());
+      expect(await result).toEqual(noAccess());
     });
   });
 
@@ -71,11 +76,11 @@ describe('guest guards', () => {
       ['a guest with a contract', CONTRACT],
       ['the administrator', ADMIN],
       ['a guest whose type is unknown', UNTYPED],
-    ])('sends %s to its own home', async (_, body) => {
+    ])('shows «Sin acceso» to %s and keeps the address', async (_, body) => {
       const result = run(temporaryGuestGuard);
       answerMe(body);
 
-      expect(await result).toEqual(home());
+      expect(await result).toEqual(noAccess());
     });
   });
 

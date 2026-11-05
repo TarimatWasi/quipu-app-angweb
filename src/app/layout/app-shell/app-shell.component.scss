@@ -1,7 +1,7 @@
 // P-01. The bar and the content share the side margins: 48 px, 16 on a phone.
 $narrow: 'max-width: 47.99rem';
 $wide: 'min-width: 48rem';
-$side: clamp(1rem, 4vw, 3rem);
+$side: var(--quipu-contenido-relleno-lados);
 
 :host {
   display: flex;
@@ -257,7 +257,7 @@ $side: clamp(1rem, 4vw, 3rem);
 
 .content {
   flex: 1 0 auto;
-  padding: clamp(2rem, 6vw, 4.5rem) $side;
+  padding: var(--quipu-contenido-relleno-bloque) $side;
 }
 
 @media (#{$narrow}) {

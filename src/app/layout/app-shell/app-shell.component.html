@@ -116,7 +116,7 @@
         }
       </svg>
     </button>
-  } @else {
+  } @else if (session()) {
     <div class="solo">
       <span class="solo-name">{{ session()?.name }}</span>
       <button class="out" type="button" [disabled]="leaving()" (click)="leave()">Salir</button>

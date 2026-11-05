@@ -4,6 +4,7 @@ import { TestBed } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
   provideRouter,
+  RedirectCommand,
   Router,
   RouterStateSnapshot,
 } from '@angular/router';
@@ -12,9 +13,11 @@ import { adminGuard } from './admin.guard';
 
 const ME_URL = `${environment.bffBaseUrl}/bff/auth/me`;
 
+const ASKED = '/admin/payments/pay_1';
+
 const run = () =>
   TestBed.runInInjectionContext(() =>
-    adminGuard({} as ActivatedRouteSnapshot, {} as RouterStateSnapshot),
+    adminGuard({} as ActivatedRouteSnapshot, { url: ASKED } as RouterStateSnapshot),
   );
 
 describe('adminGuard', () => {
@@ -39,18 +42,22 @@ describe('adminGuard', () => {
     expect(await result).toBe(true);
   });
 
-  it('sends a guest with a contract to its own home', async () => {
+  // A0.7: «Sin acceso» under the address that was asked for.
+  const noAccess = () =>
+    new RedirectCommand(TestBed.inject(Router).parseUrl('/no-access'), { browserUrl: ASKED });
+
+  it('shows «Sin acceso» to a guest with a contract and keeps the address', async () => {
     const result = run();
     answerMe({ role: 'GUEST', guestType: 'CONTRACT', name: 'g', mustChangePassword: false });
 
-    expect(await result).toEqual(TestBed.inject(Router).createUrlTree(['/home']));
+    expect(await result).toEqual(noAccess());
   });
 
-  it('sends a temporary guest to its own home', async () => {
+  it('shows «Sin acceso» to a temporary guest and keeps the address', async () => {
     const result = run();
     answerMe({ role: 'GUEST', guestType: 'TEMPORARY', name: 't', mustChangePassword: false });
 
-    expect(await result).toEqual(TestBed.inject(Router).createUrlTree(['/home']));
+    expect(await result).toEqual(noAccess());
   });
 
   it('sends someone without a session to the login', async () => {

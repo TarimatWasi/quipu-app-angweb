@@ -3,8 +3,10 @@ import { adminGuard } from '@core/guards/admin.guard';
 import { anonymousGuard } from '@core/guards/anonymous.guard';
 import { authGuard } from '@core/guards/auth.guard';
 import { contractGuestGuard, temporaryGuestGuard } from '@core/guards/guest.guard';
+import { NO_ACCESS_PATH } from '@core/guards/no-access';
 import { passwordChangeGuard } from '@core/guards/password-change.guard';
-import { AppShellComponent } from '@layout/app-shell/app-shell.component';
+import { sessionRestoredGuard } from '@core/guards/session-restored.guard';
+import { AppShellComponent, NO_CURRENT_SECTION } from '@layout/app-shell/app-shell.component';
 
 export const routes: Routes = [
   {
@@ -68,7 +70,25 @@ export const routes: Routes = [
         loadChildren: () =>
           import('@features/my-account/my-account.routes').then((m) => m.TEMPORARY_PAYMENT_ROUTES),
       },
+      // A0.7 «Sin acceso»: only the role guards send here, keeping the address asked for.
+      {
+        path: NO_ACCESS_PATH,
+        loadChildren: () => import('@features/auth/auth.routes').then((m) => m.NO_ACCESS_ROUTES),
+      },
     ],
   },
-  { path: '**', redirectTo: 'login' },
+  // A0.7 «Página no encontrada»: in the same shell, with or without a session. It waits for the
+  // session of a reload to know which bar and button to show, and no section of the menu is marked.
+  {
+    path: '',
+    component: AppShellComponent,
+    canActivate: [sessionRestoredGuard],
+    data: { [NO_CURRENT_SECTION]: true },
+    children: [
+      {
+        path: '**',
+        loadChildren: () => import('@features/auth/auth.routes').then((m) => m.NOT_FOUND_ROUTES),
+      },
+    ],
+  },
 ];

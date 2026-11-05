@@ -46,3 +46,20 @@ export const CHANGE_PASSWORD_ROUTES: Routes = [
       import('./pages/change-password.component').then((m) => m.ChangePasswordComponent),
   },
 ];
+
+/** A0.7 «Página no encontrada»: any address that matches no page, with or without a session. */
+export const NOT_FOUND_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () => import('./pages/not-found.component').then((m) => m.NotFoundComponent),
+  },
+];
+
+/** A0.7 «Sin acceso»: where a role guard sends a session, under the address it asked for. */
+export const NO_ACCESS_ROUTES: Routes = [
+  {
+    path: '',
+    data: { reason: 'no-access' },
+    loadComponent: () => import('./pages/not-found.component').then((m) => m.NotFoundComponent),
+  },
+];
