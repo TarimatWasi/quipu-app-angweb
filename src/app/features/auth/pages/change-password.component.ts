@@ -1,13 +1,14 @@
-import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FieldTree, form, FormField, FormRoot } from '@angular/forms/signals';
+import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
+import { FieldTree, form, FormRoot } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
+import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 
 interface ChangePasswordModel {
@@ -17,7 +18,7 @@ interface ChangePasswordModel {
 /** A0.1 (RF-12): the first login with a temporary password must end here before anything else. */
 @Component({
   selector: 'app-change-password',
-  imports: [AuthShellComponent, FormRoot, FormField, MatButton],
+  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, MatButton],
   templateUrl: './change-password.component.html',
   styles: FORM_PAGE_STYLES,
 })
@@ -28,8 +29,6 @@ export class ChangePasswordComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly serverError = signal<string | null>(null);
-  /** «Mostrar» / «Ocultar» of the password field (decided 2026-11-01, TAR-218). */
-  protected readonly revealed = signal(false);
 
   private readonly model = signal<ChangePasswordModel>({ newPassword: '' });
 
@@ -47,8 +46,6 @@ export class ChangePasswordComponent {
       },
     },
   );
-
-  protected readonly newPasswordError = computed(() => firstError(this.changeForm.newPassword));
 
   /** Same as the home "Salir": closes the session in the BFF and goes back to the login. */
   protected readonly leaving = signal(false);

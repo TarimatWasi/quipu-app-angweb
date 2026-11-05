@@ -35,7 +35,8 @@ export const DIRECT_PAYMENT_STYLES = `
     border: 1px solid var(--mat-sys-outline);
     border-radius: 4px;
     font: inherit;
-    background: var(--mat-sys-surface);
+    /* Only the color: the shorthand would erase the P-07 arrow of the select (styles.scss). */
+    background-color: var(--mat-sys-surface);
     color: inherit;
   }
   .shortcuts {
