@@ -1,229 +1,152 @@
-<section class="page" aria-labelledby="review-title">
-  <header class="head">
-    <div>
-      <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
-      <h1 id="review-title">Revisar pago</h1>
-    </div>
-    @if (payment()) {
-      <p [class]="'badge status-' + payment()?.status">{{ statusLabel() }}</p>
-    }
-  </header>
+<app-page-header
+  heading="Revisar pago"
+  backLink="/admin/payments"
+  backTo="Pagos"
+  [backQuery]="backQuery"
+/>
 
-  @switch (state().kind) {
-    @case ('loading') {
-      <p class="muted" role="status">Cargando el pago…</p>
-    }
-    @case ('not-found') {
-      <div class="quipu-alert" role="alert">
-        <p>No encontramos el pago.</p>
-        <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
-      </div>
-    }
-    @case ('error') {
-      <div class="quipu-alert" role="alert">
-        <p>{{ loadError() }}</p>
-        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
-      </div>
-    }
+@switch (state().kind) {
+  @case ('loading') {
+    <app-skeleton class="state" shape="detail" subject="el pago" />
   }
+  @case ('not-found') {
+    <app-page-notice class="state" tone="error" heading="No encontramos el pago.">
+      <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
+    </app-page-notice>
+  }
+  @case ('error') {
+    <app-load-error class="state" [message]="loadErrorText" (retry)="retry()" />
+  }
+}
 
-  @if (payment(); as p) {
-    @if (outcome(); as done) {
-      <section class="outcome" aria-labelledby="payment-outcome">
-        <h2 id="payment-outcome" tabindex="-1">
-          {{ done === 'APPROVED' ? 'Pago aprobado' : 'Pago rechazado' }}
-        </h2>
-        @if (noneLeft()) {
-          <p role="status">No quedan pagos por revisar.</p>
-        }
-        <div class="actions">
-          @if (!noneLeft()) {
-            <button mat-flat-button type="button" [disabled]="busy()" (click)="reviewNext()">
-              Revisar el siguiente
-            </button>
-          }
-          <a mat-stroked-button routerLink="/admin/payments" [queryParams]="backQuery"
-            >Volver a Pagos</a
-          >
-        </div>
-      </section>
-    }
+@if (payment(); as p) {
+  <div class="layout">
+    <app-review-proofs
+      class="proofs"
+      [entries]="entries()"
+      [canAdd]="editable()"
+      [full]="atProofLimit()"
+      [maxProofs]="maxProofs"
+      [busy]="busy()"
+      (add)="addProof()"
+    />
 
-    @if (p.status === 'REJECTED') {
-      <div class="quipu-alert rejected">
-        <p class="strong">
-          Rechazado
-          @if (p.reviewedBy; as by) {
-            por {{ by.name }}
+    <div class="side">
+      @if (facts(); as f) {
+        <section aria-labelledby="review-paying-title">
+          <h2 id="review-paying-title">Lo que se está pagando</h2>
+          <div class="facts">
+            <app-fact-tile class="who" label="Huésped" surface="stone">
+              <a class="guest" [routerLink]="['/admin/guests', p.guestId]">
+                @if (f.name; as fullName) {
+                  {{ fullName }}
+                } @else {
+                  <span class="quipu-unnamed">Sin nombre aún</span>
+                }
+              </a>
+              <span class="detail">{{ f.document }} · {{ f.type }}</span>
+            </app-fact-tile>
+            <app-fact-tile label="Ambiente" surface="stone" [value]="f.environment" />
+            <app-fact-tile [label]="f.whatLabel" surface="stone" [value]="f.what" />
+            <app-fact-tile [label]="f.dueLabel" surface="stone" [value]="f.due" />
+          </div>
+          @if (f.creditNote; as note) {
+            <p class="note">{{ note }}</p>
           }
-          @if (p.reviewedAt; as at) {
-            el {{ formatDateTime(at) }}
-          }
-        </p>
-        @if (p.rejectionReason; as reason) {
-          <p>Motivo: {{ reason }}</p>
-        }
+        </section>
+      }
+
+      <div>
+        <app-review-amounts
+          [entries]="entries()"
+          [texts]="amounts()"
+          [invalidIds]="invalidIds()"
+          [editable]="editable()"
+          [busy]="busy()"
+          [declaredTotal]="declaredTotal()"
+          [verifiedTotal]="verifiedTotalText()"
+          (typed)="typed($event)"
+        />
         @if (balance(); as b) {
-          @if (b.kind === 'short') {
-            <p>Faltan {{ formatMoney(b.difference) }} para cubrir lo que corresponde.</p>
-          }
-        }
-      </div>
-    } @else if (p.status === 'APPROVED') {
-      <p class="info">
-        Aprobado
-        @if (p.reviewedBy; as by) {
-          por {{ by.name }}
-        }
-        @if (p.reviewedAt; as at) {
-          el {{ formatDateTime(at) }}
-        }
-      </p>
-    }
-
-    <section aria-labelledby="what-title">
-      <h2 id="what-title">Lo que se paga</h2>
-      <dl class="facts">
-        <div>
-          <dt>Huésped</dt>
-          <dd>
-            <a [routerLink]="['/admin/guests', p.guestId]">{{ p.guestName ?? 'Sin nombre aún' }}</a>
-          </dd>
-        </div>
-        <div>
-          <dt>Documento</dt>
-          <dd>{{ p.documentNumber }}</dd>
-        </div>
-        <div>
-          <dt>Ambiente</dt>
-          <dd>{{ p.environmentCode ?? '—' }}</dd>
-        </div>
-        <div>
-          <dt>{{ p.guestType === 'TEMPORARY' ? 'Estadía' : 'Período' }}</dt>
-          <dd>{{ period() }}</dd>
-        </div>
-        <div>
-          <dt>{{ p.guestType === 'TEMPORARY' ? 'Monto acordado' : 'Cuota del mes' }}</dt>
-          <dd>{{ formatMoney(p.expectedAmount) }}</dd>
-        </div>
-        @if (p.creditApplied > 0) {
-          <div>
-            <dt>Crédito a favor aplicado</dt>
-            <dd>{{ formatMoney(p.creditApplied) }}</dd>
+          <div class="balance" role="status">
+            <app-page-notice [tone]="b.tone" [heading]="b.heading">{{ b.text }}</app-page-notice>
           </div>
         }
-        <div>
-          <dt>Por cobrar</dt>
-          <dd>{{ formatMoney(p.amountDue) }}</dd>
-        </div>
-        <div>
-          <dt>Subido</dt>
-          <dd>{{ formatDateTime(p.submittedAt) }}</dd>
-        </div>
-      </dl>
-    </section>
-
-    <section aria-labelledby="proofs-title">
-      <h2 id="proofs-title">Comprobantes</h2>
-      <ol class="proofs">
-        @for (proof of p.proofs; track proof.id; let i = $index) {
-          <li class="proof">
-            <p class="strong">
-              {{ proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo' }}
-              @if (proof.method; as method) {
-                · {{ method }}
-              }
-            </p>
-            <p class="muted">
-              {{
-                proof.uploadedBy === 'ADMIN'
-                  ? 'Agregado por la administración'
-                  : 'Subido por el huésped'
-              }}
-              · {{ formatDateTime(proof.addedAt) }}
-            </p>
-            <p>Declarado: {{ formatMoney(proof.declaredAmount) }}</p>
-            @if (proof.kind === 'VOUCHER') {
-              @if (proof.fileUrl; as url) {
-                <a [href]="url" target="_blank" rel="noopener noreferrer">
-                  Descargar voucher<span class="cdk-visually-hidden"> {{ i + 1 }}</span>
-                  @if (proof.file; as file) {
-                    ({{ file.name }})
-                  }
-                </a>
-              } @else {
-                <p class="muted">El archivo del voucher no está disponible.</p>
-              }
-            }
-            @if (editable()) {
-              <label class="amount" [for]="'verified-' + i">
-                Monto verificado del comprobante {{ i + 1 }} (S/)
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  [id]="'verified-' + i"
-                  [value]="amounts()[proof.id] ?? ''"
-                  [attr.aria-invalid]="invalidIds().has(proof.id) ? 'true' : null"
-                  [attr.aria-describedby]="
-                    invalidIds().has(proof.id) ? 'verified-error-' + i : null
-                  "
-                  [disabled]="busy()"
-                  (input)="typed(proof.id, $event.target)"
-                />
-              </label>
-              @if (invalidIds().has(proof.id)) {
-                <p class="error" [id]="'verified-error-' + i">Revisa el monto</p>
-              }
-            } @else if (proof.verifiedAmount !== null) {
-              <p>Verificado: {{ formatMoney(proof.verifiedAmount) }}</p>
-            }
-          </li>
-        }
-      </ol>
-    </section>
-
-    <section aria-labelledby="amounts-title">
-      <h2 id="amounts-title">Montos</h2>
-      <dl class="facts">
-        <div>
-          <dt>Declarado</dt>
-          <dd>{{ formatMoney(declaredSum()) }}</dd>
-        </div>
-        <div>
-          <dt>Verificado</dt>
-          <dd>{{ formatMoney(verifiedSum()) }}</dd>
-        </div>
-      </dl>
-      @if (balance(); as b) {
-        <p [class]="'balance ' + b.kind" role="status">{{ balanceText() }}</p>
-      }
-    </section>
-
-    @if (actionError(); as message) {
-      <p id="payment-action-error" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
-    }
-
-    @if (editable()) {
-      <div class="actions decision">
-        <button mat-flat-button type="button" [disabled]="!canApprove()" (click)="approve()">
-          Aprobar
-        </button>
-        <button mat-stroked-button type="button" [disabled]="busy()" (click)="reject()">
-          {{ p.status === 'REJECTED' ? 'Rechazar de nuevo' : 'Rechazar' }}
-        </button>
-        <button
-          mat-stroked-button
-          type="button"
-          [disabled]="busy() || atProofLimit()"
-          [attr.aria-describedby]="atProofLimit() ? 'proof-limit' : null"
-          (click)="addProof()"
-        >
-          Agregar comprobante
-        </button>
       </div>
-      @if (atProofLimit()) {
-        <p id="proof-limit" class="muted">Hasta {{ maxProofs }} comprobantes por pago.</p>
-      }
-    }
-  }
-</section>
+
+      <section aria-labelledby="payment-decision-title">
+        <h2 id="payment-decision-title">{{ decisionTitle() }}</h2>
+
+        @if (p.status === 'REJECTED' && outcome() === null) {
+          <app-page-notice class="rejected" tone="error" [heading]="resolved()">
+            @if (p.rejectionReason; as reason) {
+              Motivo: {{ reason }}
+            }
+          </app-page-notice>
+        }
+
+        @if (actionError(); as message) {
+          <p id="payment-action-error" class="quipu-alert" role="alert" tabindex="-1">
+            {{ message }}
+          </p>
+        }
+
+        @if (outcome(); as done) {
+          <div class="outcome quipu-notice quipu-notice--success">
+            <h3 id="payment-outcome" tabindex="-1">
+              {{ done === 'APPROVED' ? 'Pago aprobado' : 'Pago rechazado' }}
+            </h3>
+            <p>{{ outcomeText() }}</p>
+            @if (noneLeft()) {
+              <p role="status">No quedan pagos por revisar.</p>
+            }
+            <div class="actions">
+              @if (!noneLeft()) {
+                <button
+                  class="quipu-button quipu-button--primary"
+                  type="button"
+                  [disabled]="busy()"
+                  (click)="reviewNext()"
+                >
+                  Revisar el siguiente
+                </button>
+              }
+              <a
+                class="quipu-button quipu-button--tertiary"
+                routerLink="/admin/payments"
+                [queryParams]="backQuery"
+                >Volver a Pagos</a
+              >
+            </div>
+          </div>
+        } @else if (editable()) {
+          <div class="actions">
+            <button
+              class="quipu-button quipu-button--primary"
+              type="button"
+              [disabled]="!canApprove()"
+              [attr.aria-describedby]="'payment-decision-help'"
+              (click)="approve()"
+            >
+              Aprobar pago
+            </button>
+            <button
+              class="quipu-button quipu-button--secondary"
+              type="button"
+              [disabled]="busy()"
+              (click)="reject()"
+            >
+              {{ p.status === 'REJECTED' ? 'Rechazar de nuevo' : 'Rechazar con motivo' }}
+            </button>
+          </div>
+          <p id="payment-decision-help" class="help">{{ help() }}</p>
+        } @else {
+          <div class="closed">
+            <app-status-badge tone="paid" label="Aprobado" />
+            <p>{{ resolved() }}</p>
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+}

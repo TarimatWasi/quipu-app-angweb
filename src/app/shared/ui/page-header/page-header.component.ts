@@ -12,7 +12,7 @@ import { formatLimaToday } from './lima-today';
   imports: [RouterLink],
   template: `
     @if (backLink(); as link) {
-      <a class="back" [routerLink]="link">
+      <a class="back" [routerLink]="link" [queryParams]="backQuery()">
         <svg
           aria-hidden="true"
           width="18"
@@ -80,6 +80,8 @@ export class PageHeaderComponent {
   readonly backLink = input<string | readonly unknown[] | null>(null);
   /** Name of the parent, as in «Volver a Huéspedes». */
   readonly backTo = input('');
+  /** The query of the back link, such as the view of a list to return to (`?vista=`). */
+  readonly backQuery = input<Readonly<Record<string, string>> | null>(null);
 
   protected readonly today = computed(() => formatLimaToday(this.date()));
 }

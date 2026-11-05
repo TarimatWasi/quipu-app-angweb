@@ -57,7 +57,11 @@
               "extractLicenses": false,
               "sourceMap": true,
               "outputPath": "dist/quipu-app-angweb-mock",
-              "browser": "src/main.mock.ts"
+              "browser": "src/main.mock.ts",
+              "assets": [
+                { "glob": "**/*", "input": "public" },
+                { "glob": "**/*", "input": "src/mock-assets", "output": "mock-assets" }
+              ]
             }
           },
           "defaultConfiguration": "production"

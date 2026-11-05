@@ -498,6 +498,29 @@ a {
   border: var(--quipu-borde-ancho-enfasis) solid var(--quipu-error);
 }
 
+// Monto en soles (A5.1, A5.2): el campo con «S/» delante, que no se lee aparte. Uso:
+// <span class="quipu-money"><span aria-hidden="true">S/</span><input class="quipu-input" inputmode="decimal"></span>
+.quipu-money {
+  position: relative;
+  display: block;
+
+  > span {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    font-weight: var(--quipu-peso-enfasis);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > .quipu-input,
+  > .quipu-input[aria-invalid='true'] {
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.25rem);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
 .quipu-field-error {
   margin: 0;
   font: var(--mat-sys-body-medium);
