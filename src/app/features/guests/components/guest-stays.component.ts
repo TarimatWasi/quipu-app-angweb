@@ -1,7 +1,6 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import type { StayRow } from '../model/stay-rows';
 
@@ -9,11 +8,11 @@ import type { StayRow } from '../model/stay-rows';
  * A3.2 «Estadías» of a temporary guest (RN-13): one card per stay, newest first, with its dates,
  * environment and nights, the agreed amount, the state of its single payment (RN-03) and what to
  * do with it, and «Corregir estadía» (A3.5). An active guest can take a new stay; an inactive one
- * keeps its history. «Cargar más estadías» asks the next page, which the page loads.
+ * keeps its history. The page reads the whole history, so what is owed is never left out.
  */
 @Component({
   selector: 'app-guest-stays',
-  imports: [EmptyStateComponent, LoadErrorComponent, RouterLink, StatusBadgeComponent],
+  imports: [EmptyStateComponent, RouterLink, StatusBadgeComponent],
   template: `
     <section class="section" aria-labelledby="stays-title">
       <div class="section-head">
@@ -57,22 +56,6 @@ import type { StayRow } from '../model/stay-rows';
         <app-empty-state heading="Aún no tiene estadías registradas." />
       }
 
-      @if (moreError()) {
-        <app-load-error
-          message="No se pudieron cargar más estadías."
-          [retrying]="loadingMore()"
-          (retry)="more.emit()"
-        />
-      } @else if (hasMore()) {
-        <button
-          class="quipu-button quipu-button--secondary more"
-          type="button"
-          [disabled]="loadingMore()"
-          (click)="more.emit()"
-        >
-          {{ loadingMore() ? 'Cargando…' : 'Cargar más estadías' }}
-        </button>
-      }
       <p class="note">De la más reciente a la más antigua. Cada estadía tiene un solo pago.</p>
     </section>
   `,
@@ -130,9 +113,6 @@ import type { StayRow } from '../model/stay-rows';
       align-items: center;
       min-height: var(--quipu-toque);
     }
-    .more {
-      justify-self: start;
-    }
     .note {
       font: var(--mat-sys-body-medium);
       color: var(--quipu-tinta-secundaria);
@@ -144,9 +124,4 @@ export class GuestStaysComponent {
   readonly rows = input.required<readonly StayRow[]>();
   /** Only an active guest takes a new stay (RN-35). */
   readonly canRegister = input.required<boolean>();
-  readonly hasMore = input(false);
-  readonly loadingMore = input(false);
-  readonly moreError = input(false);
-  /** «Cargar más estadías», or «Reintentar» after that page failed. */
-  readonly more = output();
 }

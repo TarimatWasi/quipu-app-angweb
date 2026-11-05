@@ -10,7 +10,6 @@ import type {
   GuestDetail,
   PeriodStatus,
   Stay,
-  StayPage,
 } from '@core/api/clients/admin-guests.service';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -60,6 +59,8 @@ interface Toast {
 }
 
 const LOAD_ERROR_TEXT = 'No se pudo cargar el huésped.';
+/** How often the panel looks at the clock again (minutes left of an access). */
+const CLOCK_MS = 15_000;
 
 function leftColumn(guest: GuestDetail, periods: readonly PeriodStatus[]): LeftColumn {
   if (guest.status === 'PENDING_ACTIVATION' || guest.status === 'ONBOARDING') return 'blocked';
@@ -110,9 +111,6 @@ export class GuestDetailComponent implements OnInit {
   protected readonly guest = signal<GuestDetail | null>(null);
   private readonly periods = signal<readonly PeriodStatus[]>([]);
   private readonly stays = signal<readonly Stay[]>([]);
-  protected readonly staysCursor = signal<string | null>(null);
-  protected readonly loadingMore = signal(false);
-  protected readonly moreError = signal(false);
   private readonly now = signal(new Date());
   /** Reactivated from this page: an expired access then says it expired while inactive. */
   private readonly reactivated = signal(false);
@@ -165,14 +163,22 @@ export class GuestDetailComponent implements OnInit {
   private currentId = '';
   // Moves with every load, so a late answer for a previous guest is ignored.
   private request = 0;
-  // Moves with every page of stays, so a late page of a previous load is ignored.
-  private staysRequest = 0;
   /**
    * A3.7 asked for «Generar otro acceso»: it opens once the guest is loaded. Read while the page is
    * created, when the navigation that brings it is still the current one.
    */
   private accessAsked =
     this.router.currentNavigation()?.extras.state?.[GENERATE_ACCESS_STATE] === true;
+
+  constructor() {
+    // The time left of an access follows the clock while the page is open.
+    const clock = setInterval(() => {
+      this.now.set(new Date());
+    }, CLOCK_MS);
+    this.destroyRef.onDestroy(() => {
+      clearInterval(clock);
+    });
+  }
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
@@ -205,39 +211,20 @@ export class GuestDetailComponent implements OnInit {
     }
   }
 
-  protected async moreStays(): Promise<void> {
-    const cursor = this.staysCursor();
-    if (cursor === null || this.loadingMore()) return;
-    const request = ++this.staysRequest;
-    this.loadingMore.set(true);
-    this.moreError.set(false);
-    try {
-      const page = await firstValueFrom(this.guests.stays(this.currentId, cursor));
-      if (request !== this.staysRequest) return;
-      this.stays.update((current) => [...current, ...page.content]);
-      this.staysCursor.set(page.nextCursor);
-    } catch {
-      if (request === this.staysRequest) this.moreError.set(true);
-    } finally {
-      if (request === this.staysRequest) this.loadingMore.set(false);
-    }
-  }
-
   /** Loads the guest and what its panel needs; `quiet` keeps the page on screen meanwhile. */
   private async load(id: string, quiet = false): Promise<void> {
     const request = ++this.request;
-    this.staysRequest++;
     this.currentId = id;
     if (!quiet) this.reset();
     try {
       const guest = await firstValueFrom(this.guests.get(id));
       const kind = chargesKind(guest);
-      const [periods, page] = await Promise.all([
+      const [periods, stays] = await Promise.all([
         firstValueFrom(kind === 'periods' ? this.guests.accountStatus(id) : of([])),
-        firstValueFrom(kind === 'stays' ? this.guests.stays(id) : of<StayPage | null>(null)),
+        firstValueFrom(kind === 'stays' ? this.guests.allStays(id) : of<Stay[]>([])),
       ]);
       if (request !== this.request) return;
-      this.show(guest, periods, page);
+      this.show(guest, periods, stays);
     } catch (error: unknown) {
       if (request !== this.request) return;
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
@@ -251,18 +238,14 @@ export class GuestDetailComponent implements OnInit {
     this.guest.set(null);
     this.periods.set([]);
     this.stays.set([]);
-    this.staysCursor.set(null);
     this.reactivated.set(false);
   }
 
-  private show(guest: GuestDetail, periods: readonly PeriodStatus[], page: StayPage | null): void {
+  private show(guest: GuestDetail, periods: readonly PeriodStatus[], stays: readonly Stay[]): void {
     this.now.set(new Date());
     this.guest.set(guest);
     this.periods.set(periods);
-    this.stays.set(page?.content ?? []);
-    this.staysCursor.set(page?.nextCursor ?? null);
-    this.loadingMore.set(false);
-    this.moreError.set(false);
+    this.stays.set(stays);
     this.state.set('ready');
     if (this.accessAsked) {
       this.accessAsked = false;

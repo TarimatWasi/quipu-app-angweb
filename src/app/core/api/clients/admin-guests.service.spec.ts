@@ -281,4 +281,19 @@ describe('AdminGuestsService (A3.2 and A3.5 stays and document)', () => {
 
     expect(await answer).toEqual(months);
   });
+
+  it('reads every stay walking the pages with the largest size', async () => {
+    const { service, http } = setup();
+
+    const all = firstValueFrom(service.allStays('g1'));
+    const first = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`);
+    expect(first.request.params.get('limit')).toBe('100');
+    expect(first.request.params.has('after')).toBe(false);
+    first.flush({ content: [{ id: 's1' }], nextCursor: 'c2' });
+    const second = http.expectOne((r) => r.url === `${BASE}/bff/admin/guests/g1/stays`);
+    expect(second.request.params.get('after')).toBe('c2');
+    second.flush({ content: [{ id: 's2' }], nextCursor: null });
+
+    expect(await all).toEqual([{ id: 's1' }, { id: 's2' }]);
+  });
 });

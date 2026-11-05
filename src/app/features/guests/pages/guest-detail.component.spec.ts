@@ -12,7 +12,6 @@ import type {
   GuestDetail,
   PeriodStatus,
   Stay,
-  StayPage,
 } from '@core/api/clients/admin-guests.service';
 import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import { GuestDetailComponent } from './guest-detail.component';
@@ -136,7 +135,7 @@ const GRANT: AccessGrant = {
 interface Answers {
   detail?: Observable<GuestDetail>;
   months?: PeriodStatus[];
-  stays?: StayPage;
+  stays?: Stay[];
   state?: Record<string, unknown>;
 }
 
@@ -151,9 +150,7 @@ function serviceOf(answers: Answers) {
     accountStatus: vi.fn<(id: string) => Observable<PeriodStatus[]>>(() =>
       of(answers.months ?? MONTHS),
     ),
-    stays: vi.fn<(id: string, after?: string) => Observable<StayPage>>(() =>
-      of(answers.stays ?? { content: [stayOf()], nextCursor: null }),
-    ),
+    allStays: vi.fn<(id: string) => Observable<Stay[]>>(() => of(answers.stays ?? [stayOf()])),
     deactivate: vi.fn<(id: string) => Observable<unknown>>(() => of(null)),
     reactivate: vi.fn<(id: string) => Observable<unknown>>(() =>
       of({ id: 'g1', status: 'ACTIVE' }),
@@ -220,7 +217,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       '/admin/guests',
     );
     expect(ui.service.accountStatus).toHaveBeenCalledWith('g1');
-    expect(ui.service.stays).not.toHaveBeenCalled();
+    expect(ui.service.allStays).not.toHaveBeenCalled();
     const now = within(ui.panel());
     expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('S/ 800.00');
     expect(now.getByText('por pagar')).toBeTruthy();
@@ -330,55 +327,49 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
     expect(ui.page().queryByRole('region', { name: 'Contrato' })).toBeNull();
   });
 
-  it('shows the stays of a temporary guest with their actions, and loads more', async () => {
+  it('shows every stay of a temporary guest with its actions, an old debt included', async () => {
     const ui = await setup({
       detail: of(guestOf({ type: 'TEMPORARY', contract: undefined })),
-      stays: {
-        content: [
-          stayOf(),
-          stayOf({
-            id: 's2',
-            startDate: '2026-09-01',
-            endDate: '2026-09-08',
-            paymentStatus: 'PAID',
-            paymentId: 'p2',
-          }),
-        ],
-        nextCursor: 'next',
-      },
+      stays: [
+        stayOf(),
+        stayOf({
+          id: 's2',
+          startDate: '2026-09-01',
+          endDate: '2026-09-08',
+          paymentStatus: 'PAID',
+          paymentId: 'p2',
+        }),
+        stayOf({
+          id: 's3',
+          startDate: '2026-08-01',
+          endDate: '2026-08-03',
+          paymentStatus: 'OVERDUE',
+          paymentId: null,
+          environmentCode: null,
+        }),
+      ],
     });
-    ui.service.stays.mockReturnValueOnce(
-      of({
-        content: [
-          stayOf({
-            id: 's3',
-            startDate: '2026-08-01',
-            endDate: '2026-08-03',
-            paymentStatus: 'OVERDUE',
-            paymentId: null,
-            environmentCode: null,
-          }),
-        ],
-        nextCursor: null,
-      }),
-    );
 
     expect(ui.service.accountStatus).not.toHaveBeenCalled();
+    expect(ui.service.allStays).toHaveBeenCalledWith('g1');
+    // The oldest stay, owed, comes before the payment under review.
     expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('S/ 480.00');
     expect(
-      within(ui.panel()).getByText('Estadía del 20 – 31 oct 2026: envió su pago.'),
+      within(ui.panel()).getByText(
+        'Estadía del 1 – 3 ago 2026: venció el 3 ago. Si te pagó en persona, regístralo como pago directo.',
+      ),
     ).toBeTruthy();
     const section = within(ui.page().getByRole('region', { name: 'Estadías' }));
     expect(section.getByRole('link', { name: 'Registrar estadía' }).getAttribute('href')).toBe(
       '/admin/guests/g1/stays/new',
     );
-    const cards = () =>
-      [...section.getByRole('list', { name: 'Estadías' }).querySelectorAll(':scope > li')].map(
-        (card) => words(card),
-      );
-    expect(cards()).toEqual([
+    const cards = [
+      ...section.getByRole('list', { name: 'Estadías' }).querySelectorAll(':scope > li'),
+    ].map((card) => words(card));
+    expect(cards).toEqual([
       '20 – 31 oct 2026 C1 · 11 noches S/ 480.00 Pendiente de revisión Revisar pago de la estadía del 20 – 31 oct 2026 Corregir estadía del 20 – 31 oct 2026',
       '1 – 8 sep 2026 C1 · 7 noches S/ 480.00 Pagado Ver pago de la estadía del 1 – 8 sep 2026 Corregir estadía del 1 – 8 sep 2026',
+      '1 – 3 ago 2026 Sin ambiente · 2 noches S/ 480.00 Atrasado Registrar pago de la estadía del 1 – 3 ago 2026 Corregir estadía del 1 – 3 ago 2026',
     ]);
     expect(
       linkReading(
@@ -389,14 +380,31 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
     expect(
       section.getByText('De la más reciente a la más antigua. Cada estadía tiene un solo pago.'),
     ).toBeTruthy();
+  });
 
-    await ui.click(section.getByRole('button', { name: 'Cargar más estadías' }));
-    expect(ui.service.stays).toHaveBeenLastCalledWith('g1', 'next');
-    expect(cards()).toHaveLength(3);
-    expect(cards()[2]).toBe(
-      '1 – 3 ago 2026 Sin ambiente · 2 noches S/ 480.00 Atrasado Registrar pago de la estadía del 1 – 3 ago 2026 Corregir estadía del 1 – 3 ago 2026',
-    );
-    expect(section.queryByRole('button', { name: 'Cargar más estadías' })).toBeNull();
+  it('follows the clock: an access that expires while the page is open turns «Vencido»', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const ui = await setup({
+        detail: of(
+          guestOf({
+            status: 'PENDING_ACTIVATION',
+            onboardingProgress: 'NOT_STARTED',
+            contract: undefined,
+            version: 1,
+            accessExpiresAt: new Date(Date.now() + 2 * 60_000).toISOString(),
+          }),
+        ),
+      });
+      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('2 min');
+
+      vi.advanceTimersByTime(3 * 60_000);
+      await ui.harness.fixture.whenStable();
+
+      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Vencido');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('blocks the payments of a guest pending activation and offers its access and document', async () => {
@@ -459,7 +467,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
 
     expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('2 de 4');
     expect(within(ui.panel()).queryByRole('button')).toBeNull();
-    expect(ui.service.stays).not.toHaveBeenCalled();
+    expect(ui.service.allStays).not.toHaveBeenCalled();
     expect(
       squash(ui.page().getByRole('region', { name: 'Estadías y pagos' }).textContent),
     ).toContain('Hasta que termine su registro no se le puede registrar una estadía ni pagos.');

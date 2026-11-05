@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY, expand, first, map, Observable } from 'rxjs';
+import { EMPTY, expand, first, map, Observable, reduce } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
@@ -104,6 +104,19 @@ export class AdminGuestsService {
       params = params.set('after', after);
     }
     return this.http.get<StayPage>(this.staysUrl(id), { params });
+  }
+
+  /**
+   * Every stay of a temporary guest, newest first, walking the pages with the largest size: what
+   * the guest owes is only known once the whole history is in (A3.2).
+   */
+  allStays(id: string): Observable<Stay[]> {
+    return this.stays(id, undefined, MAX_PAGE_SIZE).pipe(
+      expand((page) =>
+        page.nextCursor === null ? EMPTY : this.stays(id, page.nextCursor, MAX_PAGE_SIZE),
+      ),
+      reduce<StayPage, Stay[]>((all, page) => all.concat(page.content), []),
+    );
   }
 
   /**

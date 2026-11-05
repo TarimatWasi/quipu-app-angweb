@@ -32,10 +32,6 @@
               [guestId]="v.guest.id"
               [rows]="stayRows()"
               [canRegister]="v.guest.status === 'ACTIVE'"
-              [hasMore]="staysCursor() !== null"
-              [loadingMore]="loadingMore()"
-              [moreError]="moreError()"
-              (more)="moreStays()"
             />
           }
           @case ('blocked') {
