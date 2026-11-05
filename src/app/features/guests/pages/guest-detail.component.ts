@@ -161,6 +161,7 @@ export class GuestDetailComponent implements OnInit {
   });
 
   private currentId = '';
+  private destroyed = false;
   private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
   // Moves with every load, so a late answer for a previous guest is ignored.
   private request = 0;
@@ -178,6 +179,10 @@ export class GuestDetailComponent implements OnInit {
     }, CLOCK_MS);
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
+      // Leaving the screen: no late answer may load, open a dialog or navigate any more.
+      this.destroyed = true;
+      this.request++;
+      this.closeDialogs();
     });
   }
 
@@ -259,11 +264,12 @@ export class GuestDetailComponent implements OnInit {
   }
 
   /**
-   * Whether the page still shows `id`. An action of a guest left behind answers late: its answer
-   * must neither reload that guest under the address of the new one nor open its dialogs.
+   * Whether the page is still open and still shows `id`. An action of a guest left behind answers
+   * late: its answer must neither reload that guest under the address of another one nor open its
+   * dialogs or navigate.
    */
   private showing(id: string): boolean {
-    return id === this.currentId;
+    return !this.destroyed && id === this.currentId;
   }
 
   /** Keeps a dialog of this guest, so it closes when the page moves to another one. */

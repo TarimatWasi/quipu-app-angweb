@@ -351,6 +351,29 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       expect(ui.page().getByRole('heading', { level: 1, name: 'Ana Torres' })).toBeTruthy();
     });
 
+    it('opens nothing over another screen when a late reactivation is refused', async () => {
+      const reactivation = new Subject<unknown>();
+      const ui = await setup({
+        detail: of(guestOf({ status: 'INACTIVE', contract: undefined })),
+        months: [],
+      });
+      ui.service.reactivate.mockReturnValueOnce(reactivation);
+      await ui.click(within(ui.panel()).getByRole('button', { name: 'Reactivar huésped' }));
+      await ui.router.navigateByUrl('/admin/guests');
+      await ui.harness.fixture.whenStable();
+      ui.service.get.mockClear();
+
+      reactivation.error(
+        httpError(409, { code: 'GUEST_HAS_PENDING_DEBT', periods: ['2026-10'], debts: [] }),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await ui.harness.fixture.whenStable();
+
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+      expect(ui.service.get).not.toHaveBeenCalled();
+      expect(ui.router.url).toBe('/admin/guests');
+    });
+
     it('ignores a dialog of the previous guest that closes after leaving it', async () => {
       const ui = await setup({ detail: of(guestOf({ contract: undefined })), months: [] });
       const deactivation = new Subject<unknown>();
