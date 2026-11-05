@@ -299,14 +299,17 @@ describe('routes', () => {
     });
   });
 
-  it('shows «Sin acceso» to a guest who opens the guests of the administrator', async () => {
-    const { harness, signIn, address, heading } = await setup();
+  it('shows «Sin acceso» to a temporary guest who opens the guests of the administrator', async () => {
+    const { harness, signIn, address, heading, text, action } = await setup();
     await signIn(false, 'GUEST', 'TEMPORARY');
 
     await harness.navigateByUrl('/admin/guests/g1/stays/new');
 
     expect(address()).toBe('/admin/guests/g1/stays/new');
     expect(heading()).toBe('Esta página no es para tu cuenta');
+    expect(text()).toContain('Desde tu cuenta puedes ver tu estado de pago y tus datos.');
+    expect(text()).not.toContain('contrato');
+    expect(action()?.textContent.trim()).toBe('Ir a mi estado de pago');
     TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
   });
 

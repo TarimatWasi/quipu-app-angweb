@@ -65,6 +65,12 @@ export const SCREENS: readonly ScreenCapture[] = [
   },
   // «Sin acceso» keeps the address that was asked for: the capture checks it stays there.
   { id: 'a0-7-sin-acceso', path: '/admin/payments', role: 'contract-guest', scenarios: ['normal'] },
+  {
+    id: 'a0-7-sin-acceso-temporal',
+    path: '/admin/payments',
+    role: 'temporary-guest',
+    scenarios: ['normal'],
+  },
   { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['normal'] },
   { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest', scenarios: ['normal'] },
   { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest', scenarios: ['normal'] },

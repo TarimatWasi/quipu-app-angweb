@@ -10,6 +10,13 @@ const NOT_FOUND_TEXT =
 // SEG-07: it says what the guest's own account has, never what is behind the address.
 const GUEST_NO_ACCESS_TEXT =
   'Desde tu cuenta puedes ver tu estado de cuenta, tu contrato, tus pagos y tus datos.';
+// The temporary guest has no contract: its account is the payment status and its data.
+const TEMPORARY_NO_ACCESS_TEXT = 'Desde tu cuenta puedes ver tu estado de pago y tus datos.';
+
+function noAccessTextFor(session: Session | null): string {
+  if (session?.role !== 'GUEST') return NOT_FOUND_TEXT;
+  return session.guestType === 'TEMPORARY' ? TEMPORARY_NO_ACCESS_TEXT : GUEST_NO_ACCESS_TEXT;
+}
 
 interface Texts {
   readonly eyebrow: string;
@@ -27,7 +34,7 @@ function textsFor(reason: NotFoundReason, session: Session | null): Texts {
     return {
       eyebrow: 'Sin acceso',
       title: 'Esta página no es para tu cuenta',
-      text: session?.role === 'GUEST' ? GUEST_NO_ACCESS_TEXT : NOT_FOUND_TEXT,
+      text: noAccessTextFor(session),
     };
   }
   return {
@@ -39,8 +46,9 @@ function textsFor(reason: NotFoundReason, session: Session | null): Texts {
 
 function actionFor(session: Session | null): Action {
   if (!session) return { label: 'Ir a iniciar sesión', link: '/login' };
-  return session.role === 'ADMIN'
-    ? { label: 'Ir al inicio', link: '/home' }
+  if (session.role === 'ADMIN') return { label: 'Ir al inicio', link: '/home' };
+  return session.guestType === 'TEMPORARY'
+    ? { label: 'Ir a mi estado de pago', link: '/home' }
     : { label: 'Ir a mi estado de cuenta', link: '/home' };
 }
 
@@ -61,16 +69,36 @@ function actionFor(session: Session | null): Action {
     }}</a>
   `,
   styles: `
+    /* The canvas: 120 px above and below on a wide screen, 48 px on a phone, counted from the
+       bar; the shell's main already gives part of it (and the 48 or 16 px of the sides). */
     :host {
       display: block;
+      max-width: var(--quipu-pagina-mensaje-ancho);
+      padding-block: calc(
+        var(--quipu-pagina-mensaje-relleno) - var(--quipu-contenido-relleno-bloque)
+      );
+    }
+    h1 {
+      margin: var(--quipu-espacio-antetitulo) 0 0;
     }
     .text {
       max-width: var(--quipu-texto-medida);
-      margin: 0 0 2rem;
-      font-size: var(--quipu-texto-intro-size);
+      margin: 1rem 0 0;
+      font-size: var(--mat-sys-title-medium-size);
+      line-height: var(--mat-sys-body-large-line-height);
       color: var(--quipu-tinta-secundaria);
     }
+    .action {
+      display: flex;
+      width: fit-content;
+      margin-top: 1.75rem;
+    }
     @media (max-width: 599.98px) {
+      :host {
+        padding-block: calc(
+          var(--quipu-pagina-mensaje-relleno-movil) - var(--quipu-contenido-relleno-bloque)
+        );
+      }
       .action {
         width: 100%;
       }

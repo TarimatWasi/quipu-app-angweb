@@ -149,8 +149,16 @@ html {
   --quipu-texto-intro-size: 1.0625rem;
   // Medida de un párrafo suelto de página (A0.7): unas 52 letras por línea.
   --quipu-texto-medida: 52ch;
-  // Antetítulo sobre el título de página (A0.7): Fraunces de 22 px.
-  --quipu-antetitulo-size: 1.375rem;
+  // Antetítulo sobre el título de página (A0.7): Fraunces de 20 px, a 8 px del h1.
+  --quipu-antetitulo-size: 1.25rem;
+  --quipu-espacio-antetitulo: 0.5rem;
+  // Relleno del main del shell (P-01): arriba y abajo, y a los lados (48 px, 16 en un teléfono).
+  --quipu-contenido-relleno-bloque: clamp(2rem, 6vw, 4.5rem);
+  --quipu-contenido-relleno-lados: clamp(1rem, 4vw, 3rem);
+  // Página de mensaje (A0.7): bloque de hasta 900 px, a 120 px de la barra (48 px en un teléfono).
+  --quipu-pagina-mensaje-ancho: 56.25rem;
+  --quipu-pagina-mensaje-relleno: 7.5rem;
+  --quipu-pagina-mensaje-relleno-movil: 3rem;
   // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
   --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
 
@@ -310,9 +318,10 @@ h2 {
   font: var(--mat-sys-title-large);
 }
 
-// Antetítulo: Fraunces en tinta secundaria sobre el h1, dice de qué trata la página (A0.7).
+// Antetítulo: Fraunces en tinta secundaria sobre el h1, dice de qué trata la página (A0.7). Sin
+// margen propio: el h1 que lo sigue pone el espacio (--quipu-espacio-antetitulo).
 .quipu-eyebrow {
-  margin: 0 0 0.5rem;
+  margin: 0;
   font-family: var(--mat-sys-headline-small-font);
   font-size: var(--quipu-antetitulo-size);
   font-weight: var(--mat-sys-headline-small-weight);

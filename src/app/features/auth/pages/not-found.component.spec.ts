@@ -20,6 +20,7 @@ const NOT_FOUND_TEXT =
   'Puede que el enlace esté mal escrito o que la página ya no exista. Lo que buscas está en las secciones de arriba.';
 const GUEST_NO_ACCESS_TEXT =
   'Desde tu cuenta puedes ver tu estado de cuenta, tu contrato, tus pagos y tus datos.';
+const TEMPORARY_NO_ACCESS_TEXT = 'Desde tu cuenta puedes ver tu estado de pago y tus datos.';
 
 async function setup(session: SessionAnswer | null, reason?: NotFoundReason) {
   TestBed.configureTestingModule({
@@ -78,15 +79,21 @@ describe('NotFoundComponent (A0.7)', () => {
       expect(ui.getByRole('link', { name: 'Ir al inicio' }).getAttribute('href')).toBe('/home');
     });
 
-    it.each([
-      ['a guest with a contract', CONTRACT],
-      ['a temporary guest', TEMPORARY],
-    ])('sends %s to its account statement', async (_, session) => {
-      const { ui } = await setup(session);
+    it('sends a guest with a contract to its account statement', async () => {
+      const { ui } = await setup(CONTRACT);
 
       const link = ui.getByRole('link', { name: 'Ir a mi estado de cuenta' });
       expect(link.getAttribute('href')).toBe('/home');
       expect(ui.queryByRole('link', { name: 'Ir al inicio' })).toBeNull();
+    });
+
+    it('sends a temporary guest, who has no contract, to its payment status', async () => {
+      const { ui } = await setup(TEMPORARY);
+
+      expect(ui.getAllByRole('link').map((link) => link.textContent.trim())).toEqual([
+        'Ir a mi estado de pago',
+      ]);
+      expect(ui.getByRole('link').getAttribute('href')).toBe('/home');
     });
 
     it('sends someone without a session to the login', async () => {
@@ -115,20 +122,23 @@ describe('NotFoundComponent (A0.7)', () => {
 
   describe('«Sin acceso»', () => {
     it.each([
-      ['a guest with a contract', CONTRACT],
-      ['a temporary guest', TEMPORARY],
-    ])('tells %s what its account has, without naming other sections', async (_, session) => {
-      const { root, ui } = await setup(session, 'no-access');
+      ['a guest with a contract', CONTRACT, GUEST_NO_ACCESS_TEXT, 'Ir a mi estado de cuenta'],
+      ['a temporary guest', TEMPORARY, TEMPORARY_NO_ACCESS_TEXT, 'Ir a mi estado de pago'],
+    ])(
+      'tells %s what its account has, without naming other sections',
+      async (_, session, text, label) => {
+        const { root, ui } = await setup(session, 'no-access');
 
-      expect(reading(root)).toEqual([
-        'Sin acceso',
-        'Esta página no es para tu cuenta',
-        GUEST_NO_ACCESS_TEXT,
-        'Ir a mi estado de cuenta',
-      ]);
-      expect(ui.getByRole('link').getAttribute('href')).toBe('/home');
-      expect(root.textContent).not.toMatch(/Pagos de|Huéspedes|Administra/);
-    });
+        expect(reading(root)).toEqual([
+          'Sin acceso',
+          'Esta página no es para tu cuenta',
+          text,
+          label,
+        ]);
+        expect(ui.getByRole('link').getAttribute('href')).toBe('/home');
+        expect(root.textContent).not.toMatch(/Pagos de|Huéspedes|Administra/);
+      },
+    );
 
     it('falls back to the text of «no existe» for the administrator', async () => {
       const { root, ui } = await setup(ADMIN, 'no-access');
