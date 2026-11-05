@@ -199,7 +199,7 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     const sent = ui.page().getByText('También se envió por correo a ana@example.com.');
     expect(sent.tagName).toBe('STRONG');
     expect(squash(sent.parentElement?.textContent)).toBe(
-      'También se envió por correo a ana@example.com.Si no le llega, compártelo por WhatsApp o copia el mensaje.',
+      'También se envió por correo a ana@example.com. Si no le llega, compártelo por WhatsApp o copia el mensaje.',
     );
   });
 
@@ -209,7 +209,7 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     const unsent = ui.page().getByText('No se pudo enviar el correo a ana@example.com.');
     expect(unsent.tagName).toBe('STRONG');
     expect(squash(unsent.parentElement?.textContent)).toBe(
-      'No se pudo enviar el correo a ana@example.com.Compártelo de otra forma: copia el mensaje y envíaselo.',
+      'No se pudo enviar el correo a ana@example.com. Compártelo de otra forma: copia el mensaje y envíaselo.',
     );
   });
 

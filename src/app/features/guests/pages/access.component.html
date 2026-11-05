@@ -68,7 +68,10 @@
       </section>
 
       @if (email; as notice) {
-        <app-page-notice tone="info" [heading]="notice.heading">{{ notice.text }}</app-page-notice>
+        <!-- One paragraph, the key sentence in bold inline, as «Tu sesión terminó.» of the login. -->
+        <app-page-notice tone="info"
+          ><strong>{{ notice.heading }}</strong> {{ notice.text }}</app-page-notice
+        >
       }
 
       @if (!expired() && texts; as words) {

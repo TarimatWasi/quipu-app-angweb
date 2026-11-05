@@ -170,6 +170,14 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
     expect(ui.page().getByLabelText('Número de documento').getAttribute('inputmode')).toBe(
       'numeric',
     );
+    // Only the document number is a short field (max. 320 px); phone and email take the form's width.
+    const short = (label: string) =>
+      ui.page().getByLabelText(label).closest('.quipu-field')?.classList.contains('narrow');
+    expect([short('Número de documento'), short('Teléfono'), short('Correo')]).toEqual([
+      true,
+      false,
+      false,
+    ]);
     expect(ui.facts()).toEqual([
       ['Documento', 'Falta el número'],
       ['Tipo', 'Con contrato'],
