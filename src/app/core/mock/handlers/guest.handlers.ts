@@ -1,6 +1,7 @@
 import type { components } from '@core/api/bff.generated';
 import {
   contractPeriods,
+  guestPeriods,
   creditLeft,
   creditOrigins,
   currentStay,
@@ -119,8 +120,8 @@ export const GUEST_ROUTES: readonly MockRoute[] = [
   {
     key: 'GET /bff/guest/account-status',
     handler: (_req, ctx) => {
-      const contract = ctx.db.contractOf(ctx.requireGuest('CONTRACT').guestId);
-      return ok(contract ? contractPeriods(ctx.db, contract).map(periodStatus) : []);
+      const { guestId } = ctx.requireGuest('CONTRACT');
+      return ok(guestPeriods(ctx.db, guestId).map(periodStatus));
     },
   },
   {

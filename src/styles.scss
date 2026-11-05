@@ -154,6 +154,12 @@ html {
   // el formulario hasta 680 px junto a un resumen de 320 px o más, y un campo corto de 320 px.
   --quipu-cifra-resumen: 1.875rem;
   --quipu-cifra-resumen-movil: 1.5rem;
+  // Un valor largo de un resumen (más de 18 caracteres, A3.2): 24 px (20 px en móvil).
+  --quipu-cifra-larga: 1.5rem;
+  --quipu-cifra-larga-movil: 1.25rem;
+  // Relleno de una ficha de dato o de filtro (P-11, P-06): 18/20/20 px, 14/16/16 px en móvil.
+  --quipu-relleno-ficha: 1.125rem 1.25rem 1.25rem;
+  --quipu-relleno-ficha-movil: 0.875rem 1rem 1rem;
   --quipu-columna-formulario: 42.5rem;
   --quipu-columna-resumen: 20rem;
   --quipu-campo-corto: 20rem;
@@ -700,6 +706,43 @@ a {
 
   tbody th {
     font-weight: normal;
+  }
+}
+
+// Cabecera ordenable de una tabla (A3, A3.2): un botón dentro del <th aria-sort>, con su flecha que
+// gira al invertir el orden. Uso: <button class="quipu-sort" [class.active]>…<svg class="quipu-sort-arrow">
+.quipu-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--quipu-tinta-secundaria);
+  font: inherit;
+  cursor: pointer;
+}
+
+.quipu-sort.active {
+  color: var(--quipu-tinta);
+}
+
+.quipu-sort-arrow {
+  flex: none;
+  transition: transform var(--quipu-duracion-hover) var(--quipu-ease);
+}
+
+.quipu-sort:not(.active) .quipu-sort-arrow {
+  opacity: var(--quipu-opacidad-inactivo);
+}
+
+.quipu-sort-arrow.down {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quipu-sort-arrow {
+    transition: none;
   }
 }
 

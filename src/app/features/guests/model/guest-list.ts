@@ -1,7 +1,6 @@
 import type { components, operations } from '@core/api/bff.generated';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
-import { documentText, GUEST_STATUS_BADGES, GUEST_TYPE_LABELS } from './guest-texts';
-import type { Tone } from './guest-texts';
+import { documentText, GUEST_STATUS_BADGES, GUEST_TYPE_LABELS, STATUS_TONES } from './guest-texts';
 import { accessText, environmentText } from './guest-list-texts';
 import type { AccessText, EnvironmentText } from './guest-list-texts';
 
@@ -144,13 +143,6 @@ export function nextSort(current: GuestSort, key: SortKey): GuestSort {
   if (current.key !== key) return { key, direction: 'asc' };
   return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
 }
-
-const STATUS_TONES: Readonly<Record<Tone, StatusTone>> = {
-  ok: 'paid',
-  wait: 'review',
-  none: 'unpaid',
-  bad: 'overdue',
-};
 
 /** One guest as the table and the cards of A3 show it. */
 export interface GuestRow {

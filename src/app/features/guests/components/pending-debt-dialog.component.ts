@@ -9,12 +9,15 @@ export interface PendingDebtData {
   /** The document the administrator typed, «DNI 70412233». */
   readonly document: string;
   readonly debt: PendingDebt;
+  /** The sentence under the title when the screen words it its own way (A3.2); A3.1's by default. */
+  readonly text?: string;
 }
 
 const TEXT_ID = 'pending-debt-text';
 
 /**
- * A3.1 «Primero salda su deuda» (RN-25, RN-35): the inactive guest owes, so it is not reactivated.
+ * A3.1 and A3.2 «Primero salda su deuda» (RN-25, RN-35): the inactive guest owes, so it is not
+ * reactivated.
  * It lists what is owed, oldest first, with the total; «Registrar pago» answers true and the page
  * opens the direct payment (A5.1) for that guest.
  */
@@ -66,7 +69,7 @@ export class PendingDebtDialogComponent {
   protected readonly data = inject<PendingDebtData>(MAT_DIALOG_DATA);
 
   protected readonly title = DEBT_TITLE;
-  protected readonly text = DEBT_TEXT;
+  protected readonly text = this.data.text ?? DEBT_TEXT;
   protected readonly textId = TEXT_ID;
 }
 

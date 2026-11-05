@@ -33,7 +33,8 @@ describe('admin guests in the simulated BFF', () => {
       status: 'ALL',
       limit: 100,
     });
-    expect(page.content).toHaveLength(9);
+    // The 9 of A3 and A3.1, and the 4 more of A3.2 (under review, up to date, no contract, lapsed).
+    expect(page.content).toHaveLength(13);
     expect(page.pendingActivationCount).toBe(2);
     expect(page.onboardingCount).toBe(1);
     const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');
@@ -65,7 +66,11 @@ describe('admin guests in the simulated BFF', () => {
     const inactive = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
       status: 'INACTIVE',
     });
-    expect(inactive.content.map((guest) => guest.id)).toEqual([GUEST_IDS.owing, GUEST_IDS.pedro]);
+    expect(inactive.content.map((guest) => guest.id)).toEqual([
+      GUEST_IDS.owing,
+      GUEST_IDS.lapsed,
+      GUEST_IDS.pedro,
+    ]);
   });
 
   it('answers the guest 360 in the variant of its status', async () => {

@@ -1,5 +1,5 @@
 import type { components, operations } from '@core/api/bff.generated';
-import { contractPeriods, payablePeriods } from '../data/account-views';
+import { guestPeriods, payablePeriods } from '../data/account-views';
 import { nowInstant, today } from '../data/mock-dates';
 import type { MockDb, PaymentRecord } from '../data/mock-db';
 import { paymentDetail, paymentSummary, queueItem } from '../data/payment-views';
@@ -75,8 +75,9 @@ function chargeOf(db: MockDb, target: PaymentTarget): { amountDue: number; credi
     return { amountDue: db.stay(target.stayId)?.agreedAmount ?? 0, creditApplied: 0 };
   }
   const contract = db.contract(target.contractId);
-  const charged = (contract ? contractPeriods(db, contract) : []).find(
-    (item) => item.period === target.period,
+  // The credit is discounted once across all the contracts of the guest (RN-38).
+  const charged = (contract ? guestPeriods(db, contract.guestId) : []).find(
+    (item) => item.contract.id === target.contractId && item.period === target.period,
   );
   if (charged === undefined) {
     return invalid('period');

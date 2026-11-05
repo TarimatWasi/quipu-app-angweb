@@ -1,335 +1,326 @@
-import { HttpRequest, provideHttpClient } from '@angular/common/http';
-import {
-  HttpTestingController,
-  provideHttpClientTesting,
-  TestRequest,
-} from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
-import { provideRouter } from '@angular/router';
-import { RouterTestingHarness } from '@angular/router/testing';
-import { fireEvent, within } from '@testing-library/dom';
-import type { Stay } from '@core/api/clients/admin-guests.service';
-import { GuestDetailComponent } from './guest-detail.component';
+import { MatDialog } from '@angular/material/dialog';
+import { within } from '@testing-library/dom';
+import { NEVER, of, throwError } from 'rxjs';
+import {
+  squash,
+  linkReading,
+  words,
+  httpError,
+  guestOf,
+  stayOf,
+  setup,
+} from './guest-detail.testing';
 
-const isGuest = (id: string) => (req: HttpRequest<unknown>) =>
-  req.url.endsWith(`/bff/admin/guests/${id}`);
-const isStays = (id: string) => (req: HttpRequest<unknown>) =>
-  req.url.endsWith(`/bff/admin/guests/${id}/stays`);
-
-function guestDetail(overrides: Partial<Record<string, unknown>> = {}): object {
-  return {
-    id: 'g1',
-    documentType: 'DNI',
-    documentNumber: '12345678',
-    name: 'Luis Mamani',
-    type: 'TEMPORARY',
-    hasLoginAccess: true,
-    phone: '999 111 222',
-    documentCount: 0,
-    paymentHistory: [],
-    status: 'ACTIVE',
-    onboardingProgress: 'COMPLETED',
-    ...overrides,
-  };
-}
-
-function stayOf(overrides: Partial<Stay> = {}): Stay {
-  return {
-    id: 's1',
-    environmentId: 'env-1',
-    environmentCode: 'H1',
-    startDate: '2026-11-10',
-    endDate: '2026-11-15',
-    agreedAmount: 400,
-    paymentStatus: 'UNPAID',
-    paymentId: null,
-    version: 1,
-    ...overrides,
-  };
-}
-
-async function settle(harness: RouterTestingHarness) {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await harness.fixture.whenStable();
-}
-
-async function setup(detail: object = guestDetail(), status = 200) {
-  TestBed.configureTestingModule({
-    providers: [
-      provideRouter([
-        { path: 'admin/payments', children: [] },
-        { path: 'admin/payments/new', children: [] },
-        { path: 'admin/payments/:id', children: [] },
-        { path: 'admin/guests/:id', component: GuestDetailComponent },
-        { path: 'admin/guests/:id/stays/new', children: [] },
-        { path: 'admin/guests/:id/stays/:stayId', children: [] },
-        { path: 'admin/guests/:id/document', children: [] },
-      ]),
-      provideHttpClient(),
-      provideHttpClientTesting(),
-    ],
-  });
-  const harness = await RouterTestingHarness.create();
-  const http = TestBed.inject(HttpTestingController);
-  await harness.navigateByUrl('/admin/guests/g1');
-  const expect1 = async (match: (req: HttpRequest<unknown>) => boolean) =>
-    vi.waitFor(() => http.expectOne(match));
-  const flush = async (req: TestRequest, body: object | null, code = 200) => {
-    req.flush(body, { status: code, statusText: 'x' });
-    await settle(harness);
-  };
-  await flush(await expect1(isGuest('g1')), detail, status);
-  const page = () => within(present(harness.routeNativeElement));
-  const click = async (element: HTMLElement) => {
-    fireEvent.click(element);
-    await settle(harness);
-  };
-  return { harness, http, page, click, expect1, flush };
-}
-
-const squash = (text: string | null | undefined) => (text ?? '').replace(/\s+/g, ' ').trim();
-
-function facts(region: HTMLElement): string[][] {
-  return [...region.querySelectorAll('dl > div')].map((pair) => [
-    squash(pair.querySelector('dt')?.textContent),
-    squash(pair.querySelector('dd')?.textContent),
-  ]);
-}
-
-/** Each stay card: its dates, environment and nights, amount, payment badge and actions. */
-function cards(list: HTMLElement): string[][] {
-  return [...list.querySelectorAll(':scope > li')].map((card) => [
-    squash(card.querySelector('.when strong')?.textContent),
-    squash(card.querySelector('.when .sub')?.textContent),
-    squash(card.querySelector('.amount')?.textContent),
-    squash(card.querySelector('.badge')?.textContent),
-    ...[...card.querySelectorAll('.acts a')].map((link) => squash(link.textContent)),
-  ]);
-}
-
-describe('GuestDetailComponent (A3.2 minimal, approved canvas)', () => {
+describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
+    TestBed.inject(MatDialog).closeAll();
   });
 
-  it('shows the header, its facts and the stays of an active temporary guest', async () => {
-    const { page, http, expect1, flush, click } = await setup();
-    const req = await expect1(isStays('g1'));
-    expect(req.request.params.get('limit')).toBe('20');
-    expect(req.request.params.has('after')).toBe(false);
-    await flush(req, {
-      content: [
-        stayOf({ paymentStatus: 'UNDER_REVIEW', paymentId: 'pay/1' }),
+  it('shows the header, the panel, the months, the facts, the contract and the actions', async () => {
+    const ui = await setup();
+
+    expect(ui.page().getByRole('heading', { level: 1, name: 'Luis Huamán' })).toBeTruthy();
+    expect(ui.page().getByRole('link', { name: 'Volver a Huéspedes' }).getAttribute('href')).toBe(
+      '/admin/guests',
+    );
+    expect(ui.service.accountStatus).toHaveBeenCalledWith('g1');
+    expect(ui.service.allStays).not.toHaveBeenCalled();
+    const now = within(ui.panel());
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('S/ 800.00');
+    expect(now.getByText('por pagar')).toBeTruthy();
+    expect(now.getByText(/^Octubre 2026: venció el 5 oct y su pago fue rechazado/)).toBeTruthy();
+    expect(now.getByRole('link', { name: 'Corregir pago' }).getAttribute('href')).toBe(
+      '/admin/payments/p10',
+    );
+    expect(ui.facts('Sus datos')).toEqual([
+      ['Documento', 'DNI 70412233'],
+      ['Estado', 'Activo'],
+      ['Tipo', 'Con contrato'],
+      ['Teléfono', '987 654 321'],
+      ['Correo', 'luis@example.com'],
+      ['Contacto de emergencia', 'Sin registrar'],
+    ]);
+    expect(
+      ui.page().getByText('Sus datos de contacto los cambia solo el huésped, desde Mis datos.'),
+    ).toBeTruthy();
+    expect(ui.facts('Contrato')).toEqual([
+      ['Ambiente', 'Habitación 201'],
+      ['Estado', 'Activo'],
+      ['Cuota', 'S/ 800.00'],
+      ['Día de pago', '5 de cada mes'],
+      ['Vigencia', '1 jul 2026 – 30 jun 2027'],
+    ]);
+    const contractBadge = ui
+      .page()
+      .getByRole('region', { name: 'Contrato' })
+      .querySelector('app-status-badge');
+    expect(contractBadge?.classList.contains('tone-paid')).toBe(true);
+    expect(squash(contractBadge?.textContent)).toBe('Activo');
+    expect(ui.page().queryByRole('link', { name: 'Ver contrato' })).toBeNull();
+    expect(ui.page().queryByRole('region', { name: 'Su registro' })).toBeNull();
+    expect(ui.more()).toEqual([
+      'Generar otro acceso si olvidó su contraseña',
+      'Cambiar correo de cuenta al que llega la recuperación de contraseña',
+      'Ver documentos 2 documentos',
+      'Desactivar huésped',
+    ]);
+  });
+
+  it('lists the months by state, filters them by tile or segment and sorts them', async () => {
+    const ui = await setup();
+    const table = () => ui.page().getByRole('table', { name: 'Pagos por mes' });
+    const rows = () =>
+      [...table().querySelectorAll('tbody tr')].map((row) =>
+        [...row.querySelectorAll('th, td')].map((cell) => words(cell)),
+      );
+
+    expect(rows()).toEqual([
+      [
+        'Octubre 2026',
+        '5 oct 2026',
+        'S/ 800.00',
+        'Atrasado Pago rechazado',
+        'Corregir pago de Octubre 2026',
+      ],
+      [
+        'Noviembre 2026',
+        '5 nov 2026',
+        'S/ 800.00',
+        'Pendiente de revisión',
+        'Revisar pago de Noviembre 2026',
+      ],
+      [
+        'Septiembre 2026',
+        '5 sep 2026',
+        'S/ 800.00',
+        'No pagado',
+        'Registrar pago de Septiembre 2026',
+      ],
+      ['Agosto 2026', '5 ago 2026', 'S/ 800.00', 'Pagado', 'Ver pago de Agosto 2026'],
+      ['Julio 2026', '5 jul 2026', 'S/ 800.00', 'Pagado', 'Ver pago de Julio 2026'],
+    ]);
+    expect(ui.page().getByText('Mostrando 5 de 5 meses')).toBeTruthy();
+    const register = linkReading(table(), 'Registrar pago de Septiembre 2026');
+    expect(register.getAttribute('href')).toBe('/admin/payments/new?guestId=g1');
+
+    const tiles = within(ui.page().getByRole('group', { name: 'Filtrar meses por estado' }));
+    await ui.click(tiles.getByRole('button', { name: /^Pagado/ }));
+    expect(rows().map((row) => row[0])).toEqual(['Agosto 2026', 'Julio 2026']);
+    expect(ui.page().getByText('Mostrando 2 de 5 meses')).toBeTruthy();
+    expect(tiles.getByRole('button', { name: /^Pagado/ }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+
+    await ui.click(ui.page().getByRole('button', { name: 'Mostrar solo Atrasado (1)' }));
+    expect(rows().map((row) => row[0])).toEqual(['Octubre 2026']);
+    await ui.click(tiles.getByRole('button', { name: /^Todos/ }));
+    expect(rows()).toHaveLength(5);
+
+    await ui.click(within(table()).getByRole('button', { name: 'Mes' }));
+    expect(rows().map((row) => row[0])).toEqual([
+      'Julio 2026',
+      'Agosto 2026',
+      'Septiembre 2026',
+      'Octubre 2026',
+      'Noviembre 2026',
+    ]);
+    expect(table().querySelector('th[aria-sort="ascending"]')?.textContent).toContain('Mes');
+    await ui.click(within(table()).getByRole('button', { name: 'Mes' }));
+    expect(rows()[0]?.[0]).toBe('Noviembre 2026');
+  });
+
+  it('says a contract guest without months has nothing to charge yet, and without contract', async () => {
+    const ui = await setup({ detail: of(guestOf({ contract: undefined })), months: [] });
+
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Sin contrato');
+    expect(within(ui.panel()).queryByRole('link')).toBeNull();
+    expect(within(ui.panel()).queryByRole('button')).toBeNull();
+    const empty = ui.page().getByRole('region', { name: 'Aún no tiene meses por cobrar.' });
+    expect(squash(empty.textContent)).toContain('Aparecen cuando le cargues un contrato.');
+    expect(ui.page().queryByRole('region', { name: 'Contrato' })).toBeNull();
+  });
+
+  it('shows every stay of a temporary guest with its actions, an old debt included', async () => {
+    const ui = await setup({
+      detail: of(guestOf({ type: 'TEMPORARY', contract: undefined })),
+      stays: [
+        stayOf(),
         stayOf({
-          id: 's/2',
-          environmentId: null,
-          environmentCode: null,
-          startDate: '2026-06-02',
-          endDate: '2026-06-09',
-          agreedAmount: 300,
+          id: 's2',
+          startDate: '2026-09-01',
+          endDate: '2026-09-08',
           paymentStatus: 'PAID',
           paymentId: 'p2',
         }),
+        stayOf({
+          id: 's3',
+          startDate: '2026-08-01',
+          endDate: '2026-08-03',
+          paymentStatus: 'OVERDUE',
+          paymentId: null,
+          environmentCode: null,
+        }),
       ],
-      nextCursor: 'next+1/==',
     });
 
-    expect(page().getByRole('heading', { level: 1, name: 'Luis Mamani' })).toBeTruthy();
-    expect(page().getByText(/^Hoy, \S+ \d{1,2} de \S+$/)).toBeTruthy();
-    expect(page().getByRole('link', { name: 'Volver a Pagos' }).getAttribute('href')).toBe(
-      '/admin/payments',
-    );
-    const data = page().getByRole('region', { name: 'Sus datos' });
-    expect(facts(data)).toEqual([
-      ['Documento', 'DNI 12345678'],
-      ['Estado', 'Activo'],
-      ['Tipo', 'Temporal'],
-    ]);
-    expect(data.querySelector('.badge')?.className).toContain('tone-ok');
-    const region = page().getByRole('region', { name: 'Estadías' });
-    const list = within(region).getByRole('list');
-    expect(cards(list)).toEqual([
-      [
-        '10 – 15 nov 2026',
-        'H1 · 5 noches',
-        'S/ 400.00',
-        'Pendiente de revisión',
-        'Revisar pago de la estadía del 10 – 15 nov 2026',
-        'Corregir estadía del 10 – 15 nov 2026',
-      ],
-      [
-        '2 – 9 jun 2026',
-        'Sin ambiente · 7 noches',
-        'S/ 300.00',
-        'Pagado',
-        'Ver pago de la estadía del 2 – 9 jun 2026',
-        'Corregir estadía del 2 – 9 jun 2026',
-      ],
-    ]);
+    expect(ui.service.accountStatus).not.toHaveBeenCalled();
+    expect(ui.service.allStays).toHaveBeenCalledWith('g1');
+    // The oldest stay, owed, comes before the payment under review.
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('S/ 480.00');
     expect(
-      within(region).getByText(
-        'De la más reciente a la más antigua. Cada estadía tiene un solo pago.',
+      within(ui.panel()).getByText(
+        'Estadía del 1 – 3 ago 2026: venció el 3 ago. Si te pagó en persona, regístralo como pago directo.',
       ),
     ).toBeTruthy();
+    const section = within(ui.page().getByRole('region', { name: 'Estadías' }));
+    expect(section.getByRole('link', { name: 'Registrar estadía' }).getAttribute('href')).toBe(
+      '/admin/guests/g1/stays/new',
+    );
+    const cards = [
+      ...section.getByRole('list', { name: 'Estadías' }).querySelectorAll(':scope > li'),
+    ].map((card) => words(card));
+    expect(cards).toEqual([
+      '20 – 31 oct 2026 C1 · 11 noches S/ 480.00 Pendiente de revisión Revisar pago de la estadía del 20 – 31 oct 2026 Corregir estadía del 20 – 31 oct 2026',
+      '1 – 8 sep 2026 C1 · 7 noches S/ 480.00 Pagado Ver pago de la estadía del 1 – 8 sep 2026 Corregir estadía del 1 – 8 sep 2026',
+      '1 – 3 ago 2026 Sin ambiente · 2 noches S/ 480.00 Atrasado Registrar pago de la estadía del 1 – 3 ago 2026 Corregir estadía del 1 – 3 ago 2026',
+    ]);
     expect(
-      within(region).getByRole('link', { name: 'Registrar estadía' }).getAttribute('href'),
-    ).toBe('/admin/guests/g1/stays/new');
-    const fix = within(region).getAllByRole('link', { name: /^Corregir estadía/ });
-    expect(fix.map((link) => link.getAttribute('href'))).toEqual([
-      '/admin/guests/g1/stays/s1',
-      '/admin/guests/g1/stays/s%2F2',
-    ]);
-    const pay = within(region).getAllByRole('link', { name: /pago de la estadía/ });
-    expect(pay.map((link) => link.getAttribute('href'))).toEqual([
-      '/admin/payments/pay%2F1',
-      '/admin/payments/p2',
-    ]);
-    expect(page().queryByRole('link', { name: 'Corregir documento' })).toBeNull();
+      linkReading(
+        ui.page().getByRole('region', { name: 'Estadías' }),
+        'Corregir estadía del 1 – 8 sep 2026',
+      ).getAttribute('href'),
+    ).toBe('/admin/guests/g1/stays/s2');
+    expect(
+      section.getByText('De la más reciente a la más antigua. Cada estadía tiene un solo pago.'),
+    ).toBeTruthy();
+  });
 
-    await click(within(region).getByRole('button', { name: 'Cargar más estadías' }));
-    const more = await expect1(isStays('g1'));
-    expect(more.request.params.get('after')).toBe('next+1/==');
-    await flush(more, {
-      content: [
-        stayOf({ id: 's3', environmentCode: 'C2', paymentStatus: 'OVERDUE' }),
-        stayOf({ id: 's4', paymentStatus: 'UNPAID', paymentId: 'rejected/1' }),
-      ],
-      nextCursor: null,
+  it('follows the clock: an access that expires while the page is open turns «Vencido»', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const ui = await setup({
+        detail: of(
+          guestOf({
+            status: 'PENDING_ACTIVATION',
+            onboardingProgress: 'NOT_STARTED',
+            contract: undefined,
+            version: 1,
+            accessExpiresAt: new Date(Date.now() + 2 * 60_000).toISOString(),
+          }),
+        ),
+      });
+      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('2 min');
+
+      vi.advanceTimersByTime(3 * 60_000);
+      await ui.harness.fixture.whenStable();
+
+      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Vencido');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('blocks the payments of a guest pending activation and offers its access and document', async () => {
+    const ui = await setup({
+      detail: of(
+        guestOf({
+          status: 'PENDING_ACTIVATION',
+          onboardingProgress: 'NOT_STARTED',
+          name: null,
+          phone: null,
+          contactEmail: null,
+          contract: undefined,
+          documentCount: 0,
+          version: 3,
+          accessExpiresAt: new Date(Date.now() + 18 * 60_000).toISOString(),
+        }),
+      ),
     });
 
-    const all = cards(list);
-    expect(all.map((card) => card[1])).toEqual([
-      'H1 · 5 noches',
-      'Sin ambiente · 7 noches',
-      'C2 · 5 noches',
-      'H1 · 5 noches',
+    expect(ui.page().getByRole('heading', { level: 1, name: 'DNI 70412233' })).toBeTruthy();
+    expect(ui.service.accountStatus).not.toHaveBeenCalled();
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toMatch(/^1[78] min$/);
+    expect(within(ui.panel()).getByRole('button', { name: 'Generar otro acceso' })).toBeTruthy();
+    const blocked = ui.page().getByRole('region', { name: 'Contrato y pagos' });
+    expect(words(blocked)).toBe(
+      'Contrato y pagos Primero tiene que activar su cuenta. Hasta que termine su registro no se le puede cargar un contrato ni registrar pagos.',
+    );
+    const steps = ui.page().getByRole('list', { name: 'Pasos de su registro' });
+    expect([...steps.querySelectorAll('li')].map((li) => squash(li.textContent))).toEqual([
+      'Contraseña: Falta',
+      'Datos personales: Falta',
+      'Documentos: Falta · opcional',
+      'Consentimiento: Falta',
     ]);
-    expect(all[2]?.slice(3, 5)).toEqual([
-      'Atrasado',
-      'Registrar pago de la estadía del 10 – 15 nov 2026',
-    ]);
-    expect(all[3]?.[4]).toBe('Corregir pago de la estadía del 10 – 15 nov 2026');
-    const register = within(region).getAllByRole('link', { name: /^Registrar pago/ })[0];
-    expect(register?.getAttribute('href')).toBe('/admin/payments/new?guestId=g1');
-    expect(list.querySelectorAll('.badge')[2]?.className).toContain('tone-bad');
-    expect(within(region).queryByRole('button', { name: 'Cargar más estadías' })).toBeNull();
-    http.expectNone(isStays('g1'));
-  });
-
-  it('shows no stay section and asks no stays for a guest with a contract', async () => {
-    const { page, http } = await setup(guestDetail({ type: 'CONTRACT', name: 'Ana Quispe' }));
-
-    expect(page().getByRole('heading', { level: 1, name: 'Ana Quispe' })).toBeTruthy();
-    expect(page().getByText('Con contrato')).toBeTruthy();
-    expect(page().queryByRole('region', { name: 'Estadías' })).toBeNull();
-    expect(page().queryByRole('link', { name: 'Registrar estadía' })).toBeNull();
-    http.expectNone(isStays('g1'));
-  });
-
-  it('says so when a temporary guest has no stays yet', async () => {
-    const { page, expect1, flush } = await setup();
-    await flush(await expect1(isStays('g1')), { content: [], nextCursor: null });
-
-    const region = page().getByRole('region', { name: 'Estadías' });
-    expect(within(region).getByText('Aún no tiene estadías registradas.')).toBeTruthy();
-    expect(within(region).queryByRole('list')).toBeNull();
-    expect(within(region).getByRole('link', { name: 'Registrar estadía' })).toBeTruthy();
-  });
-
-  it('keeps the history of an inactive temporary guest without "Registrar estadía"', async () => {
-    const { page, expect1, flush } = await setup(
-      guestDetail({ status: 'INACTIVE', onboardingProgress: 'COMPLETED' }),
-    );
-    await flush(await expect1(isStays('g1')), { content: [stayOf()], nextCursor: null });
-
-    const region = page().getByRole('region', { name: 'Estadías' });
-    expect(within(region).getAllByRole('listitem')).toHaveLength(1);
-    expect(within(region).queryByRole('link', { name: 'Registrar estadía' })).toBeNull();
-    expect(page().getByText('Inactivo').className).toContain('tone-none');
-  });
-
-  it('says a temporary guest still activating takes no stay, and offers to correct its document', async () => {
-    const { page, http } = await setup(
-      guestDetail({
-        name: null,
-        status: 'PENDING_ACTIVATION',
-        onboardingProgress: 'NOT_STARTED',
-        version: 3,
-        documentType: 'PASSPORT',
-        documentNumber: 'X-1',
-      }),
-    );
-
-    expect(page().getByRole('heading', { level: 1, name: 'Pasaporte X-1' })).toBeTruthy();
-    expect(page().getByText('Pendiente de activación').className).toContain('tone-wait');
-    expect(page().queryByRole('region', { name: 'Estadías' })).toBeNull();
-    const blocked = page().getByRole('region', { name: 'Estadías y pagos' });
-    expect(blocked.textContent).toContain('Primero tiene que activar su cuenta.');
-    expect(squash(blocked.textContent)).toContain(
-      'Hasta que termine su registro no se le puede registrar una estadía ni pagos.',
-    );
     expect(
-      page().getByText('Su nombre y sus datos los completa el huésped al activar su acceso.'),
+      ui.page().getByText('Su nombre y sus datos los completa el huésped al activar su acceso.'),
     ).toBeTruthy();
-    expect(page().getByRole('link', { name: 'Corregir documento' }).getAttribute('href')).toBe(
+    expect(ui.more()).toEqual([
+      'Cambiar correo de cuenta al que llega la recuperación de contraseña',
+      'Ver documentos no subió documentos',
+      'Corregir documento solo hasta que active su acceso',
+      'Desactivar huésped',
+    ]);
+    expect(ui.page().getByRole('link', { name: 'Corregir documento' }).getAttribute('href')).toBe(
       '/admin/guests/g1/document',
     );
-    expect(page().getByText('solo hasta que active su acceso')).toBeTruthy();
-    http.expectNone(isStays('g1'));
   });
 
-  it('shows the error of the load as the canvas words it and retries', async () => {
-    const { page, click, expect1, flush } = await setup(
-      { code: 'UNEXPECTED_ERROR', message: 'El servidor no responde' },
-      500,
-    );
+  it('shows the onboarding steps and «Estadías y pagos» for a temporary guest', async () => {
+    const ui = await setup({
+      detail: of(
+        guestOf({
+          type: 'TEMPORARY',
+          status: 'ONBOARDING',
+          onboardingProgress: 'PERSONAL_DATA_SAVED',
+          contract: undefined,
+        }),
+      ),
+    });
 
-    const alert = page().getByRole('alert');
-    expect(squash(alert.querySelector('strong')?.textContent)).toBe(
-      'No se pudo cargar el huésped.',
-    );
-    expect(alert.textContent).not.toContain('El servidor no responde');
-    await click(within(alert).getByRole('button', { name: 'Reintentar' }));
-    await flush(await expect1(isGuest('g1')), guestDetail({ type: 'CONTRACT' }));
-
-    expect(page().queryByRole('alert')).toBeNull();
-    expect(page().getByRole('heading', { level: 1, name: 'Luis Mamani' })).toBeTruthy();
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('2 de 4');
+    expect(within(ui.panel()).queryByRole('button')).toBeNull();
+    expect(ui.service.allStays).not.toHaveBeenCalled();
+    expect(
+      squash(ui.page().getByRole('region', { name: 'Estadías y pagos' }).textContent),
+    ).toContain('Hasta que termine su registro no se le puede registrar una estadía ni pagos.');
+    const steps = ui.page().getByRole('list', { name: 'Pasos de su registro' });
+    expect([...steps.querySelectorAll('li.done')]).toHaveLength(2);
+    expect(ui.more()[0]).toBe('Generar otro acceso');
   });
 
-  it('replaces the content when the guest does not exist', async () => {
-    const { page } = await setup({ code: 'GUEST_NOT_FOUND', message: 'El huésped no existe' }, 404);
+  it('says when the guest does not exist, under the title «Huésped»', async () => {
+    const ui = await setup({
+      detail: throwError(() => httpError(404, { code: 'RESOURCE_NOT_FOUND' })),
+    });
 
-    expect(page().getByText('No encontramos a este huésped.')).toBeTruthy();
-    const back = page().getAllByRole('link', { name: 'Volver a Pagos' });
-    expect(back.map((link) => link.getAttribute('href'))).toEqual([
-      '/admin/payments',
-      '/admin/payments',
-    ]);
-    expect(page().queryByRole('heading', { level: 2 })).toBeNull();
+    expect(ui.page().getByRole('heading', { level: 1, name: 'Huésped' })).toBeTruthy();
+    const block = within(ui.page().getByRole('region', { name: 'No encontramos a este huésped.' }));
+    expect(block.getByRole('link', { name: 'Volver a Huéspedes' }).getAttribute('href')).toBe(
+      '/admin/guests',
+    );
+    expect(ui.page().queryByRole('region', { name: 'Lo que toca ahora' })).toBeNull();
   });
 
-  it('shows the error of the stays with a retry, keeping the header', async () => {
-    const { page, click, expect1, flush } = await setup();
-    await flush(
-      await expect1(isStays('g1')),
-      { code: 'RATE_LIMITED', message: 'Demasiadas consultas, espera un momento' },
-      429,
+  it('says the guest could not be loaded and tries again', async () => {
+    const ui = await setup({ detail: throwError(() => httpError(503)) });
+
+    expect(squash(ui.page().getByRole('alert').textContent)).toBe(
+      'No se pudo cargar el huésped. Reintentar',
     );
+    ui.service.get.mockReturnValueOnce(of(guestOf()));
+    await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+    expect(ui.service.get).toHaveBeenCalledTimes(2);
+    expect(ui.page().getByRole('heading', { level: 1, name: 'Luis Huamán' })).toBeTruthy();
+  });
 
-    const region = page().getByRole('region', { name: 'Estadías' });
-    const alert = within(region).getByRole('alert');
-    expect(alert.textContent).toContain('Demasiadas consultas, espera un momento');
-    expect(page().getByRole('heading', { level: 1, name: 'Luis Mamani' })).toBeTruthy();
-    await click(within(alert).getByRole('button', { name: 'Reintentar' }));
-    await flush(await expect1(isStays('g1')), { content: [stayOf()], nextCursor: null });
+  it('is busy with a skeleton while the guest loads', async () => {
+    const ui = await setup({ detail: NEVER });
 
-    expect(within(region).getByRole('list')).toBeTruthy();
+    expect(ui.root().querySelector('[aria-busy="true"]')?.getAttribute('aria-label')).toBe(
+      'Cargando el huésped',
+    );
+    expect(ui.page().getByRole('heading', { level: 1, name: 'Huésped' })).toBeTruthy();
   });
 });
-
-function present<T>(value: T | null | undefined): T {
-  if (value === null || value === undefined) {
-    throw new Error('expected a value');
-  }
-  return value;
-}

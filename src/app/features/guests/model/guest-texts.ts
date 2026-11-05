@@ -1,5 +1,6 @@
-import type { DocumentType, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
+import type { DocumentType, GuestDetail } from '@core/api/clients/admin-guests.service';
 import { formatStay } from '@shared/payments/payment-format';
+import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import type { Environment } from './environment';
 
 /** Texts of A3.2 and A3.5 as the approved canvas words them, Spanish only (QP-ANGWEB-LNG-01). */
@@ -12,18 +13,19 @@ export interface Badge {
   readonly tone: Tone;
 }
 
+/** The tone of a badge as the kit's status badge (P-08) names it. */
+export const STATUS_TONES: Readonly<Record<Tone, StatusTone>> = {
+  ok: 'paid',
+  wait: 'review',
+  none: 'unpaid',
+  bad: 'overdue',
+};
+
 export const GUEST_STATUS_BADGES: Readonly<Record<GuestDetail['status'], Badge>> = {
   PENDING_ACTIVATION: { label: 'Pendiente de activación', tone: 'wait' },
   ONBOARDING: { label: 'En onboarding', tone: 'wait' },
   ACTIVE: { label: 'Activo', tone: 'ok' },
   INACTIVE: { label: 'Inactivo', tone: 'none' },
-};
-
-export const STAY_PAYMENT_BADGES: Readonly<Record<Stay['paymentStatus'], Badge>> = {
-  PAID: { label: 'Pagado', tone: 'ok' },
-  UNDER_REVIEW: { label: 'Pendiente de revisión', tone: 'wait' },
-  UNPAID: { label: 'No pagado', tone: 'none' },
-  OVERDUE: { label: 'Atrasado', tone: 'bad' },
 };
 
 export const GUEST_TYPE_LABELS: Readonly<Record<GuestDetail['type'], string>> = {

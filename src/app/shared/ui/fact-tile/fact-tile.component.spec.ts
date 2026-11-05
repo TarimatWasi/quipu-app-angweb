@@ -20,4 +20,15 @@ describe('FactTileComponent (P-11)', () => {
     expect(container.classList).toContain('surface-stone');
     expect(container.classList).not.toContain('surface-paper');
   });
+
+  it('takes a projected piece, such as a badge, in place of a value', async () => {
+    await render(`<app-fact-tile label="Estado"><b>Activo</b></app-fact-tile>`, {
+      imports: [FactTileComponent],
+    });
+
+    expect(screen.getByRole('term').textContent).toBe('Estado');
+    const value = screen.getByRole('definition');
+    expect(value.textContent).toBe('Activo');
+    expect(value.querySelector('b')?.textContent).toBe('Activo');
+  });
 });

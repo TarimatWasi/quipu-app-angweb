@@ -24,19 +24,29 @@ function cents(amount: number): number {
  * The months a contract charged up to today (or up to its end), oldest first. The credit of the
  * guest is discounted month by month from the periods without a payment yet; a period it covers
  * whole is PAID without a payment, and what is left passes on to the next one (RN-38). A payment
- * keeps the credit it was sent with.
+ * keeps the credit it was sent with. A `pool` shared by several contracts discounts it only once.
  */
-export function contractPeriods(db: MockDb, contract: Contract): ContractPeriod[] {
+/** The credit of a guest still to discount, shared by the months of all its contracts. */
+export interface CreditPool {
+  available: number;
+}
+
+export function contractPeriods(
+  db: MockDb,
+  contract: Contract,
+  pool: CreditPool = { available: db.credit(contract.guestId).balance },
+): ContractPeriod[] {
   const current = today().slice(0, 7);
   const end = contract.endDate?.slice(0, 7) ?? current;
   const last = end < current ? end : current;
-  let available = db.credit(contract.guestId).balance;
+  let available = pool.available;
   return monthsBetween(contract.startDate.slice(0, 7), last).map((period) => {
     const dueDate = dueDay(period, contract.paymentDay);
     const payment = db.paymentFor({ contractId: contract.id, period });
     const creditApplied = payment?.creditApplied ?? Math.min(available, contract.monthlyAmount);
     if (payment === undefined) {
       available = cents(available - creditApplied);
+      pool.available = available;
     }
     const amountDue = cents(contract.monthlyAmount - creditApplied);
     const coveredByCredit = payment === undefined && amountDue === 0;
@@ -52,10 +62,22 @@ export function contractPeriods(db: MockDb, contract: Contract): ContractPeriod[
   });
 }
 
+/**
+ * Every month of every contract of a guest, current or past, oldest contract first (RF-06). The
+ * credit of the guest is discounted once across all of them (RN-38): every screen that reads the
+ * months, the payable periods or the credit left uses this one calculation.
+ */
+export function guestPeriods(db: MockDb, guestId: string): ContractPeriod[] {
+  const pool: CreditPool = { available: db.credit(guestId).balance };
+  return db.data.contracts
+    .filter((contract) => contract.guestId === guestId)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .flatMap((contract) => contractPeriods(db, contract, pool));
+}
+
 /** The credit of a guest not yet discounted from any charged period (GuestCredit.balance). */
 export function creditLeft(db: MockDb, guestId: string): number {
-  const contract = db.contractOf(guestId);
-  const applied = (contract ? contractPeriods(db, contract) : [])
+  const applied = guestPeriods(db, guestId)
     .filter((item) => item.payment === undefined)
     .reduce((sum, item) => sum + item.creditApplied, 0);
   return cents(db.credit(guestId).balance - applied);
@@ -140,12 +162,8 @@ export function currentStay(db: MockDb, guestId: string): StayRecord | undefined
 type PayablePeriod = Schemas['PayablePeriod'];
 
 function contractPayables(db: MockDb, guestId: string): PayablePeriod[] {
-  const contract = db.contractOf(guestId);
-  if (contract === undefined) {
-    return [];
-  }
-  return contractPeriods(db, contract).flatMap(
-    ({ period, dueDate, payment, creditApplied, amountDue, status }) =>
+  return guestPeriods(db, guestId).flatMap(
+    ({ contract, period, dueDate, payment, creditApplied, amountDue, status }) =>
       status === 'PAID'
         ? []
         : [

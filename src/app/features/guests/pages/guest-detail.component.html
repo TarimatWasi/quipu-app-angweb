@@ -1,168 +1,59 @@
-<a class="back" routerLink="/admin/payments">
-  <svg
-    aria-hidden="true"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.4"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M15 6l-6 6 6 6" />
-  </svg>
-  Volver a Pagos
-</a>
-<div class="title">
-  <h1 [class.cdk-visually-hidden]="state().kind === 'loading' || state().kind === 'error'">
-    {{ title() }}
-  </h1>
-  <p class="today">{{ today }}</p>
-</div>
+<app-page-header [heading]="title()" backLink="/admin/guests" backTo="Huéspedes" />
 
-@switch (state().kind) {
+@switch (state()) {
   @case ('loading') {
-    @if (timing.skeleton()) {
-      <div aria-busy="true" aria-label="Cargando el huésped">
-        <div class="sk sk-panel"></div>
-        <div class="layout">
-          <div class="sk sk-main"></div>
-          <div class="sk sk-side"></div>
-        </div>
-      </div>
-    }
-    @if (timing.slow()) {
-      <output class="notice warn">{{ slowText }}</output>
-    }
-  }
-  @case ('not-found') {
-    <div class="box layout-gap">
-      <p class="strong">No encontramos a este huésped.</p>
-      <a mat-stroked-button routerLink="/admin/payments">Volver a Pagos</a>
-    </div>
+    <app-skeleton class="state" shape="detail" subject="el huésped" />
   }
   @case ('error') {
-    <p class="notice error" role="alert">
-      <strong>No se pudo cargar el huésped.</strong>
-      <button class="link-button" type="button" (click)="retry()">Reintentar</button>
-    </p>
+    <app-load-error class="state" [message]="loadErrorText" (retry)="retry()" />
+  }
+  @case ('not-found') {
+    <app-empty-state class="state" heading="No encontramos a este huésped.">
+      <a emptyAction class="quipu-button quipu-button--secondary" routerLink="/admin/guests"
+        >Volver a Huéspedes</a
+      >
+    </app-empty-state>
+  }
+  @case ('ready') {
+    @if (view(); as v) {
+      <app-detail-now-panel
+        class="now"
+        [panel]="v.panel"
+        [busy]="busy()"
+        (act)="onPanelAction($event)"
+      />
+      <div class="layout" [class.single]="v.left === 'none'">
+        @switch (v.left) {
+          @case ('periods') {
+            <app-period-payments [rows]="periodRows()" />
+          }
+          @case ('stays') {
+            <app-guest-stays
+              [guestId]="v.guest.id"
+              [rows]="stayRows()"
+              [canRegister]="v.guest.status === 'ACTIVE'"
+            />
+          }
+          @case ('blocked') {
+            <section class="blocked" aria-labelledby="blocked-title">
+              <h2 id="blocked-title">{{ blocked().title }}</h2>
+              <app-empty-state heading="Primero tiene que activar su cuenta.">
+                {{ blocked().text }}
+              </app-empty-state>
+            </section>
+          }
+        }
+        <aside aria-label="Datos del huésped">
+          <app-guest-facts [guest]="v.guest" />
+          <app-more-actions [actions]="actions()" [busy]="busy()" (act)="onMoreAction($event)" />
+        </aside>
+      </div>
+    }
   }
 }
 
-@if (guest(); as g) {
-  <div class="layout" [class.single]="!temporary()">
-    @if (temporary()) {
-      <div>
-        @if (showStays()) {
-          <section aria-labelledby="stays-title">
-            <div class="section-head">
-              <h2 id="stays-title">Estadías</h2>
-              @if (canRegister()) {
-                <a mat-stroked-button [routerLink]="['/admin/guests', g.id, 'stays', 'new']"
-                  >Registrar estadía</a
-                >
-              }
-            </div>
-
-            @if (stays().length > 0) {
-              <ul class="stays">
-                @for (stay of stays(); track stay.id) {
-                  <li>
-                    <span class="when">
-                      <strong>{{ stay.dates }}</strong>
-                      <span class="sub">{{ stay.sub }}</span>
-                    </span>
-                    <span class="amount">{{ stay.amount }}</span>
-                    <span [class]="'badge tone-' + stay.badge.tone">{{ stay.badge.label }}</span>
-                    <span class="acts">
-                      <a [routerLink]="stay.payment.link" [queryParams]="stay.payment.query">
-                        {{ stay.payment.label }}
-                        <span class="cdk-visually-hidden">de la estadía del {{ stay.dates }}</span>
-                      </a>
-                      <a [routerLink]="['/admin/guests', g.id, 'stays', stay.id]">
-                        Corregir estadía
-                        <span class="cdk-visually-hidden">del {{ stay.dates }}</span>
-                      </a>
-                    </span>
-                  </li>
-                }
-              </ul>
-            }
-
-            @switch (staysState().kind) {
-              @case ('loading') {
-                <div aria-busy="true" aria-label="Cargando las estadías" class="sk sk-side"></div>
-              }
-              @case ('error') {
-                <p class="notice error" role="alert">
-                  <strong>{{ staysError() }}</strong>
-                  <button class="link-button" type="button" (click)="retryStays()">
-                    Reintentar
-                  </button>
-                </p>
-              }
-              @default {
-                @if (stays().length === 0) {
-                  <div class="box">
-                    <p class="strong">Aún no tiene estadías registradas.</p>
-                  </div>
-                }
-                @if (staysCursor()) {
-                  <button mat-stroked-button type="button" class="more" (click)="moreStays()">
-                    Cargar más estadías
-                  </button>
-                }
-              }
-            }
-            <p class="note">
-              De la más reciente a la más antigua. Cada estadía tiene un solo pago.
-            </p>
-          </section>
-        }
-        @if (blocked()) {
-          <section aria-labelledby="blocked-title">
-            <h2 id="blocked-title">Estadías y pagos</h2>
-            <div class="box">
-              <p class="strong">Primero tiene que activar su cuenta.</p>
-              <p class="sub">
-                Hasta que termine su registro no se le puede registrar una estadía ni pagos.
-              </p>
-            </div>
-          </section>
-        }
-      </div>
-    }
-
-    <aside aria-label="Datos del huésped">
-      <section aria-labelledby="data-title">
-        <h2 id="data-title">Sus datos</h2>
-        <dl class="facts">
-          <div>
-            <dt>Documento</dt>
-            <dd>{{ documentText() }}</dd>
-          </div>
-          <div>
-            <dt>Estado</dt>
-            @if (statusBadge(); as badge) {
-              <dd class="badge-cell">
-                <span [class]="'badge tone-' + badge.tone">{{ badge.label }}</span>
-              </dd>
-            }
-          </div>
-          <div class="wide">
-            <dt>Tipo</dt>
-            <dd>{{ typeText() }}</dd>
-          </div>
-        </dl>
-        <p class="note">{{ dataNote() }}</p>
-      </section>
-      @if (documentCorrectable()) {
-        <p class="action">
-          <a [routerLink]="['/admin/guests', g.id, 'document']">Corregir documento</a>
-          <span>solo hasta que active su acceso</span>
-        </p>
-      }
-    </aside>
-  </div>
-}
+<app-toast
+  [tone]="toast()?.tone ?? null"
+  [message]="toast()?.text ?? null"
+  (dismissed)="toast.set(null)"
+/>

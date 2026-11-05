@@ -58,6 +58,7 @@ function detailBase(db: MockDb, guest: GuestRecord) {
     accountEmail: guest.accountEmail,
     documentCount: guest.documentCount,
     accessExpiresAt: guest.accessExpiresAt,
+    ...(guest.emergencyContact && { emergencyContact: guest.emergencyContact }),
     paymentHistory: paymentHistory(db, guest.id),
     ...(stay && {
       stayStartDate: stay.startDate,
@@ -65,6 +66,40 @@ function detailBase(db: MockDb, guest: GuestRecord) {
       agreedAmount: stay.agreedAmount,
     }),
     ...(contract && { contract }),
+  };
+}
+
+/** Where the onboarding of a guest goes: its own, else none without a name and all with one. */
+function progressOf(guest: GuestRecord): Schemas['OnboardingProgress'] {
+  return guest.onboardingProgress ?? (guest.name === null ? 'NOT_STARTED' : 'COMPLETED');
+}
+
+/** An onboarding guest, with or without its personal data saved (RN-33). */
+function onboardingDetail(
+  base: ReturnType<typeof detailBase>,
+  guest: GuestRecord,
+): Schemas['GuestDetail'] {
+  // An onboarding guest has at least chosen its password.
+  const progress = guest.onboardingProgress ?? 'PASSWORD_SET';
+  if (
+    (progress === 'PERSONAL_DATA_SAVED' || progress === 'DOCUMENTS_DONE') &&
+    guest.name !== null &&
+    guest.phone !== null
+  ) {
+    return {
+      ...base,
+      name: guest.name,
+      phone: guest.phone,
+      status: 'ONBOARDING',
+      onboardingProgress: progress,
+    };
+  }
+  return {
+    ...base,
+    name: guest.name,
+    phone: guest.phone,
+    status: 'ONBOARDING',
+    onboardingProgress: progress === 'NOT_STARTED' ? 'NOT_STARTED' : 'PASSWORD_SET',
   };
 }
 
@@ -82,13 +117,7 @@ export function guestDetail(db: MockDb, guest: GuestRecord): Schemas['GuestDetai
         onboardingProgress: 'NOT_STARTED',
       };
     case 'ONBOARDING':
-      return {
-        ...base,
-        name: guest.name,
-        phone: guest.phone,
-        status: 'ONBOARDING',
-        onboardingProgress: 'PASSWORD_SET',
-      };
+      return onboardingDetail(base, guest);
     case 'ACTIVE':
       return {
         ...base,
@@ -103,7 +132,7 @@ export function guestDetail(db: MockDb, guest: GuestRecord): Schemas['GuestDetai
         name: guest.name,
         phone: guest.phone,
         status: 'INACTIVE',
-        onboardingProgress: 'COMPLETED',
+        onboardingProgress: progressOf(guest),
         deactivatedAt: guest.deactivatedAt,
       };
   }

@@ -1,6 +1,6 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { EMPTY, expand, first, map, Observable } from 'rxjs';
+import { EMPTY, expand, first, map, Observable, reduce } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
@@ -21,6 +21,8 @@ export type GuestAlreadyRegistered = components['schemas']['GuestAlreadyRegister
 export type AccessGrant = components['schemas']['AccessGrant'];
 export type NonInactiveGuestSummary = components['schemas']['NonInactiveGuestSummary'];
 export type PendingDebtError = components['schemas']['GuestHasPendingDebtError'];
+export type PeriodStatus = components['schemas']['PeriodStatus'];
+export type AccessMode = components['schemas']['AccessMode'];
 
 /** Guests asked per page of the picker of A5.1: the most the contract allows. */
 export const GUEST_PICKER_PAGE_SIZE = 100;
@@ -31,8 +33,9 @@ const MAX_PAGE_SIZE = 100;
 
 /**
  * The guests of the administrator: the reads the payment screens need (A5.1), the detail (A3.2),
- * the stays and document corrections of A3.5, the registration of A3.1 and the reactivation. Ids and cursors are opaque: they are passed back
- * exactly as the BFF gave them, only escaped for the URL.
+ * the stays and document corrections of A3.5, the registration of A3.1, the reactivation and the
+ * actions of A3.2 (deactivate, a new access, the account email). Ids and cursors are opaque: they
+ * are passed back exactly as the BFF gave them, only escaped for the URL.
  */
 @Injectable({ providedIn: 'root' })
 export class AdminGuestsService {
@@ -69,6 +72,26 @@ export class AdminGuestsService {
     return this.http.post<NonInactiveGuestSummary>(`${this.guestUrl(id)}/reactivate`, null);
   }
 
+  /** Deactivates a guest (CU-10); a 409 GUEST_HAS_ACTIVE_CONTRACT says it has a contract in force. */
+  deactivate(id: string): Observable<null> {
+    return this.http.post<null>(`${this.guestUrl(id)}/deactivate`, null);
+  }
+
+  /** A new access for a guest that is not inactive (A3.4, CU-13); the previous one stops working. */
+  generateAccess(id: string, accessMode: AccessMode): Observable<AccessGrant> {
+    return this.http.post<AccessGrant>(`${this.guestUrl(id)}/access`, { accessMode });
+  }
+
+  /** Sets or changes the account email, the one the password recovery writes to (RF-16). */
+  setAccountEmail(id: string, email: string): Observable<null> {
+    return this.http.put<null>(`${this.guestUrl(id)}/account-email`, { email });
+  }
+
+  /** The state of every month the contracts of the guest charge, as the guest sees it (RF-06). */
+  accountStatus(id: string): Observable<PeriodStatus[]> {
+    return this.http.get<PeriodStatus[]>(`${this.guestUrl(id)}/account-status`);
+  }
+
   /** Corrects the document of a guest pending activation (RN-36), with the `version` loaded. */
   updateGuest(id: string, changes: GuestUpdate): Observable<GuestSummary> {
     return this.http.patch<GuestSummary>(this.guestUrl(id), changes);
@@ -81,6 +104,19 @@ export class AdminGuestsService {
       params = params.set('after', after);
     }
     return this.http.get<StayPage>(this.staysUrl(id), { params });
+  }
+
+  /**
+   * Every stay of a temporary guest, newest first, walking the pages with the largest size: what
+   * the guest owes is only known once the whole history is in (A3.2).
+   */
+  allStays(id: string): Observable<Stay[]> {
+    return this.stays(id, undefined, MAX_PAGE_SIZE).pipe(
+      expand((page) =>
+        page.nextCursor === null ? EMPTY : this.stays(id, page.nextCursor, MAX_PAGE_SIZE),
+      ),
+      reduce<StayPage, Stay[]>((all, page) => all.concat(page.content), []),
+    );
   }
 
   /**

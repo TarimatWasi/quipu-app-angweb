@@ -5,7 +5,7 @@ import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
-import { AccessHandoffService } from '../data/access-handoff.service';
+import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import type { AccessHandoff } from '../data/access-handoff.service';
 import {
   ACCESS_TEXTS,
@@ -35,7 +35,7 @@ const TICK_MS = 1000;
  * It comes from {@link AccessHandoffService}, which forgets it as soon as it is read: the address
  * carries only the guest id, so a reload or a later visit shows that there is nothing to show
  * (FE-ANG-SEC-02). The countdown follows `expiresAt` and the clock; screen readers hear it only at
- * a few marks. «Generar otro acceso» goes to the guest's page, where a new one is generated.
+ * a few marks. «Generar otro acceso» goes to the guest's page and opens A3.4 there.
  */
 @Component({
   selector: 'app-access',
@@ -64,6 +64,8 @@ export class AccessComponent {
   protected readonly toastTone = signal<'success' | null>('success');
 
   protected readonly guestLink = ['/admin/guests', this.guestId];
+  /** «Generar otro acceso» opens A3.4 on the guest's page, told by the navigation state only. */
+  protected readonly generateState = { [GENERATE_ACCESS_STATE]: true };
   protected readonly regenerated = this.handoff?.regenerated ?? false;
   protected readonly heading = this.regenerated ? 'Acceso nuevo generado' : 'Acceso generado';
   protected readonly backLink = this.regenerated ? this.guestLink : '/admin/guests';

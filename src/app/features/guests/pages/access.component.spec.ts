@@ -3,7 +3,7 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
-import { AccessHandoffService } from '../data/access-handoff.service';
+import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import type { AccessHandoff } from '../data/access-handoff.service';
 import { AccessComponent } from './access.component';
 
@@ -116,8 +116,9 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     expect(
       ui.page().getByRole('link', { name: 'Ir a la ficha del huésped' }).getAttribute('href'),
     ).toBe('/admin/guests/g1');
-    // TODO(TAR-288): A3.7 offers «Generar otro acceso» again once A3.2 can regenerate (piece 3).
-    expect(ui.page().queryByRole('link', { name: 'Generar otro acceso' })).toBeNull();
+    expect(ui.page().getByRole('link', { name: 'Generar otro acceso' }).getAttribute('href')).toBe(
+      '/admin/guests/g1',
+    );
   });
 
   it('copies the link and the message with the clipboard and says so', async () => {
@@ -254,14 +255,15 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
         'Nadie lo usó a tiempo. Genera otro desde su ficha y compártelo apenas lo tengas.',
       ),
     ).toBeTruthy();
-    expect(now.getByRole('link', { name: 'Ir a la ficha del huésped' }).getAttribute('href')).toBe(
+    expect(now.getByRole('link', { name: 'Generar otro acceso' }).getAttribute('href')).toBe(
       '/admin/guests/g1',
     );
     expect(now.queryByRole('link', { name: 'Abrir WhatsApp' })).toBeNull();
     expect(ui.facts()[3]?.[0]).toBe('Venció a las');
     expect(ui.root().textContent).not.toContain('token=abc');
-    expect(ui.page().getAllByRole('link', { name: 'Ir a la ficha del huésped' })).toHaveLength(1);
-    expect(ui.page().queryByRole('link', { name: 'Generar otro acceso' })).toBeNull();
+    // The panel offers it: the actions under the page are not repeated.
+    expect(ui.page().getAllByRole('link', { name: 'Generar otro acceso' })).toHaveLength(1);
+    expect(ui.page().queryByRole('link', { name: 'Ir a la ficha del huésped' })).toBeNull();
   });
 
   it('counts down with the clock and expires on screen', async () => {
@@ -330,5 +332,19 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     expect(
       ui.page().getByRole('link', { name: 'Volver a DNI 70412233' }).getAttribute('href'),
     ).toBe('/admin/guests/g1');
+  });
+
+  it('asks the guest page for «Generar otro acceso» through the navigation state only', async () => {
+    const ui = await setup(handoff());
+    const router = TestBed.inject(Router);
+    const navigate = vi.spyOn(router, 'navigateByUrl');
+
+    await ui.click(ui.page().getByRole('link', { name: 'Generar otro acceso' }));
+
+    expect(navigate).toHaveBeenCalledTimes(1);
+    const [target, extras] = navigate.mock.calls[0] ?? [];
+    expect(String(target)).toBe('/admin/guests/g1');
+    expect(extras?.state).toEqual({ [GENERATE_ACCESS_STATE]: true });
+    expect(router.url).toBe('/admin/guests/g1');
   });
 });
