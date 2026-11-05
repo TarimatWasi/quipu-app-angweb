@@ -239,6 +239,7 @@ describe('AppShellComponent (P-01)', () => {
       });
       await fixture.whenStable();
       expect(root.querySelector('output')?.textContent.trim()).toBe('Contraseña cambiada.');
+      expect(root.querySelector('output .success svg')?.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('a cancelled dialog shows no toast', async () => {

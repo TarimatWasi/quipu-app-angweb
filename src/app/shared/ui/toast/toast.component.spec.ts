@@ -20,6 +20,39 @@ describe('ToastComponent (P-17)', () => {
     expect(output?.textContent.trim()).toBe('');
   });
 
+  it('without a tone shows only the text, with no icon', async () => {
+    const { container } = await render(ToastComponent, { inputs: { message: 'Pago aprobado.' } });
+
+    expect(container.querySelector('.box svg')).toBeNull();
+    expect(screen.getByText('Pago aprobado.').closest('.message')?.classList).not.toContain(
+      'success',
+    );
+  });
+
+  it('the success tone puts a hidden check before the bold text, inside the live region', async () => {
+    const { container } = await render(ToastComponent, {
+      inputs: { message: 'Contraseña cambiada.', tone: 'success' },
+    });
+
+    const output = container.querySelector('output');
+    const message = screen.getByText('Contraseña cambiada.').closest('.message');
+    expect(message?.classList).toContain('success');
+    expect(message?.closest('output')).toBe(output);
+    const check = message?.querySelector('svg');
+    expect(check?.getAttribute('aria-hidden')).toBe('true');
+    expect(check?.querySelector('path')?.getAttribute('d')).toBe('M5 12l5 5L20 7');
+    expect(message?.firstElementChild).toBe(check);
+    expect(output?.textContent.trim()).toBe('Contraseña cambiada.');
+    expect(output && getComputedStyle(output).display).not.toBe('none');
+  });
+
+  it('the success tone draws nothing while there is no message', async () => {
+    const { container } = await render(ToastComponent, { inputs: { tone: 'success' } });
+
+    expect(container.querySelector('output svg')).toBeNull();
+    expect(container.querySelector('output')?.textContent.trim()).toBe('');
+  });
+
   it('without an action asks to go away after 5 s, not before', async () => {
     const dismissed = vi.fn<() => void>();
     const { fixture, container } = await render(ToastComponent, {

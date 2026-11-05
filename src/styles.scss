@@ -130,6 +130,9 @@ html {
   --quipu-relleno-mostrar: 96px;
   --quipu-opacidad-inactivo: 0.6;
   --quipu-subrayado-offset: 4px;
+  // Un ícono junto a su texto (el check del aviso emergente de éxito, P-17): 10 px, en negrita.
+  --quipu-espacio-icono: 10px;
+  --quipu-peso-enfasis: 700;
   // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
   --quipu-titulo-tracking: -0.03em;
   --quipu-titulo-pagina-movil: 2.5rem;
