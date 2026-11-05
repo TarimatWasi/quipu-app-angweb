@@ -1,13 +1,13 @@
 import type { PeriodStatus } from '@core/api/clients/admin-guests.service';
 import {
   DEFAULT_PERIOD_SORT,
-  nextPeriodSort,
   paymentAction,
   showingText,
   sortPeriods,
   stateCounts,
   toPeriodRow,
 } from './period-rows';
+import { nextSort } from '@shared/ui/data-table/list-sort';
 
 function month(period: string, status: PeriodStatus['status'], extra: Partial<PeriodStatus> = {}) {
   return toPeriodRow(
@@ -100,15 +100,15 @@ describe('A3.2 «Pagos por mes» rows', () => {
   });
 
   it('turns a header around or starts another one ascending', () => {
-    expect(nextPeriodSort(DEFAULT_PERIOD_SORT, 'state')).toEqual({
+    expect(nextSort(DEFAULT_PERIOD_SORT, 'state')).toEqual({
       key: 'state',
       direction: 'desc',
     });
-    expect(nextPeriodSort({ key: 'state', direction: 'desc' }, 'state')).toEqual({
+    expect(nextSort({ key: 'state', direction: 'desc' }, 'state')).toEqual({
       key: 'state',
       direction: 'asc',
     });
-    expect(nextPeriodSort(DEFAULT_PERIOD_SORT, 'month')).toEqual({
+    expect(nextSort(DEFAULT_PERIOD_SORT, 'month')).toEqual({
       key: 'month',
       direction: 'asc',
     });

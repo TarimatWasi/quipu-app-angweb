@@ -818,8 +818,32 @@ a {
     background: var(--quipu-hover-fila);
   }
 
-  tbody th {
+  tbody th,
+  tfoot th {
     font-weight: normal;
+  }
+
+  // Figures to the right and on one line; the action of a row to the right and on one line.
+  .align-end {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .align-action {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  // A figure column sorts with its arrow before the label, so the label stays on the right edge.
+  .align-end .quipu-sort {
+    flex-direction: row-reverse;
+  }
+
+  // The last row, such as the totals of A5.2.
+  tfoot tr {
+    border-top: var(--quipu-franja) solid var(--quipu-piedra);
+    background: var(--quipu-piedra-oscura);
   }
 }
 

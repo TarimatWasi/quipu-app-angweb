@@ -8,6 +8,8 @@ import {
   proofsSummary,
 } from '@shared/payments/payment-format';
 import { COLLATOR, matchesAny } from '@shared/text/search';
+import { compareBy } from '@shared/ui/data-table/list-sort';
+import type { ListSort, PhoneSort } from '@shared/ui/data-table/list-sort';
 import type { components } from '@core/api/bff.generated';
 import type { QueueViewParam } from './queue-views';
 
@@ -77,26 +79,13 @@ export function hasFilters(filters: QueueFilters): boolean {
 }
 
 export type SortKey = 'guest' | 'environment' | 'period' | 'submitted' | 'proofs';
-export type SortDirection = 'asc' | 'desc';
-
-export interface QueueSort {
-  readonly key: SortKey;
-  readonly direction: SortDirection;
-}
+export type QueueSort = ListSort<SortKey>;
 
 /** As the BFF sends it: the one sent longest ago first. */
 export const DEFAULT_SORT: QueueSort = { key: 'submitted', direction: 'asc' };
 
-export const COLUMNS: readonly { readonly key: SortKey; readonly label: string }[] = [
-  { key: 'guest', label: 'Huésped' },
-  { key: 'environment', label: 'Ambiente' },
-  { key: 'period', label: 'Período' },
-  { key: 'submitted', label: 'Subido' },
-  { key: 'proofs', label: 'Comprobantes' },
-];
-
 /** The orders a phone offers in «Ordenar por», where the table has its sortable headers. */
-export const PHONE_SORTS: readonly { readonly key: SortKey; readonly label: string }[] = [
+export const PHONE_SORTS: readonly PhoneSort<SortKey>[] = [
   { key: 'submitted', label: 'Subido, más antiguo primero' },
   { key: 'guest', label: 'Huésped' },
   { key: 'environment', label: 'Ambiente' },
@@ -149,8 +138,7 @@ const COMPARE: Readonly<Record<SortKey, (a: PaymentQueueItem, b: PaymentQueueIte
 export function compareQueue(
   sort: QueueSort,
 ): (a: PaymentQueueItem, b: PaymentQueueItem) => number {
-  const sign = sort.direction === 'asc' ? 1 : -1;
-  return (a, b) => sign * COMPARE[sort.key](a, b) || COMPARE.submitted(a, b);
+  return compareBy(COMPARE, sort, COMPARE.submitted);
 }
 
 /** The payments on screen: the loaded ones that match the filters, in the chosen order. */
@@ -166,12 +154,6 @@ export function visiblePayments(
         matchesQueueSearch(item, filters.search),
     )
     .sort(compareQueue(sort));
-}
-
-/** A header pressed: the same column turns around; another one starts ascending. */
-export function nextSort(current: QueueSort, key: SortKey): QueueSort {
-  if (current.key !== key) return { key, direction: 'asc' };
-  return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
 }
 
 const BADGES: Readonly<

@@ -1,5 +1,7 @@
 import type { components, operations } from '@core/api/bff.generated';
 import { COLLATOR, matchesAny } from '@shared/text/search';
+import { compareBy } from '@shared/ui/data-table/list-sort';
+import type { ListSort, PhoneSort } from '@shared/ui/data-table/list-sort';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import { documentText, GUEST_STATUS_BADGES, GUEST_TYPE_LABELS, STATUS_TONES } from './guest-texts';
 import { accessText, environmentText } from './guest-list-texts';
@@ -29,18 +31,13 @@ export interface GuestFilters {
 export const NO_FILTERS: GuestFilters = { search: '', type: 'ALL', state: 'ALL' };
 
 export type SortKey = 'guest' | 'type' | 'environment' | 'status';
-export type SortDirection = 'asc' | 'desc';
-
-export interface GuestSort {
-  readonly key: SortKey;
-  readonly direction: SortDirection;
-}
+export type GuestSort = ListSort<SortKey>;
 
 /** «Sin activar primero»: by state (pending, onboarding, active, inactive), then by name. */
 export const DEFAULT_SORT: GuestSort = { key: 'status', direction: 'asc' };
 
 /** The orders a phone offers in «Ordenar por», where the table has its sortable headers. */
-export const PHONE_SORTS: readonly { readonly key: SortKey; readonly label: string }[] = [
+export const PHONE_SORTS: readonly PhoneSort<SortKey>[] = [
   { key: 'status', label: 'Sin activar primero' },
   { key: 'guest', label: 'Nombre' },
   { key: 'environment', label: 'Ambiente' },
@@ -114,8 +111,7 @@ const COMPARE: Readonly<Record<SortKey, (a: GuestSummary, b: GuestSummary) => nu
 
 /** The order of a column, the name breaking the ties of every other column. */
 export function compareGuests(sort: GuestSort): (a: GuestSummary, b: GuestSummary) => number {
-  const sign = sort.direction === 'asc' ? 1 : -1;
-  return (a, b) => sign * COMPARE[sort.key](a, b) || byName(a, b);
+  return compareBy(COMPARE, sort, byName);
 }
 
 /** The guests on screen: the loaded ones that match «Buscar», in the chosen order. */
@@ -125,12 +121,6 @@ export function visibleGuests(
   sort: GuestSort,
 ): GuestSummary[] {
   return guests.filter((guest) => matchesSearch(guest, search)).sort(compareGuests(sort));
-}
-
-/** A header pressed: the same column turns around; another one starts ascending. */
-export function nextSort(current: GuestSort, key: SortKey): GuestSort {
-  if (current.key !== key) return { key, direction: 'asc' };
-  return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
 }
 
 /** One guest as the table and the cards of A3 show it. */
@@ -145,6 +135,8 @@ export interface GuestRow {
   readonly badge: { readonly label: string; readonly tone: StatusTone };
   /** Only for a guest pending activation with an access: when it expires, or that it did. */
   readonly access: AccessText | null;
+  /** «Ver huésped» says whom it opens: the name, or the document while it has none. */
+  readonly seeLabel: string;
 }
 
 export function toGuestRow(guest: GuestSummary, now: Date): GuestRow {
@@ -157,5 +149,6 @@ export function toGuestRow(guest: GuestSummary, now: Date): GuestRow {
     environment: environmentText(guest),
     badge: { label: badge.label, tone: STATUS_TONES[badge.tone] },
     access: guest.status === 'PENDING_ACTIVATION' ? accessText(guest.accessExpiresAt, now) : null,
+    seeLabel: `Ver huésped ${guest.name ?? documentText(guest)}`,
   };
 }

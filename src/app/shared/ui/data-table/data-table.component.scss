@@ -1,0 +1,12 @@
+// P-08: the table, its sortable headers, the alignment of a column (.align-end, .align-action)
+// and the cards are the kit's (styles.scss); here only the minimum width a screen sets with
+// --quipu-tabla-ancho-minimo.
+:host {
+  display: block;
+  // Inside a grid or a flex row, the table scrolls in its wrapper instead of widening the page.
+  min-width: 0;
+}
+
+table {
+  min-width: var(--quipu-tabla-ancho-minimo, 0);
+}

@@ -37,6 +37,7 @@ import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
+import { SearchFieldComponent } from '@shared/ui/search-field/search-field.component';
 import { payingNote, payingTiles, receivedNotice } from '../model/direct-payment';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 
@@ -152,6 +153,7 @@ type LoadState =
     PageHeaderComponent,
     PageNoticeComponent,
     RouterLink,
+    SearchFieldComponent,
   ],
   templateUrl: './direct-payment.component.html',
   styleUrl: './direct-payment.component.scss',
@@ -327,10 +329,6 @@ export class DirectPaymentComponent {
 
   protected retryPeriods(): void {
     void this.loadPeriods(this.guestId());
-  }
-
-  protected searchGuests(target: EventTarget | null): void {
-    this.guestSearch.set(target instanceof HTMLInputElement ? target.value : '');
   }
 
   protected pickGuest(id: string): void {

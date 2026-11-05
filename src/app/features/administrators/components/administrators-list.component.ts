@@ -1,108 +1,102 @@
 import { Component, input, output } from '@angular/core';
+import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
+import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
+import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
+import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import type { AdministratorRow } from '../model/administrator';
 
 const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as const;
 
+const COLUMNS: readonly DataColumn[] = [
+  { key: 'name', label: 'Nombre', rowHeader: true },
+  { key: 'document', label: 'Documento' },
+  { key: 'email', label: 'Correo de su cuenta' },
+  { key: 'state', label: 'Estado' },
+  { key: 'since', label: 'Desde' },
+  { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action' },
+];
+
 /**
- * A7 «Todos los administradores»: a table on a wide screen and one card per administrator on a
- * phone (only one of them is displayed). The own account carries «Tú» and has no action; an account
- * without a name says «Sin activar». The page decides what an action does: here it is only emitted.
+ * A7 «Todos los administradores» on `app-data-table`: a table on a wide screen and one card per
+ * administrator on a phone. The own account carries «Tú» and has no action; an account without a
+ * name says «Sin activar». The page decides what an action does: here it is only emitted.
  */
 @Component({
   selector: 'app-administrators-list',
-  imports: [StatusBadgeComponent],
+  imports: [DataCardDirective, DataCellDirective, DataTableComponent, StatusBadgeComponent],
   template: `
-    <div class="quipu-table-wrap quipu-only-wide">
-      <table class="quipu-table">
-        <caption class="cdk-visually-hidden">
-          Administradores
-        </caption>
-        <thead>
-          <tr>
-            <th scope="col">Nombre</th>
-            <th scope="col">Documento</th>
-            <th scope="col">Correo de su cuenta</th>
-            <th scope="col">Estado</th>
-            <th scope="col">Desde</th>
-            <th scope="col"><span class="cdk-visually-hidden">Acción</span></th>
-          </tr>
-        </thead>
-        <tbody>
-          @for (row of rows(); track row.id) {
-            <tr>
-              <th scope="row">
-                @if (row.name; as fullName) {
-                  <span class="quipu-name">{{ fullName }}</span>
-                } @else {
-                  <span class="quipu-unnamed">Sin activar</span>
-                }
-                @if (row.self) {
-                  &ngsp;<span class="you">Tú</span>
-                }
-              </th>
-              <td class="number">{{ row.document }}</td>
-              <td class="email">{{ row.email }}</td>
-              <td><app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" /></td>
-              <td>{{ row.since }}</td>
-              <td class="action">
-                @if (row.action; as kind) {
-                  <button
-                    class="quipu-button quipu-button--secondary quipu-button--row"
-                    type="button"
-                    [attr.aria-label]="actionLabels[kind] + ' a ' + row.displayName"
-                    (click)="act.emit(row)"
-                  >
-                    {{ actionLabels[kind] }}
-                  </button>
-                }
-              </td>
-            </tr>
+    <app-data-table caption="Administradores" [columns]="columns" [rows]="rows()" [rowId]="rowId">
+      <ng-template appDataCell="name" [appDataCellRows]="rows()" let-row>
+        @if (row.name; as fullName) {
+          <span class="quipu-name">{{ fullName }}</span>
+        } @else {
+          <span class="quipu-unnamed">Sin activar</span>
+        }
+        @if (row.self) {
+          &ngsp;<span class="you">Tú</span>
+        }
+      </ng-template>
+      <ng-template appDataCell="document" [appDataCellRows]="rows()" let-row>
+        <span class="number">{{ row.document }}</span>
+      </ng-template>
+      <ng-template appDataCell="email" [appDataCellRows]="rows()" let-row>
+        <span class="email">{{ row.email }}</span>
+      </ng-template>
+      <ng-template appDataCell="state" [appDataCellRows]="rows()" let-row>
+        <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
+      </ng-template>
+      <ng-template appDataCell="since" [appDataCellRows]="rows()" let-row>{{
+        row.since
+      }}</ng-template>
+      <ng-template appDataCell="action" [appDataCellRows]="rows()" let-row>
+        @if (row.action; as kind) {
+          <button
+            class="quipu-button quipu-button--secondary quipu-button--row"
+            type="button"
+            [attr.aria-label]="actionLabels[kind] + ' a ' + row.displayName"
+            (click)="act.emit(row)"
+          >
+            {{ actionLabels[kind] }}
+          </button>
+        }
+      </ng-template>
+
+      <ng-template appDataCard [appDataCardRows]="rows()" let-row>
+        <p class="card-name">
+          @if (row.name; as fullName) {
+            <span class="quipu-name">{{ fullName }}</span>
+          } @else {
+            <span class="quipu-unnamed">Sin activar</span>
           }
-        </tbody>
-      </table>
-    </div>
-    <ul class="quipu-card-list quipu-only-narrow cards" aria-label="Administradores">
-      @for (row of rows(); track row.id) {
-        <li class="quipu-card">
-          <p class="card-name">
-            @if (row.name; as fullName) {
-              <span class="quipu-name">{{ fullName }}</span>
-            } @else {
-              <span class="quipu-unnamed">Sin activar</span>
-            }
-            @if (row.self) {
-              &ngsp;<span class="you">Tú</span>
-            }
-          </p>
-          <p class="card-meta">
-            <span class="number">{{ row.document }}</span> · {{ row.email }}
-          </p>
-          <p class="card-state">
-            <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
-            <span>Desde {{ row.since }}</span>
-          </p>
-          @if (row.action; as kind) {
-            <button
-              class="quipu-button quipu-button--secondary quipu-button--row"
-              type="button"
-              [attr.aria-label]="actionLabels[kind] + ' a ' + row.displayName"
-              (click)="act.emit(row)"
-            >
-              {{ actionLabels[kind] }}
-            </button>
+          @if (row.self) {
+            &ngsp;<span class="you">Tú</span>
           }
-        </li>
-      }
-    </ul>
+        </p>
+        <p class="card-meta">
+          <span class="number">{{ row.document }}</span> · {{ row.email }}
+        </p>
+        <p class="card-state">
+          <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
+          <span>Desde {{ row.since }}</span>
+        </p>
+        @if (row.action; as kind) {
+          <button
+            class="quipu-button quipu-button--secondary quipu-button--row card-action"
+            type="button"
+            [attr.aria-label]="actionLabels[kind] + ' a ' + row.displayName"
+            (click)="act.emit(row)"
+          >
+            {{ actionLabels[kind] }}
+          </button>
+        }
+      </ng-template>
+    </app-data-table>
   `,
-  // The table, the cards and the names are the kit's (styles.scss); here only what A7 adds.
   styles: `
     :host {
       display: block;
-    }
-    table {
-      min-width: 860px;
+      --quipu-tabla-ancho-minimo: 860px;
     }
     .number {
       font-variant-numeric: tabular-nums;
@@ -110,9 +104,6 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     }
     .email {
       overflow-wrap: anywhere;
-    }
-    .action {
-      text-align: right;
     }
     .you {
       display: inline-block;
@@ -133,7 +124,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       align-items: center;
       gap: 0.5rem 0.75rem;
     }
-    .quipu-card button {
+    .card-action {
       width: 100%;
     }
   `,
@@ -143,5 +134,7 @@ export class AdministratorsListComponent {
   /** The action of a row was chosen: «Desactivar» or «Reactivar», as `row.action` says. */
   readonly act = output<AdministratorRow>();
 
+  protected readonly columns = COLUMNS;
   protected readonly actionLabels = ACTION_LABELS;
+  protected readonly rowId = (row: AdministratorRow): string => row.id;
 }

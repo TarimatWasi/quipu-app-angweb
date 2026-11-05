@@ -3,12 +3,12 @@ import {
   countText,
   DEFAULT_SORT,
   hasFilters,
-  nextSort,
   NO_FILTERS,
   queueNowPanel,
   toQueueRow,
   visiblePayments,
 } from './payment-queue';
+import { nextSort } from '@shared/ui/data-table/list-sort';
 import type { QueueSummary } from './payment-queue';
 
 type PaymentQueueItem = components['schemas']['PaymentQueueItem'];
