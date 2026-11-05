@@ -4,7 +4,7 @@
 @font-face {
   font-family: 'Fraunces';
   src: url('/fonts/fraunces-latin.woff2') format('woff2');
-  font-weight: 500 600;
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -12,9 +12,24 @@
 @font-face {
   font-family: 'Nunito Sans';
   src: url('/fonts/nunito-sans-latin.woff2') format('woff2');
-  font-weight: 400 700;
+  // El archivo es variable (200 a 1000): el lienzo usa 800 en botones, etiquetas y títulos.
+  font-weight: 200 1000;
   font-style: normal;
   font-display: swap;
+}
+
+// Fija un estilo de la escala tipográfica de Material (--mat-sys-<rol>, con sus partes).
+@mixin quipu-type($role, $weight, $size, $line-height, $family: plain) {
+  $font: "'Nunito Sans', system-ui, sans-serif";
+  @if $family == brand {
+    $font: "'Fraunces', Georgia, serif";
+  }
+  --mat-sys-#{$role}: #{$weight} #{$size} / #{$line-height} #{$font};
+  --mat-sys-#{$role}-font: #{$font};
+  --mat-sys-#{$role}-size: #{$size};
+  --mat-sys-#{$role}-line-height: #{$line-height};
+  --mat-sys-#{$role}-weight: #{$weight};
+  --mat-sys-#{$role}-tracking: 0;
 }
 
 html {
@@ -32,8 +47,8 @@ html {
           Georgia,
           serif,
         ),
-        bold-weight: 700,
-        medium-weight: 600,
+        bold-weight: 800,
+        medium-weight: 700,
         regular-weight: 400,
       ),
       density: 0,
@@ -58,6 +73,59 @@ html {
   --mat-sys-error: #ba1a1a;
   --mat-sys-error-container: #f6dedc;
   --mat-sys-on-error-container: #7a1010;
+  // Lo que el tema derivaba de la paleta azul de Material (TAR-218, pasada base): estados,
+  // superficies de diálogos y menús, y el resto de roles, ahora de la paleta andina.
+  color-scheme: light;
+  --mat-sys-on-error: #f4f1ea;
+  --mat-sys-secondary: #3d4842;
+  --mat-sys-on-secondary: #f4f1ea;
+  --mat-sys-secondary-container: #dfe4dc;
+  --mat-sys-on-secondary-container: #141c18;
+  --mat-sys-tertiary: #16553a;
+  --mat-sys-on-tertiary: #f4f1ea;
+  --mat-sys-tertiary-container: #d5e7dc;
+  --mat-sys-on-tertiary-container: #14532d;
+  --mat-sys-primary-fixed: #d5e7dc;
+  --mat-sys-primary-fixed-dim: #7cc29b;
+  --mat-sys-on-primary-fixed: #141c18;
+  --mat-sys-on-primary-fixed-variant: #16553a;
+  --mat-sys-secondary-fixed: #dfe4dc;
+  --mat-sys-secondary-fixed-dim: #c9d0c8;
+  --mat-sys-on-secondary-fixed: #141c18;
+  --mat-sys-on-secondary-fixed-variant: #3d4842;
+  --mat-sys-tertiary-fixed: #d5e7dc;
+  --mat-sys-tertiary-fixed-dim: #7cc29b;
+  --mat-sys-on-tertiary-fixed: #141c18;
+  --mat-sys-on-tertiary-fixed-variant: #16553a;
+  --mat-sys-surface-bright: #f4f1ea;
+  --mat-sys-surface-dim: #dfe4dc;
+  --mat-sys-surface-container-lowest: #fbfaf6;
+  --mat-sys-surface-container-low: #f4f1ea;
+  --mat-sys-surface-container: #f4f1ea;
+  --mat-sys-surface-container-high: #f4f1ea;
+  --mat-sys-surface-container-highest: #dfe4dc;
+  --mat-sys-surface-tint: #1e6b4a;
+  --mat-sys-inverse-surface: #141c18;
+  --mat-sys-inverse-on-surface: #f4f1ea;
+  --mat-sys-inverse-primary: #7cc29b;
+
+  // Escala tipográfica del lienzo (TAR-218, pasada base). La de Material es más chica: el lienzo
+  // nunca baja de 14 px. Títulos de página en Fraunces; los de sección, en Nunito Sans 800.
+  @include quipu-type(body-large, 400, 1rem, 1.5);
+  @include quipu-type(body-medium, 400, 0.9375rem, 1.5);
+  @include quipu-type(body-small, 400, 0.875rem, 1.5);
+  @include quipu-type(label-large, 800, 1rem, 1.2);
+  @include quipu-type(label-medium, 700, 0.875rem, 1.3);
+  @include quipu-type(label-small, 700, 0.875rem, 1.3);
+  @include quipu-type(title-large, 800, 1.25rem, 1.3);
+  @include quipu-type(title-medium, 800, 1.125rem, 1.35);
+  @include quipu-type(title-small, 800, 1rem, 1.4);
+  @include quipu-type(headline-small, 600, 1.75rem, 1.15, brand);
+  @include quipu-type(headline-medium, 600, 2.75rem, 1.05, brand);
+  @include quipu-type(headline-large, 600, 3.5rem, 1.05, brand);
+  @include quipu-type(display-small, 600, 3.5rem, 1.05, brand);
+  @include quipu-type(display-medium, 600, 4rem, 1, brand);
+  @include quipu-type(display-large, 600, 5rem, 1, brand);
   --quipu-obsidiana: #141c18;
   --quipu-alpaca: #f4f1ea;
   --quipu-qolle: #e3b02a;
@@ -127,6 +195,39 @@ html {
   --mat-button-filled-container-height: 48px;
   --mat-button-outlined-container-height: 48px;
   --mat-dialog-container-shape: 8px;
+
+  // Botones de Material como los del lienzo (P-10): 16 px en 800, sin espaciado extra; el
+  // secundario lleva borde chilca de 1 px.
+  --mat-button-filled-label-text-size: 1rem;
+  --mat-button-filled-label-text-weight: 800;
+  --mat-button-filled-label-text-tracking: 0;
+  --mat-button-filled-horizontal-padding: 24px;
+  --mat-button-outlined-label-text-size: 1rem;
+  --mat-button-outlined-label-text-weight: 800;
+  --mat-button-outlined-label-text-tracking: 0;
+  --mat-button-outlined-horizontal-padding: 20px;
+  --mat-button-outlined-outline-color: var(--quipu-chilca);
+  --mat-button-outlined-outline-width: 1px;
+  --mat-button-text-label-text-size: 1rem;
+  --mat-button-text-label-text-weight: 800;
+  --mat-button-text-label-text-tracking: 0;
+
+  // Campos (P-07): 48 px de alto, borde de 1 px en el gris del lienzo, 2 px en el foco y el error,
+  // texto de 16 px. La etiqueta sobre el campo es de cada página (ver «Estándar de diseño UI»).
+  --mat-form-field-container-height: 48px;
+  --mat-form-field-container-vertical-padding: 12px;
+  --mat-form-field-container-text-size: 1rem;
+  --mat-form-field-container-text-tracking: 0;
+  --mat-form-field-container-text-line-height: 1.5rem;
+  --mat-form-field-outlined-container-shape: 4px;
+  --mat-form-field-outlined-outline-color: var(--quipu-borde);
+  --mat-form-field-outlined-hover-outline-color: var(--quipu-tinta);
+  --mat-form-field-outlined-focus-outline-width: 2px;
+  --mat-form-field-outlined-label-text-size: 1rem;
+  --mat-form-field-outlined-label-text-tracking: 0;
+  --mat-form-field-outlined-label-text-color: var(--quipu-tinta-secundaria);
+  --mat-form-field-subscript-text-size: 0.9375rem;
+  --mat-form-field-subscript-text-tracking: 0;
 }
 
 body {
@@ -136,13 +237,40 @@ body {
   color: var(--mat-sys-on-surface);
 }
 
+// Título de página del lienzo: Fraunces 600 de 56 px (40 px en móvil). Las pantallas de acceso
+// lo bajan a 44 px en su propio shell.
 h1 {
   margin: 0 0 0.5rem;
   font-family: var(--mat-sys-display-small-font, 'Fraunces', Georgia, serif);
-  font-size: 2.125rem;
+  font-size: 3.5rem;
   font-weight: 600;
-  line-height: 1.15;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
   text-wrap: balance;
+}
+
+@media (max-width: 599.98px) {
+  h1 {
+    font-size: 2.5rem;
+  }
+}
+
+// En el acceso (A0) el título es de 44 px (36 px en móvil), como en el tablero Ingreso.
+app-auth-shell h1 {
+  font-size: 2.75rem;
+}
+
+@media (max-width: 599.98px) {
+  app-auth-shell h1 {
+    font-size: 2.25rem;
+  }
+}
+
+// Título de sección: Nunito Sans 800 de 20 px.
+h2 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.3;
 }
 
 a {
@@ -310,6 +438,18 @@ a {
 .quipu-band-gold {
   background: var(--quipu-qolle);
   mask-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cpath%20d%3D%22M10%2028%20L15%2034%20H5Z%20M30%2028%20L35%2034%20H25Z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+// P-07: los selectores nativos sin el aspecto del sistema, con una flecha de 16 px y 40 px de
+// relleno a la derecha. Los de Material (matNativeControl) ya dibujan la suya.
+select:not([matnativecontrol]) {
+  appearance: none;
+  padding-right: 40px;
+  background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%233d4842%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  cursor: pointer;
 }
 
 // Foco visible en todo lo interactivo (anillo chilca, 5.5:1 sobre la piedra).
