@@ -26,12 +26,15 @@
   <ul class="account-items">
     @for (entry of accountEntries(); track entry.label) {
       <li>
-        @if (entry.link; as link) {
-          <a class="item" [routerLink]="link" (click)="closeMenus()">{{ entry.label }}</a>
-        } @else {
-          <span class="item soon"
-            >{{ entry.label }} <span class="help">Disponible pronto</span></span
-          >
+        @switch (entry.kind) {
+          @case ('link') {
+            <a class="item" [routerLink]="entry.link" (click)="closeMenus()">{{ entry.label }}</a>
+          }
+          @case ('changePassword') {
+            <button class="item" type="button" (click)="openChangePassword()">
+              {{ entry.label }}
+            </button>
+          }
         }
       </li>
     }
@@ -138,3 +141,4 @@
   </div>
 }
 <main class="content"><router-outlet /></main>
+<app-toast tone="success" [message]="toast()" (dismissed)="toast.set(null)" />

@@ -48,6 +48,7 @@ const VALIDATION_TEXTS = new Map<string, string>([
   ['documentType', 'Elige un tipo de documento válido'],
   ['documentNumber', 'Revisa el número de documento'],
   ['password', 'Revisa la contraseña'],
+  ['currentPassword', 'Revisa la contraseña actual'],
   ['newPassword', 'Revisa la nueva contraseña'],
   ['email', 'Revisa el correo'],
   ['name', 'Escribe tu nombre completo'],

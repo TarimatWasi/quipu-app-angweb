@@ -17,6 +17,8 @@ import { BFF_BASE_URL } from '@core/config/bff-base-url';
 type LoginOperation = operations['login'];
 type LoginResponse = LoginOperation['responses'][200]['content']['application/json'];
 type ActivateRequest = operations['activateAccess']['requestBody']['content']['application/json'];
+type ChangePasswordRequest =
+  operations['changePassword']['requestBody']['content']['application/json'];
 
 // The API types come from the shared contract (TAR-23): nothing here is declared by hand.
 export type DocumentType = components['schemas']['DocumentType'];
@@ -169,19 +171,21 @@ export class AuthService {
   }
 
   /**
-   * RF-12. On success the BFF has already replaced the session cookie with one that no longer
-   * forces the change, so only the client's view of the session needs to be updated.
+   * RF-12 (A0.1) and A0.6. The forced change of the first login sends only the new password; the
+   * change from the account menu also sends the current one. On success the BFF has already
+   * replaced the session cookie with one that no longer forces the change, so only the client's
+   * view of the session needs to be updated.
    */
-  changePassword(newPassword: string): Observable<null> {
-    return this.http
-      .post<null>(`${this.bffBaseUrl}/bff/auth/change-password`, { newPassword })
-      .pipe(
-        timeout({ first: this.timing.timeoutMs }),
-        tap(() => {
-          this.epoch++;
-          this.current.update((session) => session && { ...session, mustChangePassword: false });
-        }),
-      );
+  changePassword(newPassword: string, currentPassword?: string): Observable<null> {
+    const body: ChangePasswordRequest =
+      currentPassword === undefined ? { newPassword } : { currentPassword, newPassword };
+    return this.http.post<null>(`${this.bffBaseUrl}/bff/auth/change-password`, body).pipe(
+      timeout({ first: this.timing.timeoutMs }),
+      tap(() => {
+        this.epoch++;
+        this.current.update((session) => session && { ...session, mustChangePassword: false });
+      }),
+    );
   }
 
   /** RF-16. The answer is the same for any email; no session is involved. */

@@ -99,6 +99,7 @@ describe('toBffError', () => {
     ['documentType', 'Elige un tipo de documento válido'],
     ['documentNumber', 'Revisa el número de documento'],
     ['password', 'Revisa la contraseña'],
+    ['currentPassword', 'Revisa la contraseña actual'],
     ['name', 'Escribe tu nombre completo'],
   ])('maps a VALIDATION_ERROR on %s to a Spanish text for that field', (field, text) => {
     expect(toBffError(bff(400, 'VALIDATION_ERROR', 'Datos de entrada inválidos', field))).toEqual({

@@ -2,8 +2,9 @@ import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { Component } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { MatDialog } from '@angular/material/dialog';
 import { provideRouter, Router } from '@angular/router';
-import { fireEvent, within } from '@testing-library/dom';
+import { fireEvent, screen, within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, GuestType, Role } from '@core/auth/auth.service';
 import { accountEntriesFor, isCurrent, sectionsFor } from './app-nav';
@@ -11,6 +12,7 @@ import { AppShellComponent } from './app-shell.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
 const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
+const isChange = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/change-password');
 
 @Component({ selector: 'app-page-stub', template: '' })
 class PageStubComponent {}
@@ -94,6 +96,7 @@ async function openAccount(fixture: ComponentFixture<AppShellComponent>, name: s
 
 describe('AppShellComponent (P-01)', () => {
   afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -174,7 +177,7 @@ describe('AppShellComponent (P-01)', () => {
   });
 
   describe('account menu', () => {
-    it('opens from the name: the administrator sees Cambiar contraseña (pronto) and Salir', async () => {
+    it('opens from the name: the administrator sees «Cambiar contraseña» as a button and Salir, not Administradores', async () => {
       const { fixture, root } = await setup(ADMIN);
       const ui = within(root);
 
@@ -187,10 +190,73 @@ describe('AppShellComponent (P-01)', () => {
       expect(button.getAttribute('aria-controls')).toBe('account-menu');
       const menu = within(element(root, '#account-menu'));
       expect(menu.getByText('Administración')).toBeTruthy();
-      expect(menu.getByText('Cambiar contraseña').textContent).toContain('Disponible pronto');
+      expect(menu.getAllByRole('button').map((item) => item.textContent.trim())).toEqual([
+        'Cambiar contraseña',
+        'Salir',
+      ]);
+      expect(menu.queryByText(/Disponible pronto/)).toBeNull();
       expect(menu.queryByRole('link')).toBeNull();
       expect(menu.queryByText('Administradores')).toBeNull();
-      expect(menu.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    });
+
+    it('«Cambiar contraseña» closes the menu and opens the dialog over the current page', async () => {
+      const { fixture, root } = await setup(ADMIN, '/admin/payments');
+      await openAccount(fixture, 'Rosa Quispe');
+
+      fireEvent.click(
+        within(element(root, '#account-menu')).getByRole('button', { name: 'Cambiar contraseña' }),
+      );
+      await fixture.whenStable();
+
+      expect(root.querySelector('#account-menu')).toBeNull();
+      expect(screen.getByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
+      expect(TestBed.inject(Router).url).toBe('/admin/payments');
+    });
+
+    it('a changed password closes the dialog and shows the toast «Contraseña cambiada.»', async () => {
+      const { fixture, root } = await setup(CONTRACT);
+      await openAccount(fixture, 'Ana Quispe');
+      fireEvent.click(
+        within(element(root, '#account-menu')).getByRole('button', { name: 'Cambiar contraseña' }),
+      );
+      await fixture.whenStable();
+      expect(root.querySelector('output')?.textContent.trim()).toBe('');
+
+      const dialog = within(screen.getByRole('dialog', { name: 'Cambiar contraseña' }));
+      fireEvent.input(dialog.getByLabelText('Contraseña actual'), {
+        target: { value: 'Actual12345' },
+      });
+      fireEvent.input(dialog.getByLabelText('Nueva contraseña'), {
+        target: { value: 'Nueva12345' },
+      });
+      await fixture.whenStable();
+      fireEvent.click(dialog.getByRole('button', { name: 'Cambiar contraseña' }));
+      const req = await vi.waitFor(() => TestBed.inject(HttpTestingController).expectOne(isChange));
+      req.flush(null, { status: 204, statusText: 'No Content' });
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).toBeNull();
+      });
+      await fixture.whenStable();
+      expect(root.querySelector('output')?.textContent.trim()).toBe('Contraseña cambiada.');
+      expect(root.querySelector('output .success svg')?.getAttribute('aria-hidden')).toBe('true');
+    });
+
+    it('a cancelled dialog shows no toast', async () => {
+      const { fixture, root } = await setup(ADMIN);
+      await openAccount(fixture, 'Rosa Quispe');
+      fireEvent.click(
+        within(element(root, '#account-menu')).getByRole('button', { name: 'Cambiar contraseña' }),
+      );
+      await fixture.whenStable();
+
+      fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).toBeNull();
+      });
+      await fixture.whenStable();
+
+      expect(root.querySelector('output')?.textContent.trim()).toBe('');
     });
 
     it('a guest sees «Huésped» under the name', async () => {
@@ -245,6 +311,21 @@ describe('AppShellComponent (P-01)', () => {
       expect(panel.getByRole('link', { name: 'Inicio' }).getAttribute('aria-current')).toBe('page');
       expect(panel.getByText('Rosa Quispe')).toBeTruthy();
       expect(panel.getByRole('button', { name: 'Salir' })).toBeTruthy();
+    });
+
+    it('«Cambiar contraseña» of the panel closes it and opens the dialog', async () => {
+      const { fixture, root, ui } = await setup(TEMPORARY, '/temporary-guest/payment');
+      fireEvent.click(ui.getByRole('button', { name: 'Menú' }));
+      await fixture.whenStable();
+
+      const panel = within(element(root, '#menu-panel'));
+      expect(panel.queryByText('Administradores')).toBeNull();
+      fireEvent.click(panel.getByRole('button', { name: 'Cambiar contraseña' }));
+      await fixture.whenStable();
+
+      expect(root.querySelector('#menu-panel')).toBeNull();
+      expect(screen.getByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
+      expect(TestBed.inject(Router).url).toBe('/temporary-guest/payment');
     });
 
     it('Escape closes the panel and gives the focus back to «Menú»', async () => {
@@ -341,12 +422,19 @@ describe('app-nav', () => {
     expect(isCurrent(pagos, '/admin/paymentsx')).toBe(false);
   });
 
-  it('the account menu has «Cambiar contraseña» for every role, without a link while A0.6 has no own route', () => {
-    expect(accountEntriesFor(null)).toEqual([{ label: 'Cambiar contraseña', link: null }]);
+  it('the account menu has the action «Cambiar contraseña» for every role, and no Administradores while A7 does not exist', () => {
+    const changePassword = { kind: 'changePassword', label: 'Cambiar contraseña' };
+    expect(accountEntriesFor(null)).toEqual([changePassword]);
+    expect(accountEntriesFor({ role: 'ADMIN', name: 'a', mustChangePassword: false })).toEqual([
+      changePassword,
+    ]);
     expect(
-      accountEntriesFor({ role: 'ADMIN', name: 'a', mustChangePassword: false }).map(
-        (entry) => entry.label,
-      ),
-    ).toEqual(['Cambiar contraseña']);
+      accountEntriesFor({
+        role: 'GUEST',
+        name: 'b',
+        mustChangePassword: false,
+        guestType: 'CONTRACT',
+      }),
+    ).toEqual([changePassword]);
   });
 });

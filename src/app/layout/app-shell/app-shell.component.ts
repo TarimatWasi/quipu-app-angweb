@@ -1,21 +1,27 @@
 import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { MatDialog } from '@angular/material/dialog';
 import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
+import { ToastComponent } from '@shared/ui/toast/toast.component';
+import { openChangePasswordDialog } from '@layout/account/change-password-dialog.component';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
+
+/** The toast (P-17) once the password changed in A0.6. */
+export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';
 
 /**
  * Frame of the pages behind the login (QP-ANGWEB-ORG-01), the bar P-01: the emblem and «Quipu», the
  * menu of the role with its current section underlined in q'olle, and the account menu (Cambiar
- * contraseña, Administradores for the administrator, Salir); under it the 20 px band, then the
- * page's single main landmark. On a phone the menu and the account go into a panel behind «Menú».
- * A session without sections (onboarding) only has «Salir».
+ * contraseña, which opens its dialog; Administradores for the administrator; Salir); under it the
+ * 20 px band, then the page's single main landmark. On a phone the menu and the account go into a
+ * panel behind «Menú». A session without sections (onboarding) only has «Salir».
  */
 @Component({
   selector: 'app-shell',
-  imports: [NgOptimizedImage, NgTemplateOutlet, RouterLink, RouterOutlet],
+  imports: [NgOptimizedImage, NgTemplateOutlet, RouterLink, RouterOutlet, ToastComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
   host: {
@@ -27,6 +33,7 @@ export class AppShellComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private readonly dialog = inject(MatDialog);
 
   private readonly accountButton = viewChild<ElementRef<HTMLButtonElement>>('accountButton');
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
@@ -46,6 +53,7 @@ export class AppShellComponent {
   protected readonly accountOpen = signal(false);
   protected readonly panelOpen = signal(false);
   protected readonly leaving = signal(false);
+  protected readonly toast = signal<string | null>(null);
 
   protected current(entry: NavEntry): boolean {
     return isCurrent(entry, this.url());
@@ -63,6 +71,22 @@ export class AppShellComponent {
   protected closeMenus(): void {
     this.accountOpen.set(false);
     this.panelOpen.set(false);
+  }
+
+  /**
+   * A0.6: the menu closes and the dialog opens over the current page. When it closes the focus
+   * goes back to the button of the menu it came from; a changed password is told with a toast.
+   */
+  protected openChangePassword(): void {
+    const opener = this.panelOpen() ? this.menuButton() : this.accountButton();
+    this.closeMenus();
+    openChangePasswordDialog(this.dialog, opener?.nativeElement ?? true)
+      .afterClosed()
+      .subscribe((changed) => {
+        if (changed === true) {
+          this.toast.set(PASSWORD_CHANGED_TEXT);
+        }
+      });
   }
 
   /** Escape closes the open menu and gives the focus back to the button that opened it. */

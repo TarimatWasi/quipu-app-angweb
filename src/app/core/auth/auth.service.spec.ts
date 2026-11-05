@@ -193,6 +193,20 @@ describe('AuthService.changePassword', () => {
     expect(service.session()).toEqual({ ...ADMIN, mustChangePassword: false });
   });
 
+  it('sends the current password too when it is given (A0.6)', async () => {
+    const { service, controller } = setup();
+    await signIn(service, controller);
+
+    const done = firstValueFrom(service.changePassword('Nueva12345', 'Actual12345'));
+    const req = controller.expectOne(CHANGE_URL);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ currentPassword: 'Actual12345', newPassword: 'Nueva12345' });
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+
+    expect(service.session()).toEqual({ ...ADMIN, mustChangePassword: false });
+  });
+
   it('keeps the session pending when the BFF rejects the password', async () => {
     const { service, controller } = setup();
     await signIn(service, controller);
