@@ -29,6 +29,7 @@
         <p class="context">{{ expired() ? expiredContext : shareText }}</p>
         <div class="now-action">
           @if (expired()) {
+            <!-- TODO(TAR-288): piece 3 adds «Generar otro acceso» to A3.2; until then this opens the guest's page. -->
             <a class="quipu-button quipu-button--primary big" [routerLink]="guestLink">
               Generar otro acceso
             </a>
