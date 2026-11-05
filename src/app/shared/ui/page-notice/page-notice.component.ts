@@ -1,12 +1,13 @@
 import { Component, input } from '@angular/core';
 
-export type NoticeTone = 'info' | 'error';
+export type NoticeTone = 'info' | 'success' | 'error';
 
 /**
  * P-09 Aviso de página: a block of its tone without border. The key phrase (`heading`) goes in
  * bold, the rest is the projected text and the action, if any, goes in `[noticeAction]`, as a link
- * or a tertiary button. Yellow informs; red asks to correct something and is announced at once
- * (role=alert). Only spans inside, so it may also sit inside an <output>.
+ * or a tertiary button. Yellow informs, green confirms what just happened (as «Contraseña
+ * actualizada.» in A0) and red asks to correct something and is announced at once (role=alert).
+ * Only spans inside, so it may also sit inside an <output>.
  */
 @Component({
   selector: 'app-page-notice',
@@ -17,8 +18,10 @@ export type NoticeTone = 'info' | 'error';
     <span class="text"><ng-content /></span>
     <span class="action"><ng-content select="[noticeAction]" /></span>
   `,
+  // Color, padding, radius and text come from the global P-09 classes (styles.scss); here only
+  // how the heading, the text and the action sit in a row.
   host: {
-    '[class]': '"tone-" + tone()',
+    '[class]': '"quipu-notice quipu-notice--" + tone()',
     '[attr.role]': 'tone() === "error" ? "alert" : null',
   },
   styles: `
@@ -27,18 +30,6 @@ export type NoticeTone = 'info' | 'error';
       flex-wrap: wrap;
       align-items: center;
       gap: 0.25rem 0.75rem;
-      padding: 0.875rem 1.125rem;
-      border-radius: 4px;
-      font-size: 1rem;
-      line-height: 1.5;
-    }
-    :host(.tone-info) {
-      background: var(--quipu-aviso-info-fondo);
-      color: var(--quipu-aviso-info-texto);
-    }
-    :host(.tone-error) {
-      background: var(--quipu-aviso-error-fondo);
-      color: var(--quipu-aviso-error-texto);
     }
     .text:empty,
     .action:empty {

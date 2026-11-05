@@ -1,4 +1,5 @@
 @use 'sass:meta';
+@use '@angular/cdk';
 @use '@angular/material' as mat;
 
 // Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL-*.txt): sin llamadas a terceros.
@@ -114,16 +115,34 @@ html {
   // página y 40 px dentro de una fila, toques de 44 px.
   --quipu-radio: 4px;
   --quipu-radio-dialogo: 8px;
+  // P-16: caja de papel de hasta 480 px.
+  --quipu-dialogo-ancho: 30rem;
   --quipu-alto-control: 48px;
   --quipu-alto-control-fila: 40px;
   --quipu-toque: 44px;
   --quipu-borde-ancho: 1px;
   --quipu-borde-ancho-enfasis: 2px;
+  // Campos (P-07, P-14): etiqueta a 6 px del campo, 14 px de relleno, 40 px a la derecha para la
+  // flecha de un selector o 96 px para «Mostrar»; un campo inactivo baja al 60 %.
+  --quipu-espacio-campo: 6px;
+  --quipu-relleno-campo: 14px;
+  --quipu-relleno-flecha: 40px;
+  --quipu-relleno-mostrar: 96px;
+  --quipu-opacidad-inactivo: 0.6;
+  --quipu-subrayado-offset: 4px;
   // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
   --quipu-titulo-tracking: -0.03em;
   --quipu-titulo-pagina-movil: 2.5rem;
-  // En el acceso (A0) el título es headline-medium (44 px) y 36 px en móvil (tablero Ingreso).
+  // Cifra de una ficha o un filtro (P-05, P-11): Fraunces de 40 px (30 px en móvil).
+  --quipu-cifra-ficha: 2.5rem;
+  --quipu-cifra-ficha-movil: 1.875rem;
+  // Acceso (A0, tablero Ingreso): título headline-medium (44 px) y 36 px en móvil, columna de
+  // 420 px con 18 px entre bloques, intro de 17 px y botón principal de 52 px.
   --quipu-titulo-acceso-movil: 2.25rem;
+  --quipu-acceso-ancho: 26.25rem;
+  --quipu-acceso-espacio: 18px;
+  --quipu-acceso-alto-boton: 52px;
+  --quipu-texto-intro-size: 1.0625rem;
   // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
   --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
 
@@ -209,6 +228,20 @@ html {
 
   // 2. Componentes de Material (P-10 botones, P-07 campos, P-16 diálogos) desde los tokens.
   --mat-dialog-container-shape: var(--quipu-radio-dialogo);
+  --mat-dialog-container-max-width: var(--quipu-dialogo-ancho);
+  --mat-dialog-container-color: var(--quipu-alpaca);
+  --mat-dialog-subhead-color: var(--quipu-tinta);
+  --mat-dialog-subhead-font: var(--mat-sys-headline-small-font);
+  --mat-dialog-subhead-size: var(--mat-sys-headline-small-size);
+  --mat-dialog-subhead-weight: var(--mat-sys-headline-small-weight);
+  --mat-dialog-subhead-line-height: var(--mat-sys-headline-small-line-height);
+  --mat-dialog-subhead-tracking: 0;
+  --mat-dialog-supporting-text-color: var(--quipu-tinta);
+  --mat-dialog-supporting-text-font: var(--mat-sys-body-large-font);
+  --mat-dialog-supporting-text-size: var(--mat-sys-body-large-size);
+  --mat-dialog-supporting-text-weight: var(--mat-sys-body-large-weight);
+  --mat-dialog-supporting-text-line-height: var(--mat-sys-body-large-line-height);
+  --mat-dialog-supporting-text-tracking: 0;
   --mat-button-filled-container-shape: var(--quipu-radio);
   --mat-button-outlined-container-shape: var(--quipu-radio);
   --mat-button-text-container-shape: var(--quipu-radio);
@@ -284,7 +317,7 @@ a {
   color: var(--mat-sys-primary);
   font-weight: 700;
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--quipu-subrayado-offset);
 }
 
 ::selection {
@@ -316,14 +349,133 @@ a {
   background: var(--mat-sys-surface);
 }
 
-// Error de la página (no de un campo): bloque en tono de error, sin borde.
+// Oculto a la vista y presente para el lector de pantalla: la clase estándar de la CDK,
+// cdk-visually-hidden, en todo el proyecto (no se redefine en los componentes).
+@include cdk.a11y-visually-hidden();
+
+// P-09 Aviso de página: un bloque de tono sin borde, texto de 16 px. Es la única definición: la
+// usan app-page-notice (shared/ui) y los errores de formulario (quipu-alert = tono rojo).
+// Amarillo informa, verde confirma lo que acaba de pasar y rojo pide corregir.
+.quipu-notice,
 .quipu-alert {
-  margin: 0 0 0.5rem;
-  padding: 0.75rem 1rem;
+  margin: 0;
+  padding: 0.875rem 1.125rem;
   border-radius: var(--quipu-radio);
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+  font: var(--mat-sys-body-large);
+}
+
+.quipu-notice--info {
+  background: var(--quipu-aviso-info-fondo);
+  color: var(--quipu-aviso-info-texto);
+}
+
+.quipu-notice--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+}
+
+.quipu-notice--error,
+.quipu-alert {
+  background: var(--quipu-aviso-error-fondo);
+  color: var(--quipu-aviso-error-texto);
+}
+
+// P-16 Ícono de un diálogo (va en [dialogIcon] de app-dialog-frame): círculo de 48 px en el tono
+// del aviso que da (rojo: bloqueo; verde: algo cambió y se vuelve a cargar).
+.quipu-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: var(--quipu-alto-control);
+  height: var(--quipu-alto-control);
+  border-radius: 50%;
+}
+
+.quipu-dialog-icon--error {
+  background: var(--quipu-rojo-fondo);
+  color: var(--quipu-rojo-texto);
+}
+
+.quipu-dialog-icon--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+}
+
+// P-07 / P-14 Campo (TAR-218): etiqueta visible encima, campo de 48 px con fondo sólido, error de
+// 15 px y ayuda de 14 px debajo. Todo sale de los tokens de arriba. Uso:
+// <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
+.quipu-field {
+  display: grid;
+  gap: var(--quipu-espacio-campo);
+}
+
+.quipu-label {
+  font: var(--mat-sys-label-medium);
+  color: var(--quipu-tinta-secundaria);
+}
+
+.quipu-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--quipu-alto-control);
+  padding: 0 var(--quipu-relleno-campo);
+  border: var(--quipu-borde-ancho) solid var(--quipu-borde);
+  border-radius: var(--quipu-radio);
+  background-color: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  font: var(--mat-sys-body-large);
+}
+
+.quipu-input:disabled {
+  opacity: var(--quipu-opacidad-inactivo);
+  cursor: not-allowed;
+}
+
+// El borde de 2 px no mueve el texto: el relleno pierde lo que gana el borde.
+.quipu-input[aria-invalid='true'] {
+  padding-inline: calc(
+    var(--quipu-relleno-campo) - var(--quipu-borde-ancho-enfasis) + var(--quipu-borde-ancho)
+  );
+  border: var(--quipu-borde-ancho-enfasis) solid var(--quipu-error);
+}
+
+.quipu-field-error {
+  margin: 0;
   font: var(--mat-sys-body-medium);
+  color: var(--quipu-error);
+}
+
+.quipu-field-help {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--quipu-tinta-secundaria);
+}
+
+// «Mostrar» / «Ocultar» dentro del campo de contraseña (A0.1, A0.2, A0.4, A0.5): un botón de
+// texto con aria-pressed y aria-controls, centrado en el alto del campo.
+.quipu-reveal {
+  position: relative;
+
+  .quipu-input {
+    padding-right: var(--quipu-relleno-mostrar);
+  }
+}
+
+.quipu-reveal-toggle {
+  $inset: calc((var(--quipu-alto-control) - var(--quipu-alto-control-fila)) / 2);
+  position: absolute;
+  top: $inset;
+  right: $inset;
+  height: var(--quipu-alto-control-fila);
+  padding: 0 calc(var(--quipu-relleno-campo) - #{$inset});
+  border: 0;
+  border-radius: var(--quipu-radio);
+  background: transparent;
+  color: var(--quipu-chilca);
+  font: var(--mat-sys-body-medium);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: var(--quipu-subrayado-offset);
+  cursor: pointer;
 }
 
 // P-10 Botones (TAR-285): clases para <button> o <a>. Principal verde lleno (uno por zona),
@@ -377,7 +529,7 @@ a {
   background: none;
   color: var(--quipu-chilca);
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--quipu-subrayado-offset);
 }
 
 .quipu-button--tertiary:hover:not(:disabled, [aria-disabled='true']) {
@@ -448,10 +600,10 @@ a {
 // relleno a la derecha. Los de Material (matNativeControl) ya dibujan la suya.
 select:not([matnativecontrol]) {
   appearance: none;
-  padding-right: 40px;
+  padding-right: var(--quipu-relleno-flecha);
   background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%233d4842%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E');
   background-repeat: no-repeat;
-  background-position: right 14px center;
+  background-position: right var(--quipu-relleno-campo) center;
   background-size: 16px 16px;
   cursor: pointer;
 }

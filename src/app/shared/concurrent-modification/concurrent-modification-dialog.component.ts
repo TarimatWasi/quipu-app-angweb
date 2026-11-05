@@ -1,14 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogActions,
-  MatDialogClose,
-  MatDialogContent,
-  MatDialogRef,
-  MatDialogTitle,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
+import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
 /** What the person chose: reload the record, or take the secondary action (leave the screen). */
 export type ConcurrentModificationChoice = 'reload' | 'back';
@@ -47,61 +40,39 @@ function nonBlank(text: string | undefined): string | undefined {
  */
 @Component({
   selector: 'app-concurrent-modification-dialog',
-  imports: [MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose, MatButton],
+  imports: [DialogFrameComponent, MatDialogClose, MatButton],
+  // Frame, icon, title and text are P-16 (app-dialog-frame): nothing of its own to style.
   template: `
-    <div class="icon" aria-hidden="true">
-      <svg
-        width="26"
-        height="26"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-        <path d="M21 3v6h-6" />
-      </svg>
-    </div>
-    <h2 mat-dialog-title>{{ title }}</h2>
-    <mat-dialog-content>
-      <p [id]="textId">{{ text }}</p>
-    </mat-dialog-content>
-    <mat-dialog-actions>
-      <button mat-flat-button type="button" [mat-dialog-close]="reload" cdkFocusInitial>
-        Volver a cargar
-      </button>
-      @if (backLabel; as label) {
-        <button mat-button type="button" [mat-dialog-close]="back">{{ label }}</button>
-      }
-    </mat-dialog-actions>
+    <app-dialog-frame [heading]="title">
+      <span class="quipu-dialog-icon quipu-dialog-icon--success" dialogIcon aria-hidden="true">
+        <svg
+          width="26"
+          height="26"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+          <path d="M21 3v6h-6" />
+        </svg>
+      </span>
+      <p class="message" [id]="textId">{{ text }}</p>
+      <ng-container dialogActions>
+        <button mat-flat-button type="button" [mat-dialog-close]="reload" cdkFocusInitial>
+          Volver a cargar
+        </button>
+        @if (backLabel; as label) {
+          <button mat-button type="button" [mat-dialog-close]="back">{{ label }}</button>
+        }
+      </ng-container>
+    </app-dialog-frame>
   `,
   styles: `
-    :host {
-      display: block;
-      padding: 0.5rem 0.5rem 0;
-    }
-    .icon {
-      display: grid;
-      place-items: center;
-      width: 3.25rem;
-      height: 3.25rem;
-      margin: 1.25rem 0 0 1.5rem;
-      border-radius: 50%;
-      background: var(--mat-sys-tertiary-container);
-      color: var(--mat-sys-on-tertiary-container);
-    }
-    h2 {
-      font-family: var(--mat-sys-display-small-font, 'Fraunces', Georgia, serif);
-      font-weight: 600;
-    }
-    p {
-      margin: 0 0 1rem;
-    }
-    mat-dialog-actions {
-      gap: 1rem;
-      padding: 0.5rem 1.5rem 1.5rem;
+    .message {
+      margin: 0;
     }
   `,
 })

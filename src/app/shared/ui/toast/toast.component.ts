@@ -45,7 +45,7 @@ export const TOAST_DURATION_MS = new InjectionToken<number>('TOAST_DURATION_MS',
       gap: 0.25rem 1rem;
       max-width: min(36rem, calc(100vw - 2rem));
       padding: 0.75rem 1.25rem;
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       background: var(--quipu-obsidiana);
       color: var(--quipu-alpaca);
       font-size: 1rem;

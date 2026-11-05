@@ -38,7 +38,7 @@
   @if (rows().length > 0) {
     <div class="table-wrap">
       <table>
-        <caption class="visually-hidden">
+        <caption class="cdk-visually-hidden">
           {{
             view().label
           }}
@@ -50,7 +50,7 @@
             <th scope="col">Período</th>
             <th scope="col">Subido</th>
             <th scope="col">Comprobantes</th>
-            <th scope="col"><span class="visually-hidden">Acción</span></th>
+            <th scope="col"><span class="cdk-visually-hidden">Acción</span></th>
           </tr>
         </thead>
         <tbody>
@@ -75,7 +75,7 @@
                   [routerLink]="['/admin/payments', item.id]"
                   [queryParams]="{ vista: view().param }"
                 >
-                  {{ view().action }}<span class="visually-hidden"> de {{ item.guest }}</span>
+                  {{ view().action }}<span class="cdk-visually-hidden"> de {{ item.guest }}</span>
                 </a>
               </td>
             </tr>

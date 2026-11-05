@@ -17,7 +17,7 @@ export type StatusTone = 'paid' | 'review' | 'unpaid' | 'overdue' | 'rejected';
       align-items: center;
       gap: 0.5rem;
       padding: 0.375rem 0.75rem;
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       font-size: 0.9375rem;
       font-weight: 700;
       line-height: 1.2;

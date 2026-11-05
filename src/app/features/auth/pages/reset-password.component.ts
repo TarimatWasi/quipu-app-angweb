@@ -1,15 +1,14 @@
-import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FieldTree, form, FormField, FormRoot } from '@angular/forms/signals';
+import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
+import { FieldTree, form, FormRoot } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
+import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 
 interface ResetPasswordModel {
@@ -25,16 +24,7 @@ function codeOf(route: ActivatedRoute): string | null {
 /** A0.2 (RF-16): the link of the email brings the code; here the person chooses a new password. */
 @Component({
   selector: 'app-reset-password',
-  imports: [
-    AuthShellComponent,
-    FormRoot,
-    FormField,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatButton,
-    RouterLink,
-  ],
+  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, MatButton, RouterLink],
   templateUrl: './reset-password.component.html',
   styles: FORM_PAGE_STYLES,
 })
@@ -66,8 +56,6 @@ export class ResetPasswordComponent {
       },
     },
   );
-
-  protected readonly newPasswordError = computed(() => firstError(this.resetForm.newPassword));
 
   constructor() {
     if (this.code() !== null) {
