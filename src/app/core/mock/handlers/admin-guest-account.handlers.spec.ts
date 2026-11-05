@@ -62,6 +62,14 @@ describe('the actions of A3.2 in the simulated BFF', () => {
       ['old', '2020-02', 200],
       ['new', '2020-03', 0],
     ]);
+    // The direct payment offers the same months with the same amounts (A5.1).
+    const payable = await mock.get<Schemas['PayablePeriod'][]>(
+      `/bff/admin/guests/${GUEST_IDS.noContract}/payable-periods`,
+    );
+    expect(payable.map((item) => [item.contractId, item.period, item.amountDue])).toEqual([
+      ['old', '2020-02', 600],
+      ['new', '2020-03', 800],
+    ]);
   });
 
   it('shows the onboarding and the lapsed guest as their states need', async () => {

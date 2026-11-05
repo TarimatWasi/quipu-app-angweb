@@ -1,6 +1,6 @@
 import type { components } from '@core/api/bff.generated';
 import { accessGrant } from '../data/access-grants';
-import { contractPeriods, periodStatus } from '../data/account-views';
+import { guestPeriods, periodStatus } from '../data/account-views';
 import { nowInstant } from '../data/mock-dates';
 import type { GuestRecord, MockDb } from '../data/mock-db';
 import { invalid, MockFailure, noContent, notFound, ok, raise } from '../mock-reply';
@@ -33,16 +33,9 @@ function refuseInactive(guest: GuestRecord): void {
   throw new MockFailure({ status: 409, body });
 }
 
-/**
- * Every month of every contract of the guest, current or past, oldest contract first (RF-06);
- * none without a contract. The credit of the guest is discounted once across them (RN-38).
- */
+/** Every month of every contract of the guest, the credit discounted once (RF-06, RN-38). */
 function accountStatus(db: MockDb, guest: GuestRecord): Schemas['PeriodStatus'][] {
-  const pool = { available: db.credit(guest.id).balance };
-  return db.data.contracts
-    .filter((contract) => contract.guestId === guest.id)
-    .sort((a, b) => a.startDate.localeCompare(b.startDate))
-    .flatMap((contract) => contractPeriods(db, contract, pool).map(periodStatus));
+  return guestPeriods(db, guest.id).map(periodStatus);
 }
 
 /** deactivateGuest (RN-12): refused while a contract is in force; a debt does not block it. */

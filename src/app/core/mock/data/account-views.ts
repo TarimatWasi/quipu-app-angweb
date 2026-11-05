@@ -62,10 +62,22 @@ export function contractPeriods(
   });
 }
 
+/**
+ * Every month of every contract of a guest, current or past, oldest contract first (RF-06). The
+ * credit of the guest is discounted once across all of them (RN-38): every screen that reads the
+ * months, the payable periods or the credit left uses this one calculation.
+ */
+export function guestPeriods(db: MockDb, guestId: string): ContractPeriod[] {
+  const pool: CreditPool = { available: db.credit(guestId).balance };
+  return db.data.contracts
+    .filter((contract) => contract.guestId === guestId)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))
+    .flatMap((contract) => contractPeriods(db, contract, pool));
+}
+
 /** The credit of a guest not yet discounted from any charged period (GuestCredit.balance). */
 export function creditLeft(db: MockDb, guestId: string): number {
-  const contract = db.contractOf(guestId);
-  const applied = (contract ? contractPeriods(db, contract) : [])
+  const applied = guestPeriods(db, guestId)
     .filter((item) => item.payment === undefined)
     .reduce((sum, item) => sum + item.creditApplied, 0);
   return cents(db.credit(guestId).balance - applied);
@@ -150,12 +162,8 @@ export function currentStay(db: MockDb, guestId: string): StayRecord | undefined
 type PayablePeriod = Schemas['PayablePeriod'];
 
 function contractPayables(db: MockDb, guestId: string): PayablePeriod[] {
-  const contract = db.contractOf(guestId);
-  if (contract === undefined) {
-    return [];
-  }
-  return contractPeriods(db, contract).flatMap(
-    ({ period, dueDate, payment, creditApplied, amountDue, status }) =>
+  return guestPeriods(db, guestId).flatMap(
+    ({ contract, period, dueDate, payment, creditApplied, amountDue, status }) =>
       status === 'PAID'
         ? []
         : [
