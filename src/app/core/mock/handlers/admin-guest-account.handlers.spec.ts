@@ -42,6 +42,24 @@ describe('the actions of A3.2 in the simulated BFF', () => {
     expect((await mock.fail(months(mock, 'nadie'))).status).toBe(404);
   });
 
+  it('discounts the credit of a guest once even with a past contract', async () => {
+    const mock = await admin();
+    const db = mock.bff.db;
+    const current = db.contractOf(GUEST_IDS.reviewing);
+    if (current === undefined) throw new Error('expected the contract of Carmen');
+    db.data.contracts.push({ ...current, id: 'old-contract', status: 'EXPIRED' });
+    db.credit(GUEST_IDS.reviewing).balance = 820;
+
+    const all = await months(mock, GUEST_IDS.reviewing);
+
+    // Only the contract in force is charged, so its months come once and the credit once.
+    expect(all.map((item) => [item.contractId, item.status])).toEqual([
+      [current.id, 'PAID'],
+      [current.id, 'PAID'],
+      [current.id, 'UNDER_REVIEW'],
+    ]);
+  });
+
   it('shows the onboarding and the lapsed guest as their states need', async () => {
     const mock = await admin();
 

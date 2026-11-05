@@ -33,11 +33,14 @@ function refuseInactive(guest: GuestRecord): void {
   throw new MockFailure({ status: 409, body });
 }
 
-/** Every month of the contracts of the guest, oldest first (RF-06); none without a contract. */
+/**
+ * The months of the contract of the guest (the one in force, else its latest), oldest first, as
+ * the guest's own account-status answers them (RF-06); none without a contract. One contract, so
+ * the credit of the guest is discounted once (RN-38).
+ */
 function accountStatus(db: MockDb, guest: GuestRecord): Schemas['PeriodStatus'][] {
-  return db.data.contracts
-    .filter((contract) => contract.guestId === guest.id)
-    .flatMap((contract) => contractPeriods(db, contract).map(periodStatus));
+  const contract = db.contractOf(guest.id);
+  return contract ? contractPeriods(db, contract).map(periodStatus) : [];
 }
 
 /** deactivateGuest (RN-12): refused while a contract is in force; a debt does not block it. */
