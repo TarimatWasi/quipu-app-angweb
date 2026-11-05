@@ -1,0 +1,105 @@
+// A3: only the layout of the page. Header, panel, table, cards, fields, notices, skeleton, badges
+// and buttons are the kit's.
+:host {
+  display: block;
+}
+
+.state {
+  margin-top: 1.5rem;
+}
+
+.now {
+  margin-top: 2rem;
+}
+
+.all {
+  margin-top: 2.5rem;
+}
+
+.all-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+h2 {
+  margin: 0;
+}
+
+.views {
+  margin-top: 1rem;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1.25rem 0 1rem;
+}
+
+.filters > .quipu-field {
+  min-width: 12rem;
+}
+
+.search {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.search-box {
+  position: relative;
+
+  svg {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .quipu-input {
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.125rem);
+  }
+}
+
+.count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.375rem;
+  min-height: var(--quipu-alto-control);
+  margin: 0 0 0 auto;
+  color: var(--quipu-tinta-secundaria);
+  font-variant-numeric: tabular-nums;
+}
+
+.more-error {
+  display: block;
+  margin-top: 1rem;
+}
+
+@media (max-width: 599.98px) {
+  .views button {
+    flex: 1;
+  }
+
+  .filters {
+    display: grid;
+  }
+
+  .search {
+    max-width: none;
+  }
+
+  .filters > .quipu-field {
+    min-width: 0;
+  }
+
+  .count {
+    margin-left: 0;
+  }
+}

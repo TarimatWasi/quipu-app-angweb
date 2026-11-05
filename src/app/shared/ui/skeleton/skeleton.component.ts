@@ -9,8 +9,11 @@ import {
 } from '@angular/core';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 
-/** The three shapes that cover every screen (P-12, Cargando): list, detail and a form that reads first. */
-export type SkeletonShape = 'list' | 'detail' | 'form';
+/**
+ * The shapes that cover every screen (P-12, Cargando): a list with tiles, a table without them (A3),
+ * a detail and a form that reads first.
+ */
+export type SkeletonShape = 'list' | 'table' | 'detail' | 'form';
 
 /** When the skeleton shows and when the notice of the server waking up appears. */
 export interface SkeletonTiming {
@@ -52,6 +55,14 @@ const FIVE = [1, 2, 3, 4, 5] as const;
                 <div class="sk tile"></div>
               }
             </div>
+            <div class="sk bar"></div>
+            @for (row of five; track row) {
+              <div class="sk row"></div>
+            }
+          }
+          @case ('table') {
+            <div class="sk panel"></div>
+            <div class="sk title"></div>
             <div class="sk bar"></div>
             @for (row of five; track row) {
               <div class="sk row"></div>

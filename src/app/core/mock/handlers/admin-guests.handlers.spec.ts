@@ -33,12 +33,39 @@ describe('admin guests in the simulated BFF', () => {
       status: 'ALL',
       limit: 100,
     });
-    expect(page.content).toHaveLength(6);
-    expect(page.pendingActivationCount).toBe(1);
-    expect(page.onboardingCount).toBe(0);
+    expect(page.content).toHaveLength(8);
+    expect(page.pendingActivationCount).toBe(2);
+    expect(page.onboardingCount).toBe(1);
     const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');
     expect(current.content.map((guest) => guest.status)).not.toContain('INACTIVE');
     expect((await mock.fail(mock.get('/bff/admin/guests', { status: 'OTRO' }))).status).toBe(400);
+  });
+
+  it('gives A3 the environment, the expired access and the type and state filters', async () => {
+    const mock = await admin();
+    const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');
+    const byId = (id: string) => current.content.find((guest) => guest.id === id);
+
+    expect(byId(GUEST_IDS.luis)?.environment).toEqual(
+      expect.objectContaining({ code: '201', type: 'ROOM', kind: 'CONTRACT' }),
+    );
+    expect(byId(GUEST_IDS.ana)?.environment).toEqual(
+      expect.objectContaining({ code: 'C1', type: 'CABIN', kind: 'STAY' }),
+    );
+    const expiresAt = byId(GUEST_IDS.expired)?.accessExpiresAt ?? '';
+    expect(Date.parse(expiresAt)).toBeLessThan(Date.now());
+    expect(byId(GUEST_IDS.onboarding)?.status).toBe('ONBOARDING');
+    expect(byId(GUEST_IDS.onboarding)?.accessExpiresAt).toBeNull();
+
+    const pending = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
+      status: 'PENDING_ACTIVATION',
+      type: 'TEMPORARY',
+    });
+    expect(pending.content.map((guest) => guest.id)).toEqual([GUEST_IDS.expired]);
+    const inactive = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
+      status: 'INACTIVE',
+    });
+    expect(inactive.content.map((guest) => guest.id)).toEqual([GUEST_IDS.pedro]);
   });
 
   it('answers the guest 360 in the variant of its status', async () => {

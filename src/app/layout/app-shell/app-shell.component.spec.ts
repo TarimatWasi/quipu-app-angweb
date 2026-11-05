@@ -22,6 +22,8 @@ const PATHS = [
   'home',
   'admin/payments',
   'admin/administrators',
+  'admin/guests',
+  'admin/guests/:id',
   'guest/payments',
   'guest/payments/new',
   'temporary-guest/payment',
@@ -108,7 +110,7 @@ describe('AppShellComponent (P-01)', () => {
       expect(sectionTexts(root)).toEqual([
         'Inicio',
         'Ambientes (pronto)',
-        'Huéspedes (pronto)',
+        'Huéspedes',
         'Contratos (pronto)',
         'Pagos',
         'Finanzas (pronto)',
@@ -116,6 +118,7 @@ describe('AppShellComponent (P-01)', () => {
       const nav = barNav(root);
       expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
         '/home',
+        '/admin/guests',
         '/admin/payments',
       ]);
       expect(nav.queryByRole('link', { name: /Ambientes/ })).toBeNull();
@@ -129,6 +132,16 @@ describe('AppShellComponent (P-01)', () => {
       expect(pagos.getAttribute('aria-current')).toBe('page');
       expect(pagos.classList).toContain('is-current');
       expect(nav.getByRole('link', { name: 'Inicio' }).hasAttribute('aria-current')).toBe(false);
+    });
+
+    it('marks Huéspedes as current on its list and on the pages of a guest', async () => {
+      const { root } = await setup(ADMIN, '/admin/guests/g-1');
+
+      const nav = barNav(root);
+      const guests = nav.getByRole('link', { name: 'Huéspedes' });
+      expect(guests.getAttribute('href')).toBe('/admin/guests');
+      expect(guests.getAttribute('aria-current')).toBe('page');
+      expect(nav.getByRole('link', { name: 'Pagos' }).hasAttribute('aria-current')).toBe(false);
     });
 
     it('the guest with a contract has Estado de cuenta, Mi contrato, Historial de pagos and Mis datos; a child page keeps its section', async () => {
@@ -475,6 +488,17 @@ describe('app-nav', () => {
     expect(isCurrent(pagos, '/admin/payments/42')).toBe(true);
     expect(isCurrent(pagos, '/admin/payments?status=OVERDUE')).toBe(true);
     expect(isCurrent(pagos, '/admin/paymentsx')).toBe(false);
+  });
+
+  it('Huéspedes is current on /admin/guests and below it', () => {
+    const [guests] = sectionsFor({ role: 'ADMIN', name: 'a', mustChangePassword: false }).filter(
+      (entry) => entry.label === 'Huéspedes',
+    );
+
+    expect(guests?.link).toBe('/admin/guests');
+    expect(guests && isCurrent(guests, '/admin/guests')).toBe(true);
+    expect(guests && isCurrent(guests, '/admin/guests/42/stays/new')).toBe(true);
+    expect(guests && isCurrent(guests, '/admin/guestsx')).toBe(false);
   });
 
   it('the account menu has the action «Cambiar contraseña» for every role and «Administradores» only for the administrator', () => {

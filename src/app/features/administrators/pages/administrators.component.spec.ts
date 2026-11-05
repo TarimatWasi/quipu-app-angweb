@@ -167,7 +167,7 @@ describe('AdministratorsComponent (A7)', () => {
       ['Sin activar', 'DNI *****912', 'nuevo@example.com', 'Sin activar', 'hoy', 'Desactivar'],
     ]);
     expect(table().getByText('Tú').classList.contains('you')).toBe(true);
-    expect(table().getAllByText('Sin activar')[0]?.classList.contains('unnamed')).toBe(true);
+    expect(table().getAllByText('Sin activar')[0]?.classList.contains('quipu-unnamed')).toBe(true);
     const badges = Array.from(document.querySelectorAll('table app-status-badge'));
     expect(badges.map((badge) => badge.className)).toEqual([
       'tone-paid',

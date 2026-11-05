@@ -13,8 +13,8 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
   selector: 'app-administrators-list',
   imports: [StatusBadgeComponent],
   template: `
-    <div class="wide">
-      <table>
+    <div class="quipu-table-wrap quipu-only-wide">
+      <table class="quipu-table">
         <caption class="cdk-visually-hidden">
           Administradores
         </caption>
@@ -33,9 +33,9 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
             <tr>
               <th scope="row">
                 @if (row.name; as fullName) {
-                  <span class="name">{{ fullName }}</span>
+                  <span class="quipu-name">{{ fullName }}</span>
                 } @else {
-                  <span class="unnamed">Sin activar</span>
+                  <span class="quipu-unnamed">Sin activar</span>
                 }
                 @if (row.self) {
                   &ngsp;<span class="you">Tú</span>
@@ -62,14 +62,14 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
         </tbody>
       </table>
     </div>
-    <ul class="narrow cards" aria-label="Administradores">
+    <ul class="quipu-card-list quipu-only-narrow cards" aria-label="Administradores">
       @for (row of rows(); track row.id) {
-        <li class="card">
+        <li class="quipu-card">
           <p class="card-name">
             @if (row.name; as fullName) {
-              <span class="name">{{ fullName }}</span>
+              <span class="quipu-name">{{ fullName }}</span>
             } @else {
-              <span class="unnamed">Sin activar</span>
+              <span class="quipu-unnamed">Sin activar</span>
             }
             @if (row.self) {
               &ngsp;<span class="you">Tú</span>
@@ -96,44 +96,13 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       }
     </ul>
   `,
-  // The canvas «Administradores»: rows on alpaca separated by 3 px of the page's stone, the header
-  // row on dark stone; on a phone, alpaca cards 3 px apart. No line of grey.
+  // The table, the cards and the names are the kit's (styles.scss); here only what A7 adds.
   styles: `
     :host {
       display: block;
     }
-    .wide {
-      overflow-x: auto;
-      border-radius: var(--quipu-radio);
-    }
     table {
-      width: 100%;
       min-width: 860px;
-      border-collapse: collapse;
-      background: var(--quipu-alpaca);
-    }
-    th,
-    td {
-      padding: var(--quipu-relleno-celda);
-      text-align: left;
-      vertical-align: middle;
-    }
-    thead tr {
-      background: var(--quipu-piedra-oscura);
-    }
-    thead th {
-      font-size: var(--mat-sys-body-medium-size);
-      font-weight: var(--quipu-peso-fuerte);
-      color: var(--quipu-tinta);
-    }
-    tbody tr {
-      border-top: var(--quipu-franja) solid var(--quipu-piedra);
-    }
-    tbody tr:hover {
-      background: var(--quipu-hover-fila);
-    }
-    tbody th {
-      font-weight: normal;
     }
     .number {
       font-variant-numeric: tabular-nums;
@@ -145,13 +114,6 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     .action {
       text-align: right;
     }
-    .name {
-      font-weight: var(--quipu-peso-enfasis);
-    }
-    .unnamed {
-      font-style: italic;
-      color: var(--quipu-tinta-secundaria);
-    }
     .you {
       display: inline-block;
       margin-left: 0.25rem;
@@ -160,23 +122,6 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       background: var(--quipu-obsidiana);
       color: var(--quipu-alpaca);
       font: var(--mat-sys-label-medium);
-    }
-    .cards {
-      display: grid;
-      gap: var(--quipu-franja);
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-    .card {
-      display: grid;
-      gap: 0.5rem;
-      padding: var(--quipu-relleno-tarjeta);
-      border-radius: var(--quipu-radio);
-      background: var(--quipu-alpaca);
-    }
-    .card p {
-      margin: 0;
     }
     .card-meta {
       color: var(--quipu-tinta-secundaria);
@@ -188,19 +133,8 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       align-items: center;
       gap: 0.5rem 0.75rem;
     }
-    .card button {
+    .quipu-card button {
       width: 100%;
-    }
-    .narrow {
-      display: none;
-    }
-    @media (max-width: 599.98px) {
-      .wide {
-        display: none;
-      }
-      .narrow {
-        display: grid;
-      }
     }
   `,
 })

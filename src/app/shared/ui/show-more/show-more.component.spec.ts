@@ -37,4 +37,15 @@ describe('ShowMoreComponent (P-22)', () => {
     expect(screen.queryByRole('button')).toBeNull();
     expect(screen.getByText('Mostrando 45 de 45 cargados')).toBeTruthy();
   });
+
+  it('without the summary it is only the centered button: the screen says the summary elsewhere', async () => {
+    const { container, fixture } = await render(ShowMoreComponent, {
+      inputs: { shown: 3, loaded: 20, hasMore: true, summary: false },
+    });
+
+    expect(container.querySelector('output')).toBeNull();
+    expect(screen.queryByText(/Mostrando/)).toBeNull();
+    expect(screen.getByRole('button', { name: 'Mostrar más' })).toBeTruthy();
+    expect((fixture.nativeElement as HTMLElement).classList).toContain('centered');
+  });
 });

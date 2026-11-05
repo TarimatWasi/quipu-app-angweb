@@ -101,6 +101,16 @@ function contractGuests(): GuestRecord[] {
       documentCount: 0,
       accessExpiresAt: instantOn(addDays(today(), 1)),
     }),
+    // A3: one in onboarding, who set a password but has not completed its data yet.
+    guest({
+      id: GUEST_IDS.onboarding,
+      documentType: 'DNI',
+      documentNumber: '70000008',
+      name: null,
+      type: 'CONTRACT',
+      status: 'ONBOARDING',
+      documentCount: 0,
+    }),
   ];
 }
 
@@ -132,6 +142,18 @@ function temporaryGuests(): GuestRecord[] {
       status: 'INACTIVE',
       phone: '943 210 987',
       deactivatedAt: instantOn(addDays(today(), -90)),
+    }),
+    // A3: its access expired without being used (RN-32), so the administrator generates another.
+    guest({
+      id: GUEST_IDS.expired,
+      documentType: 'DNI',
+      documentNumber: '70000007',
+      name: null,
+      type: 'TEMPORARY',
+      status: 'PENDING_ACTIVATION',
+      hasLoginAccess: false,
+      documentCount: 0,
+      accessExpiresAt: instantOn(addDays(today(), -1), 16),
     }),
   ];
 }

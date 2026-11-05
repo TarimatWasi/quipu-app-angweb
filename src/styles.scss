@@ -462,6 +462,11 @@ a {
   font: var(--mat-sys-body-large);
 }
 
+// Un filtro de lista (A3) va sobre la piedra de la página, no sobre papel: mismo borde y medida.
+.quipu-input--filter {
+  background-color: var(--quipu-piedra);
+}
+
 .quipu-input:disabled {
   opacity: var(--quipu-opacidad-inactivo);
   cursor: not-allowed;
@@ -640,6 +645,114 @@ a {
   button:disabled {
     opacity: var(--quipu-opacidad-inactivo);
     cursor: not-allowed;
+  }
+}
+
+// Tabla del lienzo (A7, A3): filas de alpaca separadas por la franja de la piedra de la página, la
+// cabecera en piedra oscura y ninguna línea gris. Uso: <div class="quipu-table-wrap"><table
+// class="quipu-table">…</table></div>; el ancho mínimo es del componente (su layout).
+.quipu-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--quipu-radio);
+}
+
+.quipu-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--quipu-alpaca);
+
+  th,
+  td {
+    padding: var(--quipu-relleno-celda);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead tr {
+    background: var(--quipu-piedra-oscura);
+  }
+
+  thead th {
+    font-size: var(--mat-sys-body-medium-size);
+    font-weight: var(--quipu-peso-fuerte);
+    color: var(--quipu-tinta);
+  }
+
+  tbody tr {
+    border-top: var(--quipu-franja) solid var(--quipu-piedra);
+  }
+
+  tbody tr:hover {
+    background: var(--quipu-hover-fila);
+  }
+
+  tbody th {
+    font-weight: normal;
+  }
+}
+
+// El nombre de una fila o tarjeta en negrita; sin nombre aún, el texto en cursiva y tinta secundaria.
+.quipu-name {
+  font-weight: var(--quipu-peso-enfasis);
+}
+
+.quipu-unnamed {
+  font-style: italic;
+  color: var(--quipu-tinta-secundaria);
+}
+
+// Tarjetas de una lista en un teléfono (A7, A3): alpaca, separadas por la franja. Uso:
+// <ul class="quipu-card-list"><li class="quipu-card">…</li></ul>
+.quipu-card-list {
+  display: grid;
+  gap: var(--quipu-franja);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quipu-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: var(--quipu-relleno-tarjeta);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Panel «Lo que toca ahora» (A7, A3): un bloque de piedra oscura con lo pendiente; el componente
+// pone la cifra y el orden de sus piezas.
+.quipu-now-panel {
+  display: grid;
+  gap: 0.5rem;
+  padding: var(--quipu-relleno-panel);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra-oscura);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Una lista se dibuja como tabla en pantalla ancha y como tarjetas en un teléfono: solo una se ve.
+.quipu-only-narrow {
+  display: none;
+}
+
+@media (max-width: 599.98px) {
+  .quipu-now-panel {
+    padding: var(--quipu-relleno-panel-movil);
+  }
+
+  .quipu-only-wide {
+    display: none;
+  }
+
+  .quipu-only-narrow {
+    display: grid;
   }
 }
 
