@@ -114,7 +114,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     }
     th,
     td {
-      padding: 14px 20px;
+      padding: var(--quipu-relleno-celda);
       text-align: left;
       vertical-align: middle;
     }
@@ -122,12 +122,12 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
       background: var(--quipu-piedra-oscura);
     }
     thead th {
-      font-size: 15px;
+      font-size: var(--mat-sys-body-medium-size);
       font-weight: var(--quipu-peso-fuerte);
       color: var(--quipu-tinta);
     }
     tbody tr {
-      border-top: 3px solid var(--quipu-piedra);
+      border-top: var(--quipu-franja) solid var(--quipu-piedra);
     }
     tbody tr:hover {
       background: var(--quipu-hover-fila);
@@ -163,7 +163,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     }
     .cards {
       display: grid;
-      gap: 3px;
+      gap: var(--quipu-franja);
       margin: 0;
       padding: 0;
       list-style: none;
@@ -171,7 +171,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
     .card {
       display: grid;
       gap: 0.5rem;
-      padding: 14px 16px;
+      padding: var(--quipu-relleno-tarjeta);
       border-radius: var(--quipu-radio);
       background: var(--quipu-alpaca);
     }

@@ -27,7 +27,7 @@ import type { PendingSummary } from '../model/administrator-texts';
     .card {
       display: grid;
       gap: 0.5rem;
-      padding: 28px 32px;
+      padding: var(--quipu-relleno-panel);
       border-radius: var(--quipu-radio);
       background: var(--quipu-piedra-oscura);
     }
@@ -50,7 +50,7 @@ import type { PendingSummary } from '../model/administrator-texts';
     }
     @media (max-width: 599.98px) {
       .card {
-        padding: 20px 18px;
+        padding: var(--quipu-relleno-panel-movil);
       }
       .figure {
         font-size: var(--quipu-cifra-ficha-movil);

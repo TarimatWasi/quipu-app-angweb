@@ -128,6 +128,14 @@ html {
   --quipu-relleno-campo: 14px;
   --quipu-relleno-flecha: 40px;
   --quipu-relleno-mostrar: 96px;
+  // Franja de 3 px entre piezas pegadas: filas de una tabla, tarjetas de una lista, segmentos.
+  --quipu-franja: 3px;
+  // Rellenos del lienzo (A7): celda de tabla, tarjeta de lista y panel destacado («Lo que toca
+  // ahora»), este último más chico en móvil.
+  --quipu-relleno-celda: var(--quipu-relleno-campo) 20px;
+  --quipu-relleno-tarjeta: var(--quipu-relleno-campo) 16px;
+  --quipu-relleno-panel: 28px 32px;
+  --quipu-relleno-panel-movil: 20px 18px;
   --quipu-opacidad-inactivo: 0.6;
   --quipu-subrayado-offset: 4px;
   // Un ícono junto a su texto (el check del aviso emergente de éxito, P-17): a 10 px.
@@ -611,7 +619,7 @@ a {
 .quipu-segmented {
   display: flex;
   flex-wrap: wrap;
-  gap: 3px;
+  gap: var(--quipu-franja);
 
   button {
     min-height: var(--quipu-toque);
