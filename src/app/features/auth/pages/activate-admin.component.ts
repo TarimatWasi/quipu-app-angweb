@@ -8,6 +8,7 @@ import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
+import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 
 interface ActivateAdminModel {
@@ -31,7 +32,14 @@ function codeOf(route: ActivatedRoute): string | null {
  */
 @Component({
   selector: 'app-activate-admin',
-  imports: [AuthShellComponent, FormRoot, FormField, MatButton, RouterLink],
+  imports: [
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    NewPasswordFieldComponent,
+    MatButton,
+    RouterLink,
+  ],
   templateUrl: './activate-admin.component.html',
   styles: FORM_PAGE_STYLES,
 })
@@ -46,8 +54,6 @@ export class ActivateAdminComponent {
   protected readonly serverError = signal<string | null>(null);
   /** True when the server said the code cannot be used: the only way forward is a new link. */
   protected readonly codeRejected = signal(false);
-  /** «Mostrar» / «Ocultar» of the password field (decided 2026-11-01, TAR-218). */
-  protected readonly revealed = signal(false);
 
   private readonly model = signal<ActivateAdminModel>({ name: '', newPassword: '' });
 
@@ -77,7 +83,6 @@ export class ActivateAdminComponent {
   );
 
   protected readonly nameError = computed(() => firstError(this.activateForm.name));
-  protected readonly newPasswordError = computed(() => firstError(this.activateForm.newPassword));
 
   constructor() {
     if (this.code() !== null) {
