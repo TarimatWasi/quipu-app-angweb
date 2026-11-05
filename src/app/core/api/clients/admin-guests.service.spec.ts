@@ -175,4 +175,53 @@ describe('AdminGuestsService (A3.2 and A3.5 stays and document)', () => {
 
     expect(await updated).toEqual({ id: 'g/1' });
   });
+
+  it('registers a guest with exactly the fields of GuestInput and answers the created guest', async () => {
+    const { service, http } = setup();
+    const input = {
+      documentType: 'DNI' as const,
+      documentNumber: '70412233',
+      type: 'CONTRACT' as const,
+      phone: '+51 987 654 321',
+      accessMode: 'LINK' as const,
+    };
+
+    const created = firstValueFrom(service.create(input));
+    const req = http.expectOne(`${BASE}/bff/admin/guests`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toStrictEqual(input);
+    const body = { alreadyRegistered: false, guest: { id: 'g1' }, access: { mode: 'LINK' } };
+    req.flush(body, { status: 201, statusText: 'Created' });
+
+    expect(await created).toEqual(body);
+  });
+
+  it('answers the existing guest when the document was already registered', async () => {
+    const { service, http } = setup();
+
+    const answer = firstValueFrom(
+      service.create({
+        documentType: 'CE',
+        documentNumber: 'X-1',
+        type: 'TEMPORARY',
+        accessMode: 'TEMPORARY_PASSWORD',
+      }),
+    );
+    const body = { alreadyRegistered: true, guest: { id: 'g2', status: 'ACTIVE' } };
+    http.expectOne(`${BASE}/bff/admin/guests`).flush(body);
+
+    expect(await answer).toEqual(body);
+  });
+
+  it('reactivates a guest by its opaque id, without a body', async () => {
+    const { service, http } = setup();
+
+    const reactivated = firstValueFrom(service.reactivate('g/1?x'));
+    const req = http.expectOne(`${BASE}/bff/admin/guests/g%2F1%3Fx/reactivate`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toBeNull();
+    req.flush({ id: 'g/1?x', status: 'ACTIVE' });
+
+    expect(await reactivated).toEqual({ id: 'g/1?x', status: 'ACTIVE' });
+  });
 });

@@ -150,6 +150,18 @@ html {
   // Cifra de una ficha o un filtro (P-05, P-11): Fraunces de 40 px (30 px en móvil).
   --quipu-cifra-ficha: 2.5rem;
   --quipu-cifra-ficha-movil: 1.875rem;
+  // Resumen de un alta (A3.1, A3.7): la cifra de sus fichas en Fraunces de 30 px (24 px en móvil),
+  // el formulario hasta 680 px junto a un resumen de 320 px o más, y un campo corto de 320 px.
+  --quipu-cifra-resumen: 1.875rem;
+  --quipu-cifra-resumen-movil: 1.5rem;
+  --quipu-columna-formulario: 42.5rem;
+  --quipu-columna-resumen: 20rem;
+  --quipu-campo-corto: 20rem;
+  // Acceso generado (A3.7): la clave temporal espaciada y el mensaje para el huésped a 17 px con
+  // interlineado de 1,6; el botón principal de la pantalla mide 52 px, como el del acceso.
+  --quipu-clave-tracking: 0.08em;
+  --quipu-mensaje-interlineado: 1.6;
+  --quipu-alto-boton-grande: var(--quipu-acceso-alto-boton);
   // Acceso (A0, tablero Ingreso): título headline-medium (44 px) y 36 px en móvil, columna de
   // 420 px con 18 px entre bloques, intro de 17 px y botón principal de 52 px.
   --quipu-titulo-acceso-movil: 2.25rem;

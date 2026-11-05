@@ -1,0 +1,157 @@
+<app-page-header [heading]="heading" [backLink]="backLink" [backTo]="backTo" />
+
+@if (handoff; as given) {
+  <div class="layout">
+    <aside class="summary" aria-labelledby="for-whom-title">
+      <h2 id="for-whom-title">Para quién es</h2>
+      <div class="facts">
+        @for (fact of facts(); track fact.label) {
+          <app-fact-tile
+            surface="stone"
+            [class.wide]="fact.wide"
+            [label]="fact.label"
+            [value]="fact.value"
+          />
+        }
+      </div>
+    </aside>
+
+    <div class="main">
+      <section class="quipu-now-panel now" aria-labelledby="now-title">
+        <h2 id="now-title" class="cdk-visually-hidden">Lo que toca ahora</h2>
+        <p class="clock" [class.expired]="expired()">
+          <span class="countdown" role="timer">{{ countdown() }}</span>
+          <span class="clock-label">{{
+            expired() ? 'el acceso venció' : 'minutos para usarlo'
+          }}</span>
+        </p>
+        <output class="cdk-visually-hidden">{{ announcement() }}</output>
+        <p class="context">{{ expired() ? expiredContext : shareText }}</p>
+        <div class="now-action">
+          @if (expired()) {
+            <a class="quipu-button quipu-button--primary big" [routerLink]="guestLink">
+              Generar otro acceso
+            </a>
+          } @else if (whatsapp; as url) {
+            <a
+              class="quipu-button quipu-button--primary big"
+              target="_blank"
+              rel="noopener"
+              [href]="url"
+            >
+              <svg
+                aria-hidden="true"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2.2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path d="M20 11.5a8.5 8.5 0 0 1-12.6 7.4L3 20l1.2-4.2A8.5 8.5 0 1 1 20 11.5z" />
+              </svg>
+              Abrir WhatsApp
+            </a>
+          } @else {
+            <button
+              class="quipu-button quipu-button--primary big"
+              type="button"
+              (click)="copyMessage()"
+            >
+              Copiar mensaje
+            </button>
+          }
+        </div>
+      </section>
+
+      @if (email; as notice) {
+        <app-page-notice tone="info" [heading]="notice.heading">{{ notice.text }}</app-page-notice>
+      }
+
+      @if (!expired() && texts; as words) {
+        <section class="section" aria-labelledby="secret-title">
+          <h2 id="secret-title">{{ words.sectionTitle }}</h2>
+          <div class="secret-row">
+            <div class="box secret">
+              @if (given.access.mode === 'LINK') {
+                <span class="link">{{ secret }}</span>
+              } @else {
+                <span id="access-password" class="password">
+                  @if (revealed()) {
+                    {{ secret }}
+                  } @else {
+                    <span aria-hidden="true">{{ hiddenPassword }}</span>
+                    <span class="cdk-visually-hidden">Clave oculta</span>
+                  }
+                </span>
+                <button
+                  class="quipu-button quipu-button--tertiary"
+                  type="button"
+                  aria-controls="access-password"
+                  [attr.aria-pressed]="revealed() ? 'true' : 'false'"
+                  (click)="toggleReveal()"
+                >
+                  {{ revealed() ? 'Ocultar clave' : 'Mostrar clave' }}
+                </button>
+              }
+            </div>
+            <button
+              class="quipu-button quipu-button--secondary"
+              type="button"
+              (click)="copySecret()"
+            >
+              {{ words.copyLabel }}
+            </button>
+          </div>
+          <p class="quipu-field-help">{{ words.help }}</p>
+        </section>
+
+        <section class="section" aria-labelledby="message-title">
+          <div class="section-head">
+            <h2 id="message-title">Mensaje para el huésped</h2>
+            @if (whatsapp) {
+              <button
+                class="quipu-button quipu-button--secondary"
+                type="button"
+                (click)="copyMessage()"
+              >
+                Copiar mensaje
+              </button>
+            }
+          </div>
+          <p class="box message">{{ given.access.shareMessage }}</p>
+        </section>
+      }
+
+      <div class="actions">
+        <a class="quipu-button quipu-button--secondary" [routerLink]="guestLink">
+          Ir a la ficha del huésped
+        </a>
+        @if (!expired()) {
+          <a class="quipu-button quipu-button--tertiary" [routerLink]="guestLink">
+            Generar otro acceso
+          </a>
+        }
+      </div>
+    </div>
+  </div>
+} @else {
+  <div class="nothing">
+    <app-page-notice tone="info" heading="No hay un acceso para mostrar.">
+      Cada acceso se ve una sola vez y no se guarda en esta pantalla. Si lo necesita, genera otro
+      desde su ficha.
+    </app-page-notice>
+    <div class="actions">
+      <a class="quipu-button quipu-button--primary" [routerLink]="guestLink">
+        Ir a la ficha del huésped
+      </a>
+      <a class="quipu-button quipu-button--tertiary" routerLink="/admin/guests">
+        Volver a Huéspedes
+      </a>
+    </div>
+  </div>
+}
+
+<app-toast [tone]="toastTone()" [message]="toast()" (dismissed)="toast.set(null)" />

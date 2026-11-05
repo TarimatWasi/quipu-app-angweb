@@ -108,6 +108,7 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['slow'],
     readiness: 'skeleton',
   },
+  { id: 'a3-1-nuevo-huesped', path: '/admin/guests/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a3-2-huesped-temporal',
     path: `/admin/guests/${TEMPORARY_GUEST_ANA}`,

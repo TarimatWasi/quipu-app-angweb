@@ -20,13 +20,13 @@ export interface GuestRecord {
   documentNumber: string;
   readonly name: string | null;
   readonly type: 'CONTRACT' | 'TEMPORARY';
-  readonly status: Schemas['GuestStatus'];
+  status: Schemas['GuestStatus'];
   readonly phone: string | null;
   readonly contactEmail: string | null;
   readonly accountEmail: string | null;
   readonly hasLoginAccess: boolean;
   readonly accessExpiresAt: string | null;
-  readonly deactivatedAt: string | null;
+  deactivatedAt: string | null;
   readonly documentCount: number;
 }
 

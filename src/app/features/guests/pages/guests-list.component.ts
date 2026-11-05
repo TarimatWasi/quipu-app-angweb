@@ -1,6 +1,7 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
+import { RouterLink } from '@angular/router';
 import { catchError, map, of, Subject, switchMap } from 'rxjs';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -59,7 +60,7 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
  * A3 «Huéspedes» (RF-02): every guest of the residence, the current ones or the inactive ones,
  * page by page with the cursor of the BFF. Type and state are asked to the BFF; the search and the
  * order work on what is loaded, in the page, and never go to the address. «Lo que toca ahora» says
- * who has not activated their access yet.
+ * who has not activated their access yet. «Nuevo huésped» opens A3.1.
  */
 @Component({
   selector: 'app-guests-list',
@@ -70,6 +71,7 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
     GuestsTableComponent,
     LoadErrorComponent,
     PageHeaderComponent,
+    RouterLink,
     ShowMoreComponent,
     SkeletonComponent,
   ],
