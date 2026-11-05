@@ -1,6 +1,7 @@
 import type { components } from '@core/api/bff.generated';
 import { payablePeriods } from '../data/account-views';
 import { findDemoUserByDocument } from '../data/demo-users';
+import { today } from '../data/mock-dates';
 import { ID_KIND } from '../data/mock-db';
 import type { DocumentType, GuestRecord, MockDb } from '../data/mock-db';
 import { UNSENT_EMAIL_MARK } from '../data/seed-administrators';
@@ -183,10 +184,15 @@ function createGuest(db: MockDb, body: Record<string, unknown>) {
   return ok(created, 201);
 }
 
-/** reactivateGuest (CU-28): refused while it owes overdue periods or stays (RN-25, RN-35). */
+/** What is owed: overdue, or with its payment rejected once its due date passed (RN-25). */
+function isOwed(item: Schemas['PayablePeriod']): boolean {
+  return item.status === 'OVERDUE' || (item.status === 'REJECTED' && item.dueDate < today());
+}
+
+/** reactivateGuest (CU-28): refused while it owes periods or stays (RN-25, RN-35). */
 function reactivateGuest(db: MockDb, guest: GuestRecord): Schemas['NonInactiveGuestSummary'] {
   if (guest.status !== 'INACTIVE') return nonInactive(guest);
-  const owed = payablePeriods(db, guest.id).filter((item) => item.status === 'OVERDUE');
+  const owed = payablePeriods(db, guest.id).filter(isOwed);
   if (owed.length > 0) {
     const debt: Schemas['GuestHasPendingDebtError'] = {
       code: 'GUEST_HAS_PENDING_DEBT',

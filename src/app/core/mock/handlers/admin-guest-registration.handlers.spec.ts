@@ -174,4 +174,21 @@ describe('guest registration in the simulated BFF (A3.1)', () => {
     const missing = await mock.fail(mock.send('POST', '/bff/admin/guests/nadie/reactivate', null));
     expect(missing.status).toBe(404);
   });
+
+  it('counts a past charge whose payment was rejected as owed', async () => {
+    const mock = await admin();
+    mock.bff.db.data.payments
+      .filter((payment) => payment.guestId === GUEST_IDS.pedro)
+      .forEach((payment) => {
+        payment.status = 'REJECTED';
+      });
+
+    const refused = await mock.fail(
+      mock.send('POST', `/bff/admin/guests/${GUEST_IDS.pedro}/reactivate`, null),
+    );
+    expect(refused.status).toBe(409);
+    const body = refused.error as Schemas['GuestHasPendingDebtError'];
+    expect(body.code).toBe('GUEST_HAS_PENDING_DEBT');
+    expect(body.debts).toEqual([expect.objectContaining({ period: null, amountDue: 250 })]);
+  });
 });
