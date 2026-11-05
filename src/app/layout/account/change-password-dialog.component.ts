@@ -62,7 +62,11 @@ interface ChangePasswordModel {
             @if (currentError(); as message) {
               <p id="current-password-error" class="quipu-field-error">{{ message }}</p>
             }
-            <a class="recover" href="/forgot-password" (click)="recover($event)"
+            <a
+              class="recover"
+              href="/forgot-password"
+              [attr.aria-disabled]="saving() ? 'true' : null"
+              (click)="recover($event)"
               >¿No la recuerdas?</a
             >
           </div>
@@ -147,7 +151,8 @@ export class ChangePasswordDialogComponent {
    */
   protected async recover(event: Event): Promise<void> {
     event.preventDefault();
-    if (this.leaving()) return;
+    // While a change is on its way its answer may replace the cookie after the logout expired it.
+    if (this.saving()) return;
     this.leaving.set(true);
     this.ref.close();
     await firstValueFrom(this.auth.logout());

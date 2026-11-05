@@ -254,6 +254,25 @@ describe('ChangePasswordDialogComponent (A0.6)', () => {
     controller.expectNone(isChange);
   });
 
+  it('«¿No la recuerdas?» does nothing while a change is on its way', async () => {
+    const { controller, closed, dialog, fillBoth, submit, request, fixture } = await setup();
+    await fillBoth();
+    await submit();
+    const req = await request();
+
+    const link = dialog().getByRole('link', { name: '¿No la recuerdas?' });
+    expect(link.getAttribute('aria-disabled')).toBe('true');
+    fireEvent.click(link);
+    await fixture.whenStable();
+
+    controller.expectNone(isLogout);
+    expect(closed).not.toHaveBeenCalled();
+    req.flush(null, { status: 204, statusText: 'No Content' });
+    await vi.waitFor(() => {
+      expect(closed).toHaveBeenCalledWith(true);
+    });
+  });
+
   it('«¿No la recuerdas?» closes the dialog, closes the session and goes to /forgot-password', async () => {
     const { auth, controller, closed, dialog } = await setup();
 
