@@ -39,7 +39,8 @@ export const GUEST_FORM_STYLES = `
     padding: 0 14px;
     border: 1px solid #6b766f;
     border-radius: 4px;
-    background: #f4f1ea;
+    /* Only the color: the shorthand would erase the P-07 arrow of the select (styles.scss). */
+    background-color: #f4f1ea;
     color: #141c18;
     font: inherit;
     font-size: 16px;
