@@ -77,6 +77,29 @@ describe('sessionExpiredInterceptor', () => {
     expect(queryParams).toEqual({ expired: '1', returnUrl: '/contracts?page=2' });
   });
 
+  it('keeps the notice and the way back when several calls answer 401 at once', async () => {
+    const { auth, controller, http, router, signIn } = setup();
+    await signIn();
+    await router.navigateByUrl('/contracts?page=2');
+
+    const first = firstValueFrom(http.get(`${BFF}/bff/contracts`));
+    const second = firstValueFrom(http.get(`${BFF}/bff/contracts`, { params: { page: '2' } }));
+    for (const request of controller.match((req) => req.url === `${BFF}/bff/contracts`)) {
+      request.flush({}, { status: 401, statusText: 'Unauthorized' });
+    }
+    await expect(first).rejects.toMatchObject({ status: 401 });
+    await expect(second).rejects.toMatchObject({ status: 401 });
+
+    expect(auth.session()).toBeNull();
+    await vi.waitFor(() => {
+      expect(router.url.split('?')[0]).toBe('/login');
+    });
+    expect(router.parseUrl(router.url).queryParams).toEqual({
+      expired: '1',
+      returnUrl: '/contracts?page=2',
+    });
+  });
+
   it('without a session in the tab: goes to the plain /login, with no notice', async () => {
     const { auth, controller, http, router } = setup();
     await router.navigateByUrl('/contracts');
