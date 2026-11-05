@@ -38,6 +38,8 @@ export const GUEST_IDS = {
   jorge: mockId(ID_KIND.guest, 4),
   pending: mockId(ID_KIND.guest, 5),
   pedro: mockId(ID_KIND.guest, 6),
+  expired: mockId(ID_KIND.guest, 7),
+  onboarding: mockId(ID_KIND.guest, 8),
 } as const;
 
 export const DEMO_USERS: Readonly<Record<DemoUserKey, DemoUser>> = {

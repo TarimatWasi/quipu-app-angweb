@@ -10,7 +10,7 @@ import type { PendingSummary } from '../model/administrator-texts';
   template: `
     <section aria-labelledby="pending-summary-title">
       <h2 id="pending-summary-title">Lo que toca ahora</h2>
-      <div class="card">
+      <div class="quipu-now-panel">
         <p class="figure">{{ summary().figure }}</p>
         <p class="heading">{{ summary().heading }}</p>
         <p class="text">{{ summary().text }}</p>
@@ -23,16 +23,6 @@ import type { PendingSummary } from '../model/administrator-texts';
     }
     h2 {
       margin: 0 0 0.75rem;
-    }
-    .card {
-      display: grid;
-      gap: 0.5rem;
-      padding: var(--quipu-relleno-panel);
-      border-radius: var(--quipu-radio);
-      background: var(--quipu-piedra-oscura);
-    }
-    p {
-      margin: 0;
     }
     .figure {
       font: var(--mat-sys-headline-large);
@@ -49,9 +39,6 @@ import type { PendingSummary } from '../model/administrator-texts';
       color: var(--quipu-tinta-secundaria);
     }
     @media (max-width: 599.98px) {
-      .card {
-        padding: var(--quipu-relleno-panel-movil);
-      }
       .figure {
         font-size: var(--quipu-cifra-ficha-movil);
       }

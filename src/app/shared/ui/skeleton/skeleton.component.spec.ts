@@ -80,10 +80,11 @@ describe('SkeletonComponent (P-12 cargando)', () => {
   });
 
   // Each shape draws its own blocks (Cargando.dc.html): the list has the panel, four figures, the
-  // filter bar and five rows; the detail, the panel, five rows and five tiles; the form, four
+  // filter bar and five rows; the table (A3), the same without the figures; the detail, the panel, five rows and five tiles; the form, four
   // fields with their labels, the button and four tiles.
   it.each([
     ['list', 1 + 1 + 4 + 1 + 5, 5],
+    ['table', 1 + 1 + 1 + 5, 5],
     ['detail', 1 + 1 + 5 + 1 + 4 + 1, 5],
     ['form', 1 + 4 * 2 + 1 + 1 + 4, 0],
   ] as const)('the %s shape draws %i blocks, %i of them rows', async (shape, total, rows) => {
