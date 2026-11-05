@@ -123,6 +123,57 @@ describe('simulated session', () => {
     expect((await mock.fail(mock.get('/bff/auth/me'))).status).toBe(401);
   });
 
+  it('answers AUTH_TEMPORARY_PASSWORD_EXPIRED for the expired temporary password, only on its account', async () => {
+    const mock = setUpMockBff();
+    const login = (documentNumber: string) =>
+      mock.fail(
+        mock.send('POST', '/bff/auth/login', {
+          documentType: 'DNI',
+          documentNumber,
+          password: 'Vencida2026',
+        }),
+      );
+
+    const expired = await login('70000003');
+    expect(expired.status).toBe(401);
+    expect(catalogOf(expired)).toEqual({
+      message: SOME_TEXT,
+      code: 'AUTH_TEMPORARY_PASSWORD_EXPIRED',
+    });
+    expect(catalogOf(await login('40000001'))).toEqual({
+      message: SOME_TEXT,
+      code: 'AUTH_INVALID_CREDENTIALS',
+    });
+    expect((await mock.fail(mock.get('/bff/auth/me'))).status).toBe(401);
+  });
+
+  it('activates an access (A0.4) and starts the session, and rejects the token «vencido»', async () => {
+    const mock = setUpMockBff();
+    const expired = await mock.fail(
+      mock.send('POST', '/bff/auth/activate', { token: 'vencido', newPassword: 'nueva-clave-1' }),
+    );
+    expect(catalogOf(expired)).toEqual({
+      message: SOME_TEXT,
+      code: 'AUTH_INVALID_OR_EXPIRED_CODE',
+    });
+    const weak = await mock.fail(
+      mock.send('POST', '/bff/auth/activate', { token: 'demo', newPassword: 'corta' }),
+    );
+    expect(catalogOf(weak)).toEqual({
+      message: SOME_TEXT,
+      code: 'AUTH_WEAK_PASSWORD',
+      field: 'newPassword',
+    });
+    expect((await mock.fail(mock.get('/bff/auth/me'))).status).toBe(401);
+
+    const session = await mock.send('POST', '/bff/auth/activate', {
+      token: 'demo',
+      newPassword: 'nueva-clave-1',
+    });
+    expect(session).toMatchObject({ role: 'GUEST', guestType: 'CONTRACT' });
+    expect(await mock.get('/bff/auth/me')).toEqual(session);
+  });
+
   it('reports a missing login field as VALIDATION_ERROR with its field', async () => {
     const mock = setUpMockBff();
     const error = await mock.fail(mock.send('POST', '/bff/auth/login', { documentType: 'DNI' }));

@@ -1,5 +1,11 @@
 import type { components } from '@core/api/bff.generated';
-import { DEMO_CLAVE, findDemoUser } from '../data/demo-users';
+import {
+  DEMO_CLAVE,
+  DEMO_EXPIRED_CLAVE,
+  DEMO_USERS,
+  findDemoUser,
+  findDemoUserByDocument,
+} from '../data/demo-users';
 import { failure, invalid, noContent, ok, raise } from '../mock-reply';
 import type { MockContext, MockRoute } from '../mock-types';
 
@@ -46,11 +52,20 @@ export const AUTH_ROUTES: readonly MockRoute[] = [
     key: 'POST /bff/auth/login',
     handler: (req, ctx) => {
       const fields = fieldsOf(req.body);
-      const user = findDemoUser(
-        text(fields, 'documentType'),
-        text(fields, 'documentNumber'),
-        text(fields, 'password'),
-      );
+      const documentType = text(fields, 'documentType');
+      const documentNumber = text(fields, 'documentNumber');
+      const password = text(fields, 'password');
+      if (
+        password === DEMO_EXPIRED_CLAVE &&
+        findDemoUserByDocument(documentType, documentNumber)?.key === 'temporary-password'
+      ) {
+        return failure(
+          401,
+          'AUTH_TEMPORARY_PASSWORD_EXPIRED',
+          'La clave temporal venció, pide una nueva al administrador',
+        );
+      }
+      const user = findDemoUser(documentType, documentNumber, password);
       if (user === undefined) {
         return failure(401, 'AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos');
       }
@@ -102,6 +117,25 @@ export const AUTH_ROUTES: readonly MockRoute[] = [
     handler: (req) => {
       const email = text(fieldsOf(req.body), 'email');
       return email.includes('@') ? noContent(202) : invalid('email');
+    },
+  },
+  {
+    // A0.4. The token «vencido» stands for an expired or used link; any other token activates the
+    // guest with a contract, whose session starts right away like after a login.
+    key: 'POST /bff/auth/activate',
+    handler: (req, ctx) => {
+      const fields = fieldsOf(req.body);
+      const token = text(fields, 'token');
+      checkNewPassword(text(fields, 'newPassword'));
+      if (token === 'vencido') {
+        return failure(
+          400,
+          'AUTH_INVALID_OR_EXPIRED_CODE',
+          'Enlace inválido o expirado, solicita uno nuevo',
+        );
+      }
+      ctx.signIn(DEMO_USERS['contract-guest']);
+      return ok(sessionOf(ctx));
     },
   },
   {
