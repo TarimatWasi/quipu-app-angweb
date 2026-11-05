@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { RouterLink, UrlTree } from '@angular/router';
 import { formatLimaToday } from './lima-today';
 
 /**
@@ -77,7 +77,7 @@ export class PageHeaderComponent {
   /** The instant whose day in Lima is shown; by default, when the page opens. */
   readonly date = input<Date>(new Date());
   /** The parent of a child screen; without it there is no «Volver a …». */
-  readonly backLink = input<string | readonly unknown[] | null>(null);
+  readonly backLink = input<string | readonly unknown[] | UrlTree | null>(null);
   /** Name of the parent, as in «Volver a Huéspedes». */
   readonly backTo = input('');
   /** The query of the back link, such as the view of a list to return to (`?vista=`). */

@@ -1,0 +1,249 @@
+// A5.1: only the layout of the page. Header, tiles, fields, the money field, the segmented
+// controls, notices and buttons are the kit's.
+:host {
+  display: block;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(20rem, 1fr);
+  align-items: start;
+  gap: 2.5rem 3.5rem;
+  margin-top: 2rem;
+}
+
+// The form goes first on the left; what is paid stays on the right on a wide screen.
+.main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.25rem;
+  order: 1;
+  max-width: var(--quipu-columna-formulario);
+}
+
+.side {
+  order: 2;
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 0.875rem;
+}
+
+h3 {
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--quipu-franja);
+  --quipu-cifra-ficha: var(--quipu-cifra-ficha-movil);
+}
+
+.wide {
+  grid-column: 1 / -1;
+}
+
+.note,
+.detail {
+  margin: 0;
+  color: var(--quipu-tinta-secundaria);
+}
+
+.note {
+  margin-top: 0.875rem;
+}
+
+.detail {
+  display: block;
+  font: var(--mat-sys-body-medium);
+}
+
+.empty {
+  display: block;
+}
+
+.chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: var(--quipu-relleno-tarjeta);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra-oscura);
+}
+
+.chosen-name {
+  display: block;
+  font: var(--mat-sys-title-medium);
+  color: var(--quipu-tinta);
+}
+
+.options {
+  display: grid;
+  gap: var(--quipu-franja);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option {
+  display: grid;
+  gap: 0.125rem;
+  width: 100%;
+  padding: 0.875rem var(--quipu-relleno-campo);
+  border: 0;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  font: var(--mat-sys-body-large);
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--quipu-hover-fila);
+}
+
+.period {
+  margin-top: 1.375rem;
+}
+
+.locked {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  margin-top: 0.75rem;
+}
+
+.entries {
+  display: grid;
+  gap: var(--quipu-franja);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entry {
+  display: grid;
+  gap: 1.125rem;
+  padding: var(--quipu-relleno-tarjeta);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+}
+
+.entry-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+}
+
+.drop {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  border: var(--quipu-borde-ancho-enfasis) dashed var(--quipu-borde);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra);
+  text-align: center;
+}
+
+.drop.invalid {
+  border-color: var(--quipu-error);
+}
+
+.drop-text {
+  margin: 0;
+  font-weight: var(--quipu-peso-enfasis);
+}
+
+.file {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  padding: 0.75rem;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra);
+}
+
+.file-name {
+  font-weight: var(--quipu-peso-enfasis);
+  overflow-wrap: anywhere;
+}
+
+.entry-fields {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+
+  > .quipu-field {
+    flex: 1 1 12rem;
+  }
+}
+
+.add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  margin-top: 0.75rem;
+}
+
+.date {
+  max-width: 17.5rem;
+}
+
+.sum {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.sum-line {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  margin: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.figure {
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+@media (max-width: 899.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .side,
+  .main {
+    order: 0;
+  }
+}
+
+@media (max-width: 599.98px) {
+  .tiles {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .add .quipu-button,
+  .actions .quipu-button--primary {
+    width: 100%;
+  }
+}

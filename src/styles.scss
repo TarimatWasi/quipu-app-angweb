@@ -460,6 +460,7 @@ a {
 // <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
 .quipu-field {
   display: grid;
+  align-content: start;
   gap: var(--quipu-espacio-campo);
 }
 
@@ -516,6 +517,7 @@ a {
 
   > .quipu-input,
   > .quipu-input[aria-invalid='true'] {
+    display: block;
     padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.25rem);
     font-variant-numeric: tabular-nums;
   }

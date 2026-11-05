@@ -125,7 +125,7 @@ async function setup({ url = '/admin/payments/new', from }: SetupOptions = {}) {
     fireEvent.change(element);
     await settle(harness);
   };
-  const submit = () => click(page().getByRole('button', { name: 'Registrar pago' }));
+  const submit = () => click(page().getByRole('button', { name: 'Registrar y aprobar pago' }));
   const dialog = () =>
     within(present(document.body.querySelector<HTMLElement>('mat-dialog-container')));
   const proof = (n: number) =>
@@ -143,14 +143,22 @@ async function chooseGuest(ui: Ui, id: string, periods: PayablePeriod[]) {
     pendingActivationCount: 0,
     onboardingCount: 0,
   });
-  await ui.choose(ui.page().getByLabelText('Huésped'), id);
+  await ui.click(guestOption(ui, id));
   await ui.flush(await ui.expect1(isPeriods(id)), periods);
+}
+
+/** The button of a guest in the picker, by its id among GUESTS. */
+function guestOption(ui: Ui, id: string): HTMLElement {
+  const name = GUESTS.find((item) => item.id === id)?.name ?? id;
+  return within(ui.page().getByRole('list', { name: 'Huéspedes' })).getByRole('button', {
+    name: new RegExp(`^${name}`),
+  });
 }
 
 /** The single proof as cash of `amount`. */
 async function cash(ui: Ui, amount: string) {
-  await ui.click(ui.proof(1).getByLabelText('Efectivo, sin voucher'));
-  await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), amount);
+  await ui.click(ui.proof(1).getByRole('button', { name: 'Efectivo, sin voucher' }));
+  await ui.type(ui.proof(1).getByLabelText('Monto recibido'), amount);
 }
 
 async function bodyOf(req: TestRequest) {
@@ -183,13 +191,12 @@ describe('DirectPaymentComponent (A5.1)', () => {
       onboardingCount: 0,
     });
 
-    const options = [...ui.page().getByLabelText('Huésped').querySelectorAll('option')].map(
-      (option) => option.textContent.trim(),
-    );
+    const options = within(ui.page().getByRole('list', { name: 'Huéspedes' }))
+      .getAllByRole('button')
+      .map((option) => option.textContent.replace(/\s+/g, ' ').trim());
     expect(options).toEqual([
-      'Elige un huésped',
-      'Ana Quispe · 12345678 · Con contrato',
-      'Luis Mamani · 87654321 · Temporal',
+      'Ana Quispe12345678 · Con contrato',
+      'Luis Mamani87654321 · Temporal',
     ]);
 
     await ui.submit();
@@ -230,7 +237,9 @@ describe('DirectPaymentComponent (A5.1)', () => {
       onboardingCount: 0,
     });
 
-    expect(ui.page().getByLabelText('Huésped').querySelectorAll('option')).toHaveLength(3);
+    expect(
+      within(ui.page().getByRole('list', { name: 'Huéspedes' })).getAllByRole('button'),
+    ).toHaveLength(2);
     expect(ui.page().queryByRole('button', { name: 'Cargar más huéspedes' })).toBeNull();
   });
 
@@ -240,9 +249,14 @@ describe('DirectPaymentComponent (A5.1)', () => {
 
     await ui.submit();
 
-    expect(ui.page().getByLabelText('Período').getAttribute('aria-invalid')).toBe('true');
+    expect(
+      ui
+        .page()
+        .getByLabelText(/que paga$/)
+        .getAttribute('aria-invalid'),
+    ).toBe('true');
     expect(ui.page().getByText('Elige el período', { selector: 'p' })).toBeTruthy();
-    const amount = ui.proof(1).getByLabelText('Monto (S/)');
+    const amount = ui.proof(1).getByLabelText('Monto recibido');
     expect(amount.getAttribute('aria-invalid')).toBe('true');
     expect(ui.proof(1).getByText('El monto debe ser mayor a 0')).toBeTruthy();
 
@@ -259,9 +273,12 @@ describe('DirectPaymentComponent (A5.1)', () => {
       payable({ period: '2026-08', status: 'REJECTED', paymentId: 'pay/rej' }),
     ]);
 
-    const options = [...ui.page().getByLabelText('Período').querySelectorAll('option')].map(
-      (option) => option.textContent.trim(),
-    );
+    const options = [
+      ...ui
+        .page()
+        .getByLabelText(/que paga$/)
+        .querySelectorAll('option'),
+    ].map((option) => option.textContent.trim());
     expect(options).toEqual([
       'Elige el período',
       'Septiembre 2026 · Por pagar S/ 350.00',
@@ -269,13 +286,13 @@ describe('DirectPaymentComponent (A5.1)', () => {
     ]);
     const link = ui.page().getByRole('link', { name: /Completar en Revisar pago/ });
     expect(link.getAttribute('href')).toBe('/admin/payments/pay%2Frej');
-    expect(link.closest('li')?.textContent).toContain('Agosto 2026');
+    expect(link.closest('p')?.textContent).toContain('Agosto 2026');
   });
 
   it('registers a contract month with cash, sends period and no stayId, and returns to A5 with the toast', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -294,12 +311,12 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('registers the stay of a temporary guest with a voucher: stayId, no period, the file at its index', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g2', [STAY]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'id:stay/7');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'id:stay/7');
     const voucher = new File(['png'], 'voucher.png', { type: 'image/png' });
     await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucher);
     await ui.click(ui.proof(1).getByRole('button', { name: 'Yape' }));
-    await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '400');
-    await ui.type(ui.page().getByLabelText('Fecha de recepción (opcional)'), '2026-10-30');
+    await ui.type(ui.proof(1).getByLabelText('Monto recibido'), '400');
+    await ui.type(ui.page().getByLabelText('Fecha en que lo recibiste (opcional)'), '2026-10-30');
     await ui.submit();
 
     const req = await ui.expect1(isCreate);
@@ -317,21 +334,21 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('points each voucher to its own file when cash sits between them', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await ui.pick(
       ui.proof(1).getByLabelText('Archivo del voucher'),
       new File(['a'], 'a.pdf', { type: 'application/pdf' }),
     );
-    await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '100');
+    await ui.type(ui.proof(1).getByLabelText('Monto recibido'), '100');
     await ui.click(ui.page().getByRole('button', { name: 'Agregar otro comprobante' }));
-    await ui.click(ui.proof(2).getByLabelText('Efectivo, sin voucher'));
-    await ui.type(ui.proof(2).getByLabelText('Monto (S/)'), '50');
+    await ui.click(ui.proof(2).getByRole('button', { name: 'Efectivo, sin voucher' }));
+    await ui.type(ui.proof(2).getByLabelText('Monto recibido'), '50');
     await ui.click(ui.page().getByRole('button', { name: 'Agregar otro comprobante' }));
     await ui.pick(
       ui.proof(3).getByLabelText('Archivo del voucher'),
       new File(['b'], 'b.jpg', { type: 'image/jpeg' }),
     );
-    await ui.type(ui.proof(3).getByLabelText('Monto (S/)'), '200');
+    await ui.type(ui.proof(3).getByLabelText('Monto recibido'), '200');
     await ui.submit();
 
     const req = await ui.expect1(isCreate);
@@ -348,7 +365,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('does not register a short payment and says how much is missing', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '300');
     await ui.submit();
 
@@ -376,8 +393,8 @@ describe('DirectPaymentComponent (A5.1)', () => {
       ui.proof(1).getByText('Archivo inválido — sube JPG, PNG o PDF de máx. 5MB'),
     ).toBeTruthy();
 
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
-    await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '350');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
+    await ui.type(ui.proof(1).getByLabelText('Monto recibido'), '350');
     await ui.submit();
     ui.http.expectNone(isCreate);
   });
@@ -408,10 +425,10 @@ describe('DirectPaymentComponent (A5.1)', () => {
     const link = ui.page().getByRole('link', { name: 'Rosa Huamán' });
     expect(link.getAttribute('href')).toBe('/admin/guests/g%2F9');
     expect(link.parentElement?.textContent.replace(/\s+/g, ' ').trim()).toBe(
-      'Rosa Huamán · 44556677 · Con contrato',
+      'Rosa Huamán44556677 · Con contrato',
     );
 
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-07');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-07');
     await cash(ui, '350');
     await ui.submit();
     const req = await ui.expect1(isCreate);
@@ -425,7 +442,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('paints a field error of the BFF next to its field, with its text', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -439,7 +456,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
       400,
     );
 
-    const amount = ui.proof(1).getByLabelText('Monto (S/)');
+    const amount = ui.proof(1).getByLabelText('Monto recibido');
     expect(amount.getAttribute('aria-invalid')).toBe('true');
     const describedBy = present(amount.getAttribute('aria-describedby'));
     expect(document.getElementById(describedBy)?.textContent.trim()).toBe(
@@ -452,7 +469,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('paints a stayId error of the BFF under the period', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g2', [STAY]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'id:stay/7');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'id:stay/7');
     await cash(ui, '400');
     await ui.submit();
 
@@ -462,7 +479,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
       400,
     );
 
-    const select = ui.page().getByLabelText('Período');
+    const select = ui.page().getByLabelText(/que paga$/);
     expect(select.getAttribute('aria-invalid')).toBe('true');
     expect(ui.page().getByText('La estadía no admite pagos')).toBeTruthy();
   });
@@ -470,7 +487,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('shows a 409 of the BFF in a modal with its message and reloads the periods', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -494,7 +511,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('shows GUEST_NOT_ACTIVE in a modal with the BFF text', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -518,7 +535,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('shows any other error under the form with the BFF text, keeping what was typed', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -534,13 +551,13 @@ describe('DirectPaymentComponent (A5.1)', () => {
     expect(ui.page().getByRole('alert').textContent.trim()).toBe(
       'Demasiados intentos, espera un momento antes de volver a intentar',
     );
-    expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto (S/)').value).toBe('350');
+    expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto recibido').value).toBe('350');
   });
 
   it('on a 404 of the guest after sending, says it with a toast and returns to A5', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
 
@@ -557,7 +574,7 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('does not send twice while the payment is on its way', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
     await ui.submit();
     await ui.submit();
@@ -570,9 +587,9 @@ describe('DirectPaymentComponent (A5.1)', () => {
   it('refuses a reception date in the future', async () => {
     const ui = await setup();
     await chooseGuest(ui, 'g1', [payable()]);
-    await ui.choose(ui.page().getByLabelText('Período'), 'p:2026-09');
+    await ui.choose(ui.page().getByLabelText(/que paga$/), 'p:2026-09');
     await cash(ui, '350');
-    const date = ui.page().getByLabelText('Fecha de recepción (opcional)');
+    const date = ui.page().getByLabelText('Fecha en que lo recibiste (opcional)');
     await ui.type(date, '2999-01-01');
     await ui.submit();
 

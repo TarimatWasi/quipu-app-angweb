@@ -1,226 +1,332 @@
-<section class="page" aria-labelledby="direct-payment-title">
-  <header class="head">
-    <div>
-      <a [routerLink]="backLink()">{{ preselected ? 'Volver' : 'Volver a Pagos' }}</a>
-      <h1 id="direct-payment-title">Registrar pago directo</h1>
-      <p class="muted">El pago queda registrado y aprobado con los montos que ingreses.</p>
-    </div>
-  </header>
+<app-page-header heading="Registrar pago directo" [backLink]="backLink()" [backTo]="backTo()" />
 
-  <form novalidate (submit)="submit($event)">
-    @if (preselected) {
-      <div class="field">
-        <span class="strong">Huésped</span>
-        @if (preselectedGuest(); as chosen) {
-          <span
-            ><a [routerLink]="['/admin/guests', preselected]">{{ chosen.name }}</a> ·
-            {{ chosen.detail }}</span
-          >
-        } @else {
-          <span>—</span>
+<form class="layout" novalidate (submit)="submit($event)">
+  <section class="side" aria-labelledby="dp-paying-title">
+    <h2 id="dp-paying-title">Lo que se está pagando</h2>
+    @if (guestName(); as name) {
+      <div class="tiles">
+        @for (tile of tiles(); track tile.label) {
+          <app-fact-tile
+            surface="stone"
+            [class.wide]="tile.wide"
+            [label]="tile.label"
+            [value]="tile.value"
+          />
         }
       </div>
+      <p class="note">{{ note() }}</p>
     } @else {
-      <div class="field">
-        <label for="dp-guest">Huésped</label>
-        <select
-          id="dp-guest"
-          aria-required="true"
-          [value]="guestId()"
-          [attr.aria-invalid]="guestError() ? 'true' : null"
-          [attr.aria-describedby]="guestError() ? 'dp-guest-error' : null"
-          (change)="chooseGuest($event.target)"
-        >
-          <option value="">Elige un huésped</option>
-          @for (option of guestOptions(); track option.id) {
-            <option [value]="option.id">{{ option.label }}</option>
-          }
-        </select>
-        @if (chosenGuest(); as chosen) {
-          <a class="guest-link" [routerLink]="['/admin/guests', chosen.id]">{{ chosen.name }}</a>
-        }
-        @if (guestError(); as message) {
-          <p id="dp-guest-error" class="error">{{ message }}</p>
-        }
-        @switch (guestsState().kind) {
-          @case ('loading') {
-            <p class="help" role="status">Cargando huéspedes…</p>
-          }
-          @case ('error') {
-            <div class="row">
-              <p class="error">{{ guestsLoadError() }}</p>
-              <button mat-stroked-button type="button" (click)="retryGuests()">Reintentar</button>
-            </div>
-          }
-          @default {
-            @if (guestsCursor()) {
-              <div>
-                <button mat-stroked-button type="button" (click)="moreGuests()">
-                  Cargar más huéspedes
-                </button>
-              </div>
-            }
-          }
-        }
-      </div>
+      <p class="quipu-notice quipu-notice--info empty">
+        Elige el huésped y el mes para ver lo que corresponde.
+      </p>
     }
+  </section>
 
-    @if (guestId()) {
-      <div class="field">
-        <label for="dp-period">Período</label>
-        <select
-          id="dp-period"
-          aria-required="true"
-          [value]="periodChoice()"
-          [attr.aria-invalid]="periodError() ? 'true' : null"
-          [attr.aria-describedby]="periodError() ? 'dp-period-error' : 'dp-period-help'"
-          (change)="choosePeriod($event.target)"
-        >
-          <option value="">Elige el período</option>
-          @for (option of options(); track option.key) {
-            <option [value]="option.key">{{ option.label }}</option>
-          }
-        </select>
-        <p id="dp-period-help" class="help">
-          @if (selected(); as item) {
-            Cuota {{ formatMoney(item.expectedAmount) }}
-            @if (item.creditApplied > 0) {
-              · crédito a favor {{ formatMoney(item.creditApplied) }}
-            }
-            · por pagar {{ formatMoney(item.amountDue) }}
+  <div class="main">
+    <section aria-labelledby="dp-who-title">
+      <h2 id="dp-who-title">Quién paga</h2>
+      @if (preselected) {
+        <div class="chosen">
+          @if (preselectedGuest(); as chosen) {
+            <a class="chosen-name" [routerLink]="['/admin/guests', preselected]">{{
+              chosen.name
+            }}</a>
+            <span class="detail">{{ chosen.detail }}</span>
           } @else {
-            Solo los períodos o estadías sin ningún pago.
+            <span class="detail">—</span>
           }
-        </p>
-        @if (periodError(); as message) {
-          <p id="dp-period-error" class="error">{{ message }}</p>
-        }
-        @switch (periodsState().kind) {
-          @case ('loading') {
-            <p class="help" role="status">Cargando períodos…</p>
+        </div>
+      } @else if (chosenGuest(); as chosen) {
+        <div class="chosen">
+          <div>
+            <a class="chosen-name" [routerLink]="['/admin/guests', chosen.id]">{{ chosen.name }}</a>
+            <span class="detail">{{ chosen.detail }}</span>
+          </div>
+          <button class="quipu-button quipu-button--tertiary" type="button" (click)="changeGuest()">
+            Cambiar
+          </button>
+        </div>
+      } @else {
+        <div class="quipu-field">
+          <label class="quipu-label" for="dp-guest">Huésped</label>
+          <div class="quipu-search-box">
+            <svg
+              aria-hidden="true"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <circle cx="11" cy="11" r="7" />
+              <path d="M20 20l-3.5-3.5" />
+            </svg>
+            <input
+              id="dp-guest"
+              class="quipu-input"
+              type="search"
+              autocomplete="off"
+              placeholder="Nombre, documento o tipo"
+              aria-required="true"
+              aria-controls="dp-guest-options"
+              [value]="guestSearch()"
+              [attr.aria-invalid]="guestError() ? 'true' : null"
+              [attr.aria-describedby]="guestError() ? 'dp-guest-error' : 'dp-guest-help'"
+              (input)="searchGuests($event.target)"
+            />
+          </div>
+          @if (guestError(); as message) {
+            <p id="dp-guest-error" class="quipu-field-error">{{ message }}</p>
           }
-          @case ('error') {
-            <div class="row">
-              <p class="error">{{ periodsLoadError() }}</p>
-              <button mat-stroked-button type="button" (click)="retryPeriods()">Reintentar</button>
-            </div>
-          }
-          @case ('ready') {
-            @if (options().length === 0) {
-              <p class="help">Este huésped no tiene períodos por pagar.</p>
-            }
-          }
-        }
-        @if (toComplete().length > 0) {
-          <p class="help">Con un pago por revisar o rechazado, se completan en Revisar pago:</p>
-          <ul class="to-complete">
-            @for (pending of toComplete(); track pending.id) {
+          <ul id="dp-guest-options" class="options" aria-label="Huéspedes">
+            @for (option of matchingGuests(); track option.id) {
               <li>
-                {{ pending.label }} ·
-                <a [routerLink]="['/admin/payments', pending.id]">Completar en Revisar pago</a>
+                <button class="option" type="button" (click)="pickGuest(option.id)">
+                  <span class="quipu-name">{{ option.name }}</span>
+                  <span class="detail">{{ option.detail }}</span>
+                </button>
               </li>
             }
           </ul>
-        }
-      </div>
-    }
-
-    <div class="proofs">
-      @for (proof of proofs(); track proof.key; let i = $index) {
-        <fieldset>
-          <legend>Comprobante {{ i + 1 }}</legend>
-          <div class="kinds">
-            <label>
-              <input
-                type="radio"
-                [name]="'dp-kind-' + proof.key"
-                value="VOUCHER"
-                [checked]="proof.kind === 'VOUCHER'"
-                (change)="kindOf(i, 'VOUCHER')"
-              />
-              Con voucher
-            </label>
-            <label>
-              <input
-                type="radio"
-                [name]="'dp-kind-' + proof.key"
-                value="CASH"
-                [checked]="proof.kind === 'CASH'"
-                (change)="kindOf(i, 'CASH')"
-              />
-              Efectivo, sin voucher
-            </label>
-          </div>
-
-          @if (proof.kind === 'VOUCHER') {
-            <div class="field">
-              <label [for]="'dp-proof-' + proof.key + '-file'">Archivo del voucher</label>
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                [id]="'dp-proof-' + proof.key + '-file'"
-                [attr.aria-invalid]="fileError(i) ? 'true' : null"
-                [attr.aria-describedby]="
-                  'dp-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
-                "
-                (change)="picked(i, $event.target)"
-              />
-              <p class="help" [id]="'dp-proof-' + proof.key + '-file-help'">
-                {{ proof.file ? proof.file.name : 'JPG, PNG o PDF de hasta 5 MB.' }}
-              </p>
-              @if (fileError(i); as message) {
-                <p class="error" [id]="'dp-proof-' + proof.key + '-file-error'">{{ message }}</p>
-              }
-            </div>
-            <div class="field">
-              <label [for]="'dp-proof-' + proof.key + '-method'">Medio de pago (opcional)</label>
-              <input
-                type="text"
-                maxlength="60"
-                [id]="'dp-proof-' + proof.key + '-method'"
-                [value]="proof.method"
-                (input)="typedMethod(i, methodFrom($event.target))"
-              />
-              <div class="shortcuts" role="group" aria-label="Medios frecuentes">
-                @for (shortcut of shortcuts; track shortcut) {
-                  <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
-                    {{ shortcut }}
-                  </button>
-                }
-              </div>
-            </div>
+          @if (guestsState().kind === 'ready' && matchingGuests().length === 0) {
+            <p class="quipu-notice quipu-notice--info">
+              Ningún huésped coincide con «{{ guestSearch() }}».
+            </p>
           }
-
-          <div class="field">
-            <label [for]="'dp-proof-' + proof.key + '-amount'">Monto (S/)</label>
-            <input
-              type="text"
-              inputmode="decimal"
-              aria-required="true"
-              [id]="'dp-proof-' + proof.key + '-amount'"
-              [value]="proof.amount"
-              [attr.aria-invalid]="amountError(i) ? 'true' : null"
-              [attr.aria-describedby]="
-                amountError(i) ? 'dp-proof-' + proof.key + '-amount-error' : null
-              "
-              (input)="typedAmount(i, $event.target)"
-            />
-            @if (amountError(i); as message) {
-              <p class="error" [id]="'dp-proof-' + proof.key + '-amount-error'">{{ message }}</p>
+          @if (hiddenGuests() > 0) {
+            <p class="quipu-field-help">
+              Y {{ hiddenGuests() }} más: escribe el nombre o el documento para encontrarlo.
+            </p>
+          }
+          <p id="dp-guest-help" class="quipu-field-help">
+            Aparecen los huéspedes activos y los inactivos que aún deben algún mes.
+          </p>
+          @switch (guestsState().kind) {
+            @case ('loading') {
+              <p class="quipu-field-help" role="status">Cargando huéspedes…</p>
             }
-          </div>
-
-          @if (proofs().length > 1) {
-            <button mat-button type="button" (click)="removeProof(i)">
-              Quitar<span class="cdk-visually-hidden"> comprobante {{ i + 1 }}</span>
-            </button>
+            @case ('error') {
+              <app-load-error [message]="guestsLoadError()" (retry)="retryGuests()" />
+            }
+            @default {
+              @if (guestsCursor()) {
+                <button
+                  class="quipu-button quipu-button--secondary"
+                  type="button"
+                  (click)="moreGuests()"
+                >
+                  Cargar más huéspedes
+                </button>
+              }
+            }
           }
-        </fieldset>
+        </div>
       }
 
-      <div class="row">
+      @if (guestId()) {
+        <div class="quipu-field period">
+          <label class="quipu-label" for="dp-period">{{ periodTitle() }}</label>
+          <select
+            id="dp-period"
+            class="quipu-input"
+            aria-required="true"
+            [value]="periodChoice()"
+            [attr.aria-invalid]="periodError() ? 'true' : null"
+            [attr.aria-describedby]="periodError() ? 'dp-period-error' : 'dp-period-help'"
+            (change)="choosePeriod($event.target)"
+          >
+            <option value="">Elige el período</option>
+            @for (option of options(); track option.key) {
+              <option [value]="option.key">{{ option.label }}</option>
+            }
+          </select>
+          @if (periodError(); as message) {
+            <p id="dp-period-error" class="quipu-field-error">{{ message }}</p>
+          }
+          <p id="dp-period-help" class="quipu-field-help">
+            Solo aparecen los que no tienen ningún pago.
+          </p>
+          @switch (periodsState().kind) {
+            @case ('loading') {
+              <p class="quipu-field-help" role="status">Cargando períodos…</p>
+            }
+            @case ('error') {
+              <app-load-error [message]="periodsLoadError()" (retry)="retryPeriods()" />
+            }
+            @case ('ready') {
+              @if (options().length === 0) {
+                <p class="quipu-notice quipu-notice--info">
+                  Este huésped no tiene períodos por pagar.
+                </p>
+              }
+            }
+          }
+        </div>
+        @for (pending of toComplete(); track pending.id) {
+          <p class="quipu-notice quipu-notice--info locked">
+            <strong>{{ pending.label }} ya tiene un pago por revisar o rechazado.</strong>
+            <a [routerLink]="['/admin/payments', pending.id]">Completar en Revisar pago</a>
+          </p>
+        }
+      }
+    </section>
+
+    <section aria-labelledby="dp-proofs-title">
+      <h2 id="dp-proofs-title">Comprobantes</h2>
+      <ol class="entries">
+        @for (proof of proofs(); track proof.key; let i = $index) {
+          <li class="entry" role="group" [attr.aria-label]="'Comprobante ' + (i + 1)">
+            <div class="entry-head">
+              <h3>{{ proofs().length > 1 ? 'Comprobante ' + (i + 1) : 'Comprobante' }}</h3>
+              @if (proofs().length > 1) {
+                <button
+                  class="quipu-button quipu-button--tertiary"
+                  type="button"
+                  (click)="removeProof(i)"
+                >
+                  Quitar<span class="cdk-visually-hidden"> comprobante {{ i + 1 }}</span>
+                </button>
+              }
+            </div>
+
+            <div
+              class="quipu-segmented"
+              role="group"
+              [attr.aria-label]="'Tipo del comprobante ' + (i + 1)"
+            >
+              <button
+                type="button"
+                [attr.aria-pressed]="proof.kind === 'VOUCHER'"
+                (click)="kindOf(i, 'VOUCHER')"
+              >
+                Con voucher
+              </button>
+              <button
+                type="button"
+                [attr.aria-pressed]="proof.kind === 'CASH'"
+                (click)="kindOf(i, 'CASH')"
+              >
+                Efectivo, sin voucher
+              </button>
+            </div>
+
+            @if (proof.kind === 'VOUCHER') {
+              <div class="quipu-field">
+                <input
+                  class="cdk-visually-hidden"
+                  type="file"
+                  aria-label="Archivo del voucher"
+                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
+                  [id]="'dp-proof-' + proof.key + '-file'"
+                  [attr.aria-invalid]="fileError(i) ? 'true' : null"
+                  [attr.aria-describedby]="
+                    'dp-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
+                  "
+                  (change)="picked(i, $event.target)"
+                />
+                @if (proof.file; as file) {
+                  <div class="file">
+                    <span class="file-name">{{ file.name }}</span>
+                    <label
+                      class="quipu-button quipu-button--tertiary"
+                      [for]="'dp-proof-' + proof.key + '-file'"
+                      >Cambiar<span class="cdk-visually-hidden">
+                        el archivo del voucher</span
+                      ></label
+                    >
+                  </div>
+                } @else {
+                  <div class="drop" [class.invalid]="fileError(i)">
+                    <p class="drop-text">Elige la foto o el PDF del voucher</p>
+                    <label
+                      class="quipu-button quipu-button--secondary"
+                      [for]="'dp-proof-' + proof.key + '-file'"
+                      >Elegir archivo<span class="cdk-visually-hidden">
+                        del comprobante {{ i + 1 }}</span
+                      ></label
+                    >
+                  </div>
+                }
+                @if (fileError(i); as message) {
+                  <p class="quipu-field-error" [id]="'dp-proof-' + proof.key + '-file-error'">
+                    {{ message }}
+                  </p>
+                }
+                <p class="quipu-field-help" [id]="'dp-proof-' + proof.key + '-file-help'">
+                  JPG, PNG o PDF, hasta 5 MB.
+                </p>
+              </div>
+            } @else {
+              <p class="detail">
+                El efectivo que recibiste en mano. Quedará como «agregado por la administración».
+              </p>
+            }
+
+            <div class="entry-fields">
+              <div class="quipu-field">
+                <label class="quipu-label" [for]="'dp-proof-' + proof.key + '-amount'"
+                  >Monto recibido</label
+                >
+                <span class="quipu-money">
+                  <span aria-hidden="true">S/</span>
+                  <input
+                    class="quipu-input"
+                    type="text"
+                    inputmode="decimal"
+                    aria-required="true"
+                    [id]="'dp-proof-' + proof.key + '-amount'"
+                    [value]="proof.amount"
+                    [attr.aria-invalid]="amountError(i) ? 'true' : null"
+                    [attr.aria-describedby]="
+                      amountError(i) ? 'dp-proof-' + proof.key + '-amount-error' : null
+                    "
+                    (input)="typedAmount(i, $event.target)"
+                  />
+                </span>
+                @if (amountError(i); as message) {
+                  <p class="quipu-field-error" [id]="'dp-proof-' + proof.key + '-amount-error'">
+                    {{ message }}
+                  </p>
+                }
+              </div>
+              @if (proof.kind === 'VOUCHER') {
+                <div class="quipu-field">
+                  <label class="quipu-label" [for]="'dp-proof-' + proof.key + '-method'"
+                    >Medio de pago (opcional)</label
+                  >
+                  <input
+                    class="quipu-input"
+                    type="text"
+                    maxlength="60"
+                    placeholder="Por ejemplo, Yape"
+                    [id]="'dp-proof-' + proof.key + '-method'"
+                    [value]="proof.method"
+                    (input)="typedMethod(i, methodFrom($event.target))"
+                  />
+                  <div class="quipu-segmented" role="group" aria-label="Medios frecuentes">
+                    @for (shortcut of shortcuts; track shortcut) {
+                      <button
+                        type="button"
+                        [attr.aria-pressed]="proof.method === shortcut"
+                        (click)="typedMethod(i, shortcut)"
+                      >
+                        {{ shortcut }}
+                      </button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+
+      <div class="add">
         <button
-          mat-stroked-button
+          class="quipu-button quipu-button--secondary"
           type="button"
           [disabled]="atProofLimit()"
           [attr.aria-describedby]="atProofLimit() ? 'dp-proof-limit' : null"
@@ -229,21 +335,19 @@
           Agregar otro comprobante
         </button>
         @if (atProofLimit()) {
-          <p id="dp-proof-limit" class="help">{{ proofLimitText }}</p>
+          <p id="dp-proof-limit" class="quipu-field-help">{{ proofLimitText }}</p>
         }
       </div>
-      @if (balanceText(); as text) {
-        <p class="strong" role="status">Suma {{ formatMoney(sum()) }} · {{ text }}</p>
-      }
       @if (proofsError(); as message) {
-        <p class="error" id="dp-proofs-error" tabindex="-1">{{ message }}</p>
+        <p class="quipu-field-error" id="dp-proofs-error" tabindex="-1">{{ message }}</p>
       }
-    </div>
+    </section>
 
-    <div class="field">
-      <label for="dp-received-on">Fecha de recepción (opcional)</label>
+    <div class="quipu-field date">
+      <label class="quipu-label" for="dp-received-on">Fecha en que lo recibiste (opcional)</label>
       <input
         id="dp-received-on"
+        class="quipu-input"
         type="date"
         [max]="today"
         [value]="receivedOn()"
@@ -251,10 +355,21 @@
         [attr.aria-describedby]="dateError() ? 'dp-received-on-error' : 'dp-received-on-help'"
         (input)="typedDate($event.target)"
       />
-      <p id="dp-received-on-help" class="help">Si la dejas vacía, se usa la fecha de hoy.</p>
       @if (dateError(); as message) {
-        <p id="dp-received-on-error" class="error">{{ message }}</p>
+        <p id="dp-received-on-error" class="quipu-field-error">{{ message }}</p>
       }
+      <p id="dp-received-on-help" class="quipu-field-help">
+        Si la dejas vacía, es la fecha de hoy. No cambia el mes en que cuenta el pago.
+      </p>
+    </div>
+
+    <div class="sum" role="status">
+      <p class="sum-line">
+        <strong>Suma recibida</strong><strong class="figure">{{ sumText() }}</strong>
+      </p>
+      <app-page-notice [tone]="received().tone" [heading]="received().heading">{{
+        received().text
+      }}</app-page-notice>
     </div>
 
     @if (generalError(); as message) {
@@ -264,8 +379,10 @@
     }
 
     <div class="actions">
-      <button mat-flat-button type="submit" [disabled]="busy()">Registrar pago</button>
-      <a mat-button [routerLink]="backLink()">Cancelar</a>
+      <button class="quipu-button quipu-button--primary" type="submit" [disabled]="busy()">
+        Registrar y aprobar pago
+      </button>
+      <a class="quipu-button quipu-button--tertiary" [routerLink]="backLink()">Cancelar</a>
     </div>
-  </form>
-</section>
+  </div>
+</form>
