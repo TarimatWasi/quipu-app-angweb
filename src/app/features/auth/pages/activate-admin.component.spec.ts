@@ -64,6 +64,18 @@ describe('ActivateAdminComponent (A0.5, RF-22)', () => {
     ).toBeTruthy();
   });
 
+  it('shows and hides the password with «Mostrar» / «Ocultar»', async () => {
+    const { ui } = await setup();
+    const field = ui.getByLabelText('Contraseña');
+
+    fireEvent.click(ui.getByRole('button', { name: 'Mostrar' }));
+
+    await vi.waitFor(() => {
+      expect(field.getAttribute('type')).toBe('text');
+    });
+    expect(ui.getByRole('button', { name: 'Ocultar' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('explains that the link is not valid when it has no code, and offers a new one', async () => {
     const { ui } = await setup(null);
 

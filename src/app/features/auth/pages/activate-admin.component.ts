@@ -1,8 +1,6 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -33,28 +31,9 @@ function codeOf(route: ActivatedRoute): string | null {
  */
 @Component({
   selector: 'app-activate-admin',
-  imports: [
-    AuthShellComponent,
-    FormRoot,
-    FormField,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatButton,
-    RouterLink,
-  ],
+  imports: [AuthShellComponent, FormRoot, FormField, MatButton, RouterLink],
   templateUrl: './activate-admin.component.html',
-  styles: [
-    FORM_PAGE_STYLES,
-    `
-      .lead,
-      .help {
-        margin: 0 0 0.5rem;
-        font: var(--mat-sys-body-medium);
-        color: var(--mat-sys-on-surface-variant);
-      }
-    `,
-  ],
+  styles: FORM_PAGE_STYLES,
 })
 export class ActivateAdminComponent {
   private readonly auth = inject(AuthService);
@@ -67,6 +46,8 @@ export class ActivateAdminComponent {
   protected readonly serverError = signal<string | null>(null);
   /** True when the server said the code cannot be used: the only way forward is a new link. */
   protected readonly codeRejected = signal(false);
+  /** «Mostrar» / «Ocultar» of the password field (decided 2026-11-01, TAR-218). */
+  protected readonly revealed = signal(false);
 
   private readonly model = signal<ActivateAdminModel>({ name: '', newPassword: '' });
 
