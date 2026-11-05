@@ -49,6 +49,7 @@ const VALIDATION_TEXTS = new Map<string, string>([
   ['password', 'Revisa la contraseña'],
   ['newPassword', 'Revisa la nueva contraseña'],
   ['email', 'Revisa el correo'],
+  ['name', 'Escribe tu nombre completo'],
 ]);
 const VALIDATION_FALLBACK = 'Revisa los datos ingresados';
 

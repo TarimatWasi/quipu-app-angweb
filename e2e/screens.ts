@@ -36,6 +36,12 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['normal'],
   },
   { id: 'a0-2-recuperar', path: '/forgot-password', role: 'anonymous', scenarios: ['normal'] },
+  {
+    id: 'a0-5-activar-administrador',
+    path: '/activate-admin?code=admin-nuevo',
+    role: 'anonymous',
+    scenarios: ['normal'],
+  },
   { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['normal'] },
   { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest', scenarios: ['normal'] },
   { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest', scenarios: ['normal'] },

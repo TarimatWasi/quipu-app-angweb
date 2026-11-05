@@ -1,0 +1,55 @@
+<app-auth-shell>
+  @if (code() === null || codeRejected()) {
+    <section>
+      <h1>Enlace no válido</h1>
+      <output class="lead">
+        Enlace inválido o expirado, solicita uno nuevo. Escribe el correo con el que te dieron de
+        alta y te enviaremos otro.
+      </output>
+      <a class="quipu-button quipu-button--secondary" routerLink="/forgot-password"
+        >Pedir un enlace nuevo</a
+      >
+    </section>
+  } @else {
+    <form
+      [formRoot]="activateForm"
+      novalidate
+      [attr.aria-describedby]="serverError() ? 'activate-admin-error' : null"
+    >
+      <h1>Activa tu cuenta de administrador</h1>
+      <p class="lead">
+        Te dieron acceso para administrar Quipu. Escribe tu nombre y elige tu contraseña; entrarás
+        con tu documento.
+      </p>
+
+      <div class="quipu-field">
+        <label class="quipu-label" for="name">Nombre completo</label>
+        <input
+          class="quipu-input"
+          id="name"
+          autocomplete="name"
+          aria-required="true"
+          [formField]="activateForm.name"
+          [attr.aria-invalid]="nameError() ? 'true' : null"
+          [attr.aria-describedby]="nameError() ? 'name-error name-help' : 'name-help'"
+        />
+        @if (nameError(); as message) {
+          <p id="name-error" class="quipu-field-error">{{ message }}</p>
+        }
+        <p id="name-help" class="quipu-field-help">
+          Así te verán los demás administradores y quedará en lo que revises.
+        </p>
+      </div>
+
+      <app-new-password-field [field]="activateForm.newPassword" label="Contraseña" />
+
+      @if (serverError(); as message) {
+        <p id="activate-admin-error" class="quipu-alert" tabindex="-1">{{ message }}</p>
+      }
+
+      <button mat-flat-button type="submit" [disabled]="activateForm().submitting()">
+        {{ activateForm().submitting() ? 'Activando…' : 'Activar mi cuenta' }}
+      </button>
+    </form>
+  }
+</app-auth-shell>
