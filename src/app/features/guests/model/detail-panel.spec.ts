@@ -280,7 +280,7 @@ describe('A3.2 «Lo que toca ahora»', () => {
   });
 
   it('10. up to date: nothing to do, with the last month or stay it paid', () => {
-    const periods = [period('2026-10', 'PAID'), period('2026-11', 'UNPAID')];
+    const periods = [period('2026-09', 'PAID'), period('2026-10', 'PAID')];
 
     expect(panel({ periods })).toEqual({
       figure: '0',
@@ -300,6 +300,36 @@ describe('A3.2 «Lo que toca ahora»', () => {
       'Está al día: pagó su estadía del 20 – 27 oct 2026. No hay nada por hacer.',
     );
     expect(panel({ guest: temporary }).text).toBe('Está al día. No hay nada por hacer.');
+  });
+
+  it('a rejected payment not yet overdue still asks to correct it, before the review', () => {
+    const periods = [
+      period('2026-10', 'PAID'),
+      period('2026-11', 'UNPAID', { paymentId: 'p11', rejectionReason: 'Falta el voucher' }),
+    ];
+
+    expect(panel({ periods })).toEqual({
+      figure: 'S/ 800.00',
+      alarm: false,
+      label: 'por pagar',
+      badge: { label: 'No pagado', tone: 'unpaid' },
+      text: 'Noviembre 2026: vence el 5 nov y su pago fue rechazado («Falta el voucher»). Corrígelo o agrega lo que falte en la revisión del pago.',
+      action: {
+        kind: 'link',
+        label: 'Corregir pago',
+        link: ['/admin/payments', 'p11'],
+        query: null,
+      },
+    });
+  });
+
+  it('up to date with a month still to come says when it is due, not that nothing is left', () => {
+    const periods = [period('2026-10', 'PAID'), period('2026-11', 'UNPAID')];
+
+    expect(panel({ periods }).text).toBe(
+      'Está al día: pagó octubre. Noviembre 2026 vence el 5 nov.',
+    );
+    expect(panel({ periods }).figure).toBe('0');
   });
 
   it('says how long ago a payment was sent and whether the guest owes', () => {

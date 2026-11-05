@@ -220,6 +220,23 @@ function debtPanel(guestId: string, owed: readonly Charge[]): DetailPanel {
   };
 }
 
+/** A rejected payment still before its due date (and grace): it is corrected, not paid again. */
+function rejectedPanel(rejected: Charge & { readonly paymentId: string }): DetailPanel {
+  const reason = rejected.rejectionReason ? ` («${rejected.rejectionReason}»)` : '';
+  return {
+    figure: formatMoney(rejected.amountDue),
+    alarm: false,
+    label: 'por pagar',
+    badge: PERIOD_BADGES.UNPAID,
+    text: `${rejected.title}: vence el ${dayMonth(rejected.dueDate)} y su pago fue rechazado${reason}. Corrígelo o agrega lo que falte en la revisión del pago.`,
+    action: { kind: 'link', ...openPayment('Corregir pago', rejected.paymentId) },
+  };
+}
+
+function isRejected(charge: Charge): charge is Charge & { readonly paymentId: string } {
+  return charge.state === 'UNPAID' && charge.paymentId !== null;
+}
+
 /** «hoy», «hace 1 día», «hace 4 días»: how long ago a payment was sent, by days in Lima. */
 export function daysAgo(sentAt: string, now: Date): string | null {
   const sent = limaDay(sentAt);
@@ -266,12 +283,18 @@ function quietPanel(guest: GuestDetail, charges: readonly Charge[]): DetailPanel
   }
   const paid = charges.filter((charge) => charge.state === 'PAID').at(-1);
   const what = paid === undefined ? '' : `: pagó ${paid.paidText}`;
+  // A charge not yet due is not owed, but the panel does not say that nothing is left.
+  const next = charges.find((charge) => charge.state === 'UNPAID');
+  const after =
+    next === undefined
+      ? 'No hay nada por hacer.'
+      : `${next.title} vence el ${dayMonth(next.dueDate)}.`;
   return {
     figure: '0',
     alarm: false,
     label: guest.type === 'CONTRACT' ? 'meses por pagar' : 'estadías por pagar',
     badge: null,
-    text: `Está al día${what}. No hay nada por hacer.`,
+    text: `Está al día${what}. ${after}`,
     action: null,
   };
 }
@@ -285,6 +308,8 @@ export function detailPanel(input: PanelInput): DetailPanel {
   const owed = charges.filter((charge) => charge.state === 'OVERDUE');
   if (guest.status === 'INACTIVE') return inactivePanel(guest, owed);
   if (owed.length > 0) return debtPanel(guest.id, owed);
+  const rejected = charges.filter(isRejected).at(-1);
+  if (rejected) return rejectedPanel(rejected);
   const waiting = charges.filter((charge) => charge.state === 'UNDER_REVIEW');
   if (waiting.length > 0) return reviewPanel(guest, waiting, now);
   return quietPanel(guest, charges);
