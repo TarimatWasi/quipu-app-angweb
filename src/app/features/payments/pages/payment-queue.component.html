@@ -64,10 +64,9 @@
         (clear)="clearFilters()"
         (phoneSort)="sortOnPhone($event)"
       >
-        <div class="quipu-field">
-          <label class="quipu-label" for="payments-type">Tipo de huésped</label>
+        <app-form-field fieldId="payments-type" label="Tipo de huésped">
           <select
-            id="payments-type"
+            appFieldControl
             class="quipu-input quipu-input--filter"
             [formField]="filterForm.type"
           >
@@ -75,7 +74,7 @@
             <option value="CONTRACT">Con contrato</option>
             <option value="TEMPORARY">Temporal</option>
           </select>
-        </div>
+        </app-form-field>
       </app-list-filters>
 
       <div class="list" [attr.aria-busy]="loadingList()">

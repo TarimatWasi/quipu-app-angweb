@@ -28,6 +28,8 @@ import {
   visiblePayments,
 } from '../model/payment-queue';
 import type { QueueFilters, QueueSort, QueueView, SortKey } from '../model/payment-queue';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 type Phase = 'loading' | 'error' | 'ready';
 
@@ -40,6 +42,8 @@ type Phase = 'loading' | 'error' | 'ready';
 @Component({
   selector: 'app-payment-queue',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     EmptyStateComponent,
     FormField,
     ListFiltersComponent,

@@ -1,5 +1,7 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { FieldTree, FormField } from '@angular/forms/signals';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { firstError } from './form-feedback';
 
 /**
@@ -10,20 +12,17 @@ import { firstError } from './form-feedback';
  */
 @Component({
   selector: 'app-new-password-field',
-  imports: [FormField],
+  imports: [FieldControlDirective, FormField, FormFieldComponent],
   template: `
-    <div class="quipu-field">
-      <label class="quipu-label" [for]="inputId()">{{ label() }}</label>
+    <app-form-field [fieldId]="inputId()" [label]="label()" [error]="error()" [help]="help">
       <div class="quipu-reveal">
         <input
+          appFieldControl
           class="quipu-input"
-          [id]="inputId()"
-          [type]="revealed() ? 'text' : 'password'"
           autocomplete="new-password"
           aria-required="true"
+          [type]="revealed() ? 'text' : 'password'"
           [formField]="field()"
-          [attr.aria-invalid]="error() ? 'true' : null"
-          [attr.aria-describedby]="describedBy()"
         />
         <button
           class="quipu-reveal-toggle"
@@ -35,11 +34,7 @@ import { firstError } from './form-feedback';
           {{ revealed() ? 'Ocultar' : 'Mostrar' }}
         </button>
       </div>
-      @if (error(); as message) {
-        <p [id]="inputId() + '-error'" class="quipu-field-error">{{ message }}</p>
-      }
-      <p [id]="inputId() + '-help'" class="quipu-field-help">Mínimo 8 caracteres.</p>
-    </div>
+    </app-form-field>
   `,
   styles: `
     :host {
@@ -54,8 +49,5 @@ export class NewPasswordFieldComponent {
 
   protected readonly revealed = signal(false);
   protected readonly error = computed(() => firstError(this.field()));
-  protected readonly describedBy = computed(() => {
-    const id = this.inputId();
-    return this.error() ? `${id}-error ${id}-help` : `${id}-help`;
-  });
+  protected readonly help = 'Mínimo 8 caracteres.';
 }

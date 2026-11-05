@@ -109,15 +109,18 @@
       }
 
       @if (guestId()) {
-        <div class="quipu-field period">
-          <label class="quipu-label" for="dp-period">{{ periodTitle() }}</label>
+        <app-form-field
+          class="period"
+          fieldId="dp-period"
+          help="Solo aparecen los que no tienen ningún pago."
+          [label]="periodTitle()"
+          [error]="periodError()"
+        >
           <select
-            id="dp-period"
+            appFieldControl
             class="quipu-input"
             aria-required="true"
             [value]="periodChoice()"
-            [attr.aria-invalid]="periodError() ? 'true' : null"
-            [attr.aria-describedby]="periodError() ? 'dp-period-error' : 'dp-period-help'"
             (change)="choosePeriod($event.target)"
           >
             <option value="">Elige el período</option>
@@ -125,12 +128,8 @@
               <option [value]="option.key">{{ option.label }}</option>
             }
           </select>
-          @if (periodError(); as message) {
-            <p id="dp-period-error" class="quipu-field-error">{{ message }}</p>
-          }
-          <p id="dp-period-help" class="quipu-field-help">
-            Solo aparecen los que no tienen ningún pago.
-          </p>
+        </app-form-field>
+        <div class="period-state">
           @switch (periodsState().kind) {
             @case ('loading') {
               <p class="quipu-field-help" role="status">Cargando períodos…</p>
@@ -196,51 +195,12 @@
             </div>
 
             @if (proof.kind === 'VOUCHER') {
-              <div class="quipu-field">
-                <input
-                  class="cdk-visually-hidden"
-                  type="file"
-                  aria-label="Archivo del voucher"
-                  accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                  [id]="'dp-proof-' + proof.key + '-file'"
-                  [attr.aria-invalid]="fileError(i) ? 'true' : null"
-                  [attr.aria-describedby]="
-                    'dp-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
-                  "
-                  (change)="picked(i, $event.target)"
-                />
-                @if (proof.file; as file) {
-                  <div class="file">
-                    <span class="file-name">{{ file.name }}</span>
-                    <label
-                      class="quipu-button quipu-button--tertiary"
-                      [for]="'dp-proof-' + proof.key + '-file'"
-                      >Cambiar<span class="cdk-visually-hidden">
-                        el archivo del voucher</span
-                      ></label
-                    >
-                  </div>
-                } @else {
-                  <div class="drop" [class.invalid]="fileError(i)">
-                    <p class="drop-text">Elige la foto o el PDF del voucher</p>
-                    <label
-                      class="quipu-button quipu-button--secondary"
-                      [for]="'dp-proof-' + proof.key + '-file'"
-                      >Elegir archivo<span class="cdk-visually-hidden">
-                        del comprobante {{ i + 1 }}</span
-                      ></label
-                    >
-                  </div>
-                }
-                @if (fileError(i); as message) {
-                  <p class="quipu-field-error" [id]="'dp-proof-' + proof.key + '-file-error'">
-                    {{ message }}
-                  </p>
-                }
-                <p class="quipu-field-help" [id]="'dp-proof-' + proof.key + '-file-help'">
-                  JPG, PNG o PDF, hasta 5 MB.
-                </p>
-              </div>
+              <app-file-field
+                [fieldId]="'dp-proof-' + proof.key + '-file'"
+                [fileName]="proof.file?.name ?? null"
+                [error]="fileError(i)"
+                (chosen)="picked(i, $event)"
+              />
             } @else {
               <p class="detail">
                 El efectivo que recibiste en mano. Quedará como «agregado por la administración».
@@ -248,43 +208,33 @@
             }
 
             <div class="entry-fields">
-              <div class="quipu-field">
-                <label class="quipu-label" [for]="'dp-proof-' + proof.key + '-amount'"
-                  >Monto recibido</label
-                >
-                <span class="quipu-money">
-                  <span aria-hidden="true">S/</span>
-                  <input
-                    class="quipu-input"
-                    type="text"
-                    inputmode="decimal"
-                    aria-required="true"
-                    [id]="'dp-proof-' + proof.key + '-amount'"
-                    [value]="proof.amount"
-                    [attr.aria-invalid]="amountError(i) ? 'true' : null"
-                    [attr.aria-describedby]="
-                      amountError(i) ? 'dp-proof-' + proof.key + '-amount-error' : null
-                    "
-                    (input)="typedAmount(i, $event.target)"
-                  />
-                </span>
-                @if (amountError(i); as message) {
-                  <p class="quipu-field-error" [id]="'dp-proof-' + proof.key + '-amount-error'">
-                    {{ message }}
-                  </p>
-                }
-              </div>
+              <app-form-field
+                label="Monto recibido"
+                [fieldId]="'dp-proof-' + proof.key + '-amount'"
+                [money]="true"
+                [error]="amountError(i)"
+              >
+                <input
+                  appFieldControl
+                  class="quipu-input"
+                  type="text"
+                  inputmode="decimal"
+                  aria-required="true"
+                  [value]="proof.amount"
+                  (input)="typedAmount(i, $event.target)"
+                />
+              </app-form-field>
               @if (proof.kind === 'VOUCHER') {
-                <div class="quipu-field">
-                  <label class="quipu-label" [for]="'dp-proof-' + proof.key + '-method'"
-                    >Medio de pago (opcional)</label
-                  >
+                <app-form-field
+                  label="Medio de pago (opcional)"
+                  [fieldId]="'dp-proof-' + proof.key + '-method'"
+                >
                   <input
+                    appFieldControl
                     class="quipu-input"
                     type="text"
                     maxlength="60"
                     placeholder="Por ejemplo, Yape"
-                    [id]="'dp-proof-' + proof.key + '-method'"
                     [value]="proof.method"
                     (input)="typedMethod(i, methodFrom($event.target))"
                   />
@@ -299,7 +249,7 @@
                       </button>
                     }
                   </div>
-                </div>
+                </app-form-field>
               }
             </div>
           </li>
@@ -325,25 +275,22 @@
       }
     </section>
 
-    <div class="quipu-field date">
-      <label class="quipu-label" for="dp-received-on">Fecha en que lo recibiste (opcional)</label>
+    <app-form-field
+      class="date"
+      fieldId="dp-received-on"
+      label="Fecha en que lo recibiste (opcional)"
+      help="Si la dejas vacía, es la fecha de hoy. No cambia el mes en que cuenta el pago."
+      [error]="dateError()"
+    >
       <input
-        id="dp-received-on"
+        appFieldControl
         class="quipu-input"
         type="date"
         [max]="today"
         [value]="receivedOn()"
-        [attr.aria-invalid]="dateError() ? 'true' : null"
-        [attr.aria-describedby]="dateError() ? 'dp-received-on-error' : 'dp-received-on-help'"
         (input)="typedDate($event.target)"
       />
-      @if (dateError(); as message) {
-        <p id="dp-received-on-error" class="quipu-field-error">{{ message }}</p>
-      }
-      <p id="dp-received-on-help" class="quipu-field-help">
-        Si la dejas vacía, es la fecha de hoy. No cambia el mes en que cuenta el pago.
-      </p>
-    </div>
+    </app-form-field>
 
     <div class="sum" role="status">
       <p class="sum-line">

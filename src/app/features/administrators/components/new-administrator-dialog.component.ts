@@ -37,6 +37,8 @@ import {
 } from '../model/administrator-texts';
 import type { CreateField } from '../model/administrator-texts';
 import { ADMIN_DIALOG_STYLES } from './admin-dialog.styles';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 export interface NewAdministratorData {
   /** The call to the BFF; the page owns the data, the dialog only the form. */
@@ -71,7 +73,14 @@ interface NewAdministratorModel {
  */
 @Component({
   selector: 'app-new-administrator-dialog',
-  imports: [DialogFrameComponent, FormRoot, FormField, PageNoticeComponent],
+  imports: [
+    FieldControlDirective,
+    FormFieldComponent,
+    DialogFrameComponent,
+    FormRoot,
+    FormField,
+    PageNoticeComponent,
+  ],
   templateUrl: './new-administrator-dialog.component.html',
   styles: ADMIN_DIALOG_STYLES,
 })

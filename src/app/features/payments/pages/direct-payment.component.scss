@@ -143,48 +143,12 @@ h3 {
   gap: 0.5rem 1rem;
 }
 
-.drop {
-  display: grid;
-  justify-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem 1rem;
-  border: var(--quipu-borde-ancho-enfasis) dashed var(--quipu-borde);
-  border-radius: var(--quipu-radio);
-  background: var(--quipu-piedra);
-  text-align: center;
-}
-
-.drop.invalid {
-  border-color: var(--quipu-error);
-}
-
-.drop-text {
-  margin: 0;
-  font-weight: var(--quipu-peso-enfasis);
-}
-
-.file {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem 1rem;
-  padding: 0.75rem;
-  border-radius: var(--quipu-radio);
-  background: var(--quipu-piedra);
-}
-
-.file-name {
-  font-weight: var(--quipu-peso-enfasis);
-  overflow-wrap: anywhere;
-}
-
 .entry-fields {
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
 
-  > .quipu-field {
+  > app-form-field {
     flex: 1 1 12rem;
   }
 }
@@ -246,4 +210,14 @@ h3 {
   .actions .quipu-button--primary {
     width: 100%;
   }
+}
+
+// What the period field says while its periods load, fail or are none.
+.period-state {
+  display: grid;
+  gap: var(--quipu-espacio-campo);
+}
+
+.period-state:not(:empty) {
+  margin-top: var(--quipu-espacio-campo);
 }

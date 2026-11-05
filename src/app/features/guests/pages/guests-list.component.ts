@@ -43,6 +43,8 @@ import {
 } from '../model/guest-list-texts';
 import type { PanelCounts } from '../model/guest-list-texts';
 import { nextSort } from '@shared/ui/data-table/list-sort';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 type Phase = 'loading' | 'error' | 'ready';
 
@@ -66,6 +68,8 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
 @Component({
   selector: 'app-guests-list',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     EmptyStateComponent,
     FormField,
     GuestsNowPanelComponent,

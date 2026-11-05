@@ -29,17 +29,19 @@ import {
   MAX_PROOFS,
   MISSING_FILE_TEXT,
   PERIOD_TEXT,
-  VOUCHER_MAX_BYTES,
-  VOUCHER_TYPES,
+  isValidVoucher,
 } from '@shared/payments/proof-rules';
 import { matchesAny } from '@shared/text/search';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { SearchFieldComponent } from '@shared/ui/search-field/search-field.component';
 import { payingNote, payingTiles, receivedNotice } from '../model/direct-payment';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 /** Texts of A5.1 in the SRS (Textos de validación). */
 export const GUEST_TEXT = 'Elige un huésped';
@@ -148,6 +150,9 @@ type LoadState =
 @Component({
   selector: 'app-direct-payment',
   imports: [
+    FileFieldComponent,
+    FieldControlDirective,
+    FormFieldComponent,
     FactTileComponent,
     LoadErrorComponent,
     PageHeaderComponent,
@@ -382,19 +387,13 @@ export class DirectPaymentComponent {
     return target instanceof HTMLInputElement ? target.value : '';
   }
 
-  protected picked(index: number, target: EventTarget | null): void {
-    const input = target instanceof HTMLInputElement ? target : null;
-    const chosen = input?.files?.[0] ?? null;
-    const valid =
-      chosen !== null && VOUCHER_TYPES.includes(chosen.type) && chosen.size <= VOUCHER_MAX_BYTES;
+  protected picked(index: number, chosen: File | null): void {
+    const valid = chosen !== null && isValidVoucher(chosen);
     this.updateProof(index, {
       file: valid ? chosen : null,
       fileInvalid: chosen !== null && !valid,
     });
     this.clearServer(`proofs[${String(index)}].file`);
-    if (input && !valid) {
-      input.value = '';
-    }
   }
 
   protected addProof(): void {

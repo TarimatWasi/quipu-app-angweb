@@ -21,6 +21,8 @@ import type {
   GuestInput,
 } from '@core/api/clients/admin-guests.service';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
@@ -56,16 +58,6 @@ const GENERAL_ERROR_ID = 'new-guest-error';
 
 /** What A3.1 adds to the shared layout: the fieldsets, the short fields and «(opcional)». */
 const NEW_GUEST_STYLES = `
-  fieldset {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    padding: 0;
-    margin-bottom: var(--quipu-espacio-campo);
-  }
   .narrow .quipu-input {
     max-width: var(--quipu-campo-corto);
   }
@@ -93,6 +85,8 @@ type FieldErrors = { fieldTree: FieldTree<string>; kind: 'server'; message: stri
 @Component({
   selector: 'app-new-guest',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     FactTileComponent,
     FormField,
     FormRoot,

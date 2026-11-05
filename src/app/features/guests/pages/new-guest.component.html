@@ -28,8 +28,12 @@
   >
     <section class="section" aria-labelledby="who-title">
       <h2 id="who-title">Quién es</h2>
-      <fieldset class="quipu-field">
-        <legend class="quipu-label">Tipo de huésped</legend>
+      <app-form-field
+        fieldId="new-guest-type"
+        label="Tipo de huésped"
+        [group]="true"
+        [help]="typeHelp()"
+      >
         <div class="quipu-segmented">
           @for (option of guestTypes; track option.value) {
             <button
@@ -43,11 +47,9 @@
             </button>
           }
         </div>
-        <p id="new-guest-type-help" class="quipu-field-help">{{ typeHelp() }}</p>
-      </fieldset>
+      </app-form-field>
 
-      <fieldset class="quipu-field">
-        <legend class="quipu-label">Tipo de documento</legend>
+      <app-form-field fieldId="new-guest-document-type" label="Tipo de documento" [group]="true">
         <div class="quipu-segmented">
           @for (option of documentTypes; track option.value) {
             <button
@@ -60,76 +62,68 @@
             </button>
           }
         </div>
-      </fieldset>
+      </app-form-field>
 
-      <div class="quipu-field narrow">
-        <label class="quipu-label" for="new-guest-document">Número de documento</label>
+      <app-form-field
+        class="narrow"
+        fieldId="new-guest-document"
+        label="Número de documento"
+        [help]="documentHelp()"
+        [error]="numberError()"
+      >
         <input
+          appFieldControl
           class="quipu-input figures"
-          id="new-guest-document"
           autocomplete="off"
           aria-required="true"
           [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
           [formField]="guestForm.documentNumber"
-          [attr.aria-invalid]="numberError() ? 'true' : null"
-          [attr.aria-describedby]="
-            numberError()
-              ? 'new-guest-document-error new-guest-document-help'
-              : 'new-guest-document-help'
-          "
         />
-        @if (numberError(); as message) {
-          <p id="new-guest-document-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="new-guest-document-help" class="quipu-field-help">{{ documentHelp() }}</p>
-      </div>
+      </app-form-field>
     </section>
 
     <section class="section" aria-labelledby="notify-title">
       <h2 id="notify-title">Para avisarle <span class="optional">(opcional)</span></h2>
-      <div class="quipu-field">
-        <label class="quipu-label" for="new-guest-phone">Teléfono</label>
+      <app-form-field
+        fieldId="new-guest-phone"
+        label="Teléfono"
+        [help]="phoneHelp"
+        [error]="phoneError()"
+      >
         <input
+          appFieldControl
           class="quipu-input figures"
-          id="new-guest-phone"
           type="tel"
           inputmode="tel"
           autocomplete="off"
           [formField]="guestForm.phone"
-          [attr.aria-invalid]="phoneError() ? 'true' : null"
-          [attr.aria-describedby]="
-            phoneError() ? 'new-guest-phone-error new-guest-phone-help' : 'new-guest-phone-help'
-          "
         />
-        @if (phoneError(); as message) {
-          <p id="new-guest-phone-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="new-guest-phone-help" class="quipu-field-help">{{ phoneHelp }}</p>
-      </div>
-      <div class="quipu-field">
-        <label class="quipu-label" for="new-guest-email">Correo</label>
+      </app-form-field>
+      <app-form-field
+        fieldId="new-guest-email"
+        label="Correo"
+        [help]="emailHelp"
+        [error]="emailError()"
+      >
         <input
+          appFieldControl
           class="quipu-input"
-          id="new-guest-email"
           type="email"
           autocomplete="off"
           [formField]="guestForm.contactEmail"
-          [attr.aria-invalid]="emailError() ? 'true' : null"
-          [attr.aria-describedby]="
-            emailError() ? 'new-guest-email-error new-guest-email-help' : 'new-guest-email-help'
-          "
         />
-        @if (emailError(); as message) {
-          <p id="new-guest-email-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="new-guest-email-help" class="quipu-field-help">{{ emailHelp }}</p>
-      </div>
+      </app-form-field>
     </section>
 
     <section class="section" aria-labelledby="access-title">
       <h2 id="access-title">Cómo entregar el acceso</h2>
-      <fieldset class="quipu-field">
-        <legend class="cdk-visually-hidden">Cómo entregar el acceso</legend>
+      <app-form-field
+        fieldId="new-guest-access"
+        label="Cómo entregar el acceso"
+        [group]="true"
+        [hiddenLabel]="true"
+        [help]="accessHelp()"
+      >
         <div class="quipu-segmented">
           @for (option of accessModes; track option.value) {
             <button
@@ -143,8 +137,7 @@
             </button>
           }
         </div>
-        <p id="new-guest-access-help" class="quipu-field-help">{{ accessHelp() }}</p>
-      </fieldset>
+      </app-form-field>
     </section>
 
     @if (generalError(); as message) {

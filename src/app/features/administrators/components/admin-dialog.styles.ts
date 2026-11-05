@@ -10,16 +10,6 @@ export const ADMIN_DIALOG_STYLES = `
   p {
     margin: 0;
   }
-  fieldset {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    padding: 0;
-    margin-bottom: var(--quipu-espacio-campo);
-  }
   hr {
     width: 100%;
     margin: 0.25rem 0;

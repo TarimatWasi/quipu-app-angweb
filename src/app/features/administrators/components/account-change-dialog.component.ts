@@ -17,6 +17,8 @@ import {
   PASSWORD_TEXT,
 } from '../model/administrator-texts';
 import { ADMIN_DIALOG_STYLES } from './admin-dialog.styles';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 export interface AccountChangeData {
   readonly action: AdministratorAction;
@@ -40,7 +42,14 @@ const BOTTOM_ERROR_ID = 'account-change-error';
  */
 @Component({
   selector: 'app-account-change-dialog',
-  imports: [DialogFrameComponent, FormRoot, FormField, PageNoticeComponent],
+  imports: [
+    FieldControlDirective,
+    FormFieldComponent,
+    DialogFrameComponent,
+    FormRoot,
+    FormField,
+    PageNoticeComponent,
+  ],
   template: `
     <form
       [formRoot]="changeForm"
@@ -53,27 +62,21 @@ const BOTTOM_ERROR_ID = 'account-change-error';
           @if (topError(); as message) {
             <app-page-notice tone="error" [id]="topErrorId" tabindex="-1" [heading]="message" />
           }
-          <div class="quipu-field">
-            <label class="quipu-label" for="account-change-password">Tu contraseña</label>
+          <app-form-field
+            fieldId="account-change-password"
+            label="Tu contraseña"
+            [help]="passwordHelp"
+            [error]="passwordError()"
+          >
             <input
+              appFieldControl
               class="quipu-input"
-              id="account-change-password"
               type="password"
               autocomplete="current-password"
               aria-required="true"
               [formField]="changeForm.currentPassword"
-              [attr.aria-invalid]="passwordError() ? 'true' : null"
-              [attr.aria-describedby]="
-                passwordError()
-                  ? 'account-change-password-error account-change-password-help'
-                  : 'account-change-password-help'
-              "
             />
-            @if (passwordError(); as message) {
-              <p id="account-change-password-error" class="quipu-field-error">{{ message }}</p>
-            }
-            <p id="account-change-password-help" class="quipu-field-help">{{ passwordHelp }}</p>
-          </div>
+          </app-form-field>
           @if (bottomError(); as message) {
             <p [id]="bottomErrorId" class="quipu-alert" role="alert" tabindex="-1">
               {{ message }}

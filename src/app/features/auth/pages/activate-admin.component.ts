@@ -10,6 +10,8 @@ import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 interface ActivateAdminModel {
   name: string;
@@ -33,6 +35,8 @@ function codeOf(route: ActivatedRoute): string | null {
 @Component({
   selector: 'app-activate-admin',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     AuthShellComponent,
     FormRoot,
     FormField,

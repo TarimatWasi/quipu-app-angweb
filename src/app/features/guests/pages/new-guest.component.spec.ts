@@ -173,7 +173,7 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
     );
     // Only the document number is a short field (max. 320 px); phone and email take the form's width.
     const short = (label: string) =>
-      ui.page().getByLabelText(label).closest('.quipu-field')?.classList.contains('narrow');
+      ui.page().getByLabelText(label).closest('app-form-field')?.classList.contains('narrow');
     expect([short('Número de documento'), short('Teléfono'), short('Correo')]).toEqual([
       true,
       false,

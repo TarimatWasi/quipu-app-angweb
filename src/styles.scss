@@ -464,6 +464,20 @@ a {
   gap: var(--quipu-espacio-campo);
 }
 
+// A group of buttons named by its legend (app-form-field with group): without the frame of a fieldset.
+fieldset.quipu-field {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+// A legend does not take the gap of the grid: it keeps the same space under it as a label.
+fieldset.quipu-field > legend {
+  margin-bottom: var(--quipu-espacio-campo);
+  padding: 0;
+}
+
 .quipu-label {
   font: var(--mat-sys-label-medium);
   color: var(--quipu-tinta-secundaria);
@@ -716,7 +730,8 @@ a {
   gap: 1rem;
   margin: 1.25rem 0 1rem;
 
-  > .quipu-field {
+  > .quipu-field,
+  > app-form-field {
     min-width: 12rem;
   }
 }
@@ -762,7 +777,8 @@ a {
   .quipu-filters {
     display: grid;
 
-    > .quipu-field {
+    > .quipu-field,
+    > app-form-field {
       min-width: 0;
     }
   }
