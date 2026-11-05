@@ -12,6 +12,7 @@ export const STAY_IDS = {
   jorgeOverdue: mockId(ID_KIND.stay, 3),
   jorgeNext: mockId(ID_KIND.stay, 4),
   pedroOld: mockId(ID_KIND.stay, 5),
+  owingUnpaid: mockId(ID_KIND.stay, 6),
 } as const;
 
 function stay(
@@ -40,6 +41,8 @@ export function seedStays(): StayRecord[] {
     stay(STAY_IDS.jorgeOverdue, GUEST_IDS.jorge, ENVIRONMENT_IDS.cabinC2, [-20, -15], 300),
     stay(STAY_IDS.jorgeNext, GUEST_IDS.jorge, ENVIRONMENT_IDS.cabinC2, [10, 17], 350),
     stay(STAY_IDS.pedroOld, GUEST_IDS.pedro, null, [-120, -110], 250),
+    // CU-28: an inactive guest who left without paying its last stay, so it cannot be reactivated.
+    stay(STAY_IDS.owingUnpaid, GUEST_IDS.owing, null, [-75, -68], 650),
   ];
 }
 

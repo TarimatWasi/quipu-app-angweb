@@ -15,6 +15,12 @@ export type Stay = components['schemas']['Stay'];
 export type StayPage = components['schemas']['PagedStays'];
 export type StayInput = components['schemas']['StayInput'];
 export type StayUpdate = components['schemas']['StayUpdateInput'];
+export type GuestInput = components['schemas']['GuestInput'];
+export type GuestCreated = components['schemas']['GuestCreated'];
+export type GuestAlreadyRegistered = components['schemas']['GuestAlreadyRegistered'];
+export type AccessGrant = components['schemas']['AccessGrant'];
+export type NonInactiveGuestSummary = components['schemas']['NonInactiveGuestSummary'];
+export type PendingDebtError = components['schemas']['GuestHasPendingDebtError'];
 
 /** Guests asked per page of the picker of A5.1: the most the contract allows. */
 export const GUEST_PICKER_PAGE_SIZE = 100;
@@ -24,8 +30,8 @@ export const STAY_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 /**
- * The guests of the administrator: the reads the payment screens need (A5.1), the detail (A3.2)
- * and the stays and document corrections of A3.5. Ids and cursors are opaque: they are passed back
+ * The guests of the administrator: the reads the payment screens need (A5.1), the detail (A3.2),
+ * the stays and document corrections of A3.5, the registration of A3.1 and the reactivation. Ids and cursors are opaque: they are passed back
  * exactly as the BFF gave them, only escaped for the URL.
  */
 @Injectable({ providedIn: 'root' })
@@ -47,6 +53,20 @@ export class AdminGuestsService {
 
   get(id: string): Observable<GuestDetail> {
     return this.http.get<GuestDetail>(this.guestUrl(id));
+  }
+
+  /**
+   * Registers a guest with the minimal data (RN-31). A 201 carries the new guest and its access,
+   * shown once (RN-32); a 200 says the document was already registered and nothing changed (RN-18).
+   * `alreadyRegistered` tells them apart.
+   */
+  create(input: GuestInput): Observable<GuestCreated | GuestAlreadyRegistered> {
+    return this.http.post<GuestCreated | GuestAlreadyRegistered>(this.base, input);
+  }
+
+  /** Reactivates an inactive guest (CU-28); a 409 GUEST_HAS_PENDING_DEBT lists what it owes. */
+  reactivate(id: string): Observable<NonInactiveGuestSummary> {
+    return this.http.post<NonInactiveGuestSummary>(`${this.guestUrl(id)}/reactivate`, null);
   }
 
   /** Corrects the document of a guest pending activation (RN-36), with the `version` loaded. */

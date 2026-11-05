@@ -178,7 +178,12 @@ describe('GuestsListComponent (A3)', () => {
     expect(await answer(page([ROSA]))).toEqual({ status: 'CURRENT', limit: '20' });
     expect(view.queryByLabelText('Cargando Huéspedes')).toBeNull();
     expect(view.getByRole('heading', { level: 2, name: 'Todos los huéspedes' })).toBeTruthy();
-    expect(view.queryByRole('button', { name: 'Nuevo huésped' })).toBeNull();
+    const add = view.getByRole('link', { name: 'Nuevo huésped' });
+    expect(add.getAttribute('href')).toBe('/admin/guests/new');
+    expect(add.classList).toContain('quipu-button--secondary');
+    expect(add.closest('.all-head')?.querySelector('h2')?.textContent.trim()).toBe(
+      'Todos los huéspedes',
+    );
   });
 
   it('draws each guest with its document, type, environment, state, access and link', async () => {

@@ -158,8 +158,22 @@ function temporaryGuests(): GuestRecord[] {
   ];
 }
 
+/** A3.1: inactive and owing its last stay (RN-35), so «Reactivar huésped» asks to pay it first. */
+function owingGuest(): GuestRecord {
+  return guest({
+    id: GUEST_IDS.owing,
+    documentType: 'DNI',
+    documentNumber: '70000009',
+    name: 'Rocío Layme Ccori',
+    type: 'TEMPORARY',
+    status: 'INACTIVE',
+    phone: '932 109 876',
+    deactivatedAt: instantOn(addDays(today(), -60)),
+  });
+}
+
 export function seedGuests(): GuestRecord[] {
-  return [...contractGuests(), ...temporaryGuests()];
+  return [...contractGuests(), ...temporaryGuests(), owingGuest()];
 }
 
 interface ContractFields {
