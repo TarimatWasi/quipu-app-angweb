@@ -1,10 +1,12 @@
+@use 'sass:meta';
+@use '@angular/cdk';
 @use '@angular/material' as mat;
 
 // Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL-*.txt): sin llamadas a terceros.
 @font-face {
   font-family: 'Fraunces';
   src: url('/fonts/fraunces-latin.woff2') format('woff2');
-  font-weight: 500 600;
+  font-weight: 100 900;
   font-style: normal;
   font-display: swap;
 }
@@ -12,103 +14,135 @@
 @font-face {
   font-family: 'Nunito Sans';
   src: url('/fonts/nunito-sans-latin.woff2') format('woff2');
-  font-weight: 400 700;
+  // El archivo es variable (200 a 1000): el lienzo usa 800 en botones, etiquetas y títulos.
+  font-weight: 200 1000;
   font-style: normal;
   font-display: swap;
 }
 
+// Las dos familias del estándar (§3.3); el tema de Material y la escala de abajo usan estas.
+$quipu-plain-family: ('Nunito Sans', system-ui, sans-serif);
+$quipu-brand-family: ('Fraunces', Georgia, serif);
+
+// Fija un estilo de la escala tipográfica de Material (--mat-sys-<rol>, con sus partes).
+@mixin quipu-type($role, $weight, $size, $line-height, $family: $quipu-plain-family) {
+  $font: meta.inspect($family);
+  --mat-sys-#{$role}: #{$weight} #{$size} / #{$line-height} #{$font};
+  --mat-sys-#{$role}-font: #{$font};
+  --mat-sys-#{$role}-size: #{$size};
+  --mat-sys-#{$role}-line-height: #{$line-height};
+  --mat-sys-#{$role}-weight: #{$weight};
+  --mat-sys-#{$role}-tracking: 0;
+}
+
+// Jerarquía de los estilos (QP-UI-01): 1) aquí, los tokens --quipu-* son la única fuente de cada
+// valor; 2) los roles de Material (--mat-sys-*, --mat-<componente>-*) apuntan a esos tokens;
+// 3) más abajo, los elementos y las clases del kit (quipu-*) los usan; 4) un componente solo
+// agrega su propio layout con esos tokens, sin repetir valores.
 html {
   @include mat.theme(
     (
       color: mat.$azure-palette,
       typography: (
-        plain-family: (
-          'Nunito Sans',
-          system-ui,
-          sans-serif,
-        ),
-        brand-family: (
-          'Fraunces',
-          Georgia,
-          serif,
-        ),
-        bold-weight: 700,
-        medium-weight: 600,
+        plain-family: $quipu-plain-family,
+        brand-family: $quipu-brand-family,
+        bold-weight: 800,
+        medium-weight: 700,
         regular-weight: 400,
       ),
       density: 0,
     )
   );
+  color-scheme: light;
 
-  // Identidad de Quipu (TAR-218): piedra y obsidiana, verde chilca para acciones y enlaces;
-  // cochinilla y q'olle solo en la cenefa. Contrastes medidos: obsidiana/piedra 14.9,
+  // 1. Color (Estándar UI §3.1 y §3.2). Contrastes medidos: obsidiana/piedra 14.9,
   // chilca/piedra 5.5, alpaca/chilca 5.7, tinta2/piedra 8.2, borde/piedra 4.0.
-  --mat-sys-primary: #1e6b4a;
-  --mat-sys-on-primary: #f4f1ea;
-  --mat-sys-primary-container: #dfe4dc;
-  --mat-sys-on-primary-container: #141c18;
-  --mat-sys-surface: #eceee9;
-  --mat-sys-background: #eceee9;
-  --mat-sys-on-surface: #141c18;
-  --mat-sys-on-background: #141c18;
-  --mat-sys-surface-variant: #dfe4dc;
-  --mat-sys-on-surface-variant: #3d4842;
-  --mat-sys-outline: #6b766f;
-  --mat-sys-outline-variant: #c9d0c8;
-  --mat-sys-error: #ba1a1a;
-  --mat-sys-error-container: #f6dedc;
-  --mat-sys-on-error-container: #7a1010;
   --quipu-obsidiana: #141c18;
   --quipu-alpaca: #f4f1ea;
   --quipu-qolle: #e3b02a;
   --quipu-cochinilla: #b0263f;
   // Solo para el dibujo sobre obsidiana (no es texto).
   --quipu-chilca-clara: #7cc29b;
-  --quipu-ease: cubic-bezier(0.23, 1, 0.32, 1);
-
-  // Nombres del Estándar UI (§3.1) para los colores de arriba, más los que faltaban (TAR-285).
   --quipu-piedra: #eceee9;
   --quipu-piedra-oscura: #dfe4dc;
-  --quipu-tinta: #141c18;
+  --quipu-tinta: var(--quipu-obsidiana);
   --quipu-tinta-secundaria: #3d4842;
   --quipu-borde: #6b766f;
+  --quipu-borde-suave: #c9d0c8;
   --quipu-chilca: #1e6b4a;
   --quipu-chilca-oscura: #16553a;
   --quipu-error: #ba1a1a;
   --quipu-hover-cifra: #d3dad2;
   --quipu-hover-fila: #fbfaf6;
+  // Tonos de fondo y texto que comparten los estados (P-08) y los avisos (P-09).
+  --quipu-verde-fondo: #d5e7dc;
+  --quipu-verde-texto: #14532d;
+  --quipu-amarillo-fondo: #f7e7b3;
+  --quipu-amarillo-texto: #4a3600;
+  --quipu-rojo-fondo: #f6dedc;
+  --quipu-rojo-texto: #7a1010;
+  --quipu-gris-punto: #9aa59e;
   // Deshabilitado: fondo borde con texto alpaca y siempre una ayuda al lado (QP-UI-15).
-  --quipu-deshabilitado: #6b766f;
-  --quipu-sobre-deshabilitado: #f4f1ea;
-  // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
-  --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
+  --quipu-deshabilitado: var(--quipu-borde);
+  --quipu-sobre-deshabilitado: var(--quipu-alpaca);
   // Sobre la obsidiana de la barra el foco es q'olle: el chilca no alcanza 3:1 ahí.
-  --quipu-foco-sobre-oscuro: #e3b02a;
+  --quipu-foco-sobre-oscuro: var(--quipu-qolle);
 
   // Estados (§3.2): punto, fondo y texto; nunca solo color (P-08).
-  --quipu-estado-pagado-punto: #1e6b4a;
-  --quipu-estado-pagado-fondo: #d5e7dc;
-  --quipu-estado-pagado-texto: #14532d;
-  --quipu-estado-revision-punto: #e3b02a;
-  --quipu-estado-revision-fondo: #f7e7b3;
-  --quipu-estado-revision-texto: #4a3600;
-  --quipu-estado-no-pagado-punto: #9aa59e;
-  --quipu-estado-no-pagado-fondo: #dfe4dc;
-  --quipu-estado-no-pagado-texto: #3d4842;
-  --quipu-estado-atrasado-punto: #b0263f;
-  --quipu-estado-atrasado-fondo: #f6dedc;
-  --quipu-estado-atrasado-texto: #7a1010;
-  --quipu-estado-rechazado-punto: #b0263f;
-  --quipu-estado-rechazado-fondo: #f6dedc;
-  --quipu-estado-rechazado-texto: #7a1010;
+  --quipu-estado-pagado-punto: var(--quipu-chilca);
+  --quipu-estado-pagado-fondo: var(--quipu-verde-fondo);
+  --quipu-estado-pagado-texto: var(--quipu-verde-texto);
+  --quipu-estado-revision-punto: var(--quipu-qolle);
+  --quipu-estado-revision-fondo: var(--quipu-amarillo-fondo);
+  --quipu-estado-revision-texto: var(--quipu-amarillo-texto);
+  --quipu-estado-no-pagado-punto: var(--quipu-gris-punto);
+  --quipu-estado-no-pagado-fondo: var(--quipu-piedra-oscura);
+  --quipu-estado-no-pagado-texto: var(--quipu-tinta-secundaria);
+  --quipu-estado-atrasado-punto: var(--quipu-cochinilla);
+  --quipu-estado-atrasado-fondo: var(--quipu-rojo-fondo);
+  --quipu-estado-atrasado-texto: var(--quipu-rojo-texto);
+  --quipu-estado-rechazado-punto: var(--quipu-cochinilla);
+  --quipu-estado-rechazado-fondo: var(--quipu-rojo-fondo);
+  --quipu-estado-rechazado-texto: var(--quipu-rojo-texto);
 
   // Avisos (P-09): el amarillo informa; el rojo pide corregir.
-  --quipu-aviso-info-fondo: #f7e7b3;
-  --quipu-aviso-info-texto: #4a3600;
-  --quipu-aviso-error-fondo: #f6dedc;
-  --quipu-aviso-error-texto: #7a1010;
+  --quipu-aviso-info-fondo: var(--quipu-amarillo-fondo);
+  --quipu-aviso-info-texto: var(--quipu-amarillo-texto);
+  --quipu-aviso-error-fondo: var(--quipu-rojo-fondo);
+  --quipu-aviso-error-texto: var(--quipu-rojo-texto);
 
-  // Movimiento (§3.5). Con «reducir movimiento» se quitan las transformaciones, no los colores.
+  // 1. Forma y medida (§3.4): esquinas de 4 px (8 px en diálogos), controles de 48 px en la
+  // página y 40 px dentro de una fila, toques de 44 px.
+  --quipu-radio: 4px;
+  --quipu-radio-dialogo: 8px;
+  --quipu-alto-control: 48px;
+  --quipu-alto-control-fila: 40px;
+  --quipu-toque: 44px;
+  --quipu-borde-ancho: 1px;
+  --quipu-borde-ancho-enfasis: 2px;
+  // Campos (P-07, P-14): etiqueta a 6 px del campo, 14 px de relleno, 40 px a la derecha para la
+  // flecha de un selector o 96 px para «Mostrar»; un campo inactivo baja al 60 %.
+  --quipu-espacio-campo: 6px;
+  --quipu-relleno-campo: 14px;
+  --quipu-relleno-flecha: 40px;
+  --quipu-relleno-mostrar: 96px;
+  --quipu-opacidad-inactivo: 0.6;
+  --quipu-subrayado-offset: 4px;
+  // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
+  --quipu-titulo-tracking: -0.03em;
+  --quipu-titulo-pagina-movil: 2.5rem;
+  // Acceso (A0, tablero Ingreso): título headline-medium (44 px) y 36 px en móvil, columna de
+  // 420 px con 18 px entre bloques, intro de 17 px y botón principal de 52 px.
+  --quipu-titulo-acceso-movil: 2.25rem;
+  --quipu-acceso-ancho: 26.25rem;
+  --quipu-acceso-espacio: 18px;
+  --quipu-acceso-alto-boton: 52px;
+  --quipu-texto-intro-size: 1.0625rem;
+  // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
+  --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
+
+  // 1. Movimiento (§3.5). Con «reducir movimiento» se quitan las transformaciones, no los colores.
+  --quipu-ease: cubic-bezier(0.23, 1, 0.32, 1);
   --quipu-duracion-presion: 160ms;
   --quipu-duracion-hover: 160ms;
   --quipu-duracion-entrada: 300ms;
@@ -116,17 +150,111 @@ html {
   --quipu-ease-presion: var(--quipu-ease);
   --quipu-ease-hover: ease;
   --quipu-ease-entrada: ease-out;
+
+  // 2. Roles de color de Material, todos desde la paleta andina: nada sale de la paleta azul
+  // con la que arranca mat.theme.
+  --mat-sys-primary: var(--quipu-chilca);
+  --mat-sys-on-primary: var(--quipu-alpaca);
+  --mat-sys-primary-container: var(--quipu-piedra-oscura);
+  --mat-sys-on-primary-container: var(--quipu-tinta);
+  --mat-sys-secondary: var(--quipu-tinta-secundaria);
+  --mat-sys-on-secondary: var(--quipu-alpaca);
+  --mat-sys-secondary-container: var(--quipu-piedra-oscura);
+  --mat-sys-on-secondary-container: var(--quipu-tinta);
+  --mat-sys-tertiary: var(--quipu-chilca-oscura);
+  --mat-sys-on-tertiary: var(--quipu-alpaca);
+  --mat-sys-tertiary-container: var(--quipu-verde-fondo);
+  --mat-sys-on-tertiary-container: var(--quipu-verde-texto);
+  --mat-sys-primary-fixed: var(--quipu-verde-fondo);
+  --mat-sys-primary-fixed-dim: var(--quipu-chilca-clara);
+  --mat-sys-on-primary-fixed: var(--quipu-tinta);
+  --mat-sys-on-primary-fixed-variant: var(--quipu-chilca-oscura);
+  --mat-sys-secondary-fixed: var(--quipu-piedra-oscura);
+  --mat-sys-secondary-fixed-dim: var(--quipu-borde-suave);
+  --mat-sys-on-secondary-fixed: var(--quipu-tinta);
+  --mat-sys-on-secondary-fixed-variant: var(--quipu-tinta-secundaria);
+  --mat-sys-tertiary-fixed: var(--quipu-verde-fondo);
+  --mat-sys-tertiary-fixed-dim: var(--quipu-chilca-clara);
+  --mat-sys-on-tertiary-fixed: var(--quipu-tinta);
+  --mat-sys-on-tertiary-fixed-variant: var(--quipu-chilca-oscura);
+  --mat-sys-surface: var(--quipu-piedra);
+  --mat-sys-background: var(--quipu-piedra);
+  --mat-sys-on-surface: var(--quipu-tinta);
+  --mat-sys-on-background: var(--quipu-tinta);
+  --mat-sys-surface-variant: var(--quipu-piedra-oscura);
+  --mat-sys-on-surface-variant: var(--quipu-tinta-secundaria);
+  --mat-sys-surface-bright: var(--quipu-alpaca);
+  --mat-sys-surface-dim: var(--quipu-piedra-oscura);
+  --mat-sys-surface-container-lowest: var(--quipu-hover-fila);
+  --mat-sys-surface-container-low: var(--quipu-alpaca);
+  --mat-sys-surface-container: var(--quipu-alpaca);
+  --mat-sys-surface-container-high: var(--quipu-alpaca);
+  --mat-sys-surface-container-highest: var(--quipu-piedra-oscura);
+  --mat-sys-surface-tint: var(--quipu-chilca);
+  --mat-sys-inverse-surface: var(--quipu-obsidiana);
+  --mat-sys-inverse-on-surface: var(--quipu-alpaca);
+  --mat-sys-inverse-primary: var(--quipu-chilca-clara);
+  --mat-sys-outline: var(--quipu-borde);
+  --mat-sys-outline-variant: var(--quipu-borde-suave);
+  --mat-sys-error: var(--quipu-error);
+  --mat-sys-on-error: var(--quipu-alpaca);
+  --mat-sys-error-container: var(--quipu-rojo-fondo);
+  --mat-sys-on-error-container: var(--quipu-rojo-texto);
+  --mat-sys-corner-extra-small: var(--quipu-radio);
   accent-color: var(--mat-sys-primary);
   scrollbar-color: var(--mat-sys-outline) var(--mat-sys-surface);
 
-  // Formas: esquinas rectas de 4 px, como el tejido de la cenefa; botones de 48 px de alto.
-  --mat-sys-corner-extra-small: 4px;
-  --mat-button-filled-container-shape: 4px;
-  --mat-button-outlined-container-shape: 4px;
-  --mat-button-text-container-shape: 4px;
-  --mat-button-filled-container-height: 48px;
-  --mat-button-outlined-container-height: 48px;
-  --mat-dialog-container-shape: 8px;
+  // 2. Escala tipográfica del lienzo (§3.3) en los roles de Material: nunca baja de 14 px.
+  @include quipu-type(body-large, 400, 1rem, 1.5);
+  @include quipu-type(body-medium, 400, 0.9375rem, 1.5);
+  @include quipu-type(body-small, 400, 0.875rem, 1.5);
+  @include quipu-type(label-large, 800, 1rem, 1.2);
+  @include quipu-type(label-medium, 700, 0.875rem, 1.3);
+  @include quipu-type(label-small, 700, 0.875rem, 1.3);
+  @include quipu-type(title-large, 800, 1.25rem, 1.3);
+  @include quipu-type(title-medium, 800, 1.125rem, 1.35);
+  @include quipu-type(title-small, 800, 1rem, 1.4);
+  @include quipu-type(headline-small, 600, 1.75rem, 1.15, $quipu-brand-family);
+  @include quipu-type(headline-medium, 600, 2.75rem, 1.05, $quipu-brand-family);
+  @include quipu-type(headline-large, 600, 3.5rem, 1.05, $quipu-brand-family);
+  @include quipu-type(display-small, 600, 3.5rem, 1.05, $quipu-brand-family);
+  @include quipu-type(display-medium, 600, 4rem, 1, $quipu-brand-family);
+  @include quipu-type(display-large, 600, 5rem, 1, $quipu-brand-family);
+
+  // 2. Componentes de Material (P-10 botones, P-07 campos, P-16 diálogos) desde los tokens.
+  --mat-dialog-container-shape: var(--quipu-radio-dialogo);
+  --mat-button-filled-container-shape: var(--quipu-radio);
+  --mat-button-outlined-container-shape: var(--quipu-radio);
+  --mat-button-text-container-shape: var(--quipu-radio);
+  --mat-button-filled-container-height: var(--quipu-alto-control);
+  --mat-button-outlined-container-height: var(--quipu-alto-control);
+  --mat-button-filled-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-filled-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-filled-label-text-tracking: 0;
+  --mat-button-filled-horizontal-padding: 24px;
+  --mat-button-outlined-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-outlined-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-outlined-label-text-tracking: 0;
+  --mat-button-outlined-horizontal-padding: 20px;
+  --mat-button-outlined-outline-color: var(--quipu-chilca);
+  --mat-button-outlined-outline-width: var(--quipu-borde-ancho);
+  --mat-button-text-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-text-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-text-label-text-tracking: 0;
+  --mat-form-field-container-height: var(--quipu-alto-control);
+  --mat-form-field-container-vertical-padding: 12px;
+  --mat-form-field-container-text-size: var(--mat-sys-body-large-size);
+  --mat-form-field-container-text-tracking: 0;
+  --mat-form-field-container-text-line-height: 1.5rem;
+  --mat-form-field-outlined-container-shape: var(--quipu-radio);
+  --mat-form-field-outlined-outline-color: var(--quipu-borde);
+  --mat-form-field-outlined-hover-outline-color: var(--quipu-tinta);
+  --mat-form-field-outlined-focus-outline-width: var(--quipu-borde-ancho-enfasis);
+  --mat-form-field-outlined-label-text-size: var(--mat-sys-body-large-size);
+  --mat-form-field-outlined-label-text-tracking: 0;
+  --mat-form-field-outlined-label-text-color: var(--quipu-tinta-secundaria);
+  --mat-form-field-subscript-text-size: var(--mat-sys-body-medium-size);
+  --mat-form-field-subscript-text-tracking: 0;
 }
 
 body {
@@ -136,20 +264,41 @@ body {
   color: var(--mat-sys-on-surface);
 }
 
+// 3. Título de página (h1, §3.3): su tamaño vive solo aquí; ningún componente lo repite.
 h1 {
   margin: 0 0 0.5rem;
-  font-family: var(--mat-sys-display-small-font, 'Fraunces', Georgia, serif);
-  font-size: 2.125rem;
-  font-weight: 600;
-  line-height: 1.15;
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--quipu-titulo-tracking);
   text-wrap: balance;
+}
+
+@media (max-width: 599.98px) {
+  h1 {
+    font-size: var(--quipu-titulo-pagina-movil);
+  }
+}
+
+// Título de sección (h2, P-03): Nunito Sans 800 de 20 px.
+h2 {
+  font: var(--mat-sys-title-large);
+}
+
+// El acceso (A0) usa un título más chico, como en el tablero Ingreso.
+app-auth-shell h1 {
+  font-size: var(--mat-sys-headline-medium-size);
+}
+
+@media (max-width: 599.98px) {
+  app-auth-shell h1 {
+    font-size: var(--quipu-titulo-acceso-movil);
+  }
 }
 
 a {
   color: var(--mat-sys-primary);
   font-weight: 700;
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--quipu-subrayado-offset);
 }
 
 ::selection {
@@ -163,7 +312,7 @@ a {
 
 // Los botones responden al presionarlos.
 .mat-mdc-button-base {
-  transition: transform 160ms var(--quipu-ease);
+  transition: transform var(--quipu-duracion-presion) var(--quipu-ease-presion);
 }
 
 .mat-mdc-button-base:active:not(:disabled) {
@@ -181,14 +330,113 @@ a {
   background: var(--mat-sys-surface);
 }
 
-// Error de la página (no de un campo): bloque en tono de error, sin borde.
+// Oculto a la vista y presente para el lector de pantalla: la clase estándar de la CDK,
+// cdk-visually-hidden, en todo el proyecto (no se redefine en los componentes).
+@include cdk.a11y-visually-hidden();
+
+// P-09 Aviso de página: un bloque de tono sin borde, texto de 16 px. Es la única definición: la
+// usan app-page-notice (shared/ui) y los errores de formulario (quipu-alert = tono rojo).
+// Amarillo informa, verde confirma lo que acaba de pasar y rojo pide corregir.
+.quipu-notice,
 .quipu-alert {
-  margin: 0 0 0.5rem;
-  padding: 0.75rem 1rem;
-  border-radius: 4px;
-  background: var(--mat-sys-error-container);
-  color: var(--mat-sys-on-error-container);
+  margin: 0;
+  padding: 0.875rem 1.125rem;
+  border-radius: var(--quipu-radio);
+  font: var(--mat-sys-body-large);
+}
+
+.quipu-notice--info {
+  background: var(--quipu-aviso-info-fondo);
+  color: var(--quipu-aviso-info-texto);
+}
+
+.quipu-notice--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+}
+
+.quipu-notice--error,
+.quipu-alert {
+  background: var(--quipu-aviso-error-fondo);
+  color: var(--quipu-aviso-error-texto);
+}
+
+// P-07 / P-14 Campo (TAR-218): etiqueta visible encima, campo de 48 px con fondo sólido, error de
+// 15 px y ayuda de 14 px debajo. Todo sale de los tokens de arriba. Uso:
+// <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
+.quipu-field {
+  display: grid;
+  gap: var(--quipu-espacio-campo);
+}
+
+.quipu-label {
+  font: var(--mat-sys-label-medium);
+  color: var(--quipu-tinta-secundaria);
+}
+
+.quipu-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--quipu-alto-control);
+  padding: 0 var(--quipu-relleno-campo);
+  border: var(--quipu-borde-ancho) solid var(--quipu-borde);
+  border-radius: var(--quipu-radio);
+  background-color: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  font: var(--mat-sys-body-large);
+}
+
+.quipu-input:disabled {
+  opacity: var(--quipu-opacidad-inactivo);
+  cursor: not-allowed;
+}
+
+// El borde de 2 px no mueve el texto: el relleno pierde lo que gana el borde.
+.quipu-input[aria-invalid='true'] {
+  padding-inline: calc(
+    var(--quipu-relleno-campo) - var(--quipu-borde-ancho-enfasis) + var(--quipu-borde-ancho)
+  );
+  border: var(--quipu-borde-ancho-enfasis) solid var(--quipu-error);
+}
+
+.quipu-field-error {
+  margin: 0;
   font: var(--mat-sys-body-medium);
+  color: var(--quipu-error);
+}
+
+.quipu-field-help {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--quipu-tinta-secundaria);
+}
+
+// «Mostrar» / «Ocultar» dentro del campo de contraseña (A0.1, A0.2, A0.4, A0.5): un botón de
+// texto con aria-pressed y aria-controls, centrado en el alto del campo.
+.quipu-reveal {
+  position: relative;
+
+  .quipu-input {
+    padding-right: var(--quipu-relleno-mostrar);
+  }
+}
+
+.quipu-reveal-toggle {
+  $inset: calc((var(--quipu-alto-control) - var(--quipu-alto-control-fila)) / 2);
+  position: absolute;
+  top: $inset;
+  right: $inset;
+  height: var(--quipu-alto-control-fila);
+  padding: 0 calc(var(--quipu-relleno-campo) - #{$inset});
+  border: 0;
+  border-radius: var(--quipu-radio);
+  background: transparent;
+  color: var(--quipu-chilca);
+  font: var(--mat-sys-body-medium);
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: var(--quipu-subrayado-offset);
+  cursor: pointer;
 }
 
 // P-10 Botones (TAR-285): clases para <button> o <a>. Principal verde lleno (uno por zona),
@@ -200,14 +448,11 @@ a {
   justify-content: center;
   gap: 0.5rem;
   box-sizing: border-box;
-  min-height: 48px;
+  min-height: var(--quipu-alto-control);
   padding: 0 1.375rem;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  font: inherit;
-  font-size: 1rem;
-  font-weight: 800;
-  line-height: 1.2;
+  border: var(--quipu-borde-ancho) solid transparent;
+  border-radius: var(--quipu-radio);
+  font: var(--mat-sys-label-large);
   text-decoration: none;
   cursor: pointer;
   transition:
@@ -240,12 +485,12 @@ a {
 }
 
 .quipu-button--tertiary {
-  min-height: 44px;
+  min-height: var(--quipu-toque);
   padding: 0;
   background: none;
   color: var(--quipu-chilca);
   text-decoration: underline;
-  text-underline-offset: 4px;
+  text-underline-offset: var(--quipu-subrayado-offset);
 }
 
 .quipu-button--tertiary:hover:not(:disabled, [aria-disabled='true']) {
@@ -253,7 +498,7 @@ a {
 }
 
 .quipu-button--row {
-  min-height: 44px;
+  min-height: var(--quipu-toque);
   padding-block: 2px;
 }
 
@@ -310,6 +555,18 @@ a {
 .quipu-band-gold {
   background: var(--quipu-qolle);
   mask-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cpath%20d%3D%22M10%2028%20L15%2034%20H5Z%20M30%2028%20L35%2034%20H25Z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+// P-07: los selectores nativos sin el aspecto del sistema, con una flecha de 16 px y 40 px de
+// relleno a la derecha. Los de Material (matNativeControl) ya dibujan la suya.
+select:not([matnativecontrol]) {
+  appearance: none;
+  padding-right: var(--quipu-relleno-flecha);
+  background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%233d4842%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right var(--quipu-relleno-campo) center;
+  background-size: 16px 16px;
+  cursor: pointer;
 }
 
 // Foco visible en todo lo interactivo (anillo chilca, 5.5:1 sobre la piedra).

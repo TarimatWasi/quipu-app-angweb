@@ -64,7 +64,7 @@
         [attr.aria-expanded]="accountOpen()"
         (click)="toggleAccount()"
       >
-        <span class="vh">Tu cuenta:</span> {{ session()?.name }}
+        <span class="cdk-visually-hidden">Tu cuenta:</span> {{ session()?.name }}
         <svg
           aria-hidden="true"
           class="chevron"

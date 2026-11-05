@@ -12,7 +12,7 @@ describe('PageNoticeComponent (P-09)', () => {
     );
 
     const alert = screen.getByRole('alert');
-    expect(alert.classList).toContain('tone-error');
+    expect(alert.classList).toContain('quipu-notice--error');
     expect(alert.querySelector('strong')?.textContent).toBe('Tu pago no se aprobó.');
     expect(alert.textContent).toContain('Motivo: la imagen no se lee.');
     expect(screen.getByRole('link', { name: 'Corregir pago' }).closest('.action')).toBeTruthy();
@@ -25,7 +25,7 @@ describe('PageNoticeComponent (P-09)', () => {
     );
 
     const notice = container.querySelector('app-page-notice');
-    expect(notice?.classList).toContain('tone-info');
+    expect(notice?.classList).toContain('quipu-notice--info');
     expect(notice?.getAttribute('role')).toBeNull();
     expect(screen.queryByRole('alert')).toBeNull();
     expect(notice?.querySelector('strong')?.textContent).toBe('Te devolveremos S/ 30.00.');

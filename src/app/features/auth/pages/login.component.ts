@@ -20,12 +20,12 @@ import {
 } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/auth/auth.service';
 import { AccountLock, BffError, toBffError } from '@core/http/bff-error';
 import {
@@ -48,82 +48,39 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
 
 @Component({
   selector: 'app-login',
-  imports: [
-    AuthShellComponent,
-    FormRoot,
-    FormField,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatButton,
-    RouterLink,
-  ],
+  imports: [AuthShellComponent, FormRoot, FormField, MatButton, PageNoticeComponent, RouterLink],
   templateUrl: './login.component.html',
-  styles: `
-    :host {
-      display: block;
-    }
-    form {
-      display: grid;
-      gap: 0.5rem;
-      width: min(25rem, 100%);
-    }
-    .error {
-      margin: 0 0 0.5rem;
-      color: var(--mat-sys-error);
-      font: var(--mat-sys-body-small);
-    }
-    .hint {
-      display: block;
-      margin: 0;
-      font: var(--mat-sys-body-small);
-    }
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      margin: -1px;
-      padding: 0;
-      overflow: hidden;
-      clip-path: inset(50%);
-      white-space: nowrap;
-    }
-    .lock {
-      display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 0.875rem;
-      margin-bottom: 0.75rem;
-      padding: 1rem 1.125rem;
-      border-radius: 4px;
-      background: var(--mat-sys-error-container);
-      color: var(--mat-sys-on-error-container);
-      font: var(--mat-sys-body-medium);
-    }
-    .lock-ok {
-      background: var(--mat-sys-primary-container);
-      color: var(--mat-sys-on-primary-container);
-    }
-    .lock svg {
-      margin-top: 2px;
-    }
-    .lock div {
-      display: grid;
-      gap: 0.375rem;
-    }
-    .lock p {
-      margin: 0;
-    }
-    .lock-title {
-      font-weight: 700;
-    }
-    .lock a {
-      color: inherit;
-    }
-    .time {
-      font-size: 1.0625rem;
-      font-variant-numeric: tabular-nums;
-    }
-  `,
+  // The layout is the one of every access form; here only how the lock notice lays out its icon.
+  styles: [
+    FORM_PAGE_STYLES,
+    `
+      .lock {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 0.875rem;
+      }
+      .lock svg {
+        margin-top: 2px;
+      }
+      .lock div {
+        display: grid;
+        gap: 0.375rem;
+      }
+      .lock p {
+        margin: 0;
+      }
+      .lock-title {
+        font-weight: 700;
+      }
+      .lock a {
+        color: inherit;
+      }
+      .time {
+        font-size: var(--quipu-texto-intro-size);
+        font-variant-numeric: tabular-nums;
+      }
+    `,
+  ],
 })
 export class LoginComponent {
   private readonly auth = inject(AuthService);

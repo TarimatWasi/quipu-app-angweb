@@ -15,7 +15,7 @@
   Volver a Pagos
 </a>
 <div class="title">
-  <h1 [class.visually-hidden]="state().kind === 'loading' || state().kind === 'error'">
+  <h1 [class.cdk-visually-hidden]="state().kind === 'loading' || state().kind === 'error'">
     {{ title() }}
   </h1>
   <p class="today">{{ today }}</p>
@@ -78,11 +78,11 @@
                     <span class="acts">
                       <a [routerLink]="stay.payment.link" [queryParams]="stay.payment.query">
                         {{ stay.payment.label }}
-                        <span class="visually-hidden">de la estadía del {{ stay.dates }}</span>
+                        <span class="cdk-visually-hidden">de la estadía del {{ stay.dates }}</span>
                       </a>
                       <a [routerLink]="['/admin/guests', g.id, 'stays', stay.id]">
                         Corregir estadía
-                        <span class="visually-hidden">del {{ stay.dates }}</span>
+                        <span class="cdk-visually-hidden">del {{ stay.dates }}</span>
                       </a>
                     </span>
                   </li>

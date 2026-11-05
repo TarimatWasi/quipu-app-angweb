@@ -60,6 +60,18 @@ describe('ChangePasswordComponent (A0.1, RF-12)', () => {
     expect(ui.getByLabelText('Nueva contraseña')).toBeTruthy();
   });
 
+  it('lets the person see the new password with «Mostrar»', async () => {
+    const { ui } = await setup();
+    const field = ui.getByLabelText('Nueva contraseña');
+
+    fireEvent.click(ui.getByRole('button', { name: 'Mostrar' }));
+
+    await vi.waitFor(() => {
+      expect(field.getAttribute('type')).toBe('text');
+    });
+    expect(ui.getByRole('button', { name: 'Ocultar' }).getAttribute('aria-pressed')).toBe('true');
+  });
+
   it('asks for a password without calling the BFF when the field is empty', async () => {
     const { ui, controller, submit } = await setup();
 

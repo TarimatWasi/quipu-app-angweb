@@ -217,7 +217,7 @@
                     (input)="typedMethod(i, methodFrom($event.target))"
                   />
                   <fieldset class="shortcuts">
-                    <legend class="visually-hidden">Medios frecuentes</legend>
+                    <legend class="cdk-visually-hidden">Medios frecuentes</legend>
                     @for (shortcut of shortcuts; track shortcut) {
                       <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
                         {{ shortcut }}
@@ -250,7 +250,7 @@
 
               @if (proofs().length > 1) {
                 <button mat-button type="button" (click)="removeProof(i)">
-                  Quitar<span class="visually-hidden"> comprobante {{ i + 1 }}</span>
+                  Quitar<span class="cdk-visually-hidden"> comprobante {{ i + 1 }}</span>
                 </button>
               }
             </fieldset>

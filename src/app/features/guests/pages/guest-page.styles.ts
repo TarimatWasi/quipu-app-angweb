@@ -24,11 +24,6 @@ export const GUEST_PAGE_STYLES = `
   }
   h1 {
     margin: 0;
-    font-family: 'Fraunces', Georgia, serif;
-    font-weight: 600;
-    font-size: clamp(2.5rem, 5vw, 3.5rem);
-    line-height: 1.05;
-    letter-spacing: -0.03em;
   }
   .today {
     margin: 0;
@@ -144,13 +139,5 @@ export const GUEST_PAGE_STYLES = `
   }
   @media (prefers-reduced-motion: reduce) {
     .sk { animation: none; }
-  }
-  .visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
   }
 `;

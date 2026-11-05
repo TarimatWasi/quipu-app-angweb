@@ -146,7 +146,7 @@
             @if (proof.kind === 'VOUCHER') {
               @if (proof.fileUrl; as url) {
                 <a [href]="url" target="_blank" rel="noopener noreferrer">
-                  Descargar voucher<span class="visually-hidden"> {{ i + 1 }}</span>
+                  Descargar voucher<span class="cdk-visually-hidden"> {{ i + 1 }}</span>
                   @if (proof.file; as file) {
                     ({{ file.name }})
                   }
