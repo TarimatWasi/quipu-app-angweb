@@ -391,12 +391,14 @@ describe('LoginComponent', () => {
         return pieces.join(' ').replace(/\s+/g, ' ').trim();
       });
 
-    it('says the session ended, with the key phrase in bold, in a status region', async () => {
+    it('says the session ended in one paragraph that starts in bold, in a status region', async () => {
       const { ui } = await setup(undefined, '/login?expired=1');
 
       expect(statuses(ui)).toEqual([EXPIRED]);
       const heading = ui.getByText('Tu sesión terminó.');
       expect(heading.tagName).toBe('STRONG');
+      // One paragraph, as in the canvas: the bold phrase runs inline with the rest of the text.
+      expect(heading.parentElement?.textContent.replace(/\s+/g, ' ').trim()).toBe(EXPIRED);
       expect(heading.closest('.quipu-notice')?.classList).toContain('quipu-notice--info');
     });
 
