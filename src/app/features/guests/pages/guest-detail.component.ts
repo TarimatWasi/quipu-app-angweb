@@ -1,7 +1,7 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatDialog } from '@angular/material/dialog';
+import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, of } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
@@ -161,6 +161,7 @@ export class GuestDetailComponent implements OnInit {
   });
 
   private currentId = '';
+  private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
   // Moves with every load, so a late answer for a previous guest is ignored.
   private request = 0;
   /**
@@ -182,7 +183,10 @@ export class GuestDetailComponent implements OnInit {
 
   ngOnInit(): void {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
-      void this.load(params.get('id') ?? '');
+      const id = params.get('id') ?? '';
+      // The dialogs of the guest left behind go with it.
+      if (id !== this.currentId) this.closeDialogs();
+      void this.load(id);
     });
   }
 
@@ -239,6 +243,7 @@ export class GuestDetailComponent implements OnInit {
     this.periods.set([]);
     this.stays.set([]);
     this.reactivated.set(false);
+    this.busy.set(false);
   }
 
   private show(guest: GuestDetail, periods: readonly PeriodStatus[], stays: readonly Stay[]): void {
@@ -253,6 +258,28 @@ export class GuestDetailComponent implements OnInit {
     }
   }
 
+  /**
+   * Whether the page still shows `id`. An action of a guest left behind answers late: its answer
+   * must neither reload that guest under the address of the new one nor open its dialogs.
+   */
+  private showing(id: string): boolean {
+    return id === this.currentId;
+  }
+
+  /** Keeps a dialog of this guest, so it closes when the page moves to another one. */
+  private track<T, R>(ref: MatDialogRef<T, R>): MatDialogRef<T, R> {
+    this.dialogs.add(ref);
+    ref.afterClosed().subscribe(() => {
+      this.dialogs.delete(ref);
+    });
+    return ref;
+  }
+
+  private closeDialogs(): void {
+    for (const ref of this.dialogs) ref.close();
+    this.dialogs.clear();
+  }
+
   private say(text: string, tone: 'success' | null = 'success'): void {
     this.toast.set({ text, tone });
   }
@@ -261,13 +288,15 @@ export class GuestDetailComponent implements OnInit {
   private openAccess(): void {
     const guest = this.guest();
     if (guest === null) return;
-    openGenerateAccessDialog(this.dialog, {
-      active: guest.status === 'ACTIVE',
-      generate: (mode) => this.guests.generateAccess(guest.id, mode),
-    })
+    this.track(
+      openGenerateAccessDialog(this.dialog, {
+        active: guest.status === 'ACTIVE',
+        generate: (mode) => this.guests.generateAccess(guest.id, mode),
+      }),
+    )
       .afterClosed()
       .subscribe((access) => {
-        if (access) void this.handOver(guest, access);
+        if (access && this.showing(guest.id)) void this.handOver(guest, access);
       });
   }
 
@@ -289,13 +318,15 @@ export class GuestDetailComponent implements OnInit {
   private openAccountEmail(): void {
     const guest = this.guest();
     if (guest === null) return;
-    openAccountEmailDialog(this.dialog, {
-      current: guest.accountEmail ?? null,
-      save: (email) => this.guests.setAccountEmail(guest.id, email),
-    })
+    this.track(
+      openAccountEmailDialog(this.dialog, {
+        current: guest.accountEmail ?? null,
+        save: (email) => this.guests.setAccountEmail(guest.id, email),
+      }),
+    )
       .afterClosed()
       .subscribe((saved) => {
-        if (saved !== true) return;
+        if (saved !== true || !this.showing(guest.id)) return;
         this.say(EMAIL_SAVED_TEXT);
         void this.load(guest.id, true);
       });
@@ -304,14 +335,16 @@ export class GuestDetailComponent implements OnInit {
   private openDeactivate(): void {
     const guest = this.guest();
     if (guest === null) return;
-    openDeactivateGuestDialog(this.dialog, {
-      who: guestName(guest),
-      blocked: guest.contract?.status === 'ACTIVE',
-      deactivate: () => this.guests.deactivate(guest.id),
-    })
+    this.track(
+      openDeactivateGuestDialog(this.dialog, {
+        who: guestName(guest),
+        blocked: guest.contract?.status === 'ACTIVE',
+        deactivate: () => this.guests.deactivate(guest.id),
+      }),
+    )
       .afterClosed()
       .subscribe((done) => {
-        if (done !== true) return;
+        if (done !== true || !this.showing(guest.id)) return;
         this.say(DEACTIVATED_TEXT);
         void this.load(guest.id, true);
       });
@@ -324,17 +357,20 @@ export class GuestDetailComponent implements OnInit {
     this.busy.set(true);
     try {
       const summary = await firstValueFrom(this.guests.reactivate(guest.id));
+      if (!this.showing(guest.id)) return;
       this.reactivated.set(true);
       await this.load(guest.id, true);
+      if (!this.showing(guest.id)) return;
       const expiresAt = this.guest()?.accessExpiresAt ?? null;
       const expired =
         summary.status === 'PENDING_ACTIVATION' &&
         (expiresAt === null || isAccessExpired(expiresAt, new Date()));
       this.say(expired ? REACTIVATED_EXPIRED_TEXT : REACTIVATED_TEXT);
     } catch (error: unknown) {
-      this.reactivateFailed(guest, error);
+      if (this.showing(guest.id)) this.reactivateFailed(guest, error);
     } finally {
-      this.busy.set(false);
+      // A new guest has its own state already (reset on load): only this guest's wait ends.
+      if (this.showing(guest.id)) this.busy.set(false);
     }
   }
 
@@ -347,14 +383,16 @@ export class GuestDetailComponent implements OnInit {
       this.say(reactivateProblem(failure), null);
       return;
     }
-    openPendingDebtDialog(this.dialog, {
-      document: documentText(guest),
-      debt,
-      text: DETAIL_DEBT_TEXT,
-    })
+    this.track(
+      openPendingDebtDialog(this.dialog, {
+        document: documentText(guest),
+        debt,
+        text: DETAIL_DEBT_TEXT,
+      }),
+    )
       .afterClosed()
       .subscribe((pay) => {
-        if (pay === true) {
+        if (pay === true && this.showing(guest.id)) {
           void this.router.navigate(['/admin/payments/new'], {
             queryParams: { guestId: guest.id },
           });
