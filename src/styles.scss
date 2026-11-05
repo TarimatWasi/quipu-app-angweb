@@ -147,6 +147,10 @@ html {
   --quipu-acceso-espacio: 18px;
   --quipu-acceso-alto-boton: 52px;
   --quipu-texto-intro-size: 1.0625rem;
+  // Medida de un párrafo suelto de página (A0.7): unas 52 letras por línea.
+  --quipu-texto-medida: 52ch;
+  // Antetítulo sobre el título de página (A0.7): Fraunces de 22 px.
+  --quipu-antetitulo-size: 1.375rem;
   // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
   --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
 
@@ -304,6 +308,16 @@ h1 {
 // Título de sección (h2, P-03): Nunito Sans 800 de 20 px.
 h2 {
   font: var(--mat-sys-title-large);
+}
+
+// Antetítulo: Fraunces en tinta secundaria sobre el h1, dice de qué trata la página (A0.7).
+.quipu-eyebrow {
+  margin: 0 0 0.5rem;
+  font-family: var(--mat-sys-headline-small-font);
+  font-size: var(--quipu-antetitulo-size);
+  font-weight: var(--mat-sys-headline-small-weight);
+  line-height: var(--mat-sys-headline-small-line-height);
+  color: var(--quipu-tinta-secundaria);
 }
 
 // El acceso (A0) usa un título más chico, como en el tablero Ingreso.

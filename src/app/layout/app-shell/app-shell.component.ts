@@ -2,12 +2,18 @@ import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
 import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
-import { NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
+import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { openChangePasswordDialog } from '@layout/account/change-password-dialog.component';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
+
+/**
+ * Key of the route data that tells the shell its pages belong to no section (A0.7, a page that
+ * does not exist): the menu marks none, even when the address starts like one.
+ */
+export const NO_CURRENT_SECTION = 'noCurrentSection';
 
 /** The toast (P-17) once the password changed in A0.6. */
 export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';
@@ -17,7 +23,8 @@ export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';
  * menu of the role with its current section underlined in q'olle, and the account menu (Cambiar
  * contraseña, which opens its dialog; Administradores for the administrator; Salir); under it the
  * 20 px band, then the page's single main landmark. On a phone the menu and the account go into a
- * panel behind «Menú». A session without sections (onboarding) only has «Salir».
+ * panel behind «Menú». A session without sections (onboarding) only has «Salir»; without a session
+ * (A0.7, a page that does not exist) the bar has only the emblem and «Quipu».
  */
 @Component({
   selector: 'app-shell',
@@ -34,6 +41,7 @@ export class AppShellComponent {
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly dialog = inject(MatDialog);
+  private readonly sectionless = inject(ActivatedRoute).snapshot.data[NO_CURRENT_SECTION] === true;
 
   private readonly accountButton = viewChild<ElementRef<HTMLButtonElement>>('accountButton');
   private readonly menuButton = viewChild<ElementRef<HTMLButtonElement>>('menuButton');
@@ -56,7 +64,7 @@ export class AppShellComponent {
   protected readonly toast = signal<string | null>(null);
 
   protected current(entry: NavEntry): boolean {
-    return isCurrent(entry, this.url());
+    return !this.sectionless && isCurrent(entry, this.url());
   }
 
   protected toggleAccount(): void {

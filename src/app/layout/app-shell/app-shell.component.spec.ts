@@ -167,6 +167,27 @@ describe('AppShellComponent (P-01)', () => {
       expect(ui.getByRole('button', { name: 'Salir' })).toBeTruthy();
     });
 
+    // A0.7: a page that does not exist is shown in the shell to someone without a session too.
+    it('without a session there is only the emblem and «Quipu»: no menu, no account, no «Salir»', async () => {
+      TestBed.configureTestingModule({
+        providers: [
+          provideRouter(PATHS.map((path) => ({ path, component: PageStubComponent }))),
+          provideHttpClient(),
+          provideHttpClientTesting(),
+        ],
+      });
+      const fixture = TestBed.createComponent(AppShellComponent);
+      await fixture.whenStable();
+      const root = fixture.nativeElement as HTMLElement;
+      const ui = within(root);
+
+      expect(element(root, 'header').textContent.trim()).toBe('Quipu');
+      expect(element(root, 'header img.emblem').getAttribute('alt')).toBe('');
+      expect(root.querySelector('nav')).toBeNull();
+      expect(ui.queryAllByRole('button')).toHaveLength(0);
+      expect(root.querySelectorAll('main')).toHaveLength(1);
+    });
+
     it('has the band of 20 px under the bar, hidden from assistive technologies, and one main', async () => {
       const { root } = await setup(ADMIN);
 

@@ -1,3 +1,4 @@
+import { Location } from '@angular/common';
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
@@ -41,7 +42,11 @@ async function setup() {
           { status: 401, statusText: 'Unauthorized' },
         );
     });
-  return { harness, router, signIn, text, answerNoSession };
+  // The address bar: «Sin acceso» keeps the one that was asked for (A0.7).
+  const address = () => TestBed.inject(Location).path();
+  const heading = () => harness.routeNativeElement?.querySelector('h1')?.textContent.trim();
+  const action = () => harness.routeNativeElement?.querySelector('main a');
+  return { harness, router, signIn, text, answerNoSession, address, heading, action };
 }
 
 describe('routes', () => {
@@ -58,12 +63,61 @@ describe('routes', () => {
     expect(text()).toContain('Iniciar sesión');
   });
 
-  it('sends unknown paths to the login page', async () => {
-    const { harness, router } = await setup();
+  describe('a page that does not exist (A0.7)', () => {
+    it('tells someone without a session, under a bar without menu, and offers the login', async () => {
+      const { harness, router, text, answerNoSession, address, heading, action } = await setup();
 
-    await harness.navigateByUrl('/does-not-exist');
+      const navigation = harness.navigateByUrl('/does-not-exist');
+      await answerNoSession();
+      await navigation;
 
-    expect(router.url).toBe('/login');
+      expect(router.url).toBe('/does-not-exist');
+      expect(address()).toBe('/does-not-exist');
+      expect(heading()).toBe('No encontramos esta página');
+      expect(text()).toContain('Quipu');
+      expect(text()).not.toContain('Salir');
+      expect(harness.routeNativeElement?.querySelector('nav')).toBeNull();
+      expect(action()?.textContent.trim()).toBe('Ir a iniciar sesión');
+      expect(action()?.getAttribute('href')).toBe('/login');
+    });
+
+    it('shows it inside the bar of the administrator, with no section marked', async () => {
+      const { harness, router, signIn, text, heading, action } = await setup();
+      await signIn();
+
+      await harness.navigateByUrl('/admin/does-not-exist');
+
+      expect(router.url).toBe('/admin/does-not-exist');
+      expect(heading()).toBe('No encontramos esta página');
+      expect(text()).toContain('Pagos');
+      expect(text()).toContain('Tu cuenta: admin@example.test');
+      expect(harness.routeNativeElement?.querySelector('[aria-current="page"]')).toBeNull();
+      expect(action()?.textContent.trim()).toBe('Ir al inicio');
+      expect(action()?.getAttribute('href')).toBe('/home');
+    });
+
+    it('marks no section even under the path of one', async () => {
+      const { harness, router, signIn, heading } = await setup();
+      await signIn();
+
+      await harness.navigateByUrl('/admin/payments/pay_1/does-not-exist');
+
+      expect(router.url).toBe('/admin/payments/pay_1/does-not-exist');
+      expect(heading()).toBe('No encontramos esta página');
+      expect(harness.routeNativeElement?.querySelector('[aria-current="page"]')).toBeNull();
+      expect(harness.routeNativeElement?.querySelector('.is-current')).toBeNull();
+    });
+
+    it('offers a guest its account statement', async () => {
+      const { harness, signIn, heading, action } = await setup();
+      await signIn(false, 'GUEST', 'CONTRACT');
+
+      await harness.navigateByUrl('/does-not-exist');
+
+      expect(heading()).toBe('No encontramos esta página');
+      expect(action()?.textContent.trim()).toBe('Ir a mi estado de cuenta');
+      expect(action()?.getAttribute('href')).toBe('/home');
+    });
   });
 
   it('keeps /home behind the login', async () => {
@@ -217,13 +271,17 @@ describe('routes', () => {
     });
   });
 
-  it('sends a guest who opens the payments of the administrator to its own home', async () => {
-    const { harness, router, signIn } = await setup();
-    await signIn(false, 'GUEST');
+  it('shows «Sin acceso» to a guest who opens the payments of the administrator, at its address', async () => {
+    const { harness, signIn, text, address, heading, action } = await setup();
+    await signIn(false, 'GUEST', 'CONTRACT');
 
     await harness.navigateByUrl('/admin/payments/pay_1');
 
-    expect(router.url).toBe('/home');
+    expect(address()).toBe('/admin/payments/pay_1');
+    expect(heading()).toBe('Esta página no es para tu cuenta');
+    expect(text()).toContain('Sin acceso');
+    expect(action()?.getAttribute('href')).toBe('/home');
+    expect(harness.routeNativeElement?.querySelector('[aria-current="page"]')).toBeNull();
     TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
   });
 
@@ -241,13 +299,14 @@ describe('routes', () => {
     });
   });
 
-  it('sends a guest who opens the guests of the administrator to its own home', async () => {
-    const { harness, router, signIn } = await setup();
-    await signIn(false, 'GUEST');
+  it('shows «Sin acceso» to a guest who opens the guests of the administrator', async () => {
+    const { harness, signIn, address, heading } = await setup();
+    await signIn(false, 'GUEST', 'TEMPORARY');
 
     await harness.navigateByUrl('/admin/guests/g1/stays/new');
 
-    expect(router.url).toBe('/home');
+    expect(address()).toBe('/admin/guests/g1/stays/new');
+    expect(heading()).toBe('Esta página no es para tu cuenta');
     TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
   });
 
@@ -282,24 +341,19 @@ describe('routes', () => {
       await answer('/bff/guest/account-status', []);
     });
 
-    it('sends a guest with a contract who opens T2 to its own home', async () => {
-      const { harness, router, signIn } = await setup();
+    it('shows «Sin acceso» to a guest with a contract who opens T2', async () => {
+      const { harness, signIn, address, heading } = await setup();
       await signIn(false, 'GUEST', 'CONTRACT');
 
       await harness.navigateByUrl('/temporary-guest/payment');
 
-      expect(router.url).toBe('/home');
-      await answer('/bff/guest/account-status', []);
-      await answer('/bff/guest/credit', {
-        balance: 0,
-        toRefund: false,
-        origins: [],
-        lastRefund: null,
-      });
+      expect(address()).toBe('/temporary-guest/payment');
+      expect(heading()).toBe('Esta página no es para tu cuenta');
+      TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/bff/'));
     });
 
     it('opens T2 for a temporary guest and keeps it away from H3 and H4', async () => {
-      const { harness, router, signIn } = await setup();
+      const { harness, router, signIn, address, heading } = await setup();
       await signIn(false, 'GUEST', 'TEMPORARY');
 
       await harness.navigateByUrl('/temporary-guest/payment');
@@ -307,8 +361,8 @@ describe('routes', () => {
       await answer('/bff/temporary-guest/payment-status', { status: 'PAID' });
 
       await harness.navigateByUrl('/guest/payments/new');
-      expect(router.url).toBe('/home');
-      await answer('/bff/temporary-guest/payment-status', { status: 'PAID' });
+      expect(address()).toBe('/guest/payments/new');
+      expect(heading()).toBe('Esta página no es para tu cuenta');
     });
 
     it('shows the panels of my-account inside the home of dashboard, at /home', async () => {
@@ -335,15 +389,28 @@ describe('routes', () => {
       });
     });
 
-    it('sends the administrator who opens a guest page to its home', async () => {
-      const { harness, router, signIn } = await setup();
+    it('shows «Sin acceso» to the administrator who opens a guest page', async () => {
+      const { harness, signIn, address, heading, action } = await setup();
       await signIn();
 
       await harness.navigateByUrl('/guest/payments');
-      expect(router.url).toBe('/home');
+      expect(address()).toBe('/guest/payments');
+      expect(heading()).toBe('Esta página no es para tu cuenta');
+      expect(action()?.textContent.trim()).toBe('Ir al inicio');
 
       await harness.navigateByUrl('/temporary-guest/payment/pay_1');
-      expect(router.url).toBe('/home');
+      expect(address()).toBe('/temporary-guest/payment/pay_1');
+      expect(heading()).toBe('Esta página no es para tu cuenta');
+    });
+
+    it('keeps sending someone without a session from a guest page to the login', async () => {
+      const { harness, router, answerNoSession } = await setup();
+
+      const navigation = harness.navigateByUrl('/guest/payments');
+      await answerNoSession();
+      await navigation;
+
+      expect(router.url).toBe('/login');
     });
   });
 });
