@@ -311,12 +311,92 @@ a {
 
 // Error de la página (no de un campo): bloque en tono de error, sin borde.
 .quipu-alert {
-  margin: 0 0 0.5rem;
-  padding: 0.75rem 1rem;
+  margin: 0;
+  padding: 0.875rem 1.125rem;
   border-radius: 4px;
   background: var(--mat-sys-error-container);
   color: var(--mat-sys-on-error-container);
-  font: var(--mat-sys-body-medium);
+  font: var(--mat-sys-body-large);
+}
+
+// P-07 Campo del lienzo (TAR-218): etiqueta encima en 14 px 800 gris, campo de 48 px con borde de
+// 1 px (2 px en rojo con error), el error en 15 px debajo y la ayuda en 14 px. Uso:
+// <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
+.quipu-field {
+  display: grid;
+  gap: 6px;
+}
+
+.quipu-label {
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--quipu-tinta-secundaria);
+}
+
+.quipu-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--quipu-borde);
+  border-radius: 4px;
+  background-color: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  font: inherit;
+  font-size: 1rem;
+}
+
+.quipu-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.quipu-input[aria-invalid='true'] {
+  padding-inline: 13px;
+  border: 2px solid var(--quipu-error);
+}
+
+.quipu-field-error {
+  margin: 0;
+  font-size: 0.9375rem;
+  line-height: 1.4;
+  color: var(--quipu-error);
+}
+
+.quipu-field-help {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: var(--quipu-tinta-secundaria);
+}
+
+// «Mostrar» / «Ocultar» dentro del campo de contraseña (A0.1, A0.2, A0.4, A0.5): un botón de
+// texto con aria-pressed y aria-controls; el campo deja sitio a la derecha.
+.quipu-reveal {
+  position: relative;
+
+  .quipu-input {
+    padding-right: 96px;
+  }
+}
+
+.quipu-reveal-toggle {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--quipu-chilca);
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
 }
 
 // P-10 Botones (TAR-285): clases para <button> o <a>. Principal verde lleno (uno por zona),

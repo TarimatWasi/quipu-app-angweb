@@ -20,11 +20,10 @@ import {
 } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, map } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/auth/auth.service';
 import { AccountLock, BffError, toBffError } from '@core/http/bff-error';
@@ -48,35 +47,26 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
 
 @Component({
   selector: 'app-login',
-  imports: [
-    AuthShellComponent,
-    FormRoot,
-    FormField,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatButton,
-    RouterLink,
-  ],
+  imports: [AuthShellComponent, FormRoot, FormField, MatButton, PageNoticeComponent, RouterLink],
   templateUrl: './login.component.html',
   styles: `
+    /* Board «Ingreso» of the canvas (TAR-218): 420 px column, 18 px between blocks, 52 px button. */
     :host {
       display: block;
+      --mat-button-filled-container-height: 52px;
+      --mat-button-filled-label-text-size: 1.0625rem;
     }
     form {
       display: grid;
-      gap: 0.5rem;
-      width: min(25rem, 100%);
+      gap: 18px;
+      width: min(26.25rem, 100%);
     }
-    .error {
-      margin: 0 0 0.5rem;
-      color: var(--mat-sys-error);
-      font: var(--mat-sys-body-small);
-    }
-    .hint {
-      display: block;
+    h1 {
       margin: 0;
-      font: var(--mat-sys-body-small);
+    }
+    .link {
+      justify-self: start;
+      padding: 8px 0;
     }
     .sr-only {
       position: absolute;
@@ -92,12 +82,11 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
       display: grid;
       grid-template-columns: auto 1fr;
       gap: 0.875rem;
-      margin-bottom: 0.75rem;
       padding: 1rem 1.125rem;
       border-radius: 4px;
       background: var(--mat-sys-error-container);
       color: var(--mat-sys-on-error-container);
-      font: var(--mat-sys-body-medium);
+      font: var(--mat-sys-body-large);
     }
     .lock-ok {
       background: var(--mat-sys-primary-container);

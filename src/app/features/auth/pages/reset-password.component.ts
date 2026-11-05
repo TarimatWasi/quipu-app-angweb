@@ -1,8 +1,6 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
-import { MatFormField, MatLabel } from '@angular/material/form-field';
-import { MatInput } from '@angular/material/input';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -25,16 +23,7 @@ function codeOf(route: ActivatedRoute): string | null {
 /** A0.2 (RF-16): the link of the email brings the code; here the person chooses a new password. */
 @Component({
   selector: 'app-reset-password',
-  imports: [
-    AuthShellComponent,
-    FormRoot,
-    FormField,
-    MatFormField,
-    MatLabel,
-    MatInput,
-    MatButton,
-    RouterLink,
-  ],
+  imports: [AuthShellComponent, FormRoot, FormField, MatButton, RouterLink],
   templateUrl: './reset-password.component.html',
   styles: FORM_PAGE_STYLES,
 })
@@ -47,6 +36,8 @@ export class ResetPasswordComponent {
   /** Read once from the link; the address bar is cleaned right away so the code is not kept in it. */
   protected readonly code = signal(codeOf(inject(ActivatedRoute)));
   protected readonly serverError = signal<string | null>(null);
+  /** «Mostrar» / «Ocultar» of the password field (decided 2026-11-01, TAR-218). */
+  protected readonly revealed = signal(false);
   /** True when the server said the code cannot be used: the only way forward is a new link. */
   protected readonly codeRejected = signal(false);
 

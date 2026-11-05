@@ -56,6 +56,25 @@ describe('ResetPasswordComponent (A0.2, RF-16)', () => {
     expect(ui.getByLabelText('Nueva contraseña')).toBeTruthy();
   });
 
+  it('shows and hides the password with «Mostrar» / «Ocultar»', async () => {
+    const { ui } = await setup();
+    const field = ui.getByLabelText('Nueva contraseña');
+    expect(field.getAttribute('type')).toBe('password');
+
+    fireEvent.click(ui.getByRole('button', { name: 'Mostrar' }));
+    await vi.waitFor(() => {
+      expect(field.getAttribute('type')).toBe('text');
+    });
+    const hide = ui.getByRole('button', { name: 'Ocultar' });
+    expect(hide.getAttribute('aria-pressed')).toBe('true');
+    expect(hide.getAttribute('aria-controls')).toBe('new-password');
+
+    fireEvent.click(hide);
+    await vi.waitFor(() => {
+      expect(field.getAttribute('type')).toBe('password');
+    });
+  });
+
   it('explains that the link is not valid when it has no code, and offers a new one', async () => {
     const { ui } = await setup(null);
 

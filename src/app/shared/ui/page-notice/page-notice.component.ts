@@ -1,12 +1,13 @@
 import { Component, input } from '@angular/core';
 
-export type NoticeTone = 'info' | 'error';
+export type NoticeTone = 'info' | 'success' | 'error';
 
 /**
  * P-09 Aviso de página: a block of its tone without border. The key phrase (`heading`) goes in
  * bold, the rest is the projected text and the action, if any, goes in `[noticeAction]`, as a link
- * or a tertiary button. Yellow informs; red asks to correct something and is announced at once
- * (role=alert). Only spans inside, so it may also sit inside an <output>.
+ * or a tertiary button. Yellow informs, green confirms what just happened (as «Contraseña
+ * actualizada.» in A0) and red asks to correct something and is announced at once (role=alert).
+ * Only spans inside, so it may also sit inside an <output>.
  */
 @Component({
   selector: 'app-page-notice',
@@ -35,6 +36,10 @@ export type NoticeTone = 'info' | 'error';
     :host(.tone-info) {
       background: var(--quipu-aviso-info-fondo);
       color: var(--quipu-aviso-info-texto);
+    }
+    :host(.tone-success) {
+      background: var(--quipu-estado-pagado-fondo);
+      color: var(--quipu-estado-pagado-texto);
     }
     :host(.tone-error) {
       background: var(--quipu-aviso-error-fondo);
