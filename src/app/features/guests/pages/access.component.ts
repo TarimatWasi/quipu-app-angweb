@@ -83,6 +83,19 @@ export class AccessComponent {
   protected readonly texts = this.handoff ? ACCESS_TEXTS[this.handoff.access.mode] : null;
   protected readonly secret = this.handoff ? accessSecret(this.handoff.access) : '';
   protected readonly shareText = this.handoff ? shareContext(this.handoff.phone) : '';
+  /**
+   * The message as the page shows it: a temporary password stays hidden in it too until «Mostrar
+   * clave». Copying it and WhatsApp always use the whole message.
+   */
+  protected readonly messagePreview = computed(() => {
+    const access = this.handoff?.access;
+    if (!access) return '';
+    return access.mode === 'TEMPORARY_PASSWORD' &&
+      access.temporaryPassword !== '' &&
+      !this.revealed()
+      ? access.shareMessage.split(access.temporaryPassword).join(HIDDEN_PASSWORD)
+      : access.shareMessage;
+  });
   protected readonly whatsapp = this.handoff?.phone
     ? whatsappUrl(this.handoff.phone, this.handoff.access.shareMessage)
     : null;

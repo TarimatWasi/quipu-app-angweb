@@ -171,6 +171,35 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     expect(squash(password()?.textContent)).toBe('•••••••••Clave oculta');
   });
 
+  it('hides the temporary password inside the message too, but copies and shares it whole', async () => {
+    const given = handoff({ phone: '987 654 321' });
+    const ui = await setup({
+      ...given,
+      access: { ...PASSWORD, expiresAt: given.access.expiresAt },
+    });
+    const message = () =>
+      squash(
+        within(ui.page().getByRole('region', { name: 'Mensaje para el huésped' })).getByText(
+          /^Entra con tu documento/,
+        ).textContent,
+      );
+
+    expect(message()).toBe('Entra con tu documento y la clave •••••••••');
+    expect(ui.root().textContent).not.toContain('K7-q2x9m');
+    expect(ui.page().getByRole('link', { name: 'Abrir WhatsApp' }).getAttribute('href')).toBe(
+      `//wa.me/51987654321?text=${encodeURIComponent(PASSWORD.shareMessage)}`,
+    );
+
+    await ui.click(ui.page().getByRole('button', { name: 'Mostrar clave' }));
+    expect(message()).toBe('Entra con tu documento y la clave K7-q2x9m');
+
+    await ui.click(ui.page().getByRole('button', { name: 'Ocultar clave' }));
+    expect(message()).toBe('Entra con tu documento y la clave •••••••••');
+    const section = within(ui.page().getByRole('region', { name: 'Mensaje para el huésped' }));
+    await ui.click(section.getByRole('button', { name: 'Copiar mensaje' }));
+    expect(ui.clipboard.copy).toHaveBeenLastCalledWith(PASSWORD.shareMessage);
+  });
+
   it('opens WhatsApp with the message when there is a phone, and says the email went out', async () => {
     const ui = await setup(
       handoff({
