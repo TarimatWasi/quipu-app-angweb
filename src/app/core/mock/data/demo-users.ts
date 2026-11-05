@@ -97,16 +97,27 @@ export function isDemoUserKey(value: string | null): value is DemoUserKey {
   return (DEMO_USER_KEYS as readonly (string | null)[]).includes(value);
 }
 
+/**
+ * The temporary password of the «temporary-password» account once its 30 minutes are over (RN-32):
+ * the login answers AUTH_TEMPORARY_PASSWORD_EXPIRED. Not a secret either.
+ */
+export const DEMO_EXPIRED_CLAVE = 'Vencida2026';
+
+/** The demo account with that document, whatever the password, or undefined. */
+export function findDemoUserByDocument(
+  documentType: unknown,
+  documentNumber: unknown,
+): DemoUser | undefined {
+  return Object.values(DEMO_USERS).find(
+    (user) => user.documentType === documentType && user.documentNumber === documentNumber,
+  );
+}
+
 /** The demo account with that document and password, or undefined. */
 export function findDemoUser(
   documentType: unknown,
   documentNumber: unknown,
   password: unknown,
 ): DemoUser | undefined {
-  if (password !== DEMO_CLAVE) {
-    return undefined;
-  }
-  return Object.values(DEMO_USERS).find(
-    (user) => user.documentType === documentType && user.documentNumber === documentNumber,
-  );
+  return password === DEMO_CLAVE ? findDemoUserByDocument(documentType, documentNumber) : undefined;
 }

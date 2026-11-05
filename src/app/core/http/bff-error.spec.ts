@@ -10,6 +10,11 @@ describe('toBffError', () => {
     [401, 'AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
     [403, 'AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
     [
+      401,
+      'AUTH_TEMPORARY_PASSWORD_EXPIRED',
+      'La clave temporal venció, pide una nueva al administrador',
+    ],
+    [
       423,
       'AUTH_ACCOUNT_LOCKED',
       'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',

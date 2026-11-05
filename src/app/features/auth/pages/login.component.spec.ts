@@ -254,6 +254,17 @@ describe('LoginComponent', () => {
       expect(TestBed.inject(AuthService).session()).toBeNull();
     });
 
+    it('tells a guest whose temporary password expired to ask for a new one (RN-32)', async () => {
+      const { ui, failWith } = await setup();
+
+      await failWith(401, { code: 'AUTH_TEMPORARY_PASSWORD_EXPIRED', message: 'x' });
+
+      expect(
+        await ui.findByText('La clave temporal venció, pide una nueva al administrador'),
+      ).toBeTruthy();
+      expect(TestBed.inject(AuthService).session()).toBeNull();
+    });
+
     it('keeps the form open with a plain message on a 423 that does not say how long (SEG-06)', async () => {
       const { ui, failWith } = await setup();
 

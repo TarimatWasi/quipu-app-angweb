@@ -16,6 +16,7 @@ import { BFF_BASE_URL } from '@core/config/bff-base-url';
 
 type LoginOperation = operations['login'];
 type LoginResponse = LoginOperation['responses'][200]['content']['application/json'];
+type ActivateRequest = operations['activateAccess']['requestBody']['content']['application/json'];
 
 // The API types come from the shared contract (TAR-23): nothing here is declared by hand.
 export type DocumentType = components['schemas']['DocumentType'];
@@ -104,7 +105,21 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.current() !== null);
 
   login(request: LoginRequest): Observable<Session> {
-    return this.http.post<unknown>(`${this.bffBaseUrl}/bff/auth/login`, request).pipe(
+    return this.startSession(`${this.bffBaseUrl}/bff/auth/login`, request);
+  }
+
+  /**
+   * A0.4 (CU-24, RN-32): the guest chooses a password with the single-use token of the link the
+   * administrator handed over. Unlike a reset, the BFF starts the session right away.
+   */
+  activate(token: string, newPassword: string): Observable<Session> {
+    const body: ActivateRequest = { token, newPassword };
+    return this.startSession(`${this.bffBaseUrl}/bff/auth/activate`, body);
+  }
+
+  /** A call whose answer is a new session (login, activation): it replaces the one of this tab. */
+  private startSession(url: string, body: unknown): Observable<Session> {
+    return this.http.post<unknown>(url, body).pipe(
       timeout({ first: this.timing.timeoutMs }),
       map(toSession),
       tap((session) => {

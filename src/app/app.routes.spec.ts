@@ -146,6 +146,17 @@ describe('routes', () => {
     expect(text()).toContain('Este enlace no es válido');
   });
 
+  it('opens the activation of an access (A0.4) without a session and cleans the token', async () => {
+    const { harness, router, text } = await setup();
+
+    await harness.navigateByUrl('/activate#token=abc-DEF_123');
+
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/activate');
+    });
+    expect(text()).toContain('Activa tu cuenta');
+  });
+
   it('opens the activation of an administrator (A0.5) without a session and cleans the code', async () => {
     const { harness, router, text } = await setup();
 

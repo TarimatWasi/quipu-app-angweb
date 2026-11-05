@@ -21,6 +21,7 @@ export interface AccountLock {
 const KNOWN_TEXTS = new Map<string, string>([
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
   ['AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
+  ['AUTH_TEMPORARY_PASSWORD_EXPIRED', 'La clave temporal venció, pide una nueva al administrador'],
   [
     'AUTH_ACCOUNT_LOCKED',
     'Tu cuenta está bloqueada por intentos fallidos. Inténtalo más tarde o restablece tu contraseña.',

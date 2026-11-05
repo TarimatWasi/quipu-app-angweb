@@ -254,6 +254,43 @@ describe('AuthService password recovery (RF-16)', () => {
     expect(service.session()).toBeNull();
   });
 
+  it('activates the access with the token and starts the session the BFF answers (A0.4)', async () => {
+    const { service, controller } = setup();
+    const guest = {
+      role: 'GUEST',
+      guestType: 'CONTRACT',
+      name: 'Luis Huamán',
+      mustChangePassword: false,
+      guestStatus: 'ONBOARDING',
+      nextOnboardingStep: 'PERSONAL_DATA',
+    };
+
+    const result = firstValueFrom(service.activate('el-token', 'Nueva12345'));
+    const req = controller.expectOne(`${environment.bffBaseUrl}/bff/auth/activate`);
+    expect(req.request.method).toBe('POST');
+    expect(req.request.body).toEqual({ token: 'el-token', newPassword: 'Nueva12345' });
+    req.flush(guest);
+
+    const session = { role: 'GUEST', guestType: 'CONTRACT', name: 'Luis Huamán' };
+    await expect(result).resolves.toEqual({ ...session, mustChangePassword: false });
+    expect(service.session()).toEqual({ ...session, mustChangePassword: false });
+  });
+
+  it('keeps no session when the activation fails', async () => {
+    const { service, controller } = setup();
+
+    const result = firstValueFrom(service.activate('vencido', 'Nueva12345'));
+    controller
+      .expectOne(`${environment.bffBaseUrl}/bff/auth/activate`)
+      .flush(
+        { code: 'AUTH_INVALID_OR_EXPIRED_CODE', message: 'x' },
+        { status: 400, statusText: 'Bad Request' },
+      );
+
+    await expect(result).rejects.toBeInstanceOf(HttpErrorResponse);
+    expect(service.session()).toBeNull();
+  });
+
   it('lets the HTTP error through so the screen can map its code', async () => {
     const { service, controller } = setup();
 

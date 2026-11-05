@@ -22,6 +22,10 @@ export const routes: Routes = [
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.RESET_PASSWORD_ROUTES),
   },
   {
+    path: 'activate',
+    loadChildren: () => import('@features/auth/auth.routes').then((m) => m.ACTIVATE_ACCOUNT_ROUTES),
+  },
+  {
     path: 'activate-admin',
     loadChildren: () => import('@features/auth/auth.routes').then((m) => m.ACTIVATE_ADMIN_ROUTES),
   },

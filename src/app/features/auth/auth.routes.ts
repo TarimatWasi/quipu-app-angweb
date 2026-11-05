@@ -21,6 +21,15 @@ export const RESET_PASSWORD_ROUTES: Routes = [
   },
 ];
 
+/** A0.4: the link the administrator hands a guest to choose a password (CU-24, RN-32). */
+export const ACTIVATE_ACCOUNT_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./pages/activate-account.component').then((m) => m.ActivateAccountComponent),
+  },
+];
+
 /** A0.5: the link of the email that gives an administrator access (RF-22). */
 export const ACTIVATE_ADMIN_ROUTES: Routes = [
   {
