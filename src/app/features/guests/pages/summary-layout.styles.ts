@@ -60,9 +60,6 @@ export const SUMMARY_LAYOUT_STYLES = `
     align-items: center;
     gap: 0.75rem 1.5rem;
   }
-  .big {
-    min-height: var(--quipu-alto-boton-grande);
-  }
   @media (max-width: 900px) {
     .layout {
       grid-template-columns: minmax(0, 1fr);

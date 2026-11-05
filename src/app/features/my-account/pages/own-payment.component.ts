@@ -9,7 +9,6 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -142,7 +141,7 @@ export type OwnPaymentMode = 'new' | 'correct' | 'read';
  */
 @Component({
   selector: 'app-own-payment',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './own-payment.component.html',
   styles: [PAYMENT_PAGE_STYLES, DIRECT_PAYMENT_STYLES, OWN_PAYMENT_STYLES],
 })

@@ -9,7 +9,6 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -64,7 +63,7 @@ const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map(
  */
 @Component({
   selector: 'app-document-form',
-  imports: [MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './document-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })

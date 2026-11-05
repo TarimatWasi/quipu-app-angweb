@@ -8,7 +8,6 @@ import {
   signal,
 } from '@angular/core';
 import { email, FieldTree, form, FormField, FormRoot, required } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -32,7 +31,6 @@ interface ForgotPasswordModel {
     AuthShellComponent,
     FormRoot,
     FormField,
-    MatButton,
     RouterLink,
   ],
   templateUrl: './forgot-password.component.html',

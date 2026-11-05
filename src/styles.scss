@@ -654,6 +654,11 @@ fieldset.quipu-field > legend {
   background: var(--quipu-rojo-texto);
 }
 
+// El botón principal grande del acceso (A0), de A3.1 y de A3.7: 52 px.
+.quipu-button--big {
+  min-height: var(--quipu-alto-boton-grande);
+}
+
 .quipu-button--row {
   min-height: var(--quipu-toque);
   padding-block: 2px;

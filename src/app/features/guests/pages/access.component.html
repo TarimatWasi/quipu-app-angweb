@@ -30,7 +30,7 @@
         <div class="now-action">
           @if (expired()) {
             <a
-              class="quipu-button quipu-button--primary big"
+              class="quipu-button quipu-button--primary quipu-button--big"
               [routerLink]="guestLink"
               [state]="generateState"
             >
@@ -38,7 +38,7 @@
             </a>
           } @else if (whatsapp; as url) {
             <a
-              class="quipu-button quipu-button--primary big"
+              class="quipu-button quipu-button--primary quipu-button--big"
               target="_blank"
               rel="noopener"
               [href]="url"
@@ -60,7 +60,7 @@
             </a>
           } @else {
             <button
-              class="quipu-button quipu-button--primary big"
+              class="quipu-button quipu-button--primary quipu-button--big"
               type="button"
               (click)="copyMessage()"
             >

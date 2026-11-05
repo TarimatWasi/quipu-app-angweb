@@ -145,7 +145,11 @@
     }
 
     <div class="actions">
-      <button class="quipu-button quipu-button--primary big" type="submit" [disabled]="saving()">
+      <button
+        class="quipu-button quipu-button--primary quipu-button--big"
+        type="submit"
+        [disabled]="saving()"
+      >
         {{ saving() ? 'Creando…' : 'Crear huésped' }}
       </button>
       <a class="quipu-button quipu-button--tertiary" routerLink="/admin/guests">Cancelar</a>

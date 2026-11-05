@@ -1,5 +1,4 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -34,7 +33,7 @@ const SURPLUS_TEXTS: Readonly<Record<NonNullable<GuestPayment['surplus']>['outco
  */
 @Component({
   selector: 'app-guest-history',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './guest-history.component.html',
   styles: [PAYMENT_PAGE_STYLES, OWN_PAYMENT_STYLES],
 })

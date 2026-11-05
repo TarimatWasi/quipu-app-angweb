@@ -1,6 +1,5 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -41,7 +40,6 @@ function codeOf(route: ActivatedRoute): string | null {
     FormRoot,
     FormField,
     NewPasswordFieldComponent,
-    MatButton,
     RouterLink,
   ],
   templateUrl: './activate-admin.component.html',

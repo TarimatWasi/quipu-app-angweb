@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
@@ -19,7 +18,7 @@ export const ACCOUNT_LOCKED_TEXT_ID = 'account-locked-text';
  */
 @Component({
   selector: 'app-account-locked-dialog',
-  imports: [DialogFrameComponent, MatDialogClose, MatButton, RouterLink],
+  imports: [DialogFrameComponent, MatDialogClose, RouterLink],
   template: `
     <app-dialog-frame heading="Cuenta bloqueada por un rato">
       <span class="quipu-dialog-icon quipu-dialog-icon--error" dialogIcon aria-hidden="true">
@@ -43,7 +42,14 @@ export const ACCOUNT_LOCKED_TEXT_ID = 'account-locked-text';
       <p class="time" aria-hidden="true">{{ countdown.display() }}</p>
       <p class="until">Disponible de nuevo a las {{ countdown.clockTime() }} (hora de Lima)</p>
       <ng-container dialogActions>
-        <button mat-flat-button type="button" mat-dialog-close cdkFocusInitial>Entendido</button>
+        <button
+          class="quipu-button quipu-button--primary"
+          type="button"
+          mat-dialog-close
+          cdkFocusInitial
+        >
+          Entendido
+        </button>
         <a routerLink="/forgot-password" (click)="close()">Restablecer mi contraseña</a>
       </ng-container>
     </app-dialog-frame>

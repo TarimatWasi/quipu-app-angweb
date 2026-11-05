@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
@@ -18,13 +17,18 @@ const NOTICE_TEXT_ID = 'guest-notice-text';
  */
 @Component({
   selector: 'app-guest-notice-dialog',
-  imports: [DialogFrameComponent, MatButton, MatDialogClose],
+  imports: [DialogFrameComponent, MatDialogClose],
   // Frame, title and text are P-16 (app-dialog-frame): nothing of its own to style.
   template: `
     <app-dialog-frame [heading]="data.title">
       <p class="message" [id]="textId">{{ data.message }}</p>
       <ng-container dialogActions>
-        <button mat-flat-button type="button" [mat-dialog-close]="true" cdkFocusInitial>
+        <button
+          class="quipu-button quipu-button--primary"
+          type="button"
+          [mat-dialog-close]="true"
+          cdkFocusInitial
+        >
           {{ data.buttonLabel }}
         </button>
       </ng-container>

@@ -18,7 +18,6 @@ import {
   required,
   validate,
 } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -78,7 +77,6 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
     AuthShellComponent,
     FormRoot,
     FormField,
-    MatButton,
     PageNoticeComponent,
     RouterLink,
   ],

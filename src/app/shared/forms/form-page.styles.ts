@@ -6,8 +6,9 @@
 export const FORM_PAGE_STYLES = `
   :host {
     display: block;
-    --mat-button-filled-container-height: var(--quipu-acceso-alto-boton);
-    --mat-button-filled-label-text-size: var(--quipu-texto-intro-size);
+  }
+  .quipu-button--big {
+    font-size: var(--quipu-texto-intro-size);
   }
   form,
   section {

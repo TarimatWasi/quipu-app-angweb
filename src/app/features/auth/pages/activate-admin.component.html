@@ -43,7 +43,11 @@
         <p id="activate-admin-error" class="quipu-alert" tabindex="-1">{{ message }}</p>
       }
 
-      <button mat-flat-button type="submit" [disabled]="activateForm().submitting()">
+      <button
+        class="quipu-button quipu-button--primary quipu-button--big"
+        type="submit"
+        [disabled]="activateForm().submitting()"
+      >
         {{ activateForm().submitting() ? 'Activando…' : 'Activar mi cuenta' }}
       </button>
     </form>

@@ -10,7 +10,6 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
 import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -161,7 +160,7 @@ function nightsValue(start: string, end: string): string {
  */
 @Component({
   selector: 'app-stay-form',
-  imports: [MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './stay-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
