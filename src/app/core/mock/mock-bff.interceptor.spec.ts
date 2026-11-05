@@ -56,7 +56,7 @@ describe('mockBffInterceptor', () => {
 
   it('answers a route the mock does not simulate with a 404 of the catalog', async () => {
     const mock = setUpMockBff();
-    const error = await mock.fail(mock.get('/bff/admin/dashboard'));
+    const error = await mock.fail(mock.get('/bff/admin/finance'));
     expect(error.status).toBe(404);
     expect(catalogOf(error)).toEqual({ code: 'RESOURCE_NOT_FOUND', message: SOME_TEXT });
   });

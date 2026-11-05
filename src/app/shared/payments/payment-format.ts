@@ -145,6 +145,25 @@ export function formatDateTime(isoDateTime: string): string {
   return `${shortDate(parts, parts.year)}, ${get('hour')}:${get('minute')}`;
 }
 
+/** The day of an instant in Lima as a number of days, to count whole days between two of them. */
+function limaDayNumber(instant: Date): number | null {
+  if (Number.isNaN(instant.getTime())) return null;
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(LIMA_PARTS.formatToParts(instant).find((part) => part.type === type)?.value);
+  const day = Date.UTC(get('year'), get('month') - 1, get('day'));
+  return Number.isNaN(day) ? null : day / 86_400_000;
+}
+
+/** «hoy», «hace 1 día», «hace 4 días»: how long ago a payment was sent, by days in Lima (A3.2, A5). */
+export function daysAgo(sentAt: string, now: Date): string | null {
+  const sent = limaDayNumber(new Date(sentAt));
+  const today = limaDayNumber(now);
+  if (sent === null || today === null) return null;
+  const days = today - sent;
+  if (days <= 0) return 'hoy';
+  return days === 1 ? 'hace 1 día' : `hace ${String(days)} días`;
+}
+
 /** Soles with two decimals: "S/ 1,350.50". */
 export function formatMoney(amount: number): string {
   const [whole = '0', cents = '00'] = Math.abs(amount).toFixed(2).split('.');

@@ -1,0 +1,26 @@
+// A5: only the layout of the page. Header, panel, list head, filters, table, cards, notices,
+// skeleton, badges and buttons are the kit's.
+:host {
+  display: block;
+}
+
+.state {
+  margin-top: 1.5rem;
+}
+
+.now {
+  margin-top: 2rem;
+}
+
+.all {
+  margin-top: 2.5rem;
+}
+
+.views {
+  margin-top: 1rem;
+}
+
+.more-error {
+  display: block;
+  margin-top: 1rem;
+}

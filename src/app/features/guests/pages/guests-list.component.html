@@ -18,14 +18,18 @@
     }
 
     <section class="all" aria-labelledby="all-guests-title">
-      <div class="all-head">
+      <div class="quipu-list-head">
         <h2 id="all-guests-title">Todos los huéspedes</h2>
-        <a class="quipu-button quipu-button--secondary new" routerLink="/admin/guests/new">
+        <a class="quipu-button quipu-button--secondary" routerLink="/admin/guests/new">
           Nuevo huésped
         </a>
       </div>
 
-      <div class="quipu-segmented views" role="group" aria-label="Qué huéspedes ver">
+      <div
+        class="quipu-segmented quipu-segmented--fill views"
+        role="group"
+        aria-label="Qué huéspedes ver"
+      >
         @for (option of views; track option.view) {
           <button
             type="button"
@@ -37,10 +41,10 @@
         }
       </div>
 
-      <div class="filters">
-        <div class="quipu-field search">
+      <div class="quipu-filters">
+        <div class="quipu-field quipu-search">
           <label class="quipu-label" for="guests-search">Buscar</label>
-          <div class="search-box">
+          <div class="quipu-search-box">
             <svg
               aria-hidden="true"
               width="18"
@@ -106,7 +110,7 @@
             }
           </select>
         </div>
-        <p class="count">
+        <p class="quipu-list-count">
           <output aria-live="polite">{{ count() }}</output>
           @if (filtered()) {
             <span aria-hidden="true"> · </span>

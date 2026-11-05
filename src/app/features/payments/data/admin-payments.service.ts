@@ -12,12 +12,16 @@ export type PaymentDetail = components['schemas']['Payment'];
 export type AdminProof = components['schemas']['AdminProof'];
 export type PaymentSurplus = components['schemas']['PaymentSurplus'];
 export type { ProofKind } from '../model/proof-kind';
+import type { QueueSummary } from '../model/payment-queue';
+export type { QueueSummary } from '../model/payment-queue';
 export type ProofEdit = components['schemas']['ProofEdit'];
 type ResolveBody = operations['resolvePayment']['requestBody']['content']['application/json'];
 export type VerifiedProof = NonNullable<ResolveBody['proofs']>[number];
 export type PayablePeriod = components['schemas']['PayablePeriod'];
 export type ProofInput = components['schemas']['ProofInput'];
 export type PaymentSummary = components['schemas']['PaymentSummary'];
+type AdminDashboard =
+  operations['getAdminDashboard']['responses'][200]['content']['application/json'];
 
 /** What a direct payment is for: exactly one of a contract month or a stay (DirectPaymentUpload). */
 export type DirectPaymentTarget =
@@ -62,6 +66,20 @@ export class AdminPaymentsService {
   /** The id of the payment that has waited longest for its review, or null when none waits. */
   oldestPendingId(): Observable<string | null> {
     return this.list('PENDING', undefined, 1).pipe(map((page) => page.content[0]?.id ?? null));
+  }
+
+  /**
+   * The counts of A5 from the administrator's home (A1): the pending vouchers come oldest first and
+   * the rejected payments not yet corrected bring their oldest one (`getAdminDashboard`).
+   */
+  queueSummary(): Observable<QueueSummary> {
+    return this.http.get<AdminDashboard>(`${this.root}/bff/admin/dashboard`).pipe(
+      map((dashboard) => ({
+        pendingTotal: dashboard.pendingVouchersTotal,
+        oldestPending: dashboard.pendingVouchers[0] ?? null,
+        rejected: dashboard.rejected,
+      })),
+    );
   }
 
   get(id: string): Observable<PaymentDetail> {

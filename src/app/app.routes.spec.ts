@@ -265,7 +265,15 @@ describe('routes', () => {
 
     expect(router.url).toBe('/admin/payments');
     await vi.waitFor(() => {
-      TestBed.inject(HttpTestingController)
+      const http = TestBed.inject(HttpTestingController);
+      http
+        .expectOne((req) => req.url.endsWith('/bff/admin/dashboard'))
+        .flush({
+          pendingVouchers: [],
+          pendingVouchersTotal: 0,
+          rejected: { count: 0, oldest: null },
+        });
+      http
         .expectOne((req) => req.url.endsWith('/bff/admin/payments'))
         .flush({ content: [], nextCursor: null });
     });

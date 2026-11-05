@@ -1,5 +1,6 @@
 import {
   balanceOf,
+  daysAgo,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -108,5 +109,15 @@ describe('payment-format', () => {
     expect(hasRejectedPayment({ status: 'UNPAID', paymentId: null })).toBe(false);
     expect(hasRejectedPayment({ status: 'UNDER_REVIEW', paymentId: 'p1' })).toBe(false);
     expect(hasRejectedPayment({ status: 'PAID', paymentId: 'p1' })).toBe(false);
+  });
+
+  it('says how long ago a payment was sent, by whole days in Lima', () => {
+    const now = new Date('2026-11-05T20:47:00Z');
+    expect(daysAgo('2026-11-05T14:00:00Z', now)).toBe('hoy');
+    expect(daysAgo('2026-11-04T14:00:00Z', now)).toBe('hace 1 día');
+    // 01:00 UTC of the 5th is still the 4th in Lima.
+    expect(daysAgo('2026-11-05T01:00:00Z', now)).toBe('hace 1 día');
+    expect(daysAgo('2026-10-07T14:00:00Z', now)).toBe('hace 29 días');
+    expect(daysAgo('no', now)).toBeNull();
   });
 });

@@ -666,6 +666,95 @@ a {
   }
 }
 
+// Cabecera y filtros de una lista (A3, A5): el título con su acción a la derecha; debajo, «Buscar»
+// con su lupa, los desplegables y «Mostrando N de M» con «Quitar filtros». Uso:
+// <div class="quipu-list-head"><h2>…</h2><a class="quipu-button …"></div>
+// <div class="quipu-filters"><div class="quipu-field quipu-search"><label>…</label>
+// <div class="quipu-search-box"><svg>…</svg><input class="quipu-input …"></div></div>…
+// <p class="quipu-list-count"><output>…</output></p></div>
+.quipu-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.quipu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1.25rem 0 1rem;
+
+  > .quipu-field {
+    min-width: 12rem;
+  }
+}
+
+.quipu-search {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.quipu-search-box {
+  position: relative;
+
+  svg {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .quipu-input {
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.125rem);
+  }
+}
+
+.quipu-list-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.375rem;
+  min-height: var(--quipu-alto-control);
+  margin: 0 0 0 auto;
+  color: var(--quipu-tinta-secundaria);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 599.98px) {
+  .quipu-list-head > .quipu-button {
+    width: 100%;
+  }
+
+  .quipu-filters {
+    display: grid;
+
+    > .quipu-field {
+      min-width: 0;
+    }
+  }
+
+  .quipu-search {
+    max-width: none;
+  }
+
+  .quipu-list-count {
+    margin-left: 0;
+  }
+
+  .quipu-segmented.quipu-segmented--fill button {
+    flex: 1;
+  }
+}
+
 // Tabla del lienzo (A7, A3): filas de alpaca separadas por la franja de la piedra de la página, la
 // cabecera en piedra oscura y ninguna línea gris. Uso: <div class="quipu-table-wrap"><table
 // class="quipu-table">…</table></div>; el ancho mínimo es del componente (su layout).
@@ -800,6 +889,11 @@ a {
 @media (max-width: 599.98px) {
   .quipu-now-panel {
     padding: var(--quipu-relleno-panel-movil);
+  }
+
+  // Its action takes the whole width on a phone.
+  .quipu-now-panel > .quipu-button {
+    width: 100%;
   }
 
   .quipu-only-wide {

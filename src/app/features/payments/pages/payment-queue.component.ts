@@ -1,122 +1,126 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { MatAnchor, MatButton } from '@angular/material/button';
+import { form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { ShowMoreComponent } from '@shared/ui/show-more/show-more.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { PaymentsTableComponent } from '../components/payments-table.component';
+import { AdminPaymentsService } from '../data/admin-payments.service';
+import type { PaymentQueueItem, QueueSummary } from '../data/admin-payments.service';
 import {
-  AdminPaymentsService,
-  PaymentQueueItem,
-  PaymentStatus,
-} from '../data/admin-payments.service';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { formatDateTime, periodLabel, proofsSummary } from '@shared/payments/payment-format';
-import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
-import type { QueueViewParam } from '../model/queue-views';
+  countText,
+  DEFAULT_SORT,
+  hasFilters,
+  LOAD_ERROR_TEXT,
+  nextSort,
+  NO_FILTERS,
+  NO_MATCH_HEADING,
+  PHONE_SORTS,
+  QUEUE_VIEWS,
+  queueNowPanel,
+  toQueueRow,
+  visiblePayments,
+} from '../model/payment-queue';
+import type { QueueFilters, QueueSort, QueueView, SortKey } from '../model/payment-queue';
 
-interface QueueView {
-  readonly status: PaymentStatus;
-  readonly label: string;
-  /** Value of `?vista=` in the address, so "Volver a Pagos" can come back to the same view. */
-  readonly param: QueueViewParam;
-  readonly empty: string;
-  readonly action: string;
-}
-
-const VIEWS: readonly [QueueView, ...QueueView[]] = [
-  {
-    status: 'PENDING',
-    label: 'Por revisar',
-    param: 'por-revisar',
-    empty: 'No hay pagos por revisar.',
-    action: 'Revisar',
-  },
-  {
-    status: 'APPROVED',
-    label: 'Aprobados',
-    param: 'aprobados',
-    empty: 'No hay pagos aprobados.',
-    action: 'Ver pago',
-  },
-  {
-    status: 'REJECTED',
-    label: 'Rechazados',
-    param: 'rechazados',
-    empty: 'No hay pagos rechazados.',
-    action: 'Corregir pago',
-  },
-];
-
-const RESOLVED_BY: Readonly<Record<PaymentStatus, string>> = {
-  PENDING: '',
-  APPROVED: 'Aprobado por',
-  REJECTED: 'Rechazado por',
-};
-
-interface QueueRow {
-  readonly id: string;
-  readonly guest: string;
-  readonly document: string;
-  readonly environment: string;
-  readonly period: string;
-  readonly submitted: string;
-  readonly proofs: string;
-  readonly resolvedBy: string | null;
-}
-
-function toRow(item: PaymentQueueItem): QueueRow {
-  const reviewer = item.reviewedBy?.name;
-  return {
-    id: item.id,
-    guest: item.guestName ?? 'Sin nombre aún',
-    document: item.documentNumber,
-    environment: item.environmentCode ?? '—',
-    period: periodLabel(item),
-    submitted: formatDateTime(item.submittedAt),
-    proofs: proofsSummary(item.voucherCount, item.hasCash),
-    resolvedBy: reviewer ? `${RESOLVED_BY[item.status]} ${reviewer}` : null,
-  };
-}
+type Phase = 'loading' | 'error' | 'ready';
 
 /**
- * A5 (RF-05): the payments of a view, oldest first, page by page with "Mostrar más". The rows do
- * not carry the amount: the administrator compares it in A5.2.
+ * A5 «Pagos» (RF-05): «Lo que toca ahora» with the payments waiting over every page, and the
+ * payments of a view («Por revisar», «Aprobados», «Rechazados»), oldest first, page by page with
+ * «Mostrar más». «Buscar», «Tipo de huésped» and the order work on what is loaded, in the page.
+ * The rows do not carry the amount: the administrator compares it in A5.2.
  */
 @Component({
   selector: 'app-payment-queue',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [
+    EmptyStateComponent,
+    FormField,
+    LoadErrorComponent,
+    NowPanelComponent,
+    PageHeaderComponent,
+    PaymentsTableComponent,
+    RouterLink,
+    ShowMoreComponent,
+    SkeletonComponent,
+  ],
   templateUrl: './payment-queue.component.html',
-  styles: PAYMENT_PAGE_STYLES,
+  styleUrl: './payment-queue.component.scss',
 })
 export class PaymentQueueComponent {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
 
-  protected readonly views = VIEWS;
-  protected readonly view = signal<QueueView>(VIEWS[0]);
-  protected readonly rows = signal<readonly QueueRow[]>([]);
+  protected readonly views = QUEUE_VIEWS;
+  protected readonly phoneSorts = PHONE_SORTS;
+  protected readonly loadErrorText = LOAD_ERROR_TEXT;
+  protected readonly noMatchHeading = NO_MATCH_HEADING;
+
+  protected readonly view = signal<QueueView>(QUEUE_VIEWS[0]);
+  private readonly filters = signal<QueueFilters>(NO_FILTERS);
+  protected readonly filterForm = form(this.filters);
+  protected readonly sort = signal<QueueSort>(DEFAULT_SORT);
+
+  private readonly items = signal<readonly PaymentQueueItem[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
   protected readonly loading = signal(false);
-  protected readonly error = signal<string | null>(null);
-  /** True once the first page of the view answered, so "empty" is never shown while loading. */
-  protected readonly loaded = signal(false);
-  protected readonly oldestId = computed(() =>
-    this.view().status === 'PENDING' ? (this.rows()[0]?.id ?? null) : null,
-  );
+  /** Whether the last read failed, and whether it was the first page (instead of the list) or a next one. */
+  private readonly failure = signal<'first' | 'more' | null>(null);
+  /** True once a first page answered: from then on a new view keeps the page and only the list waits. */
+  private readonly answered = signal(false);
+  /** The first page of the view on screen answered, so «empty» is never shown while it loads. */
+  private readonly viewLoaded = signal(false);
+  private readonly summary = signal<QueueSummary | null>(null);
 
-  // Moves with every new request, so a late answer of a previous view or page is ignored.
+  protected readonly phase = computed<Phase>(() => {
+    if (this.answered()) return 'ready';
+    return this.failure() === null ? 'loading' : 'error';
+  });
+  protected readonly retrying = computed(() => this.failure() !== null && this.loading());
+  protected readonly listFailed = computed(() => this.failure() === 'first');
+  protected readonly moreFailed = computed(() => this.failure() === 'more');
+  protected readonly loadingList = computed(() => this.loading() && !this.viewLoaded());
+  protected readonly loadingMore = computed(() => this.loading() && this.viewLoaded());
+  protected readonly showEmpty = computed(() => this.viewLoaded() && !this.loading());
+
+  protected readonly filtered = computed(() => hasFilters(this.filters()));
+  protected readonly rows = computed(() => {
+    const now = new Date();
+    return visiblePayments(this.items(), this.filters(), this.sort()).map((item) =>
+      toQueueRow(item, now),
+    );
+  });
+  protected readonly loadedCount = computed(() => this.items().length);
+  protected readonly count = computed(() =>
+    countText(this.rows().length, this.loadedCount(), this.nextCursor() !== null),
+  );
+  protected readonly panel = computed(() => {
+    const summary = this.summary();
+    return summary === null ? null : queueNowPanel(this.view().status, summary, new Date());
+  });
+
+  // Moves with every new read of the list, so a late answer of a previous view or page is ignored.
   private request = 0;
   private started = false;
 
   constructor() {
     // The address decides the view (?vista=), also when only it changes on this same page.
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
-      const view = VIEWS.find((v) => v.param === params.get('vista')) ?? VIEWS[0];
+      const view = QUEUE_VIEWS.find((v) => v.param === params.get('vista')) ?? QUEUE_VIEWS[0];
       if (this.started && view === this.view()) return;
       this.started = true;
       this.view.set(view);
+      this.filters.set(NO_FILTERS);
+      this.sort.set(DEFAULT_SORT);
       void this.load();
     });
+    void this.loadSummary();
   }
 
   protected choose(view: QueueView): void {
@@ -128,8 +132,25 @@ export class PaymentQueueComponent {
     });
   }
 
-  protected reload(): void {
-    void this.load();
+  protected clearFilters(): void {
+    this.filters.set(NO_FILTERS);
+  }
+
+  protected sortBy(key: SortKey): void {
+    this.sort.update((current) => nextSort(current, key));
+  }
+
+  /** «Ordenar por» of a phone: always ascending, as its labels say. */
+  protected sortOnPhone(event: Event): void {
+    const select = event.target;
+    if (!(select instanceof HTMLSelectElement)) return;
+    const choice = PHONE_SORTS.find((option) => option.key === select.value);
+    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
+  }
+
+  /** «Reintentar» asks again what failed: the first page of the view or the next one. */
+  protected retry(): void {
+    void this.load(this.failure() === 'more' ? (this.nextCursor() ?? undefined) : undefined);
   }
 
   protected more(): void {
@@ -139,12 +160,12 @@ export class PaymentQueueComponent {
     }
   }
 
-  protected openOldest(): void {
-    const id = this.oldestId();
-    if (id !== null) {
-      void this.router.navigate(['/admin/payments', id], {
-        queryParams: { vista: this.view().param },
-      });
+  /** The panel is a help over the list: without it the queue still works. */
+  private async loadSummary(): Promise<void> {
+    try {
+      this.summary.set(await firstValueFrom(this.payments.queueSummary()));
+    } catch {
+      this.summary.set(null);
     }
   }
 
@@ -152,21 +173,22 @@ export class PaymentQueueComponent {
     const request = ++this.request;
     const status = this.view().status;
     if (after === undefined) {
-      this.rows.set([]);
+      this.items.set([]);
       this.nextCursor.set(null);
-      this.loaded.set(false);
+      this.viewLoaded.set(false);
     }
     this.loading.set(true);
-    this.error.set(null);
+    this.failure.set(null);
     try {
       const page = await firstValueFrom(this.payments.list(status, after));
       if (request !== this.request) return;
-      this.rows.update((rows) => [...rows, ...page.content.map(toRow)]);
+      this.items.update((items) => [...items, ...page.content]);
       this.nextCursor.set(page.nextCursor);
-      this.loaded.set(true);
-    } catch (error: unknown) {
+      this.viewLoaded.set(true);
+      this.answered.set(true);
+    } catch {
       if (request !== this.request) return;
-      this.error.set(toBffErrorWithServerMessage(error).message);
+      this.failure.set(after === undefined ? 'first' : 'more');
     } finally {
       if (request === this.request) {
         this.loading.set(false);
