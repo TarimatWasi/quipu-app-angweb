@@ -91,8 +91,10 @@ export async function waitUntilStable(page: Page, readiness: ScreenReadiness): P
 
 /** Fails the capture when the app sent it elsewhere (a guard, a lost session): it would mislead. */
 export function ensureOn(page: Page, path: string): void {
+  // Only the route counts: a screen may clean its query from the address bar (A0.2, A0.5 take the
+  // code out of it once read).
   const current = new URL(page.url()).pathname;
-  if (current !== path) {
+  if (current !== new URL(path, page.url()).pathname) {
     throw new Error(`The capture of ${path} landed on ${current}`);
   }
 }

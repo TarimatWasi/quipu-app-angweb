@@ -64,7 +64,7 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
       max-width: 24rem;
       padding: 1rem 1.25rem;
       border: 1px solid var(--mat-sys-outline-variant);
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       background: var(--quipu-alpaca);
       color: var(--mat-sys-on-surface);
       text-decoration: none;

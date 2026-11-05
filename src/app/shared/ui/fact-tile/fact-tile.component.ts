@@ -20,7 +20,7 @@ export type FactTileSurface = 'paper' | 'stone';
     :host {
       display: block;
       padding: 1.125rem 1.25rem 1.25rem;
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       background: var(--quipu-alpaca);
     }
     :host(.surface-stone) {
@@ -36,9 +36,8 @@ export type FactTileSurface = 'paper' | 'stone';
     }
     dd {
       margin: 0.5rem 0 0;
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: 2.5rem;
-      font-weight: 600;
+      font: var(--mat-sys-headline-large);
+      font-size: var(--quipu-cifra-ficha);
       line-height: 1;
       font-variant-numeric: tabular-nums;
       color: var(--quipu-tinta);
@@ -48,7 +47,7 @@ export type FactTileSurface = 'paper' | 'stone';
         padding: 0.875rem 1rem 1rem;
       }
       dd {
-        font-size: 1.875rem;
+        font-size: var(--quipu-cifra-ficha-movil);
       }
     }
   `,

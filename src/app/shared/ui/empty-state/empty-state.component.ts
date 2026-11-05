@@ -30,7 +30,7 @@ let nextId = 0;
     }
     section {
       padding: 3rem 1.5rem;
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       background: var(--quipu-alpaca);
       text-align: center;
     }

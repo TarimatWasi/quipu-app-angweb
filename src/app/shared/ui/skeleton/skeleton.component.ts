@@ -110,7 +110,7 @@ const FIVE = [1, 2, 3, 4, 5] as const;
       display: block;
     }
     .sk {
-      border-radius: 4px;
+      border-radius: var(--quipu-radio);
       background: var(--quipu-piedra-oscura);
       animation: pulse var(--quipu-duracion-pulso) ease-in-out infinite;
     }

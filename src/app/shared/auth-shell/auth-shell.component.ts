@@ -32,13 +32,15 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
       grid-template-columns: minmax(18rem, 42%) 1fr;
       min-height: 100dvh;
     }
+    /* The band reaches both edges of the panel: it pulls back exactly the panel's own padding. */
     .panel {
+      --panel-inline: 2.25rem;
       display: grid;
       grid-template-rows: 1fr auto auto;
       gap: 2rem;
       background: var(--quipu-obsidiana);
       color: var(--quipu-alpaca);
-      padding: 2.5rem 2.25rem 0;
+      padding: 2.5rem var(--panel-inline) 0;
       overflow: hidden;
     }
     .quipu {
@@ -58,15 +60,13 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
     }
     .name {
       margin: 0;
-      font-family: var(--mat-sys-display-small-font, 'Fraunces', Georgia, serif);
-      font-size: clamp(3.25rem, 5.5vw, 5rem);
-      font-weight: 600;
-      line-height: 1;
-      letter-spacing: -0.03em;
+      font: var(--mat-sys-display-large);
+      font-size: clamp(3.25rem, 5.5vw, var(--mat-sys-display-large-size));
+      letter-spacing: var(--quipu-titulo-tracking);
     }
     .band {
       height: 2.5rem;
-      margin-inline: -2.25rem;
+      margin-inline: calc(-1 * var(--panel-inline));
       /* Cenefa escalonada del emblema (SVG 40x40 en línea, los estilos del componente deben ser estáticos). */
       background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2240%22%20height%3D%2240%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cg%20fill%3D%22none%22%20stroke%3D%22%23f4f1ea%22%20stroke-width%3D%222%22%3E%3Cpath%20d%3D%22M0%2018%20L10%206%20L20%2018%20L30%206%20L40%2018%22%2F%3E%3Cpath%20d%3D%22M0%2034%20L10%2022%20L20%2034%20L30%2022%20L40%2034%22%2F%3E%3C%2Fg%3E%3Cpath%20d%3D%22M10%2012%20L15%2018%20H5Z%20M30%2012%20L35%2018%20H25Z%22%20fill%3D%22%23b0263f%22%2F%3E%3Cpath%20d%3D%22M10%2028%20L15%2034%20H5Z%20M30%2028%20L35%2034%20H25Z%22%20fill%3D%22%23e3b02a%22%2F%3E%3C%2Fsvg%3E');
       background-repeat: repeat-x;
@@ -86,8 +86,9 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
       }
       .panel {
         grid-template-rows: auto auto;
+        --panel-inline: 1.25rem;
         gap: 0.875rem;
-        padding: 1rem 1.25rem 0;
+        padding: 1rem var(--panel-inline) 0;
       }
       .quipu {
         display: none;
@@ -104,7 +105,7 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
       }
       .band {
         height: 1.75rem;
-        margin-inline: -1.25rem;
+        margin-inline: calc(-1 * var(--panel-inline));
       }
       .content {
         align-items: start;
