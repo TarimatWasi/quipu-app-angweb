@@ -51,7 +51,7 @@ describe('SkeletonComponent (P-12 cargando)', () => {
     const notice = screen.getByText(SLOW_SERVER_NOTICE);
     expect(notice.closest('output')).toBe(live);
     expect(notice.closest('[aria-busy]')).toBeNull();
-    expect(notice.closest('app-page-notice')?.classList).toContain('tone-info');
+    expect(notice.closest('app-page-notice')?.classList).toContain('quipu-notice--info');
     expect(notice.closest('[role="alert"]')).toBeNull();
   });
 

@@ -7,10 +7,10 @@
     <h1>Iniciar sesión</h1>
 
     <!-- Lo único que se le dice a un lector de pantalla del bloqueo: al empezar, a los 10, 5 y 1 minutos y al terminar. -->
-    <p class="sr-only" aria-live="polite">{{ countdown.announcement() }}</p>
+    <p class="cdk-visually-hidden" aria-live="polite">{{ countdown.announcement() }}</p>
 
     @if (countdown.active()) {
-      <div id="lock-banner" class="lock" tabindex="-1">
+      <div id="lock-banner" class="lock quipu-notice quipu-notice--error" tabindex="-1">
         <svg
           aria-hidden="true"
           width="24"
@@ -39,7 +39,7 @@
         </div>
       </div>
     } @else if (unlocked()) {
-      <div class="lock lock-ok">
+      <div class="lock quipu-notice quipu-notice--success">
         <svg
           aria-hidden="true"
           width="24"

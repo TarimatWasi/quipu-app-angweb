@@ -49,7 +49,6 @@ const ROLE_LABELS: Readonly<Record<Role, string>> = {
     }
     h1 {
       font-size: clamp(2.5rem, 5vw, 4rem);
-      letter-spacing: -0.03em;
     }
     .who {
       margin: 0;

@@ -60,22 +60,15 @@ import { formatLimaToday } from './lima-today';
       justify-content: space-between;
       gap: 0.375rem 1.5rem;
     }
+    /* The size of h1 is the global one (styles.scss): here only its place in the row. */
     h1 {
       margin: 0;
-      font-size: 3.5rem;
-      line-height: 1.05;
-      letter-spacing: -0.03em;
     }
     .today {
       margin: 0;
       font-size: 1.125rem;
       color: var(--quipu-tinta-secundaria);
       font-variant-numeric: tabular-nums;
-    }
-    @media (max-width: 599.98px) {
-      h1 {
-        font-size: 2.5rem;
-      }
     }
   `,
 })

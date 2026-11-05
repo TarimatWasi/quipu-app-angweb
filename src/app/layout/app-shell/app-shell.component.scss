@@ -257,15 +257,6 @@ $side: clamp(1rem, 4vw, 3rem);
   padding: 0 1.125rem;
 }
 
-.vh {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
 .content {
   flex: 1 0 auto;
   padding: clamp(2rem, 6vw, 4.5rem) $side;
