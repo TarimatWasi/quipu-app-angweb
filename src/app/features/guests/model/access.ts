@@ -95,7 +95,7 @@ export const MESSAGE_COPIED_TEXT = 'Mensaje copiado.';
 export const COPY_FAILED_TEXT = 'No se pudo copiar. Selecciona el texto y cópialo a mano.';
 export const LEAVE_TEXT = ' Al salir de esta pantalla ya no se puede volver a ver.';
 export const EXPIRED_CONTEXT_TEXT =
-  'Nadie lo usó a tiempo. Genera otro y compártelo apenas lo tengas.';
+  'Nadie lo usó a tiempo. Genera otro desde su ficha y compártelo apenas lo tengas.';
 
 /** «Compártelo ahora: …», with the phone WhatsApp opens for, or the message to copy without one. */
 export function shareContext(phone: string | null): string {

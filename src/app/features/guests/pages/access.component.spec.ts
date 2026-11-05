@@ -116,9 +116,8 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     expect(
       ui.page().getByRole('link', { name: 'Ir a la ficha del huésped' }).getAttribute('href'),
     ).toBe('/admin/guests/g1');
-    expect(ui.page().getByRole('link', { name: 'Generar otro acceso' }).getAttribute('href')).toBe(
-      '/admin/guests/g1',
-    );
+    // TODO(TAR-288): A3.7 offers «Generar otro acceso» again once A3.2 can regenerate (piece 3).
+    expect(ui.page().queryByRole('link', { name: 'Generar otro acceso' })).toBeNull();
   });
 
   it('copies the link and the message with the clipboard and says so', async () => {
@@ -242,7 +241,7 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     );
   });
 
-  it('turns expired: red countdown, no secret, «Generar otro acceso» to the guest', async () => {
+  it('turns expired: red countdown, no secret, the guest page as the only action', async () => {
     const ui = await setup(handoff({ phone: '987 654 321' }, -1));
 
     const now = within(ui.page().getByRole('region', { name: 'Lo que toca ahora' }));
@@ -251,15 +250,18 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     expect(now.getByText('el acceso venció')).toBeTruthy();
     expect(squash(now.getByRole('status').textContent)).toBe('El acceso venció.');
     expect(
-      now.getByText('Nadie lo usó a tiempo. Genera otro y compártelo apenas lo tengas.'),
+      now.getByText(
+        'Nadie lo usó a tiempo. Genera otro desde su ficha y compártelo apenas lo tengas.',
+      ),
     ).toBeTruthy();
-    expect(now.getByRole('link', { name: 'Generar otro acceso' }).getAttribute('href')).toBe(
+    expect(now.getByRole('link', { name: 'Ir a la ficha del huésped' }).getAttribute('href')).toBe(
       '/admin/guests/g1',
     );
     expect(now.queryByRole('link', { name: 'Abrir WhatsApp' })).toBeNull();
     expect(ui.facts()[3]?.[0]).toBe('Venció a las');
     expect(ui.root().textContent).not.toContain('token=abc');
-    expect(ui.page().getAllByRole('link', { name: 'Generar otro acceso' })).toHaveLength(1);
+    expect(ui.page().getAllByRole('link', { name: 'Ir a la ficha del huésped' })).toHaveLength(1);
+    expect(ui.page().queryByRole('link', { name: 'Generar otro acceso' })).toBeNull();
   });
 
   it('counts down with the clock and expires on screen', async () => {

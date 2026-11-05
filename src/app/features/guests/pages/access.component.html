@@ -29,9 +29,9 @@
         <p class="context">{{ expired() ? expiredContext : shareText }}</p>
         <div class="now-action">
           @if (expired()) {
-            <!-- TODO(TAR-288): piece 3 adds «Generar otro acceso» to A3.2; until then this opens the guest's page. -->
+            <!-- TODO(TAR-288): «Generar otro acceso» comes back here once A3.2 can regenerate (piece 3). -->
             <a class="quipu-button quipu-button--primary big" [routerLink]="guestLink">
-              Generar otro acceso
+              Ir a la ficha del huésped
             </a>
           } @else if (whatsapp; as url) {
             <a
@@ -129,16 +129,15 @@
         </section>
       }
 
-      <div class="actions">
-        <a class="quipu-button quipu-button--secondary" [routerLink]="guestLink">
-          Ir a la ficha del huésped
-        </a>
-        @if (!expired()) {
-          <a class="quipu-button quipu-button--tertiary" [routerLink]="guestLink">
-            Generar otro acceso
+      <!-- Expired, the panel already offers the guest's page: the same action is not repeated here. -->
+      @if (!expired()) {
+        <div class="actions">
+          <a class="quipu-button quipu-button--secondary" [routerLink]="guestLink">
+            Ir a la ficha del huésped
           </a>
-        }
-      </div>
+          <!-- TODO(TAR-288): the link «Generar otro acceso» comes back here with piece 3. -->
+        </div>
+      }
     </div>
   </div>
 } @else {
