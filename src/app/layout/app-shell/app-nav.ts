@@ -44,9 +44,11 @@ export type AccountEntry =
   | { readonly kind: 'link'; readonly label: string; readonly link: string }
   | { readonly kind: 'changePassword'; readonly label: string };
 
-// A7 does not exist yet: while this is null, «Administradores» is left out of the administrator's
-// account menu.
-const ACCOUNT_LINKS: Readonly<Record<'administrators', string | null>> = { administrators: null };
+// A7 lives in the account menu of the administrator, not in the bar: no section of the bar is the
+// current one there. A link set to null would leave its entry out.
+const ACCOUNT_LINKS: Readonly<Record<'administrators', string | null>> = {
+  administrators: '/admin/administrators',
+};
 
 function audienceOf(session: Session): Audience | null {
   if (session.role === 'ADMIN') return 'ADMIN';

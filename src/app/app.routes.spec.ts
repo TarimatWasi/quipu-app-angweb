@@ -313,6 +313,42 @@ describe('routes', () => {
     TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
   });
 
+  it('opens the administrators (A7) for the administrator and asks their list', async () => {
+    const { harness, router, signIn, heading } = await setup();
+    await signIn();
+
+    await harness.navigateByUrl('/admin/administrators');
+
+    expect(router.url).toBe('/admin/administrators');
+    expect(heading()).toBe('Administradores');
+    await vi.waitFor(() => {
+      TestBed.inject(HttpTestingController)
+        .expectOne((req) => req.method === 'GET' && req.url.endsWith('/bff/admin/administrators'))
+        .flush([]);
+    });
+  });
+
+  it('shows «Sin acceso» to a guest who opens the administrators, without asking them', async () => {
+    const { harness, signIn, address, heading } = await setup();
+    await signIn(false, 'GUEST', 'CONTRACT');
+
+    await harness.navigateByUrl('/admin/administrators');
+
+    expect(address()).toBe('/admin/administrators');
+    expect(heading()).toBe('Esta página no es para tu cuenta');
+    TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/admin/'));
+  });
+
+  it('keeps the administrators behind the login', async () => {
+    const { harness, router, answerNoSession } = await setup();
+
+    const navigation = harness.navigateByUrl('/admin/administrators');
+    await answerNoSession();
+    await navigation;
+
+    expect(router.url).toBe('/login');
+  });
+
   it('keeps the payments behind the login', async () => {
     const { harness, router, answerNoSession } = await setup();
 

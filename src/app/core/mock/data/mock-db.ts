@@ -60,6 +60,17 @@ export interface PaymentRecord {
   readonly creditApplied: number;
 }
 
+/** An administrator account as the simulated BFF keeps it, with its whole document (RF-22). */
+export interface AdministratorRecord {
+  readonly id: string;
+  readonly name: string | null;
+  readonly documentType: DocumentType;
+  readonly documentNumber: string;
+  readonly email: string;
+  status: Schemas['AdministratorSummary']['status'];
+  readonly createdAt: string;
+}
+
 export type RefundRecord = GuestRefund & { readonly guestId: string };
 
 export interface CreditRecord {
@@ -76,6 +87,7 @@ export interface MockDbData {
   readonly payments: PaymentRecord[];
   readonly refunds: RefundRecord[];
   readonly credits: Map<string, CreditRecord>;
+  readonly administrators: AdministratorRecord[];
 }
 
 /** The kinds of record, used in the opaque ids so a mixed-up id never finds the wrong record. */
@@ -104,6 +116,10 @@ export class MockDb {
   newId(kind: number): string {
     this.sequence += 1;
     return mockId(kind, this.sequence);
+  }
+
+  administrator(id: string): AdministratorRecord | undefined {
+    return this.data.administrators.find((administrator) => administrator.id === id);
   }
 
   guest(id: string): GuestRecord | undefined {

@@ -21,6 +21,7 @@ const PATHS = [
   'login',
   'home',
   'admin/payments',
+  'admin/administrators',
   'guest/payments',
   'guest/payments/new',
   'temporary-guest/payment',
@@ -198,7 +199,7 @@ describe('AppShellComponent (P-01)', () => {
   });
 
   describe('account menu', () => {
-    it('opens from the name: the administrator sees «Cambiar contraseña» as a button and Salir, not Administradores', async () => {
+    it('opens from the name: the administrator sees «Cambiar contraseña», the link «Administradores» and Salir, in that order', async () => {
       const { fixture, root } = await setup(ADMIN);
       const ui = within(root);
 
@@ -209,15 +210,48 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(button.getAttribute('aria-expanded')).toBe('true');
       expect(button.getAttribute('aria-controls')).toBe('account-menu');
-      const menu = within(element(root, '#account-menu'));
-      expect(menu.getByText('Administración')).toBeTruthy();
-      expect(menu.getAllByRole('button').map((item) => item.textContent.trim())).toEqual([
-        'Cambiar contraseña',
-        'Salir',
+      const menu = element(root, '#account-menu');
+      expect(within(menu).getByText('Administración')).toBeTruthy();
+      expect(
+        [...menu.querySelectorAll('.account-items .item')].map((item) => [
+          item.tagName,
+          item.textContent.trim(),
+        ]),
+      ).toEqual([
+        ['BUTTON', 'Cambiar contraseña'],
+        ['A', 'Administradores'],
+        ['BUTTON', 'Salir'],
       ]);
-      expect(menu.queryByText(/Disponible pronto/)).toBeNull();
-      expect(menu.queryByRole('link')).toBeNull();
+      expect(within(menu).getByRole('link', { name: 'Administradores' }).getAttribute('href')).toBe(
+        '/admin/administrators',
+      );
+      expect(within(menu).queryByText(/Disponible pronto/)).toBeNull();
+    });
+
+    it('«Administradores» goes to A7, closes the menu and marks no section of the bar', async () => {
+      const { fixture, root } = await setup(ADMIN);
+      await openAccount(fixture, 'Rosa Quispe');
+
+      fireEvent.click(
+        within(element(root, '#account-menu')).getByRole('link', { name: 'Administradores' }),
+      );
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/admin/administrators');
+      });
+      await fixture.whenStable();
+
+      expect(root.querySelector('#account-menu')).toBeNull();
+      expect(root.querySelector('header nav [aria-current="page"]')).toBeNull();
+      expect(root.querySelector('header nav .is-current')).toBeNull();
+    });
+
+    it('a guest has no «Administradores» in its account menu', async () => {
+      const { fixture, root } = await setup(CONTRACT);
+      await openAccount(fixture, 'Ana Quispe');
+
+      const menu = within(element(root, '#account-menu'));
       expect(menu.queryByText('Administradores')).toBeNull();
+      expect(menu.queryByRole('link')).toBeNull();
     });
 
     it('«Cambiar contraseña» closes the menu and opens the dialog over the current page', async () => {
@@ -443,11 +477,12 @@ describe('app-nav', () => {
     expect(isCurrent(pagos, '/admin/paymentsx')).toBe(false);
   });
 
-  it('the account menu has the action «Cambiar contraseña» for every role, and no Administradores while A7 does not exist', () => {
+  it('the account menu has the action «Cambiar contraseña» for every role and «Administradores» only for the administrator', () => {
     const changePassword = { kind: 'changePassword', label: 'Cambiar contraseña' };
     expect(accountEntriesFor(null)).toEqual([changePassword]);
     expect(accountEntriesFor({ role: 'ADMIN', name: 'a', mustChangePassword: false })).toEqual([
       changePassword,
+      { kind: 'link', label: 'Administradores', link: '/admin/administrators' },
     ]);
     expect(
       accountEntriesFor({
@@ -457,5 +492,20 @@ describe('app-nav', () => {
         guestType: 'CONTRACT',
       }),
     ).toEqual([changePassword]);
+    expect(
+      accountEntriesFor({
+        role: 'GUEST',
+        name: 'c',
+        mustChangePassword: false,
+        guestType: 'TEMPORARY',
+      }),
+    ).toEqual([changePassword]);
+  });
+
+  it('no section of the administrator is current in A7', () => {
+    const admin = { role: 'ADMIN', name: 'a', mustChangePassword: false } as const;
+    expect(sectionsFor(admin).filter((entry) => isCurrent(entry, '/admin/administrators'))).toEqual(
+      [],
+    );
   });
 });

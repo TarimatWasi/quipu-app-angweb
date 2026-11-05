@@ -213,6 +213,28 @@ describe('toBffError for resolving a payment (TAR-207)', () => {
   });
 });
 
+describe('toBffError for the administrators (A7, TAR-127)', () => {
+  it.each([
+    [409, 'ACCOUNT_DOCUMENT_TAKEN', 'documentNumber', 'Ese documento ya pertenece a una cuenta'],
+    [409, 'ACCOUNT_EMAIL_TAKEN', 'email', 'Ese correo ya está en uso por otra cuenta'],
+  ])('keeps %i %s with its field and a local text', (status, code, field, text) => {
+    expect(toBffError(bff(status, code, 'texto del servidor', field))).toEqual({
+      code,
+      message: text,
+      field,
+    });
+  });
+
+  it.each([
+    ['ADMIN_LIMIT_REACHED', 'Ya hay 5 administradores activos, el máximo.'],
+    ['ADMIN_SELF_DEACTIVATION', 'No puedes desactivar tu propia cuenta.'],
+    ['LAST_ACTIVE_ADMIN', 'No puedes desactivar al último administrador activo.'],
+    ['ADMIN_NOT_FOUND', 'Ese administrador no existe.'],
+  ])('keeps the code %s instead of hiding it as unexpected', (code, text) => {
+    expect(toBffError(bff(409, code))).toEqual({ code, message: text });
+  });
+});
+
 // QP-UI-17: the payment screens show the BFF's own message, which the contract writes for the UI.
 describe('toBffErrorWithServerMessage', () => {
   it('keeps the code, the message and the field the BFF sent', () => {
