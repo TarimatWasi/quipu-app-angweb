@@ -60,6 +60,8 @@ export function paymentAction(
 }
 
 export interface PeriodRow {
+  /** The contract and the month: two contracts can charge the same month (a move mid-month). */
+  readonly key: string;
   readonly period: string;
   /** «Octubre 2026». */
   readonly month: string;
@@ -79,6 +81,7 @@ export function toPeriodRow(item: PeriodStatus, guestId: string): PeriodRow {
   const rejected =
     (item.status === 'UNPAID' || item.status === 'OVERDUE') && Boolean(item.paymentId);
   return {
+    key: `${item.contractId}:${item.period}`,
     period: item.period,
     month: formatPeriod(item.period),
     dueDate: item.dueDate,

@@ -93,7 +93,7 @@ function isState(key: string | null): key is PeriodState {
               </tr>
             </thead>
             <tbody>
-              @for (row of shown(); track row.period) {
+              @for (row of shown(); track row.key) {
                 <tr>
                   <th scope="row" class="quipu-name">{{ row.month }}</th>
                   <td class="figures">{{ row.due }}</td>
@@ -118,7 +118,7 @@ function isState(key: string | null): key is PeriodState {
           </table>
         </div>
         <ul class="quipu-card-list quipu-only-narrow" aria-label="Pagos por mes">
-          @for (row of shown(); track row.period) {
+          @for (row of shown(); track row.key) {
             <li class="quipu-card">
               <div class="card-head">
                 <p class="quipu-name">{{ row.month }}</p>

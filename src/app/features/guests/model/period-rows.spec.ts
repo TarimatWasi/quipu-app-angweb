@@ -32,6 +32,7 @@ describe('A3.2 «Pagos por mes» rows', () => {
     const row = month('2026-10', 'OVERDUE', { paymentId: 'p9', amountDue: 750.5 });
 
     expect(row).toEqual({
+      key: 'c1:2026-10',
       period: '2026-10',
       month: 'Octubre 2026',
       dueDate: '2026-10-05',
@@ -123,4 +124,26 @@ describe('A3.2 «Pagos por mes» rows', () => {
     expect(showingText(1, 3)).toBe('Mostrando 1 de 3 meses');
     expect(showingText(1, 1)).toBe('Mostrando 1 de 1 mes');
   });
+
+  it('keys a month by its contract, so two contracts can charge the same month', () => {
+    const first = month('2026-10', 'PAID');
+    const second = toPeriodRow({ ...month2('2026-10'), contractId: 'c2' }, 'g1');
+
+    expect(first.key).toBe('c1:2026-10');
+    expect(second.key).toBe('c2:2026-10');
+  });
 });
+
+function month2(period: string): PeriodStatus {
+  return {
+    period,
+    status: 'UNPAID',
+    dueDate: `${period}-05`,
+    amount: 800,
+    creditApplied: 0,
+    amountDue: 800,
+    contractId: 'c1',
+    paymentId: null,
+    rejectionReason: null,
+  };
+}
