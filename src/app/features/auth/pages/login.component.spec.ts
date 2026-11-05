@@ -15,12 +15,15 @@ const ADMIN = { role: 'ADMIN', name: 'admin@example.test', mustChangePassword: f
 @Component({ selector: 'app-home-stub', template: '' })
 class HomeStubComponent {}
 
-async function setup(timing?: LoginTiming) {
+/** `url`, when given, is where the page opens (its query is what the login reads). */
+async function setup(timing?: LoginTiming, url?: string) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
         { path: 'home', component: HomeStubComponent },
         { path: 'forgot-password', component: HomeStubComponent },
+        { path: 'login', component: HomeStubComponent },
+        { path: 'contracts', component: HomeStubComponent },
       ]),
       provideHttpClient(withInterceptors([credentialsInterceptor])),
       provideHttpClientTesting(),
@@ -28,6 +31,9 @@ async function setup(timing?: LoginTiming) {
       ...(timing ? [{ provide: LOGIN_TIMING, useValue: timing }] : []),
     ],
   });
+  if (url) {
+    await TestBed.inject(Router).navigateByUrl(url);
+  }
   const fixture = TestBed.createComponent(LoginComponent);
   await fixture.whenStable();
   const root = fixture.nativeElement as HTMLElement;
@@ -363,6 +369,123 @@ describe('LoginComponent', () => {
       retry.flush(ADMIN);
       await vi.waitFor(() => {
         expect(ui.queryByText('Documento o contraseña incorrectos')).toBeNull();
+      });
+    });
+  });
+
+  describe('session notices (TAR-245)', () => {
+    const EXPIRED = 'Tu sesión terminó. Vuelve a iniciar sesión para seguir donde estabas.';
+    const SIGNED_OUT = 'Cerraste sesión.';
+    const UPDATED = 'Contraseña actualizada. Ya puedes iniciar sesión.';
+    /**
+     * The text of every status region of the page, as it reads: its text pieces (the bold key
+     * phrase and the rest sit side by side, with a gap of CSS) joined by a space, spaces collapsed.
+     */
+    const statuses = (ui: { queryAllByRole: (role: 'status') => HTMLElement[] }) =>
+      ui.queryAllByRole('status').map((element) => {
+        const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+        const pieces: string[] = [];
+        for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+          pieces.push(node.textContent ?? '');
+        }
+        return pieces.join(' ').replace(/\s+/g, ' ').trim();
+      });
+
+    it('says the session ended, with the key phrase in bold, in a status region', async () => {
+      const { ui } = await setup(undefined, '/login?expired=1');
+
+      expect(statuses(ui)).toEqual([EXPIRED]);
+      const heading = ui.getByText('Tu sesión terminó.');
+      expect(heading.tagName).toBe('STRONG');
+      expect(heading.closest('.quipu-notice')?.classList).toContain('quipu-notice--info');
+    });
+
+    it('confirms the person signed out, in green, in a status region', async () => {
+      const { ui } = await setup(undefined, '/login?signedOut=1');
+
+      expect(statuses(ui)).toEqual([SIGNED_OUT]);
+      expect(ui.getByText(SIGNED_OUT).closest('.quipu-notice')?.classList).toContain(
+        'quipu-notice--success',
+      );
+    });
+
+    it('still confirms the password was updated', async () => {
+      const { ui } = await setup(undefined, '/login?updated=1');
+
+      expect(statuses(ui)).toEqual([UPDATED]);
+    });
+
+    it('shows no notice on a plain /login or with values other than 1', async () => {
+      for (const url of ['/login', '/login?expired=0&signedOut=true&updated=yes']) {
+        TestBed.resetTestingModule();
+        const { ui } = await setup(undefined, url);
+
+        expect(statuses(ui), url).toEqual([]);
+      }
+    });
+
+    it.each([
+      ['/login?expired=1&signedOut=1&updated=1', EXPIRED],
+      ['/login?signedOut=1&updated=1', SIGNED_OUT],
+    ])('shows only one notice: %s gives the most important', async (url, text) => {
+      const { ui } = await setup(undefined, url);
+
+      expect(statuses(ui)).toEqual([text]);
+    });
+
+    it('hides them all while the account is locked', async () => {
+      const { ui, failWith, fixture } = await setup(
+        undefined,
+        '/login?expired=1&signedOut=1&updated=1',
+      );
+
+      await failWith(
+        423,
+        { code: 'AUTH_ACCOUNT_LOCKED', message: 'x', lockedUntil: '2026-10-07T20:42:00Z' },
+        { 'Retry-After': '900' },
+      );
+      await fixture.whenStable();
+
+      await vi.waitFor(() => {
+        expect(ui.getByText('Cuenta bloqueada por intentos fallidos')).toBeTruthy();
+      });
+      // The open dialog hides the page from the accessibility tree, so the check is on the text.
+      expect(ui.queryByText(/Tu sesión terminó|Cerraste sesión|Contraseña actualizada/)).toBeNull();
+    });
+  });
+
+  describe('going back where the person was (TAR-245)', () => {
+    const signInFrom = async (url: string) => {
+      const { fillValid, submit, request } = await setup(undefined, url);
+      await fillValid();
+      await submit();
+      (await request()).flush(ADMIN);
+    };
+
+    it('opens the page the expired session was on', async () => {
+      await signInFrom('/login?expired=1&returnUrl=%2Fcontracts%3Fpage%3D2');
+
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/contracts?page=2');
+      });
+    });
+
+    it.each([
+      ['another host, protocol-relative', '//evil.com'],
+      ['another host, absolute', 'https://evil.com'],
+      ['another host, behind a backslash', '/\\evil.com'],
+      ['a backslash further on', '/contracts\\..\\\\evil.com'],
+      ['a control character', '/\t/evil.com'],
+      ['a scheme', 'javascript:alert(1)'],
+      ['a relative path', 'contracts'],
+      ['the login itself', '/login?expired=1'],
+      ['the root, which leads back to the login', '/'],
+      ['an empty value', ''],
+    ])('goes to /home instead of %s', async (_case, returnUrl) => {
+      await signInFrom(`/login?expired=1&returnUrl=${encodeURIComponent(returnUrl)}`);
+
+      await vi.waitFor(() => {
+        expect(TestBed.inject(Router).url).toBe('/home');
       });
     });
   });

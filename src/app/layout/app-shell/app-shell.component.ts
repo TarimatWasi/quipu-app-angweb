@@ -93,11 +93,11 @@ export class AppShellComponent {
     }
   }
 
-  /** Closes the session in the BFF (it expires the cookie) and goes back to the login. */
+  /** Closes the session in the BFF (it expires the cookie) and goes back to the login, which says so. */
   protected async leave(): Promise<void> {
     if (this.leaving()) return;
     this.leaving.set(true);
     await firstValueFrom(this.auth.logout());
-    await this.router.navigateByUrl('/login');
+    await this.router.navigateByUrl('/login?signedOut=1');
   }
 }

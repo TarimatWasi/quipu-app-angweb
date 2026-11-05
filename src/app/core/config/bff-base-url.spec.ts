@@ -58,8 +58,9 @@ describe('BFF_BASE_URL is the single source of the BFF address', () => {
     await expect(call).rejects.toMatchObject({ status: 401 });
     expect(auth.session()).toBeNull();
     await vi.waitFor(() => {
-      expect(router.url).toBe('/login');
+      expect(router.url.split('?')[0]).toBe('/login');
     });
+    expect(router.parseUrl(router.url).queryParams).toMatchObject({ expired: '1' });
     controller.verify();
   });
 

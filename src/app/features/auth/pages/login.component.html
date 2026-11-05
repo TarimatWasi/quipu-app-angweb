@@ -64,12 +64,26 @@
       </div>
     }
 
-    @if (passwordUpdated()) {
-      <output>
-        <app-page-notice tone="success"
-          >Contraseña actualizada. Ya puedes iniciar sesión.</app-page-notice
-        >
-      </output>
+    @switch (arrivalNotice()) {
+      @case ('expired') {
+        <output>
+          <app-page-notice tone="info" heading="Tu sesión terminó."
+            >Vuelve a iniciar sesión para seguir donde estabas.</app-page-notice
+          >
+        </output>
+      }
+      @case ('signedOut') {
+        <output>
+          <app-page-notice tone="success">Cerraste sesión.</app-page-notice>
+        </output>
+      }
+      @case ('updated') {
+        <output>
+          <app-page-notice tone="success"
+            >Contraseña actualizada. Ya puedes iniciar sesión.</app-page-notice
+          >
+        </output>
+      }
     }
 
     <div class="quipu-field">

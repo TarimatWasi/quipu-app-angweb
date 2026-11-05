@@ -8,6 +8,9 @@ import { AuthService } from '@core/auth/auth.service';
 /**
  * A 401 from the BFF on any call other than the login and /me means the session cookie is gone or expired:
  * forget the session in this tab and send the user to the login. The error still reaches the caller.
+ * When this tab had a session, the login is told so (`expired=1`) and where the person was
+ * (`returnUrl`), so it can explain what happened and take them back after signing in again (TAR-245).
+ * Nobody is moved when they are already on the login: it would wipe what that page is showing.
  * Same-origin: the BFF is /bff; with an absolute base URL it is <base>/bff. The comparison is
  * case-insensitive and accepts /bff exactly, /bff/..., and /bff?query.
  */
@@ -23,10 +26,21 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (req, next) => {
   return next(req).pipe(
     catchError((error: unknown) => {
       if (toBff && !answersItself && error instanceof HttpErrorResponse && error.status === 401) {
+        const hadSession = auth.session() !== null;
         auth.clear();
-        void router.navigateByUrl('/login');
+        const returnUrl = router.url;
+        if (!isLogin(returnUrl)) {
+          void (hadSession
+            ? router.navigate(['/login'], { queryParams: { expired: '1', returnUrl } })
+            : router.navigateByUrl('/login'));
+        }
       }
       return throwError(() => error);
     }),
   );
 };
+
+/** True for /login itself, with or without a query or a fragment. */
+function isLogin(url: string): boolean {
+  return /^\/login(?:[?#]|$)/.test(url);
+}

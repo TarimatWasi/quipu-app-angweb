@@ -278,7 +278,7 @@ describe('AppShellComponent (P-01)', () => {
   });
 
   describe('leaving', () => {
-    it('tells the BFF to close the session, forgets it and goes to /login', async () => {
+    it('tells the BFF to close the session, forgets it and goes to /login?signedOut=1', async () => {
       const { auth, fixture, root } = await setup(ADMIN);
       await openAccount(fixture, 'Rosa Quispe');
 
@@ -290,7 +290,7 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(auth.session()).toBeNull();
       await vi.waitFor(() => {
-        expect(TestBed.inject(Router).url).toBe('/login');
+        expect(TestBed.inject(Router).url).toBe('/login?signedOut=1');
       });
     });
 
@@ -308,7 +308,7 @@ describe('AppShellComponent (P-01)', () => {
       }
     });
 
-    it('leaves even when the BFF cannot be reached', async () => {
+    it('leaves to /login?signedOut=1 even when the BFF cannot be reached', async () => {
       const { auth, ui, fixture } = await setup(NO_SECTIONS);
 
       fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
@@ -317,7 +317,7 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(auth.session()).toBeNull();
       await vi.waitFor(() => {
-        expect(TestBed.inject(Router).url).toBe('/login');
+        expect(TestBed.inject(Router).url).toBe('/login?signedOut=1');
       });
     });
   });

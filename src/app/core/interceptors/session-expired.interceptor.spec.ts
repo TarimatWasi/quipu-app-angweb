@@ -17,7 +17,10 @@ class LoginStubComponent {}
 function setup() {
   TestBed.configureTestingModule({
     providers: [
-      provideRouter([{ path: 'login', component: LoginStubComponent }]),
+      provideRouter([
+        { path: 'login', component: LoginStubComponent },
+        { path: 'contracts', component: LoginStubComponent },
+      ]),
       provideHttpClient(withInterceptors([credentialsInterceptor, sessionExpiredInterceptor])),
       provideHttpClientTesting(),
     ],
@@ -47,20 +50,60 @@ describe('sessionExpiredInterceptor', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('forgets the session and goes to /login when the BFF answers 401', async () => {
-    const { auth, controller, http, router, signIn } = setup();
-    await signIn();
-
-    const call = firstValueFrom(http.get(`${BFF}/bff/contracts`));
+  /** Answers the next call to /bff/contracts with a 401, as the BFF does once the cookie expired. */
+  const expireOn = async (
+    controller: HttpTestingController,
+    call: Promise<unknown>,
+  ): Promise<void> => {
     controller
       .expectOne(`${BFF}/bff/contracts`)
       .flush({ code: 'AUTH_INVALID_CREDENTIALS' }, { status: 401, statusText: 'Unauthorized' });
-
     await expect(call).rejects.toMatchObject({ status: 401 });
+  };
+
+  it('with a session in the tab: forgets it and goes to /login saying it expired and where the person was', async () => {
+    const { auth, controller, http, router, signIn } = setup();
+    await signIn();
+    await router.navigateByUrl('/contracts?page=2');
+
+    const call = firstValueFrom(http.get(`${BFF}/bff/contracts`));
+    await expireOn(controller, call);
+
+    expect(auth.session()).toBeNull();
+    await vi.waitFor(() => {
+      expect(router.url.split('?')[0]).toBe('/login');
+    });
+    const { queryParams } = router.parseUrl(router.url);
+    expect(queryParams).toEqual({ expired: '1', returnUrl: '/contracts?page=2' });
+  });
+
+  it('without a session in the tab: goes to the plain /login, with no notice', async () => {
+    const { auth, controller, http, router } = setup();
+    await router.navigateByUrl('/contracts');
+
+    const call = firstValueFrom(http.get(`${BFF}/bff/contracts`));
+    await expireOn(controller, call);
+
     expect(auth.session()).toBeNull();
     await vi.waitFor(() => {
       expect(router.url).toBe('/login');
     });
+  });
+
+  it('stays where it is when the person is already on /login', async () => {
+    const { auth, controller, http, router, signIn } = setup();
+    await router.navigateByUrl('/login?updated=1');
+    await signIn();
+    const navigate = vi.spyOn(router, 'navigate');
+    const navigateByUrl = vi.spyOn(router, 'navigateByUrl');
+
+    const call = firstValueFrom(http.get(`${BFF}/bff/contracts`));
+    await expireOn(controller, call);
+
+    expect(auth.session()).toBeNull();
+    expect(navigate).not.toHaveBeenCalled();
+    expect(navigateByUrl).not.toHaveBeenCalled();
+    expect(router.url).toBe('/login?updated=1');
   });
 
   it('does not treat a 401 from the login call itself as an expired session', async () => {

@@ -29,6 +29,8 @@ const TEMPORARY_GUEST_ANA = '00000001-0000-4000-8000-000000000003';
 
 export const SCREENS: readonly ScreenCapture[] = [
   { id: 'a0-login', path: '/login', role: 'anonymous', scenarios: ['normal'] },
+  { id: 'a0-sesion-vencida', path: '/login?expired=1', role: 'anonymous', scenarios: ['normal'] },
+  { id: 'a0-sesion-cerrada', path: '/login?signedOut=1', role: 'anonymous', scenarios: ['normal'] },
   {
     id: 'a0-1-cambio-clave',
     path: '/change-password',
