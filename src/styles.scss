@@ -115,6 +115,8 @@ html {
   // página y 40 px dentro de una fila, toques de 44 px.
   --quipu-radio: 4px;
   --quipu-radio-dialogo: 8px;
+  // P-16: caja de papel de hasta 480 px.
+  --quipu-dialogo-ancho: 30rem;
   --quipu-alto-control: 48px;
   --quipu-alto-control-fila: 40px;
   --quipu-toque: 44px;
@@ -131,6 +133,9 @@ html {
   // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
   --quipu-titulo-tracking: -0.03em;
   --quipu-titulo-pagina-movil: 2.5rem;
+  // Cifra de una ficha o un filtro (P-05, P-11): Fraunces de 40 px (30 px en móvil).
+  --quipu-cifra-ficha: 2.5rem;
+  --quipu-cifra-ficha-movil: 1.875rem;
   // Acceso (A0, tablero Ingreso): título headline-medium (44 px) y 36 px en móvil, columna de
   // 420 px con 18 px entre bloques, intro de 17 px y botón principal de 52 px.
   --quipu-titulo-acceso-movil: 2.25rem;
@@ -223,6 +228,20 @@ html {
 
   // 2. Componentes de Material (P-10 botones, P-07 campos, P-16 diálogos) desde los tokens.
   --mat-dialog-container-shape: var(--quipu-radio-dialogo);
+  --mat-dialog-container-max-width: var(--quipu-dialogo-ancho);
+  --mat-dialog-container-color: var(--quipu-alpaca);
+  --mat-dialog-subhead-color: var(--quipu-tinta);
+  --mat-dialog-subhead-font: var(--mat-sys-headline-small-font);
+  --mat-dialog-subhead-size: var(--mat-sys-headline-small-size);
+  --mat-dialog-subhead-weight: var(--mat-sys-headline-small-weight);
+  --mat-dialog-subhead-line-height: var(--mat-sys-headline-small-line-height);
+  --mat-dialog-subhead-tracking: 0;
+  --mat-dialog-supporting-text-color: var(--quipu-tinta);
+  --mat-dialog-supporting-text-font: var(--mat-sys-body-large-font);
+  --mat-dialog-supporting-text-size: var(--mat-sys-body-large-size);
+  --mat-dialog-supporting-text-weight: var(--mat-sys-body-large-weight);
+  --mat-dialog-supporting-text-line-height: var(--mat-sys-body-large-line-height);
+  --mat-dialog-supporting-text-tracking: 0;
   --mat-button-filled-container-shape: var(--quipu-radio);
   --mat-button-outlined-container-shape: var(--quipu-radio);
   --mat-button-text-container-shape: var(--quipu-radio);
@@ -359,6 +378,26 @@ a {
 .quipu-alert {
   background: var(--quipu-aviso-error-fondo);
   color: var(--quipu-aviso-error-texto);
+}
+
+// P-16 Ícono de un diálogo (va en [dialogIcon] de app-dialog-frame): círculo de 48 px en el tono
+// del aviso que da (rojo: bloqueo; verde: algo cambió y se vuelve a cargar).
+.quipu-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: var(--quipu-alto-control);
+  height: var(--quipu-alto-control);
+  border-radius: 50%;
+}
+
+.quipu-dialog-icon--error {
+  background: var(--quipu-rojo-fondo);
+  color: var(--quipu-rojo-texto);
+}
+
+.quipu-dialog-icon--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
 }
 
 // P-07 / P-14 Campo (TAR-218): etiqueta visible encima, campo de 48 px con fondo sólido, error de

@@ -1,14 +1,7 @@
 import { Component, inject } from '@angular/core';
 import { MatButton } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogActions,
-  MatDialogClose,
-  MatDialogContent,
-  MatDialogRef,
-  MatDialogTitle,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
+import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
 export interface GuestNoticeData {
   readonly title: string;
@@ -25,33 +18,21 @@ const NOTICE_TEXT_ID = 'guest-notice-text';
  */
 @Component({
   selector: 'app-guest-notice-dialog',
-  imports: [MatButton, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose],
+  imports: [DialogFrameComponent, MatButton, MatDialogClose],
+  // Frame, title and text are P-16 (app-dialog-frame): nothing of its own to style.
   template: `
-    <h2 mat-dialog-title>{{ data.title }}</h2>
-    <mat-dialog-content>
-      <p [id]="textId">{{ data.message }}</p>
-    </mat-dialog-content>
-    <mat-dialog-actions>
-      <button mat-flat-button type="button" [mat-dialog-close]="true" cdkFocusInitial>
-        {{ data.buttonLabel }}
-      </button>
-    </mat-dialog-actions>
+    <app-dialog-frame [heading]="data.title">
+      <p class="message" [id]="textId">{{ data.message }}</p>
+      <ng-container dialogActions>
+        <button mat-flat-button type="button" [mat-dialog-close]="true" cdkFocusInitial>
+          {{ data.buttonLabel }}
+        </button>
+      </ng-container>
+    </app-dialog-frame>
   `,
   styles: `
-    h2 {
-      font-family: 'Fraunces', Georgia, serif;
-      font-size: 28px;
-      font-weight: 600;
-      line-height: 1.15;
-    }
-    p {
+    .message {
       margin: 0;
-      font-size: 17px;
-      line-height: 1.5;
-    }
-    mat-dialog-actions {
-      justify-content: end;
-      padding: 0 1.5rem 1.5rem;
     }
   `,
 })
