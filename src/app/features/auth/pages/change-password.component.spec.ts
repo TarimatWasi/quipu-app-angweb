@@ -145,7 +145,7 @@ describe('ChangePasswordComponent (A0.1, RF-12)', () => {
     expect(await ui.findByText('Elige una contraseña distinta de la temporal')).toBeTruthy();
   });
 
-  it('lets the user leave: forgets the session and goes to /login', async () => {
+  it('lets the user leave: forgets the session and goes to /login?signedOut=1', async () => {
     const { auth, ui } = await setup();
     TestBed.inject(Router).resetConfig([{ path: 'login', component: HomeStubComponent }]);
 
@@ -155,7 +155,7 @@ describe('ChangePasswordComponent (A0.1, RF-12)', () => {
       .flush(null, { status: 204, statusText: 'No Content' });
 
     await vi.waitFor(() => {
-      expect(TestBed.inject(Router).url).toBe('/login');
+      expect(TestBed.inject(Router).url).toBe('/login?signedOut=1');
     });
     expect(auth.session()).toBeNull();
   });

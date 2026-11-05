@@ -20,8 +20,8 @@ import {
 } from '@angular/forms/signals';
 import { MatButton } from '@angular/material/button';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, map } from 'rxjs';
+import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
+import { firstValueFrom } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
@@ -38,6 +38,28 @@ interface LoginModel {
   documentType: DocumentType;
   documentNumber: string;
   password: string;
+}
+
+/** What the login has to say about how the person got here; only one is shown at a time. */
+type ArrivalNotice = 'expired' | 'signedOut' | 'updated';
+
+/**
+ * FE-ANG-SEC-02: the `returnUrl` of the query is only followed when it is a path of this app. A
+ * second slash or a backslash would let it name another host, and the root and the login lead
+ * back here; anything else (including control characters) sends the person to /home.
+ */
+function safeReturnUrl(value: string | null): string | null {
+  if (value === null || !value.startsWith('/') || value.startsWith('//')) {
+    return null;
+  }
+  for (const char of value) {
+    const code = char.charCodeAt(0);
+    if (char === '\\' || code < 0x20 || code === 0x7f) {
+      return null;
+    }
+  }
+  const [path = ''] = value.split(/[?#]/, 1);
+  return path === '/' || path === '/login' || path.startsWith('/login/') ? null : value;
 }
 
 const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: string }[] = [
@@ -90,11 +112,22 @@ export class LoginComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
 
   protected readonly documentTypes = DOCUMENT_TYPES;
-  /** The recovery flow sends the person here with `?updated=1` once the password is saved. */
-  protected readonly passwordUpdated = toSignal(
-    inject(ActivatedRoute).queryParamMap.pipe(map((params) => params.get('updated') === '1')),
-    { initialValue: false },
-  );
+  private readonly params = toSignal(inject(ActivatedRoute).queryParamMap, {
+    initialValue: convertToParamMap({}),
+  });
+  /**
+   * Why the person is here (TAR-245): `?expired=1` from the session-expired interceptor, `?signedOut=1`
+   * from «Salir», `?updated=1` from the recovery flow once the password is saved. The lock of the
+   * account says more than any of them, so while it shows (or its end does) none is shown.
+   */
+  protected readonly arrivalNotice = computed<ArrivalNotice | null>(() => {
+    if (this.countdown.active() || this.unlocked()) {
+      return null;
+    }
+    const params = this.params();
+    const notices: readonly ArrivalNotice[] = ['expired', 'signedOut', 'updated'];
+    return notices.find((notice) => params.get(notice) === '1') ?? null;
+  });
   protected readonly serverError = signal<string | null>(null);
   /** True when the server is taking long enough to explain why (free hosting wakes up slowly). */
   protected readonly slow = signal(false);
@@ -169,7 +202,7 @@ export class LoginComponent {
       clearTimeout(hint);
       this.slow.set(false);
     }
-    await this.router.navigateByUrl('/home');
+    await this.router.navigateByUrl(safeReturnUrl(this.params().get('returnUrl')) ?? '/home');
     return undefined;
   }
 

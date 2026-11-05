@@ -54,7 +54,7 @@ export class ChangePasswordComponent {
     if (this.leaving()) return;
     this.leaving.set(true);
     await firstValueFrom(this.auth.logout());
-    await this.router.navigateByUrl('/login');
+    await this.router.navigateByUrl('/login?signedOut=1');
   }
 
   /** Runs when the form is valid. A failure comes back as errors, so the form stays editable. */
