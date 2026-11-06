@@ -38,49 +38,34 @@ describe('BFF_BASE_URL is the single source of the BFF address', () => {
     expect(TestBed.inject(BFF_BASE_URL)).toBe('');
   });
 
-  it('AuthService, the credentials interceptor and the session interceptor all follow an override', async () => {
-    const { auth, controller, http, router } = setup(ABSOLUTE);
-
-    // AuthService builds the login URL from the token, and the credentials interceptor flags it.
+  it('rejects a runtime absolute base before sending credentials or a bootstrap request', async () => {
+    const { auth, controller } = setup(ABSOLUTE);
     const login = firstValueFrom(
       auth.login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' }),
     );
-    const loginReq = controller.expectOne(`${ABSOLUTE}/bff/auth/login`);
-    expect(loginReq.request.withCredentials).toBe(true);
-    loginReq.flush(ADMIN);
-    await login;
-
-    // The session interceptor treats a 401 from that BFF as an expired session...
-    const call = firstValueFrom(http.get(`${ABSOLUTE}/bff/contracts`));
-    controller
-      .expectOne(`${ABSOLUTE}/bff/contracts`)
-      .flush({}, { status: 401, statusText: 'Unauthorized' });
-    await expect(call).rejects.toMatchObject({ status: 401 });
+    await expect(login).rejects.toThrow('CSRF requires same-origin');
+    controller.expectNone(() => true);
     expect(auth.session()).toBeNull();
-    await vi.waitFor(() => {
-      expect(router.url.split('?')[0]).toBe('/login');
-    });
-    expect(router.parseUrl(router.url).queryParams).toMatchObject({ expired: '1' });
-    controller.verify();
   });
 
-  it('with an absolute base, a relative /bff path is not the BFF and a 401 there is ignored', async () => {
-    const { auth, controller, http } = setup(ABSOLUTE);
+  it('a foreign service error carries no credentials and does not clear the BFF session', async () => {
+    const { auth, controller, http } = setup('');
     const login = firstValueFrom(
       auth.login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' }),
     );
-    controller.expectOne(`${ABSOLUTE}/bff/auth/login`).flush(ADMIN);
+    controller.expectOne('/bff/auth/login').flush(ADMIN);
     await login;
-
-    const call = firstValueFrom(http.get('/bff/contracts'));
-    controller.expectOne('/bff/contracts').flush({}, { status: 401, statusText: 'Unauthorized' });
+    const call = firstValueFrom(http.get('https://foreign.example/bff/contracts'));
+    const request = controller.expectOne('https://foreign.example/bff/contracts');
+    expect(request.request.withCredentials).toBe(false);
+    request.flush({}, { status: 401, statusText: 'Unauthorized' });
     await expect(call).rejects.toMatchObject({ status: 401 });
-    expect(auth.session()).not.toBeNull();
+    expect(auth.session()).toEqual(ADMIN);
     controller.verify();
   });
 
-  it('a 401 from the login call itself is not an expired session, for any base', async () => {
-    for (const base of ['', ABSOLUTE]) {
+  it('a 401 from the login call itself is not an expired session, for the same-origin BFF', async () => {
+    for (const base of ['']) {
       TestBed.resetTestingModule();
       const { auth, controller } = setup(base);
       const login = firstValueFrom(

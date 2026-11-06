@@ -112,6 +112,8 @@ test('the development branch is deployed by the pipeline, not by the Vercel Git 
   assert.equal(enabled.development, false);
 });
 
-test('only the development branch is switched off, so pull request previews keep working', () => {
-  assert.deepEqual(Object.keys(config.git.deploymentEnabled), ['development']);
+test('only development and the isolated CSRF review branch are disabled, preserving other PR previews', () => {
+  // TAR-300: no preview deploy while backend/contract enforcement is being reviewed in parallel.
+  assert.deepEqual(Object.keys(config.git.deploymentEnabled), ['development', 'feat/TAR-300-csrf']);
+  assert.equal(config.git.deploymentEnabled['feat/TAR-300-csrf'], false);
 });

@@ -5,7 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { AdminGuestsService, GUEST_PICKER_PAGE_SIZE, STAY_PAGE_SIZE } from './admin-guests.service';
 
-const BASE = 'https://bff.example.test';
+// TAR-300: the browser calls the same-origin proxy.
+const BASE = '';
 
 function setup() {
   TestBed.configureTestingModule({

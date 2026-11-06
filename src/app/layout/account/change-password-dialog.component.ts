@@ -164,9 +164,17 @@ export class ChangePasswordDialogComponent {
     // While a change is on its way its answer may replace the cookie after the logout expired it.
     if (this.saving()) return;
     this.leaving.set(true);
-    this.ref.close();
-    await firstValueFrom(this.auth.logout());
-    await this.router.navigateByUrl('/forgot-password');
+    try {
+      await this.submission.run(async () => {
+        await firstValueFrom(this.auth.logout());
+        this.ref.close();
+        await this.router.navigateByUrl('/forgot-password');
+      });
+    } catch (error: unknown) {
+      this.serverError.set(toBffError(error).message);
+    } finally {
+      this.leaving.set(false);
+    }
   }
 
   /** Runs when the form is valid. A failure comes back as errors, so the dialog stays editable. */

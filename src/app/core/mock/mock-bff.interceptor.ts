@@ -9,6 +9,7 @@ import { inject } from '@angular/core';
 import { mergeMap, of, throwError } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { MOCK_BUNDLE_MARKER, MOCK_HEADER, MockBff } from './mock-bff';
+import { MockCsrfService } from './mock-csrf.service';
 
 /**
  * The path of a call to the BFF (`/bff/...`, without query or fragment), or null for any other URL.
@@ -31,11 +32,18 @@ export const mockBffInterceptor: HttpInterceptorFn = (req, next) => {
     return next(req);
   }
   const bff = inject(MockBff);
-  const headers = new HttpHeaders({ [MOCK_HEADER]: MOCK_BUNDLE_MARKER });
+  const csrf = inject(MockCsrfService);
+  const headers = new HttpHeaders({
+    [MOCK_HEADER]: MOCK_BUNDLE_MARKER,
+    ...(path === '/bff/auth/csrf' ? { 'Cache-Control': 'no-store' } : {}),
+  });
   return inject(MockRequestControls)
     .dispatch(
       { method: req.method, path, query: req.params, body: req.body },
-      () => bff.handle({ method: req.method, path, query: req.params, body: req.body }),
+      () =>
+        csrf.handle(req, path, () =>
+          bff.handle({ method: req.method, path, query: req.params, body: req.body }),
+        ),
       bff.latencyMs(),
     )
     .pipe(

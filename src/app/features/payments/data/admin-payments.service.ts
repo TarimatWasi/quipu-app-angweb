@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { proofsBody } from '@shared/payments/proofs-body';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
@@ -48,6 +49,7 @@ export const PAYMENT_QUEUE_PAGE_SIZE = 20;
 @Injectable({ providedIn: 'root' })
 export class AdminPaymentsService {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly root = inject(BFF_BASE_URL);
   private readonly base = `${this.root}/bff/admin/payments`;
 
@@ -89,12 +91,12 @@ export class AdminPaymentsService {
 
   approve(id: string, proofs: readonly VerifiedProof[]): Observable<unknown> {
     const body: ResolveBody = { status: 'APPROVED', proofs: [...proofs] };
-    return this.http.patch(this.url(id), body);
+    return this.csrf.protect(() => this.http.patch(this.url(id), body));
   }
 
   reject(id: string, reason: string): Observable<unknown> {
     const body: ResolveBody = { status: 'REJECTED', reason };
-    return this.http.patch(this.url(id), body);
+    return this.csrf.protect(() => this.http.patch(this.url(id), body));
   }
 
   /**
@@ -107,7 +109,7 @@ export class AdminPaymentsService {
     files: readonly File[],
   ): Observable<unknown> {
     const body = proofsBody(proofs, files);
-    return this.http.put(`${this.url(id)}/proofs`, body);
+    return this.csrf.protect(() => this.http.put(`${this.url(id)}/proofs`, body));
   }
 
   /** What a guest can pay or has pending, for a direct payment (A5.1), oldest first. */
@@ -128,7 +130,7 @@ export class AdminPaymentsService {
     else fields['stayId'] = payment.target.stayId;
     if (payment.receivedOn !== undefined) fields['receivedOn'] = payment.receivedOn;
     const body = proofsBody(payment.proofs, files, fields);
-    return this.http.post<PaymentSummary>(this.base, body);
+    return this.csrf.protect(() => this.http.post<PaymentSummary>(this.base, body));
   }
 
   private url(id: string): string {

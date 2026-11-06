@@ -23,7 +23,8 @@ export const sessionExpiredInterceptor: HttpInterceptorFn = (req, next) => {
   const toBff = url === bff || url.startsWith(`${bff}/`) || url.startsWith(`${bff}?`);
   // The login answers its own 401, and /me (TAR-74) is the restoration asking: its 401 means "no
   // session" for AuthService, and must not wipe a session opened here while the answer was on its way.
-  const answersItself = url === `${bff}/auth/login` || url === `${bff}/auth/me`;
+  const answersItself =
+    url === `${bff}/auth/login` || url === `${bff}/auth/me` || url === `${bff}/auth/csrf`;
   return next(req).pipe(
     catchError((error: unknown) => {
       if (toBff && !answersItself && error instanceof HttpErrorResponse && error.status === 401) {

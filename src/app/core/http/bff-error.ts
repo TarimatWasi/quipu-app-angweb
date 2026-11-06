@@ -1,4 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
+import { CSRF_INVALID_TEXT } from './csrf-failure';
 import { TimeoutError } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 
@@ -19,6 +20,7 @@ export interface AccountLock {
 }
 
 const KNOWN_TEXTS = new Map<string, string>([
+  ['AUTH_CSRF_INVALID', CSRF_INVALID_TEXT],
   ['AUTH_INVALID_CREDENTIALS', 'Documento o contraseña incorrectos'],
   ['AUTH_ACCOUNT_DISABLED', 'Tu cuenta está deshabilitada. Contacta al administrador.'],
   ['AUTH_TEMPORARY_PASSWORD_EXPIRED', 'La clave temporal venció, pide una nueva al administrador'],

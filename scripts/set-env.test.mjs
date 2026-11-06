@@ -33,10 +33,10 @@ test('other relative values are rejected: only same-origin or an absolute https 
   }
 });
 
-test('an absolute https URL is still accepted for a cross-origin BFF', () => {
-  assert.equal(
-    resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: 'https://api.example.org' }),
-    'https://api.example.org',
+test('an absolute https BFF is rejected with a clear CSRF/proxy configuration error', () => {
+  assert.throws(
+    () => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: 'https://api.example.org' }),
+    /CSRF requires same-origin.*proxy/,
   );
 });
 
@@ -54,10 +54,10 @@ test('rejects values that are not absolute URLs', () => {
   );
 });
 
-test('strips a trailing slash', () => {
-  assert.equal(
-    resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: 'https://api.example.org/' }),
-    'https://api.example.org',
+test('an absolute BFF with a trailing slash is rejected too', () => {
+  assert.throws(
+    () => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: 'https://api.example.org/' }),
+    /CSRF requires same-origin/,
   );
 });
 
@@ -92,15 +92,16 @@ test('the rendered file keeps any value as a single string literal', async () =>
   assert.equal((await evaluate(renderEnvironment(multiline))).bffBaseUrl, multiline);
 });
 
-test('a quote or newline in the variable cannot break out of the generated file', async () => {
+test('hostile absolute values cannot reach the generated configuration', () => {
   for (const raw of [
     "https://a.example/it's",
     'https://a.example/x\ny',
     "https://a.example/';boom();//",
   ]) {
-    const value = resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw });
-    assert.equal((await evaluate(renderEnvironment(value))).bffBaseUrl, value);
-    assert.ok(!value.includes('\n'));
+    assert.throws(
+      () => resolveBffBaseUrl({ NG_APP_BFF_BASE_URL: raw }),
+      /CSRF requires same-origin/,
+    );
   }
 });
 
@@ -123,13 +124,10 @@ test('the build log states the mode: same-origin by default', () => {
   assert.match(describeBffMode('', { VERCEL: '1' }), /same-origin/);
 });
 
-test('the build log states an absolute URL and warns about it on Vercel (stale variable)', () => {
-  const local = describeBffMode('https://api.example.org', {});
-  assert.ok(local.includes('absolute'));
-  const shown = local.split(' ').find((word) => word.startsWith('https:'));
-  assert.equal(new URL(shown).hostname, 'api.example.org');
-  assert.ok(!local.includes('WARNING'));
-  const onVercel = describeBffMode('https://api.example.org', { VERCEL: '1' });
-  assert.ok(onVercel.includes('WARNING'));
-  assert.ok(onVercel.includes('NG_APP_BFF_BASE_URL'));
+test('a stale absolute base never produces a cross-origin build mode', () => {
+  assert.throws(() => describeBffMode('https://api.example.org', {}), /CSRF requires same-origin/);
+  assert.throws(
+    () => describeBffMode('https://api.example.org', { VERCEL: '1' }),
+    /CSRF requires same-origin/,
+  );
 });

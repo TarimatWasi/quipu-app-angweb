@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, InjectionToken, signal } from '@angular/core';
 import {
@@ -13,6 +14,7 @@ import {
 } from 'rxjs';
 import type { components, operations } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
+import { isCsrfFailure } from '@core/http/csrf-failure';
 
 type LoginOperation = operations['login'];
 type LoginResponse = LoginOperation['responses'][200]['content']['application/json'];
@@ -96,6 +98,7 @@ function toSession(body: unknown): Session {
 @Injectable({ providedIn: 'root' })
 export class AuthService {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly bffBaseUrl = inject(BFF_BASE_URL);
   private readonly timing = inject(LOGIN_TIMING);
   private readonly current = signal<Session | null>(null);
@@ -121,15 +124,17 @@ export class AuthService {
 
   /** A call whose answer is a new session (login, activation): it replaces the one of this tab. */
   private startSession(url: string, body: unknown): Observable<Session> {
-    return this.http.post<unknown>(url, body).pipe(
-      timeout({ first: this.timing.timeoutMs }),
-      map(toSession),
-      tap((session) => {
-        this.epoch++;
-        this.current.set(session);
-        this.restoration ??= Promise.resolve();
-      }),
-    );
+    return this.csrf
+      .protect(() => this.http.post<unknown>(url, body))
+      .pipe(
+        timeout({ first: this.timing.timeoutMs }),
+        map(toSession),
+        tap((session) => {
+          this.epoch++;
+          this.current.set(session);
+          this.restoration ??= Promise.resolve();
+        }),
+      );
   }
 
   /**
@@ -179,19 +184,21 @@ export class AuthService {
   changePassword(newPassword: string, currentPassword?: string): Observable<null> {
     const body: ChangePasswordRequest =
       currentPassword === undefined ? { newPassword } : { currentPassword, newPassword };
-    return this.http.post<null>(`${this.bffBaseUrl}/bff/auth/change-password`, body).pipe(
-      timeout({ first: this.timing.timeoutMs }),
-      tap(() => {
-        this.epoch++;
-        this.current.update((session) => session && { ...session, mustChangePassword: false });
-      }),
-    );
+    return this.csrf
+      .protect(() => this.http.post<null>(`${this.bffBaseUrl}/bff/auth/change-password`, body))
+      .pipe(
+        timeout({ first: this.timing.timeoutMs }),
+        tap(() => {
+          this.epoch++;
+          this.current.update((session) => session && { ...session, mustChangePassword: false });
+        }),
+      );
   }
 
   /** RF-16. The answer is the same for any email; no session is involved. */
   requestPasswordReset(email: string): Observable<null> {
-    return this.http
-      .post<null>(`${this.bffBaseUrl}/bff/auth/forgot-password`, { email })
+    return this.csrf
+      .protect(() => this.http.post<null>(`${this.bffBaseUrl}/bff/auth/forgot-password`, { email }))
       .pipe(timeout({ first: this.timing.timeoutMs }));
   }
 
@@ -202,8 +209,8 @@ export class AuthService {
    */
   resetPassword(code: string, newPassword: string, name?: string): Observable<null> {
     const body = name === undefined ? { code, newPassword } : { code, newPassword, name };
-    return this.http
-      .post<null>(`${this.bffBaseUrl}/bff/auth/reset-password`, body)
+    return this.csrf
+      .protect(() => this.http.post<null>(`${this.bffBaseUrl}/bff/auth/reset-password`, body))
       .pipe(timeout({ first: this.timing.timeoutMs }));
   }
 
@@ -212,13 +219,15 @@ export class AuthService {
    * here whatever the answer: if the BFF was unreachable the cookie simply lives until it expires.
    */
   logout(): Observable<null> {
-    return this.http.post<null>(`${this.bffBaseUrl}/bff/auth/logout`, null).pipe(
-      timeout({ first: LOGOUT_TIMEOUT_MS }),
-      catchError(() => of(null)),
-      tap(() => {
-        this.clear();
-      }),
-    );
+    return this.csrf
+      .protect(() => this.http.post<null>(`${this.bffBaseUrl}/bff/auth/logout`, null))
+      .pipe(
+        timeout({ first: LOGOUT_TIMEOUT_MS }),
+        catchError((error: unknown) => (isCsrfFailure(error) ? throwError(() => error) : of(null))),
+        tap(() => {
+          this.clear();
+        }),
+      );
   }
 
   /** Forgets the session in this tab only; {@link logout} also expires the cookie. */

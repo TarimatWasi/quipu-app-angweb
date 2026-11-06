@@ -16,7 +16,7 @@ export const MOCK_TARGETS = [
 ] as const;
 export type MockTarget = (typeof MOCK_TARGETS)[number]['key'];
 export type RequestMode = 'normal' | 'hold' | 'slow' | 'fail-next';
-export type FailureKind = 'server' | 'conflict' | 'validation' | 'storage';
+export type FailureKind = 'server' | 'conflict' | 'validation' | 'storage' | 'csrf';
 interface RequestRule {
   readonly mode: RequestMode;
   readonly failure: FailureKind;
@@ -30,6 +30,12 @@ export interface PendingMockRequest {
 
 export function forcedFailure(kind: FailureKind): MockReply {
   switch (kind) {
+    case 'csrf':
+      return failure(
+        403,
+        'AUTH_CSRF_INVALID',
+        'No se pudo validar la solicitud. Actualiza la página e inténtalo nuevamente.',
+      );
     case 'conflict':
       return concurrentModification();
     case 'validation':
@@ -71,7 +77,8 @@ function storedRules(): Partial<Record<MockTarget, RequestRule>> {
       if (typeof rule !== 'object' || rule === null || !('mode' in rule) || !('failure' in rule))
         continue;
       if (!['normal', 'hold', 'slow', 'fail-next'].includes(String(rule.mode))) continue;
-      if (!['server', 'conflict', 'validation', 'storage'].includes(String(rule.failure))) continue;
+      if (!['server', 'conflict', 'validation', 'storage', 'csrf'].includes(String(rule.failure)))
+        continue;
       result[key] = { mode: rule.mode as RequestMode, failure: rule.failure as FailureKind };
     }
     return result;

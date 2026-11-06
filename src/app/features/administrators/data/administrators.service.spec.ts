@@ -7,7 +7,8 @@ import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import type { AdministratorSummary } from '../model/administrator';
 import { AdministratorsService } from './administrators.service';
 
-const BASE = 'https://bff.example.test';
+// TAR-300: the browser calls the same-origin proxy.
+const BASE = '';
 const ROSA: AdministratorSummary = {
   id: 'a/1',
   name: 'Rosa Quispe',

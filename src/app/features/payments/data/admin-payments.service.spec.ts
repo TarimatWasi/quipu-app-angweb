@@ -5,7 +5,8 @@ import { firstValueFrom } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { AdminPaymentsService, PAYMENT_QUEUE_PAGE_SIZE } from './admin-payments.service';
 
-const BASE = 'https://bff.example.test';
+// TAR-300: the browser calls the same-origin proxy.
+const BASE = '';
 // Opaque ids: the service passes them through untouched, only escaping them for the path.
 const ID = 'pay_9f/x?y';
 const ESCAPED_ID = 'pay_9f%2Fx%3Fy';

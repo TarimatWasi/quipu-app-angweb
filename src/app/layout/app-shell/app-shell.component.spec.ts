@@ -428,6 +428,21 @@ describe('AppShellComponent (P-01)', () => {
   });
 
   describe('leaving', () => {
+    it('keeps the session and current page and releases the button after a CSRF rejection', async () => {
+      const { auth, fixture, root } = await setup(ADMIN);
+      await openAccount(fixture, 'Rosa Quispe');
+      fireEvent.click(within(root).getByRole('button', { name: 'Salir' }));
+      TestBed.inject(HttpTestingController)
+        .expectOne(isLogout)
+        .flush({ code: 'AUTH_CSRF_INVALID' }, { status: 403, statusText: 'Forbidden' });
+      await fixture.whenStable();
+      expect(auth.session()).not.toBeNull();
+      expect(TestBed.inject(Router).url).toBe('/home');
+      expect(within(root).getByRole<HTMLButtonElement>('button', { name: 'Salir' }).disabled).toBe(
+        false,
+      );
+      TestBed.inject(HttpTestingController).expectNone(isLogout);
+    });
     it('tells the BFF to close the session, forgets it and goes to /login?signedOut=1', async () => {
       const { auth, fixture, root } = await setup(ADMIN);
       await openAccount(fixture, 'Rosa Quispe');

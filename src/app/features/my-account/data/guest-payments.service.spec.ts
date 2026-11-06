@@ -6,7 +6,8 @@ import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { GUEST_HISTORY_PAGE_SIZE, GuestPaymentsService } from './guest-payments.service';
 import { TemporaryGuestPaymentsService } from './temporary-guest-payments.service';
 
-const BASE = 'https://bff.example.test';
+// TAR-300: the browser calls the same-origin proxy.
+const BASE = '';
 // Opaque ids: the services pass them through untouched, only escaping them for the path.
 const ID = 'pay_9f/x?y';
 const ESCAPED_ID = 'pay_9f%2Fx%3Fy';

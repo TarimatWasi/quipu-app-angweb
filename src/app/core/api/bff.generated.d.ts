@@ -1,9 +1,29 @@
 /**
- * Generated from the BFF contract v0.20.0 (TarimatWasi/quipu-lib-contracts), spec sha256 12d451699d4ec601ab6c35d613e5cacfba697c60bb9238690a73d271de915a66.
+ * Generated from the BFF contract 5211bb61b3d5f178adc4bc0530763de564488541 (TarimatWasi/quipu-lib-contracts), spec sha256 d558b4035ca02e5557890b3c94be98533e2d1bfd71acf2498db7459b33109669.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
 export interface paths {
+    "/auth/csrf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prepare the browser CSRF cookie (TAR-300)
+         * @description Makes a CSRF token available in the XSRF-TOKEN cookie without requiring a session. An expired or malformed JWT cookie is ignored on this route. Reuses an existing token; repeated GET requests do not rotate it. The cookie is readable by Angular (HttpOnly=false), Secure in deployed environments, SameSite=Lax, Path=/, and host-only (no Domain). The same-origin proxy preserves Set-Cookie and never caches this response. After logout obtain a new token before another unsafe request. No token value is returned in the response body or logged.
+         */
+        get: operations["getCsrfToken"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -1262,6 +1282,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * @example {
+         *       "code": "AUTH_CSRF_INVALID",
+         *       "message": "No se pudo validar la solicitud. Actualiza la página e inténtalo nuevamente."
+         *     }
+         */
+        CsrfError: {
+            /** @enum {string} */
+            code: "AUTH_CSRF_INVALID";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+        };
         PagedEnvironments: {
             content: components["schemas"]["Environment"][];
             nextCursor: components["schemas"]["NextCursor"];
@@ -3175,6 +3207,15 @@ export interface components {
         };
     };
     responses: {
+        /** @description AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
+        CsrfInvalid: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["CsrfError"];
+            };
+        };
         /** @description Invalid input data */
         ValidationFailed: {
             headers: {
@@ -3193,7 +3234,10 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description The session is valid but its role cannot use the operation (RN-08, RN-09). On the multipart uploads it is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). The `code` is always `AUTH_FORBIDDEN` */
+        /**
+         * @description The session is valid but its role cannot use the operation (RN-08, RN-09). On the multipart uploads it is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). The `code` is always `AUTH_FORBIDDEN`
+         *      For unsafe requests, AUTH_CSRF_INVALID is also returned when the CSRF cookie/header pair is absent or invalid, before authentication or business validation.
+         */
         Forbidden: {
             headers: {
                 [name: string]: unknown;
@@ -3201,7 +3245,7 @@ export interface components {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "AUTH_FORBIDDEN";
+                    code: "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                     /** @description User-facing message, in Spanish, ready to display in the UI */
                     message: string;
                 };
@@ -3265,7 +3309,7 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description Account disabled (RN-12) */
+        /** @description Account disabled (RN-12) For unsafe requests, AUTH_CSRF_INVALID is also returned when the CSRF cookie/header pair is absent or invalid, before authentication or business validation. */
         AccountDisabled: {
             headers: {
                 [name: string]: unknown;
@@ -3306,7 +3350,10 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
-        /** @description `AUTH_FORBIDDEN`: the session is not an administrator (RN-08), or the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin`, or they name another site (ADR-006). `replaceGuestDocument` is one route of the exact set of multipart routes under that check: `createContract`, `createDirectPayment`, `uploadPaymentVoucher`, `uploadOnboardingDocument`, `uploadTemporaryVoucher`, `uploadOwnDocument`, `uploadTemporaryOwnDocument`, `replaceGuestDocument`, and the corrections of a payment (TAR-239): `correctPaymentByAdmin`, `correctOwnPayment` and `correctOwnPaymentTemporary`. `deleteGuestDocument` is the only JSON route under the same check, because it deletes personal data irreversibly */
+        /**
+         * @description `AUTH_FORBIDDEN`: the session is not an administrator (RN-08), or the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin`, or they name another site (ADR-006). `replaceGuestDocument` is one route of the exact set of multipart routes under that check: `createContract`, `createDirectPayment`, `uploadPaymentVoucher`, `uploadOnboardingDocument`, `uploadTemporaryVoucher`, `uploadOwnDocument`, `uploadTemporaryOwnDocument`, `replaceGuestDocument`, and the corrections of a payment (TAR-239): `correctPaymentByAdmin`, `correctOwnPayment` and `correctOwnPaymentTemporary`. `deleteGuestDocument` is the only JSON route under the same check, because it deletes personal data irreversibly
+         *      For unsafe requests, AUTH_CSRF_INVALID is also returned when the CSRF cookie/header pair is absent or invalid, before authentication or business validation.
+         */
         OriginCheckForbidden: {
             headers: {
                 [name: string]: unknown;
@@ -3314,7 +3361,7 @@ export interface components {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "AUTH_FORBIDDEN";
+                    code: "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                     /** @description User-facing message, in Spanish, ready to display in the UI */
                     message: string;
                 };
@@ -3367,7 +3414,10 @@ export interface components {
                 "application/json": components["schemas"]["GuestInactiveError"];
             };
         };
-        /** @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach. On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+        /**
+         * @description A guest session that cannot use the onboarding operation. The `code` is `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) or `AUTH_FORBIDDEN` for the administrator. Never `AUTH_ONBOARDING_REQUIRED`: these are the routes an incomplete guest must reach. On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006)
+         *      For unsafe requests, AUTH_CSRF_INVALID is also returned when the CSRF cookie/header pair is absent or invalid, before authentication or business validation.
+         */
         OnboardingAccessDenied: {
             headers: {
                 [name: string]: unknown;
@@ -3375,13 +3425,16 @@ export interface components {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                    code: "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                     /** @description User-facing message, in Spanish, ready to display in the UI */
                     message: string;
                 };
             };
         };
-        /** @description The guest session cannot use the operation yet or at all. The `code` is `AUTH_ONBOARDING_REQUIRED` while the onboarding is incomplete (RN-33: the client redirects to the first pending step, `nextStep` of `GET /guest/onboarding`), `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) and `AUTH_FORBIDDEN` for a guest of the other type (a CONTRACT guest on `/temporary-guest/**` or the reverse, RN-09) */
+        /**
+         * @description The guest session cannot use the operation yet or at all. The `code` is `AUTH_ONBOARDING_REQUIRED` while the onboarding is incomplete (RN-33: the client redirects to the first pending step, `nextStep` of `GET /guest/onboarding`), `AUTH_PASSWORD_CHANGE_REQUIRED` while a temporary password has not been changed (RF-12) and `AUTH_FORBIDDEN` for a guest of the other type (a CONTRACT guest on `/temporary-guest/**` or the reverse, RN-09)
+         *      For unsafe requests, AUTH_CSRF_INVALID is also returned when the CSRF cookie/header pair is absent or invalid, before authentication or business validation.
+         */
         GuestAccessDenied: {
             headers: {
                 [name: string]: unknown;
@@ -3389,7 +3442,7 @@ export interface components {
             content: {
                 "application/json": {
                     /** @enum {string} */
-                    code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                    code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                     /** @description User-facing message, in Spanish, ready to display in the UI */
                     message: string;
                 };
@@ -3415,6 +3468,8 @@ export interface components {
         };
     };
     parameters: {
+        /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+        XsrfToken: string;
         Id: string;
         StayId: string;
         DocumentId: string;
@@ -3432,10 +3487,36 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    login: {
+    getCsrfToken: {
         parameters: {
             query?: never;
             header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description CSRF cookie available; no response body */
+            204: {
+                headers: {
+                    /** @description The browser and intermediaries must not cache this response */
+                    "Cache-Control": "no-store";
+                    /** @description XSRF-TOKEN when a token needs to be created. It need not be reissued when the browser already holds an existing token. */
+                    "Set-Cookie"?: string;
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    login: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3476,7 +3557,10 @@ export interface operations {
     logout: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3490,6 +3574,7 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["NoSession"];
+            403: components["responses"]["CsrfInvalid"];
         };
     };
     getCurrentUser: {
@@ -3516,7 +3601,10 @@ export interface operations {
     activateAccess: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3556,7 +3644,10 @@ export interface operations {
     changePassword: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3588,7 +3679,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `AUTH_INVALID_CREDENTIALS` with `field: currentPassword` when the current password is wrong (A0.6, as in the re-authentication of the administrators, TAR-127) */
+            /** @description `AUTH_INVALID_CREDENTIALS` with `field: currentPassword` when the current password is wrong (A0.6, as in the re-authentication of the administrators, TAR-127). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -3603,7 +3694,10 @@ export interface operations {
     requestPasswordReset: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3624,13 +3718,17 @@ export interface operations {
                 content?: never;
             };
             400: components["responses"]["ValidationFailed"];
+            403: components["responses"]["CsrfInvalid"];
             429: components["responses"]["TooManyRequests"];
         };
     };
     resetPassword: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3663,6 +3761,7 @@ export interface operations {
                     "application/json": components["schemas"]["Error"];
                 };
             };
+            403: components["responses"]["CsrfInvalid"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -3703,7 +3802,10 @@ export interface operations {
     createEnvironment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3764,7 +3866,10 @@ export interface operations {
     updateEnvironment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -3821,7 +3926,10 @@ export interface operations {
     deactivateEnvironment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -3854,7 +3962,10 @@ export interface operations {
     reactivateEnvironment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -3961,7 +4072,10 @@ export interface operations {
     createAdministrator: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -3982,7 +4096,7 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
-            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4006,7 +4120,10 @@ export interface operations {
     deactivateAdministrator: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4027,7 +4144,7 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
-            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4058,7 +4175,10 @@ export interface operations {
     reactivateAdministrator: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4079,7 +4199,7 @@ export interface operations {
             };
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
-            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`) */
+            /** @description Not an administrator (`AUTH_FORBIDDEN`), the session still has the password change pending (`AUTH_PASSWORD_CHANGE_REQUIRED`), or `currentPassword` is wrong (`AUTH_INVALID_CREDENTIALS` with `field: currentPassword`). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4144,7 +4264,10 @@ export interface operations {
     createGuest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -4218,7 +4341,10 @@ export interface operations {
     updateGuest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4270,7 +4396,10 @@ export interface operations {
     deactivateGuest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4303,7 +4432,10 @@ export interface operations {
     reactivateGuest: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4370,7 +4502,10 @@ export interface operations {
     createGuestStay: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4411,7 +4546,10 @@ export interface operations {
     updateGuestStay: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
                 stayId: components["parameters"]["StayId"];
@@ -4452,7 +4590,10 @@ export interface operations {
     setGuestAccountEmail: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4493,7 +4634,10 @@ export interface operations {
     generateGuestAccess: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -4570,7 +4714,10 @@ export interface operations {
     replaceGuestDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
                 documentId: components["parameters"]["DocumentId"];
@@ -4622,7 +4769,10 @@ export interface operations {
     deleteGuestDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
                 documentId: components["parameters"]["DocumentId"];
@@ -4829,7 +4979,10 @@ export interface operations {
     createContract: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -4932,7 +5085,10 @@ export interface operations {
     terminateContract: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5080,7 +5236,10 @@ export interface operations {
     createDirectPayment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5163,7 +5322,10 @@ export interface operations {
     resolvePayment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5223,7 +5385,10 @@ export interface operations {
     correctPaymentByAdmin: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5302,7 +5467,10 @@ export interface operations {
     createExpense: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5331,7 +5499,10 @@ export interface operations {
     deleteExpense: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5355,7 +5526,10 @@ export interface operations {
     updateExpense: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5421,7 +5595,10 @@ export interface operations {
     createFine: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5467,7 +5644,10 @@ export interface operations {
     deleteFine: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5529,7 +5709,10 @@ export interface operations {
     createRefund: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5707,7 +5890,10 @@ export interface operations {
     uploadPaymentVoucher: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5736,7 +5922,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            /** @description `VOUCHER_NO_ACTIVE_CONTRACT` (no active contract, RN-27), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5744,7 +5930,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        code: "VOUCHER_NO_ACTIVE_CONTRACT" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        code: "VOUCHER_NO_ACTIVE_CONTRACT" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                         /** @description User-facing message, in Spanish, ready to display in the UI */
                         message: string;
                     };
@@ -5799,7 +5985,10 @@ export interface operations {
     correctOwnPayment: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -5879,7 +6068,10 @@ export interface operations {
     updateOwnProfile: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5908,7 +6100,10 @@ export interface operations {
     uploadOwnDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -5943,7 +6138,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a TEMPORARY guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a TEMPORARY guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5951,7 +6146,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                         /** @description User-facing message, in Spanish, ready to display in the UI */
                         message: string;
                     };
@@ -6031,7 +6226,10 @@ export interface operations {
     savePersonalData: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6067,7 +6265,10 @@ export interface operations {
     uploadOnboardingDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6118,7 +6319,10 @@ export interface operations {
     finishDocumentsStep: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6141,7 +6345,10 @@ export interface operations {
     acceptConsent: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6208,7 +6415,10 @@ export interface operations {
     uploadTemporaryVoucher: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6237,7 +6447,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `VOUCHER_NO_ACTIVE_STAY` (the guest has no stay in force or coming, CU-22), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            /** @description `VOUCHER_NO_ACTIVE_STAY` (the guest has no stay in force or coming, CU-22), `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a guest of the other type, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6245,7 +6455,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        code: "VOUCHER_NO_ACTIVE_STAY" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        code: "VOUCHER_NO_ACTIVE_STAY" | "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                         /** @description User-facing message, in Spanish, ready to display in the UI */
                         message: string;
                     };
@@ -6300,7 +6510,10 @@ export interface operations {
     correctOwnPaymentTemporary: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path: {
                 id: components["parameters"]["Id"];
             };
@@ -6380,7 +6593,10 @@ export interface operations {
     updateOwnProfileTemporary: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6409,7 +6625,10 @@ export interface operations {
     uploadTemporaryOwnDocument: {
         parameters: {
             query?: never;
-            header?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -6444,7 +6663,7 @@ export interface operations {
                 };
             };
             401: components["responses"]["NoSession"];
-            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a CONTRACT guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006) */
+            /** @description `AUTH_ONBOARDING_REQUIRED` (the onboarding is not complete, RN-33), `AUTH_PASSWORD_CHANGE_REQUIRED` (temporary password not changed, RF-12) or `AUTH_FORBIDDEN` (a CONTRACT guest, RN-09). On the multipart upload, `AUTH_FORBIDDEN` is also returned when the request carries neither an `Origin` header nor `Sec-Fetch-Site: same-origin` (ADR-006). AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -6452,7 +6671,7 @@ export interface operations {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN";
+                        code: "AUTH_ONBOARDING_REQUIRED" | "AUTH_PASSWORD_CHANGE_REQUIRED" | "AUTH_FORBIDDEN" | "AUTH_CSRF_INVALID";
                         /** @description User-facing message, in Spanish, ready to display in the UI */
                         message: string;
                     };

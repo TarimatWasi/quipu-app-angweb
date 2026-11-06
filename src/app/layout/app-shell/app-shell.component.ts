@@ -150,7 +150,13 @@ export class AppShellComponent {
   protected async leave(): Promise<void> {
     if (this.leaving()) return;
     this.leaving.set(true);
-    await firstValueFrom(this.auth.logout());
-    await this.router.navigateByUrl('/login?signedOut=1');
+    try {
+      await firstValueFrom(this.auth.logout());
+      await this.router.navigateByUrl('/login?signedOut=1');
+    } catch (error: unknown) {
+      this.toasts.show(toBffError(error).message);
+    } finally {
+      this.leaving.set(false);
+    }
   }
 }
