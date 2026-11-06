@@ -186,8 +186,10 @@ export interface QueueRow {
   readonly environment: string;
   readonly period: string;
   readonly submitted: string;
-  /** «hace 3 días»; null without a valid instant. */
+  /** «hace 3 días», or «rechazado hace 24 días» in «Rechazados»; null without a valid instant. */
   readonly ago: string | null;
+  /** «Motivo: No se lee el voucher.» of a rejected payment (TAR-296); null otherwise. */
+  readonly reason: string | null;
   readonly proofs: string;
   readonly badge: { readonly label: string; readonly tone: StatusTone };
   /** «Aprobado por Rosa Quispe» once resolved (TAR-230); null while pending. */
@@ -197,6 +199,15 @@ export interface QueueRow {
   readonly actionName: string;
   /** «Revisar pago» and «Corregir pago» are the primary action of the row; «Ver pago» a link. */
   readonly primary: boolean;
+}
+
+/** How long ago it was sent or, once rejected, how long ago it was rejected (tablero Cola). */
+function agoText(item: PaymentQueueItem, now: Date): string | null {
+  if (item.status === 'REJECTED' && item.reviewedAt) {
+    const ago = daysAgo(item.reviewedAt, now);
+    return ago === null ? null : `rechazado ${ago}`;
+  }
+  return daysAgo(item.submittedAt, now);
 }
 
 export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
@@ -209,7 +220,9 @@ export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
     environment: item.environmentCode ?? '—',
     period: periodLabel(item),
     submitted: formatDateTime(item.submittedAt),
-    ago: daysAgo(item.submittedAt, now),
+    ago: agoText(item, now),
+    reason:
+      item.status === 'REJECTED' && item.rejectionReason ? `Motivo: ${item.rejectionReason}` : null,
     proofs: proofsSummary(item.voucherCount, item.hasCash),
     badge: BADGES[item.status],
     resolvedBy: reviewer ? `${RESOLVED_BY[item.status]} ${reviewer}` : null,

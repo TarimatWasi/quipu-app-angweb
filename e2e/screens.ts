@@ -91,6 +91,12 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal', 'empty', 'load-error'],
   },
+  {
+    id: 'a5-cola-rechazados',
+    path: '/admin/payments?vista=rechazados',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
   { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a5-2-revision',

@@ -55,9 +55,12 @@ const COLUMNS: readonly DataColumn<Column>[] = [
       <ng-template appDataCell="environment" [appDataCellRows]="rows()" let-row>{{
         row.environment
       }}</ng-template>
-      <ng-template appDataCell="period" [appDataCellRows]="rows()" let-row>{{
-        row.period
-      }}</ng-template>
+      <ng-template appDataCell="period" [appDataCellRows]="rows()" let-row>
+        {{ row.period }}
+        @if (row.reason; as reason) {
+          <span class="detail reason">{{ reason }}</span>
+        }
+      </ng-template>
       <ng-template appDataCell="submitted" [appDataCellRows]="rows()" let-row>
         <span class="number">{{ row.submitted }}</span>
         @if (row.ago; as ago) {
@@ -102,6 +105,9 @@ const COLUMNS: readonly DataColumn<Column>[] = [
           <span class="card-environment">{{ row.environment }}</span>
         </div>
         <p>{{ row.period }} · subido {{ row.submitted }} · {{ row.proofs }}</p>
+        @if (row.reason; as reason) {
+          <p class="detail reason">{{ reason }}</p>
+        }
         <div class="card-state">
           <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
           @if (row.ago; as ago) {
@@ -136,6 +142,9 @@ const COLUMNS: readonly DataColumn<Column>[] = [
     }
     .number {
       font-variant-numeric: tabular-nums;
+    }
+    .reason {
+      color: var(--quipu-rojo-texto);
     }
     .resolved {
       margin-top: 0.375rem;

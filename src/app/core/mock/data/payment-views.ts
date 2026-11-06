@@ -147,6 +147,9 @@ export function queueItem(db: MockDb, payment: PaymentRecord): Schemas['PaymentQ
     voucherCount: vouchers,
     hasCash: vouchers < payment.proofs.length,
     reviewedBy: payment.reviewedBy,
+    // TAR-296: the reason of the last rejection while it stays rejected, and when it was decided.
+    rejectionReason: payment.status === 'REJECTED' ? payment.rejectionReason : null,
+    reviewedAt: payment.status === 'PENDING' ? null : payment.reviewedAt,
     submittedAt: payment.submittedAt,
     createdAt: payment.createdAt,
   };
