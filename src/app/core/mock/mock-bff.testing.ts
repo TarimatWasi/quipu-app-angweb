@@ -15,6 +15,7 @@ import { MOCK_LATENCY, MockBff } from './mock-bff';
 import { mockBffInterceptor } from './mock-bff.interceptor';
 import type { MockScenario } from './mock-scenarios';
 import { writeMockSetting } from './mock-storage';
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 
 export interface MockHarness {
   readonly bff: MockBff;
@@ -55,7 +56,12 @@ export function setUpMockBff(scenario: MockScenario = 'normal'): MockHarness {
     backend: TestBed.inject(HttpTestingController),
     get: (url, params) =>
       call(http.get<never>(url, { params: new HttpParams({ fromObject: params }) })),
-    send: (method, url, body) => call(http.request<never>(method, url, { body })),
+    send: (method, url, body) =>
+      call(
+        TestBed.inject(CsrfBootstrapService).protect(() =>
+          http.request<never>(method, url, { body }),
+        ),
+      ),
     fail: (promise) =>
       promise.then(
         () => {

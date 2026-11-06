@@ -2,8 +2,8 @@ import { InjectionToken } from '@angular/core';
 import { environment } from '../../../environments/environment';
 
 /**
- * Base URL of the BFF. Empty means same-origin (/bff/* is forwarded by the platform); an absolute
- * https URL means a BFF on another origin. Injectable so tests can cover both setups.
+ * TAR-300: the browser uses the same-origin /bff proxy, so the generated base is empty.
+ * Injectable to verify fail-closed behavior when an unsupported absolute base is supplied.
  */
 export const BFF_BASE_URL = new InjectionToken<string>('BFF_BASE_URL', {
   providedIn: 'root',

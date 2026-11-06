@@ -14,7 +14,9 @@ const CONFIG = new URL('../contract.json', import.meta.url);
 const TARGET = new URL('../src/app/core/api/bff.generated.d.ts', import.meta.url);
 
 const REPOSITORY = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/;
-const VERSION = /^v\d+\.\d+\.\d+$/;
+// TAR-300: before the release tag exists, an immutable full commit is an explicit provisional pin.
+// Branches and abbreviated SHAs remain invalid; the spec checksum is required in both cases.
+export const CONTRACT_VERSION = /^(?:v\d+\.\d+\.\d+|[0-9a-f]{40})$/;
 const SHA256 = /^[0-9a-f]{64}$/;
 const RAW_HOST = 'https://raw.githubusercontent.com/';
 const ATTEMPTS = 3;
@@ -25,8 +27,10 @@ export function readConfig() {
   if (!REPOSITORY.test(config.repository ?? '')) {
     throw new Error('contract.json: "repository" must be owner/name');
   }
-  if (!VERSION.test(config.version ?? '')) {
-    throw new Error('contract.json: "version" must be a tag like v1.2.3');
+  if (!CONTRACT_VERSION.test(config.version ?? '')) {
+    throw new Error(
+      'contract.json: "version" must be a release tag like v1.2.3 or a full immutable commit SHA',
+    );
   }
   if (!SHA256.test(config.sha256 ?? '')) {
     throw new Error('contract.json: "sha256" must be 64 lowercase hex digits');
@@ -119,7 +123,7 @@ function writeTypes(text) {
 }
 
 async function pin(version) {
-  if (!VERSION.test(version ?? '')) {
+  if (!CONTRACT_VERSION.test(version ?? '')) {
     throw new Error('Usage: node scripts/contract.mjs pin vMAJOR.MINOR.PATCH');
   }
   const config = { ...readConfig(), version };

@@ -50,10 +50,16 @@ export class ChangePasswordComponent {
   protected readonly leaving = signal(false);
 
   protected async leave(): Promise<void> {
-    if (this.leaving()) return;
+    if (this.leaving() || this.changeForm().submitting()) return;
     this.leaving.set(true);
-    await firstValueFrom(this.auth.logout());
-    await this.router.navigateByUrl('/login?signedOut=1');
+    try {
+      await firstValueFrom(this.auth.logout());
+      await this.router.navigateByUrl('/login?signedOut=1');
+    } catch (error: unknown) {
+      this.serverError.set(toBffError(error).message);
+    } finally {
+      this.leaving.set(false);
+    }
   }
 
   /** Runs when the form is valid. A failure comes back as errors, so the form stays editable. */

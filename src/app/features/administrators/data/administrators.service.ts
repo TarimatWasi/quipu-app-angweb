@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { HttpClient, httpResource, HttpResourceRef } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
@@ -19,6 +20,7 @@ type Reauthentication = components['schemas']['AdministratorReauthentication'];
 @Injectable({ providedIn: 'root' })
 export class AdministratorsService {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly base = `${inject(BFF_BASE_URL)}/bff/admin/administrators`;
 
   /**
@@ -30,7 +32,7 @@ export class AdministratorsService {
   }
 
   create(input: AdministratorInput): Observable<AdministratorCreated> {
-    return this.http.post<AdministratorCreated>(this.base, input);
+    return this.csrf.protect(() => this.http.post<AdministratorCreated>(this.base, input));
   }
 
   deactivate(id: string, currentPassword: string): Observable<void> {
@@ -47,8 +49,8 @@ export class AdministratorsService {
     currentPassword: string,
   ): Observable<void> {
     const body: Reauthentication = { currentPassword };
-    return this.http
-      .post(`${this.base}/${encodeURIComponent(id)}/${action}`, body)
+    return this.csrf
+      .protect(() => this.http.post(`${this.base}/${encodeURIComponent(id)}/${action}`, body))
       .pipe(map(() => undefined));
   }
 }

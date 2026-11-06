@@ -1,7 +1,7 @@
 // Writes src/environments/environment.ts from NG_APP_BFF_BASE_URL (QP-ANGWEB-BFF-01).
 // Default: same-origin (empty base URL). The browser calls /bff/* on its own origin and the
 // platform forwards it to the backend: Vercel via vercel.json rewrites, `ng serve` via
-// proxy.conf.json. An absolute https URL is still accepted for a BFF on another origin.
+// proxy.conf.json. TAR-300 rejects an absolute BFF URL: the host-only XSRF cookie needs same-origin.
 // With the variable unset it restores the default, so a build against a remote BFF never leaks
 // into the next local run. The generated file is committed with the default content; the test
 // "the committed environment file is the generated same-origin default" fails if anything else
@@ -39,22 +39,22 @@ export function resolveBffBaseUrl(env) {
     throw new Error('NG_APP_BFF_BASE_URL must be a base URL without a fragment');
   }
   // href is the normalized form: the URL parser already drops tabs and newlines.
-  return url.href.replace(/\/+$/, '');
+  throw new Error(
+    'CSRF requires same-origin /bff. Remove NG_APP_BFF_BASE_URL and use the local/dev proxy.',
+  );
 }
 
 /**
  * One build-log line stating which mode the build uses, so a stale NG_APP_BFF_BASE_URL left in the
  * Vercel project (it would bypass the same-origin rewrite) is visible in the deployment log.
  */
-export function describeBffMode(bffBaseUrl, env) {
+export function describeBffMode(bffBaseUrl) {
   if (bffBaseUrl === '') {
     return 'set-env: BFF mode = same-origin (/bff/* is forwarded by the platform)';
   }
-  const line = `set-env: BFF mode = absolute URL ${bffBaseUrl} (cross-origin)`;
-  return env.VERCEL
-    ? `${line}
-set-env: WARNING NG_APP_BFF_BASE_URL is set on Vercel: remove it to use the same-origin rewrite from vercel.json`
-    : line;
+  throw new Error(
+    'CSRF requires same-origin /bff. Remove NG_APP_BFF_BASE_URL and use the local/dev proxy.',
+  );
 }
 
 export function renderEnvironment(bffBaseUrl) {

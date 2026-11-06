@@ -278,14 +278,31 @@ describe('ChangePasswordDialogComponent (A0.6)', () => {
 
     fireEvent.click(dialog().getByRole('link', { name: '¿No la recuerdas?' }));
 
-    await vi.waitFor(() => {
-      expect(closed).toHaveBeenCalledWith(undefined);
-    });
+    expect(closed).not.toHaveBeenCalled();
     controller.expectOne(isLogout).flush(null, { status: 204, statusText: 'No Content' });
     await vi.waitFor(() => {
       expect(TestBed.inject(Router).url).toBe('/forgot-password');
+      expect(closed).toHaveBeenCalledWith(undefined);
     });
     expect(auth.session()).toBeNull();
     controller.expectNone(isChange);
+  });
+
+  it('keeps the dialog, password draft and session when recovery logout is rejected by CSRF', async () => {
+    const { auth, controller, closed, dialog, type } = await setup();
+    await type('Contraseña actual', CURRENT);
+    fireEvent.click(dialog().getByRole('link', { name: '¿No la recuerdas?' }));
+    controller
+      .expectOne(isLogout)
+      .flush({ code: 'AUTH_CSRF_INVALID' }, { status: 403, statusText: 'Forbidden' });
+    await vi.waitFor(() => {
+      expect(dialog().getByLabelText<HTMLInputElement>('Contraseña actual').value).toBe(CURRENT);
+      expect(dialog().getByRole<HTMLButtonElement>('button', { name: 'Cancelar' }).disabled).toBe(
+        false,
+      );
+    });
+    expect(closed).not.toHaveBeenCalled();
+    expect(auth.session()).not.toBeNull();
+    expect(TestBed.inject(Router).url).toBe('/home');
   });
 });

@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { EMPTY, expand, first, map, Observable, reduce } from 'rxjs';
@@ -40,6 +41,7 @@ const MAX_PAGE_SIZE = 100;
 @Injectable({ providedIn: 'root' })
 export class AdminGuestsService {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly base = `${inject(BFF_BASE_URL)}/bff/admin/guests`;
 
   /**
@@ -64,27 +66,35 @@ export class AdminGuestsService {
    * `alreadyRegistered` tells them apart.
    */
   create(input: GuestInput): Observable<GuestCreated | GuestAlreadyRegistered> {
-    return this.http.post<GuestCreated | GuestAlreadyRegistered>(this.base, input);
+    return this.csrf.protect(() =>
+      this.http.post<GuestCreated | GuestAlreadyRegistered>(this.base, input),
+    );
   }
 
   /** Reactivates an inactive guest (CU-28); a 409 GUEST_HAS_PENDING_DEBT lists what it owes. */
   reactivate(id: string): Observable<NonInactiveGuestSummary> {
-    return this.http.post<NonInactiveGuestSummary>(`${this.guestUrl(id)}/reactivate`, null);
+    return this.csrf.protect(() =>
+      this.http.post<NonInactiveGuestSummary>(`${this.guestUrl(id)}/reactivate`, null),
+    );
   }
 
   /** Deactivates a guest (CU-10); a 409 GUEST_HAS_ACTIVE_CONTRACT says it has a contract in force. */
   deactivate(id: string): Observable<null> {
-    return this.http.post<null>(`${this.guestUrl(id)}/deactivate`, null);
+    return this.csrf.protect(() => this.http.post<null>(`${this.guestUrl(id)}/deactivate`, null));
   }
 
   /** A new access for a guest that is not inactive (A3.4, CU-13); the previous one stops working. */
   generateAccess(id: string, accessMode: AccessMode): Observable<AccessGrant> {
-    return this.http.post<AccessGrant>(`${this.guestUrl(id)}/access`, { accessMode });
+    return this.csrf.protect(() =>
+      this.http.post<AccessGrant>(`${this.guestUrl(id)}/access`, { accessMode }),
+    );
   }
 
   /** Sets or changes the account email, the one the password recovery writes to (RF-16). */
   setAccountEmail(id: string, email: string): Observable<null> {
-    return this.http.put<null>(`${this.guestUrl(id)}/account-email`, { email });
+    return this.csrf.protect(() =>
+      this.http.put<null>(`${this.guestUrl(id)}/account-email`, { email }),
+    );
   }
 
   /** The state of every month the contracts of the guest charge, as the guest sees it (RF-06). */
@@ -94,7 +104,7 @@ export class AdminGuestsService {
 
   /** Corrects the document of a guest pending activation (RN-36), with the `version` loaded. */
   updateGuest(id: string, changes: GuestUpdate): Observable<GuestSummary> {
-    return this.http.patch<GuestSummary>(this.guestUrl(id), changes);
+    return this.csrf.protect(() => this.http.patch<GuestSummary>(this.guestUrl(id), changes));
   }
 
   /** One page of the stays of a temporary guest, newest first (RN-13). */
@@ -137,12 +147,14 @@ export class AdminGuestsService {
   }
 
   createStay(id: string, input: StayInput): Observable<Stay> {
-    return this.http.post<Stay>(this.staysUrl(id), input);
+    return this.csrf.protect(() => this.http.post<Stay>(this.staysUrl(id), input));
   }
 
   /** Corrects a stay with the changed fields and the `version` loaded (BE-SPR-DAT-13). */
   updateStay(id: string, stayId: string, changes: StayUpdate): Observable<Stay> {
-    return this.http.patch<Stay>(`${this.staysUrl(id)}/${encodeURIComponent(stayId)}`, changes);
+    return this.csrf.protect(() =>
+      this.http.patch<Stay>(`${this.staysUrl(id)}/${encodeURIComponent(stayId)}`, changes),
+    );
   }
 
   private guestUrl(id: string): string {

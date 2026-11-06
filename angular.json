@@ -95,6 +95,7 @@
           "builder": "@angular/build:unit-test",
           "options": {
             "coverage": true,
+            "setupFiles": ["src/csrf-test.setup.ts"],
             "coverageInclude": [
               "src/app/core/**/*.ts",
               "src/app/shared/**/*.ts",

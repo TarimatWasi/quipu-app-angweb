@@ -44,7 +44,7 @@ async function setup() {
     await fixture.whenStable();
   };
   const request = () => vi.waitFor(() => controller.expectOne(isChange));
-  return { auth, ui, controller, fill, submit, request };
+  return { auth, ui, controller, fixture, fill, submit, request };
 }
 
 describe('ChangePasswordComponent (A0.1, RF-12)', () => {
@@ -158,6 +158,23 @@ describe('ChangePasswordComponent (A0.1, RF-12)', () => {
       expect(TestBed.inject(Router).url).toBe('/login?signedOut=1');
     });
     expect(auth.session()).toBeNull();
+  });
+
+  it('keeps a pending-password session and permits another exit attempt after a CSRF rejection', async () => {
+    const { auth, ui, fixture } = await setup();
+    fireEvent.click(ui.getByRole('button', { name: 'Salir' }));
+    fixture.detectChanges();
+    expect(ui.getByRole<HTMLButtonElement>('button', { name: 'Cambiar contraseña' }).disabled).toBe(
+      true,
+    );
+    TestBed.inject(HttpTestingController)
+      .expectOne((request) => request.url.endsWith('/bff/auth/logout'))
+      .flush({ code: 'AUTH_CSRF_INVALID' }, { status: 403, statusText: 'Forbidden' });
+    await fixture.whenStable();
+    expect(auth.session()).not.toBeNull();
+    await vi.waitFor(() => {
+      expect(ui.getByRole<HTMLButtonElement>('button', { name: 'Salir' }).disabled).toBe(false);
+    });
   });
 
   it('shows a general error when the server cannot be reached', async () => {

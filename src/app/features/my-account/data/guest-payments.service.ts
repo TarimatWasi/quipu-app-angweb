@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { proofsBody } from '@shared/payments/proofs-body';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
@@ -29,6 +30,7 @@ export const GUEST_HISTORY_PAGE_SIZE = 20;
 @Injectable({ providedIn: 'root' })
 export class GuestPaymentsService implements OwnPaymentsApi {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly root = inject(BFF_BASE_URL);
   private readonly base = `${this.root}/bff/guest/payments`;
 
@@ -61,7 +63,9 @@ export class GuestPaymentsService implements OwnPaymentsApi {
     proofs: readonly OwnProofInput[],
     files: readonly File[],
   ): Observable<OwnPaymentSummary> {
-    return this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files, { period }));
+    return this.csrf.protect(() =>
+      this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files, { period })),
+    );
   }
 
   correct(
@@ -69,6 +73,8 @@ export class GuestPaymentsService implements OwnPaymentsApi {
     proofs: readonly OwnProofEdit[],
     files: readonly File[],
   ): Observable<OwnPaymentSummary> {
-    return this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files));
+    return this.csrf.protect(() =>
+      this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files)),
+    );
   }
 }

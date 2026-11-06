@@ -6,6 +6,7 @@ import {
   compareTypes,
   downloadSpec,
   readConfig,
+  CONTRACT_VERSION,
   renderTypes,
   sha256Of,
   specUrl,
@@ -71,9 +72,9 @@ test('the versioned types must equal the regenerated ones', () => {
   assert.match(result.reason, /npm run contract:sync/);
 });
 
-test('contract.json pins a tag and the hash of its spec', () => {
+test('contract.json pins a release or immutable commit and the hash of its spec', () => {
   const config = readConfig();
-  assert.match(config.version, /^v\d+\.\d+\.\d+$/);
+  assert.match(config.version, CONTRACT_VERSION);
   assert.match(config.sha256, /^[0-9a-f]{64}$/);
   assert.equal(config.repository, 'TarimatWasi/quipu-lib-contracts');
 });
@@ -138,4 +139,11 @@ test('a download that ends on another host is refused', async () => {
     () => downloadSpec(CONFIG, { fetchImpl, backoffMs: 0 }),
     /Unexpected download location/,
   );
+});
+
+test('contract pins accept releases and full commits, rejecting branches and abbreviated revisions', () => {
+  for (const valid of ['v0.21.0', 'ab5cb2b2790254c15417f9178aa4cee6d2306305'])
+    assert.match(valid, CONTRACT_VERSION);
+  for (const invalid of ['main', 'feat/TAR-300-csrf', 'ab5cb2b', '../main', 'v0.21.0/path'])
+    assert.equal(CONTRACT_VERSION.test(invalid), false);
 });

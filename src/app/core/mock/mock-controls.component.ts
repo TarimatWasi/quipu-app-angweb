@@ -44,7 +44,7 @@ export class MockControlsComponent {
 
   protected chooseFailure(event: Event): void {
     const value = (event.target as HTMLSelectElement).value;
-    if (['server', 'conflict', 'validation', 'storage'].includes(value))
+    if (['server', 'conflict', 'validation', 'storage', 'csrf'].includes(value))
       this.kind.set(value as FailureKind);
   }
 

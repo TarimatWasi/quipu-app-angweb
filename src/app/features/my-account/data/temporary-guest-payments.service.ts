@@ -1,3 +1,4 @@
+import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { proofsBody } from '@shared/payments/proofs-body';
 import { HttpClient } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
@@ -22,6 +23,7 @@ export type StayPaymentStatus = components['schemas']['StayPaymentStatus'];
 @Injectable({ providedIn: 'root' })
 export class TemporaryGuestPaymentsService implements OwnPaymentsApi {
   private readonly http = inject(HttpClient);
+  private readonly csrf = inject(CsrfBootstrapService);
   private readonly root = inject(BFF_BASE_URL);
   private readonly base = `${this.root}/bff/temporary-guest/payments`;
 
@@ -36,7 +38,9 @@ export class TemporaryGuestPaymentsService implements OwnPaymentsApi {
 
   /** Sends the single payment of the stay (StayPaymentUpload): only the proofs and their files. */
   upload(proofs: readonly OwnProofInput[], files: readonly File[]): Observable<OwnPaymentSummary> {
-    return this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files));
+    return this.csrf.protect(() =>
+      this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files)),
+    );
   }
 
   correct(
@@ -44,6 +48,8 @@ export class TemporaryGuestPaymentsService implements OwnPaymentsApi {
     proofs: readonly OwnProofEdit[],
     files: readonly File[],
   ): Observable<OwnPaymentSummary> {
-    return this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files));
+    return this.csrf.protect(() =>
+      this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files)),
+    );
   }
 }

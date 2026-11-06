@@ -16,6 +16,7 @@
     <option value="conflict">Conflicto de edición (409)</option>
     <option value="validation">Validación de comprobantes (400)</option>
     <option value="storage">Archivo no disponible (503)</option>
+    <option value="csrf">Seguridad CSRF (403)</option>
   </select>
   @for (target of targets; track target.key; let index = $index) {
     <label [for]="'mock-target-' + target.key">{{ target.label }}</label>
