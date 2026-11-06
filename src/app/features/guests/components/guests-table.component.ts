@@ -1,8 +1,7 @@
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
 import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
-import { TemplateRef } from '@angular/core';
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, TemplateRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';

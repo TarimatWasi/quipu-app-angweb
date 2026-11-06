@@ -17,7 +17,12 @@ import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { toBffError } from '@core/http/bff-error';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
 import { ToastService } from '@shared/ui/toast/toast.service';
-import { NO_CURRENT_SECTION } from './app-shell-route-data';
+
+/**
+ * Key of the route data that tells the shell its pages belong to no section (A0.7, a page that
+ * does not exist): the menu marks none, even when the address starts like one.
+ */
+export const NO_CURRENT_SECTION = 'noCurrentSection';
 
 /** The toast (P-17) once the password changed in A0.6. */
 export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';

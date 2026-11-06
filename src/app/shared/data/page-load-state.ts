@@ -20,9 +20,10 @@ export class PageLoadState<Q> {
   readonly pending = this.pendingValue.asReadonly();
   readonly failed = this.failedValue.asReadonly();
   readonly loading = computed(() => this.pending() !== null);
-  readonly phase = computed<'loading' | 'error' | 'ready'>(() =>
-    this.answered() ? 'ready' : this.failed() === null ? 'loading' : 'error',
-  );
+  readonly phase = computed<'loading' | 'error' | 'ready'>(() => {
+    if (this.answered()) return 'ready';
+    return this.failed() === null ? 'loading' : 'error';
+  });
   readonly retrying = computed(() => this.failed() !== null && this.loading());
   readonly loadingFirst = computed(() => this.pending()?.after === null);
   readonly loadingMore = computed(() => this.pending() !== null && !this.loadingFirst());

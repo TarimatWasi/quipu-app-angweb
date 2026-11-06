@@ -35,9 +35,7 @@
   }
   <p>Autenticación excluida. «Normal» no libera las peticiones ya retenidas.</p>
   @if (!controls.storageAvailable()) {
-    <p role="status">
-      Los controles solo se conservan en esta pestaña; no sobreviven a una recarga.
-    </p>
+    <output>Los controles solo se conservan en esta pestaña; no sobreviven a una recarga.</output>
   }
   <button type="button" (click)="reloadView()">Recargar pantalla conservando controles</button>
   <p>Recargar reinicia los datos demo. Para conservarlos, navega a otra pantalla y vuelve.</p>

@@ -58,10 +58,10 @@
           }
         </tr>
       </thead>
-      <tbody>
+      <tbody [attr.aria-hidden]="loading() ? 'true' : null">
         @if (loading()) {
           @for (index of placeholders(); track index) {
-            <tr aria-hidden="true">
+            <tr>
               @for (header of headers(); track header.key) {
                 <td [class]="'align-' + (header.align ?? 'start')">
                   @if (header.skeletonTemplate; as custom) {

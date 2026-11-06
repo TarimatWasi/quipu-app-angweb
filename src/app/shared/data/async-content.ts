@@ -10,7 +10,6 @@ export type AsyncContent<T> =
   | { readonly status: 'initial-error'; readonly message: string; readonly retrying: boolean }
   | { readonly status: 'ready'; readonly data: T; readonly refresh: RefreshState };
 
-export type MoreState = RefreshState;
 export type ActionState =
   | { readonly status: 'idle' }
   | { readonly status: 'submitting' }

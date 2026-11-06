@@ -9,7 +9,7 @@ export class FieldErrors<K extends string = string> {
     if (fields.some((field) => field in errors)) {
       this.values.set(
         Object.fromEntries(
-          Object.entries(errors).filter(([key]) => !fields.some((field) => field === key)),
+          Object.entries(errors).filter(([key]) => !(fields as string[]).includes(key)),
         ) as Partial<Record<K, string>>,
       );
     }

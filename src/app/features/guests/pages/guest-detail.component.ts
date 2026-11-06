@@ -180,7 +180,6 @@ export class GuestDetailComponent implements OnInit {
   constructor() {
     // The time left of an access follows the clock while the page is open.
     const clock = setInterval(() => {
-      this.refreshError.set(null);
       this.now.set(new Date());
     }, CLOCK_MS);
     this.destroyRef.onDestroy(() => {
@@ -235,10 +234,12 @@ export class GuestDetailComponent implements OnInit {
     const request = ++this.request;
     const refreshing = quiet && this.state() === 'ready';
     this.refreshing.set(refreshing);
-    if (!quiet) this.refreshError.set(null);
-    if (!quiet) this.retrying.set(false);
     this.currentId = id;
-    if (!quiet) this.reset();
+    if (!quiet) {
+      this.refreshError.set(null);
+      this.retrying.set(false);
+      this.reset();
+    }
     try {
       const guest = await firstValueFrom(this.guests.get(id));
       if (request !== this.request || this.destroyed) return;
@@ -251,19 +252,26 @@ export class GuestDetailComponent implements OnInit {
       if (request !== this.request) return;
       this.show(guest, periods, stays);
     } catch (error: unknown) {
-      if (request !== this.request) return;
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      if (refreshing && !notFound) this.refreshError.set(this.loadErrorText);
-      else {
-        this.state.set(notFound ? 'not-found' : 'error');
-        if (!notFound) this.guest.set(null);
-      }
+      if (request === this.request) this.failLoad(error, refreshing);
     } finally {
-      if (request === this.request) {
-        this.retrying.set(false);
-        this.refreshing.set(false);
-      }
+      if (request === this.request) this.endLoad();
     }
+  }
+
+  /** A failed refresh keeps the page and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) {
+      this.refreshError.set(this.loadErrorText);
+      return;
+    }
+    this.state.set(notFound ? 'not-found' : 'error');
+    if (!notFound) this.guest.set(null);
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 
   private reset(): void {
@@ -281,6 +289,7 @@ export class GuestDetailComponent implements OnInit {
     this.periods.set(periods);
     this.stays.set(stays);
     this.state.set('ready');
+    this.refreshError.set(null);
     if (this.accessAsked) {
       this.accessAsked = false;
       if (guest.status !== 'INACTIVE') this.openAccess();

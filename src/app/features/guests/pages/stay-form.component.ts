@@ -522,7 +522,7 @@ export class StayFormComponent implements OnInit {
     this.generalError.set(null);
     try {
       const stay = await firstValueFrom(this.guests.findStay(this.guestId, stayId));
-      if (this.destroyed || request !== this.stayRequest) return;
+      if (!this.isCurrentStay(request)) return;
       this.refreshError.set(null);
       this.loaded.set(stay);
       this.rejected.set(null);
@@ -530,22 +530,27 @@ export class StayFormComponent implements OnInit {
       this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
       if (stay) this.refreshFree();
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.stayRequest) return;
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      if (refreshing && !notFound)
-        this.refreshError.set(toBffErrorWithServerMessage(error).message);
-      else
-        this.state.set(
-          notFound
-            ? { kind: 'not-found' }
-            : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-        );
+      if (this.isCurrentStay(request)) this.failLoad(error, refreshing);
     } finally {
-      if (!this.destroyed && request === this.stayRequest) {
-        this.retrying.set(false);
-        this.refreshing.set(false);
-      }
+      if (this.isCurrentStay(request)) this.endLoad();
     }
+  }
+
+  private isCurrentStay(request: number): boolean {
+    return !this.destroyed && request === this.stayRequest;
+  }
+
+  /** A failed refresh keeps the form and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const { message } = toBffErrorWithServerMessage(error);
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) this.refreshError.set(message);
+    else this.state.set(notFound ? { kind: 'not-found' } : { kind: 'error', message });
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 
   /** Asks the environments free for the dates typed, or clears them while the dates are not valid. */

@@ -505,17 +505,23 @@ export class OwnPaymentComponent implements OnInit {
         this.state.set({ kind: 'ready' });
       }
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.loadRequest) return;
-      const { message } = toBffErrorWithServerMessage(error);
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      if (refreshing && !notFound) this.refreshError.set(message);
-      else this.state.set({ kind: notFound ? 'not-found' : 'error', message });
+      if (!this.destroyed && request === this.loadRequest) this.failLoad(error, refreshing);
     } finally {
-      if (!this.destroyed && request === this.loadRequest) {
-        this.retrying.set(false);
-        this.refreshing.set(false);
-      }
+      if (!this.destroyed && request === this.loadRequest) this.endLoad();
     }
+  }
+
+  /** A failed refresh keeps the form and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const { message } = toBffErrorWithServerMessage(error);
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) this.refreshError.set(message);
+    else this.state.set({ kind: notFound ? 'not-found' : 'error', message });
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 
   /** The own payment by id; a rejected one fills the form with the proofs it was sent with. */

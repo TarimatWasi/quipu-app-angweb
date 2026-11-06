@@ -253,7 +253,7 @@ export class DocumentFormComponent implements OnInit {
     this.generalError.set(null);
     try {
       const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (this.destroyed || request !== this.request) return;
+      if (!this.isCurrent(request)) return;
       this.refreshError.set(null);
       this.who.set(guestName(guest));
       if (guest.status !== 'PENDING_ACTIVATION') {
@@ -266,21 +266,26 @@ export class DocumentFormComponent implements OnInit {
       this.documentNumber.set(guest.documentNumber);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.request) return;
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      if (refreshing && !notFound)
-        this.refreshError.set(toBffErrorWithServerMessage(error).message);
-      else
-        this.state.set(
-          notFound
-            ? { kind: 'not-found' }
-            : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-        );
+      if (this.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (!this.destroyed && request === this.request) {
-        this.retrying.set(false);
-        this.refreshing.set(false);
-      }
+      if (this.isCurrent(request)) this.endLoad();
     }
+  }
+
+  private isCurrent(request: number): boolean {
+    return !this.destroyed && request === this.request;
+  }
+
+  /** A failed refresh keeps the form and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const { message } = toBffErrorWithServerMessage(error);
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) this.refreshError.set(message);
+    else this.state.set(notFound ? { kind: 'not-found' } : { kind: 'error', message });
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 }

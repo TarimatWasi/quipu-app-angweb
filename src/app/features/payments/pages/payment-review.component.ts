@@ -440,10 +440,10 @@ export class PaymentReviewComponent {
     const request = ++this.request;
     const refreshing = quiet && this.payment() !== null;
     this.refreshing.set(refreshing);
-    if (!quiet) this.refreshError.set(null);
-    if (!quiet) this.retrying.set(false);
     this.currentId = id;
     if (!quiet) {
+      this.refreshError.set(null);
+      this.retrying.set(false);
       this.state.set({ kind: 'loading' });
       this.payment.set(null);
       this.amounts.set({});
@@ -456,23 +456,30 @@ export class PaymentReviewComponent {
       this.refreshError.set(null);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request !== this.request) return;
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      if (refreshing && !notFound) this.refreshError.set(this.loadErrorText);
-      else {
-        this.payment.set(null);
-        this.state.set(
-          notFound
-            ? { kind: 'not-found' }
-            : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-        );
-      }
+      if (request === this.request) this.failLoad(error, refreshing);
     } finally {
-      if (request === this.request) {
-        this.retrying.set(false);
-        this.refreshing.set(false);
-      }
+      if (request === this.request) this.endLoad();
     }
+  }
+
+  /** A failed refresh keeps the page and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) {
+      this.refreshError.set(this.loadErrorText);
+      return;
+    }
+    this.payment.set(null);
+    this.state.set(
+      notFound
+        ? { kind: 'not-found' }
+        : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
+    );
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 
   private focus(selector: string): void {

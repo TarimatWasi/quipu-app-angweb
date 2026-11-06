@@ -113,7 +113,7 @@ export class MockRequestControls {
   }
 
   cancelAll(): void {
-    for (const cancel of [...this.cancellations.values()]) cancel();
+    for (const cancel of this.cancellations.values()) cancel();
   }
 
   dispatch(call: MockCall, run: () => Promise<MockReply>, latency: number): Observable<MockReply> {
