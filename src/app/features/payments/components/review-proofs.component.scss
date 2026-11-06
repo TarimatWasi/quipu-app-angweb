@@ -1,0 +1,153 @@
+// A5.2 «Comprobantes»: only the layout of the column. Buttons and the segmented look come from
+// the kit; the viewer is a block of dark stone where the proof is shown.
+:host {
+  display: block;
+  min-width: 0;
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.625rem 1.25rem;
+  margin-bottom: 0.875rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.add {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem 0.75rem;
+}
+
+.hint {
+  font: var(--mat-sys-body-medium);
+  color: var(--quipu-tinta-secundaria);
+}
+
+// The picker is the kit's segmented control, two lines high: the title and its amount.
+.picker {
+  margin-bottom: 0.75rem;
+
+  button {
+    padding-block: 0.5rem;
+    text-align: left;
+  }
+}
+
+.pick-title {
+  display: block;
+  font: var(--mat-sys-label-large);
+}
+
+.pick-amount {
+  display: block;
+  margin-top: 2px;
+  font: var(--mat-sys-body-medium);
+  font-variant-numeric: tabular-nums;
+}
+
+.viewer {
+  display: grid;
+  place-items: center;
+  min-height: 26rem;
+  padding: var(--quipu-relleno-panel);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra-oscura);
+  overflow: hidden;
+}
+
+// The image fills its frame without cropping; «Girar» turns it a quarter at a time.
+.frame {
+  position: relative;
+  width: 100%;
+  height: 26rem;
+}
+
+.image {
+  object-fit: contain;
+  transition: rotate var(--quipu-duracion-hover) var(--quipu-ease);
+}
+
+.turn-1 {
+  rotate: 90deg;
+}
+
+.turn-2 {
+  rotate: 180deg;
+}
+
+.turn-3 {
+  rotate: 270deg;
+}
+
+.message {
+  display: grid;
+  justify-items: center;
+  gap: 0.75rem;
+  max-width: 22.5rem;
+  text-align: center;
+  color: var(--quipu-tinta-secundaria);
+
+  p {
+    margin: 0;
+  }
+}
+
+.message-title,
+.file-name {
+  display: block;
+  font: var(--mat-sys-title-medium);
+  color: var(--quipu-tinta);
+}
+
+.file-name {
+  overflow-wrap: anywhere;
+}
+
+.who {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  margin: 0.75rem 0 0;
+}
+
+.by {
+  font-weight: var(--quipu-peso-enfasis);
+}
+
+.by.admin {
+  padding: 0.125rem 0.5rem;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra-oscura);
+}
+
+.tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 599.98px) {
+  .frame {
+    height: 18rem;
+  }
+
+  .viewer {
+    min-height: 18rem;
+    padding: var(--quipu-relleno-panel-movil);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .image {
+    transition: none;
+  }
+}

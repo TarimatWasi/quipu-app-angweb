@@ -1,0 +1,160 @@
+<app-page-header heading="Huéspedes" />
+
+@switch (phase()) {
+  @case ('loading') {
+    <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+    <section class="all" aria-labelledby="guests-loading-title">
+      <div class="quipu-list-head">
+        <h2 id="guests-loading-title">Todos los huéspedes</h2>
+        <a class="quipu-button quipu-button--secondary" routerLink="/admin/guests/new"
+          >Nuevo huésped</a
+        >
+      </div>
+      <ng-template #filtersSkeleton>
+        <div class="quipu-segmented quipu-segmented--fill views">
+          @for (option of views; track option.view) {
+            <button type="button" disabled>{{ option.label }}</button>
+          }
+        </div>
+        <div class="quipu-filters">
+          <div class="quipu-field quipu-search">
+            <span class="quipu-label">Buscar</span><app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-field">
+            <span class="quipu-label">Tipo</span><app-skeleton-block shape="rectangle" />
+          </div>
+          @if (view() === 'CURRENT') {
+            <div class="quipu-field">
+              <span class="quipu-label">Estado</span><app-skeleton-block shape="rectangle" />
+            </div>
+          }
+          <div class="quipu-field quipu-only-narrow">
+            <span class="quipu-label">Ordenar por</span><app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
+        </div>
+      </ng-template>
+      <app-guests-table
+        [loading]="true"
+        [rows]="[]"
+        [sort]="sort()"
+        [skeletonBefore]="filtersSkeleton"
+      />
+    </section>
+  }
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
+  }
+  @case ('ready') {
+    @if (panel(); as now) {
+      <app-guests-now-panel class="now" [panel]="now" (showPending)="showPending()" />
+    }
+
+    <section class="all" aria-labelledby="all-guests-title">
+      <div class="quipu-list-head">
+        <h2 id="all-guests-title">Todos los huéspedes</h2>
+        <a class="quipu-button quipu-button--secondary" routerLink="/admin/guests/new">
+          Nuevo huésped
+        </a>
+      </div>
+
+      <div
+        class="quipu-segmented quipu-segmented--fill views"
+        role="group"
+        aria-label="Qué huéspedes ver"
+      >
+        @for (option of views; track option.view) {
+          <button
+            type="button"
+            [attr.aria-pressed]="option.view === view()"
+            (click)="chooseView(option.view)"
+          >
+            {{ option.label }}
+          </button>
+        }
+      </div>
+
+      <app-list-filters
+        idPrefix="guests"
+        placeholder="Nombre, documento o ambiente"
+        [search]="filters().search"
+        [count]="count()"
+        [filtered]="filtered()"
+        [phoneSorts]="phoneSorts"
+        [sortKey]="sort().key"
+        (searchChange)="searchFor($event)"
+        (clear)="clearFilters()"
+        (phoneSort)="sortOnPhone($event)"
+      >
+        <app-form-field fieldId="guests-type" label="Tipo">
+          <select
+            appFieldControl
+            class="quipu-input quipu-input--filter"
+            [formField]="filterForm.type"
+          >
+            <option value="ALL">Todos</option>
+            <option value="CONTRACT">Con contrato</option>
+            <option value="TEMPORARY">Temporal</option>
+          </select>
+        </app-form-field>
+        @if (view() === 'CURRENT') {
+          <app-form-field fieldId="guests-state" label="Estado">
+            <select
+              appFieldControl
+              class="quipu-input quipu-input--filter"
+              [formField]="filterForm.state"
+            >
+              <option value="ALL">Todos</option>
+              <option value="PENDING_ACTIVATION">Pendiente de activación</option>
+              <option value="ONBOARDING">En onboarding</option>
+              <option value="ACTIVE">Activo</option>
+            </select>
+          </app-form-field>
+        }
+      </app-list-filters>
+
+      <div class="list" [attr.aria-busy]="loadingPage()">
+        @if (listFailed()) {
+          <app-load-error [message]="loadErrorText" [retrying]="retrying()" (retry)="retry()" />
+        }
+        @if (rows().length > 0) {
+          <app-guests-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
+        } @else if (filtered() && !listFailed()) {
+          <app-empty-state
+            [heading]="noMatchHeading"
+            [filtered]="true"
+            (clearFilters)="clearFilters()"
+          />
+        } @else if (!loadingPage() && !listFailed()) {
+          <app-empty-state [heading]="emptyHeading()">{{ emptyText() }}</app-empty-state>
+        }
+      </div>
+
+      @if (moreFailed()) {
+        <app-load-error
+          class="more-error"
+          [message]="loadErrorText"
+          [retrying]="retrying()"
+          (retry)="retry()"
+        />
+      } @else if (nextCursor() !== null && !listFailed()) {
+        <app-show-more
+          [summary]="false"
+          [shown]="rows().length"
+          [loaded]="loadedCount()"
+          [hasMore]="true"
+          [loading]="loadingMore()"
+          (more)="more()"
+        />
+      }
+    </section>
+  }
+}

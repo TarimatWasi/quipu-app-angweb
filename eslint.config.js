@@ -1,0 +1,458 @@
+// Flat config (FE-ANG-EST-02). Messages cite the rule ID from "Guía Angular" (FE-ANG-...) or from
+// the "Perfil técnico de Quipu" (QP-ANGWEB-...) so a failure explains itself.
+import { readdirSync } from 'node:fs';
+import eslint from '@eslint/js';
+import angular from 'angular-eslint';
+import prettier from 'eslint-config-prettier';
+import tseslint from 'typescript-eslint';
+
+const restrict = (id, message) => ({ message: `${id}: ${message}` });
+
+const baseRestrictedImports = {
+  paths: [
+    {
+      name: '@angular/common',
+      importNames: ['NgClass', 'NgStyle'],
+      ...restrict('FE-ANG-TPL-02', 'use [class] and [style] bindings'),
+    },
+    {
+      name: '@angular/common/http',
+      importNames: ['HttpInterceptor'],
+      ...restrict('FE-ANG-DI-04', 'use functional interceptors (HttpInterceptorFn)'),
+    },
+    {
+      name: '@angular/forms',
+      importNames: ['FormsModule'],
+      ...restrict('FE-ANG-FRM-02', 'no template-driven forms'),
+    },
+    { name: 'zone.js', ...restrict('FE-ANG-CMP-04', 'the app is zoneless') },
+    {
+      name: '@angular/localize',
+      ...restrict('QP-ANGWEB-LNG-01', 'no i18n framework; the UI is Spanish only'),
+    },
+    // TAR-297: the kit replaces these Material pieces; Material stays for dialogs and the CDK.
+    {
+      name: '@angular/material/button',
+      ...restrict('QP-UI-01', 'use the kit buttons (.quipu-button, P-10)'),
+    },
+    {
+      name: '@angular/material/snack-bar',
+      ...restrict('QP-UI-01', 'use ToastService and the toast of the shell (P-17)'),
+    },
+    {
+      name: '@angular/material/form-field',
+      ...restrict('QP-UI-01', 'use app-form-field with appFieldControl (P-07)'),
+    },
+    {
+      name: '@angular/material/input',
+      ...restrict('QP-UI-01', 'use app-form-field with appFieldControl (P-07)'),
+    },
+    {
+      name: '@angular/material/select',
+      ...restrict('QP-UI-01', 'use a native select in app-form-field (P-07)'),
+    },
+    {
+      name: '@angular/material/table',
+      ...restrict('QP-UI-01', 'use app-data-table (P-08)'),
+    },
+  ],
+  patterns: [
+    { group: ['zone.js/*'], ...restrict('FE-ANG-CMP-04', 'the app is zoneless') },
+    { group: ['@ngrx/*'], ...restrict('FE-ANG-SIG-05', 'no state library without an ADR') },
+    {
+      group: ['@angular/localize/*'],
+      ...restrict('QP-ANGWEB-LNG-01', 'no i18n framework; the UI is Spanish only'),
+    },
+  ],
+};
+
+// FE-ANG-ORG-02 / QP-ANGWEB-ORG-01: folders talk to each other through the @core, @shared,
+// @features and @layout aliases; relative imports never leave a folder.
+// A later matching config block replaces (does not extend) the rule options, so every block
+// below is built from the full set: base restrictions + folder patterns (+ HttpClient for components).
+const httpClientPath = {
+  name: '@angular/common/http',
+  importNames: ['HttpClient'],
+  ...restrict('FE-ANG-DI-03', 'components never inject HttpClient; use a data service'),
+};
+const folderImports = (extraPatterns, extraPaths = []) => ({
+  'no-restricted-imports': [
+    'error',
+    {
+      paths: [...baseRestrictedImports.paths, ...extraPaths],
+      patterns: [...baseRestrictedImports.patterns, ...extraPatterns],
+    },
+  ],
+});
+// Anchored on the alias (`@core/...`) and on relative paths (`../core/...`): a bare `**/core/**`
+// would also match package paths such as `@angular/core/testing`.
+const forbidFolders = (...folders) =>
+  folders.flatMap((folder) => {
+    const message = restrict('FE-ANG-ORG-02', `this folder must not import from ${folder}/`);
+    return [
+      { group: [`@${folder}/*`], ...message },
+      { regex: `^\\.{1,2}/(.*/)?${folder}(/|$)`, ...message },
+    ];
+  });
+
+const escapeRegex = (text) => text.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
+export const MAX_FEATURE_DEPTH = 8;
+
+// FE-ANG-ORG-02: `shared` imports neither `core` nor `features`; `core` does not import `features`
+// (it may use `shared`); a feature never imports another feature (files directly under features/
+// belong to no feature and may reference any of them). The last rule needs the feature name, so
+// each feature gets: a catch-all scope that bans `@features/<other>` at ANY depth (an alias needs
+// no depth), plus one scope per folder depth up to MAX_FEATURE_DEPTH for relative imports: an
+// import climbing out of the feature (`../` more times than the file's depth) may only re-enter
+// the same feature. Relative imports below MAX_FEATURE_DEPTH are not covered, so the test
+// "no file under src/app/features is deeper than ..." fails instead of letting them slip through.
+// QP-ANGWEB-ORG-02: inside a feature there are only `<f>.routes.ts` and these layers, and each
+// layer imports only the layers listed here (besides itself, @core/ and @shared/). components/ is
+// pure presentation: it neither injects the router nor reaches a data client or the session; model/
+// is plain TypeScript, without Angular. app-structure.spec.ts checks that a feature holds only
+// these folders; the rules below check the direction of the imports between them.
+export const FEATURE_LAYERS = {
+  pages: ['components', 'data', 'model'],
+  components: ['model'],
+  data: ['model'],
+  model: [],
+};
+const layerNames = Object.keys(FEATURE_LAYERS);
+
+const layerExtras = {
+  components: {
+    paths: [
+      {
+        name: '@angular/router',
+        importNames: ['Router', 'ActivatedRoute'],
+        ...restrict('QP-ANGWEB-ORG-02', 'components/ is presentation; the page owns the router'),
+      },
+    ],
+    patterns: [
+      {
+        group: ['@core/api/clients/*', '@core/auth/*'],
+        ...restrict('QP-ANGWEB-ORG-02', 'components/ is presentation; the page owns the data'),
+      },
+    ],
+  },
+  model: {
+    paths: [],
+    patterns: [
+      {
+        regex: '^@angular/',
+        ...restrict('QP-ANGWEB-ORG-02', 'model/ is plain TypeScript, without Angular'),
+      },
+    ],
+  },
+};
+
+// The layers of the same feature a file of `layer` must not reach: by alias at any depth and,
+// when `depth` (its folders below the feature) is known, by a relative path that climbs back to
+// the feature root (`../data`) or out of the feature and into it again (`../../f/data`).
+const layerPatterns = (feature, layer, depth) => {
+  const extra = layerExtras[layer]?.patterns ?? [];
+  const banned = layerNames.filter(
+    (other) => other !== layer && !FEATURE_LAYERS[layer].includes(other),
+  );
+  if (banned.length === 0) {
+    return extra;
+  }
+  const name = escapeRegex(feature);
+  const layers = `(${banned.join('|')})(/|$)`;
+  const allowed = FEATURE_LAYERS[layer].map((other) => `${other}/`).join(', ') || 'no layer';
+  const message = restrict(
+    'QP-ANGWEB-ORG-02',
+    `${layer}/ may import only ${allowed} of its feature, plus @core/ and @shared/`,
+  );
+  const relative =
+    depth === undefined
+      ? []
+      : [
+          { regex: `^(\\.\\./){${depth}}${layers}`, ...message },
+          { regex: `^(\\.\\./){${depth + 1}}${name}/${layers}`, ...message },
+        ];
+  return [{ regex: `^@features/${name}/${layers}`, ...message }, ...relative, ...extra];
+};
+
+const featureScopes = (feature) => {
+  const name = escapeRegex(feature);
+  const message = restrict(
+    'FE-ANG-ORG-02',
+    `a feature must not import another feature; use @core/ or @shared/ (this file is in ${feature})`,
+  );
+  const otherFeatureAlias = { regex: `^@features/(?!${name}(/|$))`, ...message };
+  const base = [...forbidFolders('layout'), otherFeatureAlias];
+  const climbOut = (depth) => ({
+    regex: `^(\\.\\./){${depth + 1},}(?!${name}(/|$))`,
+    ...message,
+  });
+  const root = `src/app/features/${feature}`;
+  // From broad to narrow: the feature, each depth, then each layer and its depths, so that the
+  // last scope matching a file carries every restriction that applies to it.
+  const layerScopes = layerNames.flatMap((layer) => {
+    const paths = layerExtras[layer]?.paths ?? [];
+    return [
+      { dir: `${root}/${layer}/**`, patterns: [...base, ...layerPatterns(feature, layer)], paths },
+      ...Array.from({ length: MAX_FEATURE_DEPTH }, (_, index) => ({
+        dir: `${root}/${layer}${'/*'.repeat(index)}`,
+        patterns: [...base, climbOut(index + 1), ...layerPatterns(feature, layer, index + 1)],
+        paths,
+      })),
+    ];
+  });
+  return [
+    { dir: `${root}/**`, patterns: base },
+    ...Array.from({ length: MAX_FEATURE_DEPTH + 1 }, (_, depth) => ({
+      dir: `${root}${'/*'.repeat(depth)}`,
+      patterns: [...base, climbOut(depth)],
+    })),
+    ...layerScopes,
+  ];
+};
+
+const folderScopes = (features) => [
+  { dir: 'src/app/shared/**', patterns: forbidFolders('core', 'features', 'layout') },
+  { dir: 'src/app/core/**', patterns: forbidFolders('features', 'layout') },
+  // QP-ANGWEB-ORG-01: the shell uses core and shared, never a feature.
+  { dir: 'src/app/layout/**', patterns: forbidFolders('features') },
+  { dir: 'src/app/features/**', patterns: forbidFolders('layout') },
+  ...features.flatMap(featureScopes),
+];
+
+// Features are the folders under src/app/features, discovered each time ESLint loads this file
+// (command line, CI). An editor's ESLint server keeps the list it loaded: restart it after adding
+// a feature. A missing folder only means there is nothing to enforce yet; any other error (for
+// example a permissions problem) must surface instead of silently disabling the cross-feature rule.
+export const discoverFeatures = (dir = new URL('./src/app/features/', import.meta.url)) => {
+  try {
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
+};
+
+const absoluteUrl = {
+  selector: 'Literal[value=/^https?:\\/\\//i]',
+  message: 'FE-ANG-HTTP-01: no absolute URLs; take the base URL from environment',
+};
+const absoluteUrlTemplate = {
+  selector: 'TemplateElement[value.raw=/^https?:\\/\\//i]',
+  message: 'FE-ANG-HTTP-01: no absolute URLs; take the base URL from environment',
+};
+const restrictedSyntax = [
+  {
+    selector: 'Decorator[expression.callee.name=/^(HostBinding|HostListener)$/]',
+    message: 'FE-ANG-CMP-03: use the host property of the component decorator',
+  },
+  {
+    selector: "MemberExpression[object.name='ChangeDetectionStrategy'][property.name='Eager']",
+    message: 'FE-ANG-CMP-04: OnPush is the default; do not use Eager',
+  },
+  {
+    selector: "CallExpression[callee.name='provideZoneChangeDetection']",
+    message: 'FE-ANG-CMP-04: use provideZonelessChangeDetection',
+  },
+  {
+    selector: 'CallExpression[callee.property.name=/^bypassSecurityTrust/]',
+    message: 'FE-ANG-SEC-01: never bypass Angular sanitization',
+  },
+  {
+    selector: "AssignmentExpression[left.property.name='innerHTML']",
+    message: 'FE-ANG-SEC-01: do not assign innerHTML',
+  },
+  {
+    selector: 'MemberExpression[property.name=/^(localStorage|sessionStorage)$/]',
+    message: 'FE-ANG-HTTP-02: no browser storage for tokens or personal data',
+  },
+  {
+    selector: 'MemberExpression[computed=true][property.value=/^(localStorage|sessionStorage)$/]',
+    message: 'FE-ANG-HTTP-02: no browser storage for tokens or personal data',
+  },
+];
+
+const restrictedGlobals = ['localStorage', 'sessionStorage'].map((name) => ({
+  name,
+  message: 'FE-ANG-HTTP-02 / FE-ANG-SEC-02: no browser storage for tokens or personal data',
+}));
+
+// Bounded exception for the simulated backend (QP-ANGWEB-ENV-01, TAR-287): core/mock/ only exists
+// in the `mock` build, which never reaches production (scripts/mock-bundle.mjs proves it), and keeps
+// the demo role and scenario in sessionStorage, never a token or personal data. localStorage stays
+// forbidden there too.
+const isSessionStorageRule = ({ selector }) => selector.includes('sessionStorage');
+const mockRestrictedSyntax = [
+  ...restrictedSyntax.filter((rule) => !isSessionStorageRule(rule)),
+  {
+    selector: "MemberExpression[property.name='localStorage']",
+    message: 'FE-ANG-HTTP-02: no localStorage, not even in the simulated backend',
+  },
+  {
+    selector: "MemberExpression[computed=true][property.value='localStorage']",
+    message: 'FE-ANG-HTTP-02: no localStorage, not even in the simulated backend',
+  },
+];
+const mockRestrictedGlobals = restrictedGlobals.filter(({ name }) => name !== 'sessionStorage');
+
+// `features` are the folders under src/app/features; tests pass their own list.
+export const createConfig = (features) =>
+  tseslint.config(
+    {
+      ignores: [
+        'dist/',
+        '.angular/',
+        'coverage/',
+        'node_modules/',
+        'src/environments/',
+        'src/app/core/api/bff.generated.d.ts',
+      ],
+    },
+    {
+      files: ['**/*.ts'],
+      extends: [
+        eslint.configs.recommended,
+        ...tseslint.configs.strictTypeChecked,
+        ...tseslint.configs.stylisticTypeChecked,
+        ...angular.configs.tsRecommended,
+      ],
+      processor: angular.processInlineTemplates,
+      languageOptions: {
+        parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      },
+      rules: {
+        '@angular-eslint/component-selector': [
+          'error',
+          { type: 'element', prefix: 'app', style: 'kebab-case' },
+        ],
+        '@angular-eslint/directive-selector': [
+          'error',
+          { type: 'attribute', prefix: 'app', style: 'camelCase' },
+        ],
+        '@angular-eslint/prefer-signals': 'error',
+        '@angular-eslint/prefer-output-readonly': 'error',
+        '@angular-eslint/prefer-output-emitter-ref': 'error',
+        '@angular-eslint/no-uncalled-signals': 'error',
+        '@angular-eslint/no-empty-lifecycle-method': 'error',
+        '@angular-eslint/prefer-inject': 'error',
+        // Angular components and services are decorated classes that may legitimately be empty.
+        '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+        'no-console': 'error',
+        'no-debugger': 'error',
+        'no-alert': 'error',
+        'no-eval': 'error',
+        'no-new-func': 'error',
+        'max-lines': ['error', { max: 800, skipBlankLines: true, skipComments: true }],
+        'max-depth': ['error', 4],
+        'max-lines-per-function': ['error', { max: 50, skipBlankLines: true, skipComments: true }],
+        '@typescript-eslint/naming-convention': [
+          'error',
+          { selector: 'default', format: ['camelCase'] },
+          { selector: 'variable', format: ['camelCase', 'UPPER_CASE'] },
+          { selector: 'typeLike', format: ['PascalCase'] },
+          { selector: 'enumMember', format: ['PascalCase', 'UPPER_CASE'] },
+          { selector: 'property', format: null },
+          { selector: 'parameter', format: ['camelCase'], leadingUnderscore: 'allow' },
+        ],
+        'no-restricted-imports': ['error', baseRestrictedImports],
+        'no-restricted-syntax': ['error', ...restrictedSyntax, absoluteUrl, absoluteUrlTemplate],
+        'no-restricted-globals': ['error', ...restrictedGlobals],
+      },
+    },
+    // FE-ANG-ORG-02 by folder, then the same scopes again for components (FE-ANG-DI-03). Scopes go
+    // from broad to narrow, and all component blocks come after all plain blocks, so the last match
+    // always carries both the folder patterns and the HttpClient restriction.
+    { files: ['**/*.component.ts'], rules: folderImports([], [httpClientPath]) },
+    ...folderScopes(features).map(({ dir, patterns, paths = [] }) => ({
+      files: [`${dir}/*.ts`],
+      rules: folderImports(patterns, paths),
+    })),
+    ...folderScopes(features).map(({ dir, patterns, paths = [] }) => ({
+      files: [`${dir}/*.component.ts`],
+      rules: folderImports(patterns, [...paths, httpClientPath]),
+    })),
+    {
+      // The adopted skeleton standard: features compose regions rather than owning their timers.
+      // Keep tests free to inject short timings; countdowns and unrelated timers are unaffected.
+      files: ['src/app/features/**/*.ts'],
+      ignores: ['**/*.spec.ts', '**/*.testing.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          ...restrictedSyntax,
+          absoluteUrl,
+          absoluteUrlTemplate,
+          {
+            selector: 'ImportDeclaration[source.value=/skeleton\\/load-timing$/]',
+            message:
+              'QP-UI-16: compose app-skeleton or app-data-table; loading timers belong to shared/ui/skeleton',
+          },
+          {
+            selector:
+              'ImportDeclaration[source.value=/skeleton\\/skeleton.component$/] ImportSpecifier[imported.name="SKELETON_TIMING"]',
+            message: 'QP-UI-16: keep the shared loading thresholds; override timings only in tests',
+          },
+        ],
+      },
+    },
+    {
+      files: ['src/app/core/mock/**/*.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          ...mockRestrictedSyntax,
+          absoluteUrl,
+          absoluteUrlTemplate,
+        ],
+        'no-restricted-globals': ['error', ...mockRestrictedGlobals],
+      },
+    },
+    {
+      // Tests: Vitest only (FE-ANG-TST-01); they may use literal URLs and long describe blocks.
+      files: ['**/*.spec.ts'],
+      rules: {
+        'max-lines-per-function': 'off',
+        'no-restricted-syntax': ['error', ...restrictedSyntax],
+        'no-restricted-globals': [
+          'error',
+          ...restrictedGlobals,
+          { name: 'jasmine', message: 'FE-ANG-TST-01: Vitest only, no Jasmine' },
+        ],
+      },
+    },
+    {
+      files: ['**/*.html'],
+      extends: [...angular.configs.templateRecommended, ...angular.configs.templateAccessibility],
+      rules: {
+        '@angular-eslint/template/button-has-type': 'error',
+        '@angular-eslint/template/no-inline-styles': 'error',
+        '@angular-eslint/template/prefer-at-empty': 'error',
+        '@angular-eslint/template/prefer-ngsrc': 'error',
+        '@angular-eslint/template/prefer-self-closing-tags': 'error',
+        '@angular-eslint/template/prefer-control-flow': 'error',
+        '@angular-eslint/template/eqeqeq': 'error',
+        '@angular-eslint/template/no-negated-async': 'error',
+      },
+    },
+    {
+      files: ['scripts/**/*.mjs', 'eslint.config.js'],
+      extends: [eslint.configs.recommended],
+      languageOptions: {
+        globals: {
+          process: 'readonly',
+          URL: 'readonly',
+          Buffer: 'readonly',
+          fetch: 'readonly',
+          TextDecoder: 'readonly',
+          AbortSignal: 'readonly',
+          setTimeout: 'readonly',
+        },
+      },
+    },
+    prettier,
+  );
+
+export default createConfig(discoverFeatures());

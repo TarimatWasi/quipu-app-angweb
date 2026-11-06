@@ -1,0 +1,146 @@
+<section class="proofs" aria-labelledby="review-proofs-title">
+  <div class="head">
+    <h2 id="review-proofs-title">Comprobantes ({{ entries().length }})</h2>
+    @if (canAdd()) {
+      <span class="add">
+        @if (full()) {
+          <span class="hint" id="review-proofs-full"
+            >Hasta {{ maxProofs() }} comprobantes por pago.</span
+          >
+        }
+        <button
+          class="quipu-button quipu-button--secondary"
+          type="button"
+          [disabled]="full() || busy()"
+          [attr.aria-describedby]="full() ? 'review-proofs-full' : null"
+          (click)="add.emit()"
+        >
+          Agregar comprobante
+        </button>
+      </span>
+    }
+  </div>
+
+  @if (entries().length > 1) {
+    <div class="quipu-segmented picker" role="group" aria-label="Elegir comprobante">
+      @for (entry of entries(); track entry.id) {
+        <button type="button" [attr.aria-pressed]="entry.id === selectedId()" (click)="pick(entry)">
+          <span class="pick-title">{{ entry.title }}</span>
+          <span class="pick-amount">{{ entry.declared }}</span>
+        </button>
+      }
+    </div>
+  }
+
+  @if (selected(); as entry) {
+    <div class="viewer">
+      @switch (entry.view) {
+        @case ('image') {
+          <div class="frame">
+            <img
+              fill
+              priority
+              [class]="'image turn-' + turns()"
+              [ngSrc]="entry.url ?? ''"
+              [alt]="imageName()"
+            />
+          </div>
+        }
+        @case ('pdf') {
+          <div class="message">
+            <svg
+              aria-hidden="true"
+              width="56"
+              height="56"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <path d="M14 3H6a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8z" />
+              <path d="M14 3v5h5M9 13h6M9 17h4" />
+            </svg>
+            <p>
+              <strong class="file-name">{{ entry.fileName }}</strong>
+              <span class="hint">{{ entry.fileMeta }}</span>
+            </p>
+            <p class="hint">Los PDF se abren descargándolos. El enlace dura 15 minutos.</p>
+            <a
+              class="quipu-button quipu-button--secondary"
+              [href]="entry.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Descargar PDF</a
+            >
+          </div>
+        }
+        @case ('cash') {
+          <div class="message">
+            <svg
+              aria-hidden="true"
+              width="52"
+              height="52"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="2" y="6" width="20" height="12" rx="1" />
+              <circle cx="12" cy="12" r="2.5" />
+              <path d="M6 9v.01M18 15v.01" />
+            </svg>
+            <p class="message-title">Efectivo, sin voucher</p>
+            <p class="hint">
+              Confírmalo con lo que recibiste. Puedes agregar un voucher de referencia, como la foto
+              del recibo.
+            </p>
+          </div>
+        }
+        @case ('missing') {
+          <div class="message">
+            <svg
+              aria-hidden="true"
+              width="44"
+              height="44"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.6"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+            >
+              <rect x="3" y="4" width="18" height="16" rx="1" />
+              <path d="m3 16 5-5 4 4 3-3 6 6M3 3l18 18" />
+            </svg>
+            <p class="message-title">El voucher no se pudo mostrar.</p>
+            <p class="hint">Para aprobar, primero tienes que ver los vouchers.</p>
+          </div>
+        }
+      }
+    </div>
+
+    <p class="who">
+      <span class="by" [class.admin]="entry.byAdmin">{{ entry.by }}</span>
+      <span class="hint">{{ entry.added }}</span>
+    </p>
+
+    @if (entry.view === 'image') {
+      <div class="tools">
+        <button class="quipu-button quipu-button--secondary" type="button" (click)="rotate()">
+          Girar
+        </button>
+        <a
+          class="quipu-button quipu-button--secondary"
+          [href]="entry.url"
+          target="_blank"
+          rel="noopener noreferrer"
+          >Descargar</a
+        >
+      </div>
+    }
+  }
+</section>

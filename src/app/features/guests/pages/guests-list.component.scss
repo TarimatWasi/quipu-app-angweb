@@ -1,0 +1,5 @@
+@use '../../../shared/styles/list-page';
+
+// A3: only the layout of the page. Header, panel, list head, filters, table, cards, notices,
+// skeleton, badges and buttons are the kit's.
+@include list-page.layout;

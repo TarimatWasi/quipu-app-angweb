@@ -1,0 +1,133 @@
+<app-guest-form-header
+  [guestId]="guestId"
+  heading="Corregir documento"
+  [backLabel]="backLabel()"
+  [today]="today"
+/>
+
+@if (refreshError(); as message) {
+  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+}
+@if (refreshing() && refreshError() === null) {
+  <output>Actualizando…</output>
+}
+@switch (state().kind) {
+  @case ('loading') {
+    <app-skeleton subject="el documento"
+      ><ng-template appSkeletonContent>
+        <app-form-summary-layout class="layout">
+          <div class="fields">
+            <h2>El documento</h2>
+            <app-skeleton-fields
+              [labels]="['Tipo de documento', 'Número de documento']"
+            /><app-skeleton-block shape="rectangle" width="12rem" />
+          </div>
+          <aside aria-label="Cómo está hoy">
+            <h2>Cómo está hoy</h2>
+            <app-skeleton-facts [labels]="['Documento', 'Estado']" />
+          </aside>
+        </app-form-summary-layout> </ng-template
+    ></app-skeleton>
+  }
+  @case ('not-found') {
+    <p class="notice error" role="alert">
+      <strong>No encontramos a este huésped.</strong>
+      <a [routerLink]="['/admin/guests', guestId]">Volver al huésped</a>
+    </p>
+  }
+  @case ('locked') {
+    <p class="notice warn">{{ lockedText }}</p>
+  }
+  @case ('error') {
+    <p class="notice error" role="alert">
+      <strong>{{ loadError() }}</strong>
+      <button class="link-button" type="button" [disabled]="retrying()" (click)="retry()">
+        {{ retrying() ? 'Cargando…' : 'Reintentar' }}
+      </button>
+    </p>
+  }
+  @case ('ready') {
+    <app-form-summary-layout class="layout">
+      <aside aria-labelledby="side-title">
+        <h2 id="side-title">Cómo está hoy</h2>
+        <dl class="facts">
+          <div class="wide">
+            <dt>Hoy</dt>
+            <dd>{{ currentDocument() }}</dd>
+          </div>
+          <div class="wide">
+            <dt>Estado</dt>
+            <dd class="badge-cell">
+              <span [class]="'badge tone-' + statusBadge.tone">{{ statusBadge.label }}</span>
+            </dd>
+          </div>
+        </dl>
+        <p class="note">
+          Aún no usa su acceso: el documento todavía se puede corregir. El acceso que ya le diste
+          sigue sirviendo.
+        </p>
+      </aside>
+
+      <form
+        [attr.aria-busy]="refreshing()"
+        [inert]="refreshing() || refreshError() !== null"
+        novalidate
+        aria-labelledby="form-title"
+        (submit)="submit($event)"
+      >
+        <h2 id="form-title">El documento</h2>
+        <div class="fields">
+          <fieldset class="field">
+            <legend>Tipo de documento</legend>
+            <div class="chips">
+              @for (option of documentTypes; track option.value) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="option.value === documentType() ? 'true' : 'false'"
+                  (click)="chooseType(option.value)"
+                >
+                  {{ option.label }}
+                </button>
+              }
+            </div>
+          </fieldset>
+
+          <div class="field">
+            <label for="document-number">Número de documento</label>
+            <input
+              id="document-number"
+              class="control"
+              maxlength="20"
+              autocomplete="off"
+              aria-required="true"
+              [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
+              [value]="documentNumber()"
+              [attr.aria-invalid]="numberError() ? 'true' : null"
+              [attr.aria-describedby]="describedBy(numberError(), 'document-number')"
+              (input)="typedNumber($event.target)"
+            />
+            @if (numberError(); as message) {
+              <span id="document-number-error" class="error">{{ message }}</span>
+            }
+            <span id="document-number-help" class="help">
+              Con este documento entrará a Quipu. Se puede corregir solo hasta que use su acceso.
+            </span>
+          </div>
+        </div>
+
+        @if (generalError(); as message) {
+          <p [id]="generalErrorId" class="notice error" role="alert" tabindex="-1">
+            {{ message }}
+          </p>
+        }
+
+        <div class="submit">
+          <button class="quipu-button quipu-button--primary" type="submit" [disabled]="!canSave()">
+            {{ saveLabel() }}
+          </button>
+          <a [routerLink]="['/admin/guests', guestId]">Cancelar</a>
+        </div>
+      </form>
+    </app-form-summary-layout>
+  }
+}

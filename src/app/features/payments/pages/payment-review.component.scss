@@ -1,0 +1,123 @@
+// A5.2: only the layout of the page. Header, skeleton, notices, tiles, badges, the table and the
+// buttons are the kit's; the proofs and the amounts are their own components.
+:host {
+  display: block;
+}
+
+.state {
+  display: block;
+  margin-top: 1.5rem;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(22rem, 1fr);
+  align-items: start;
+  gap: 2.5rem 3.5rem;
+  margin-top: 2rem;
+}
+
+.side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.5rem;
+  min-width: 0;
+}
+
+h2 {
+  margin: 0 0 0.875rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--quipu-franja);
+  --quipu-cifra-ficha: var(--quipu-cifra-ficha-movil);
+}
+
+.who {
+  grid-column: 1 / -1;
+}
+
+.guest {
+  display: block;
+  font: var(--mat-sys-title-large);
+  color: var(--quipu-tinta);
+}
+
+.detail {
+  display: block;
+  margin-top: 0.25rem;
+  font: var(--mat-sys-body-medium);
+  color: var(--quipu-tinta-secundaria);
+}
+
+.note,
+.help {
+  margin: 0.875rem 0 0;
+  color: var(--quipu-tinta-secundaria);
+}
+
+.balance {
+  display: block;
+  margin-top: 1rem;
+}
+
+.rejected {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.25rem;
+}
+
+.outcome {
+  display: grid;
+  gap: 0.625rem;
+
+  h3 {
+    margin: 0;
+    font: var(--mat-sys-headline-small);
+  }
+
+  p {
+    margin: 0;
+  }
+
+  .actions {
+    margin-top: 0.625rem;
+  }
+}
+
+.closed {
+  display: grid;
+  justify-items: start;
+  gap: 0.75rem;
+  padding: var(--quipu-relleno-tarjeta);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+
+  p {
+    margin: 0;
+  }
+}
+
+@media (max-width: 899.98px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 599.98px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .actions .quipu-button:not(.quipu-button--tertiary) {
+    width: 100%;
+  }
+}

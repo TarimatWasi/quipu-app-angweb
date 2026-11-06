@@ -1,0 +1,89 @@
+<form
+  [formRoot]="adminForm"
+  novalidate
+  [attr.aria-describedby]="bottomError() ? bottomErrorId : null"
+>
+  <app-dialog-frame heading="Nuevo administrador">
+    <div class="body">
+      <p [id]="leadId">{{ lead }}</p>
+      @if (topError(); as message) {
+        <app-page-notice tone="error" [id]="topErrorId" tabindex="-1" [heading]="message" />
+      }
+      <app-form-field fieldId="new-admin-document-type" label="Tipo de documento" [group]="true">
+        <div class="quipu-segmented">
+          @for (option of documentTypes; track option.value) {
+            <button
+              type="button"
+              [attr.aria-pressed]="option.value === documentType() ? 'true' : 'false'"
+              [disabled]="saving()"
+              (click)="chooseType(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </app-form-field>
+      <app-form-field
+        fieldId="new-admin-document"
+        label="Número de documento"
+        [error]="numberError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input"
+          autocomplete="off"
+          aria-required="true"
+          [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
+          [formField]="adminForm.documentNumber"
+        />
+      </app-form-field>
+      <app-form-field
+        fieldId="new-admin-email"
+        label="Correo de su cuenta"
+        [help]="emailHelp"
+        [error]="emailError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input"
+          type="email"
+          autocomplete="off"
+          aria-required="true"
+          [formField]="adminForm.email"
+        />
+      </app-form-field>
+      <hr />
+      <app-form-field
+        fieldId="new-admin-password"
+        label="Tu contraseña"
+        [help]="passwordHelp"
+        [error]="passwordError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input"
+          type="password"
+          autocomplete="current-password"
+          aria-required="true"
+          [formField]="adminForm.currentPassword"
+        />
+      </app-form-field>
+      @if (bottomError(); as message) {
+        <p [id]="bottomErrorId" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
+      }
+    </div>
+    <ng-container dialogActions>
+      <button
+        class="quipu-button quipu-button--secondary"
+        type="button"
+        [disabled]="saving()"
+        (click)="cancel()"
+      >
+        Cancelar
+      </button>
+      <button class="quipu-button quipu-button--primary" type="submit" [disabled]="saving()">
+        {{ saving() ? 'Creando…' : 'Crear administrador' }}
+      </button>
+    </ng-container>
+  </app-dialog-frame>
+</form>

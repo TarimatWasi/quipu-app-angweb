@@ -1,0 +1,73 @@
+<app-page-header heading="Administradores" />
+
+@if (unsentEmail(); as email) {
+  <app-page-notice class="unsent" tone="info" [heading]="unsentHeading">{{
+    unsentText(email)
+  }}</app-page-notice>
+}
+
+@switch (view()) {
+  @case ('loading') {
+    <app-skeleton class="pending" subject="el resumen de administradores" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+    <section class="all" aria-labelledby="administrators-loading-title">
+      <div class="all-head">
+        <h2 id="administrators-loading-title">Todos los administradores</h2>
+        <button class="quipu-button quipu-button--secondary" type="button" disabled>
+          Nuevo administrador
+        </button>
+      </div>
+      <ng-template #countSkeleton
+        ><p class="count"><app-skeleton-block width="14rem" /></p
+      ></ng-template>
+      <app-administrators-list [loading]="true" [rows]="[]" [skeletonBefore]="countSkeleton" />
+    </section>
+  }
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
+  }
+  @case ('ready') {
+    @if (list.error() !== undefined || retrying()) {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="retry()"
+      />
+    }
+    <app-pending-summary class="pending" [summary]="summary()" />
+
+    <section
+      class="all"
+      aria-labelledby="all-administrators-title"
+      [attr.aria-busy]="list.isLoading()"
+    >
+      <div class="all-head">
+        <h2 id="all-administrators-title">Todos los administradores</h2>
+        <div class="new">
+          <button
+            class="quipu-button quipu-button--secondary"
+            type="button"
+            aria-describedby="new-administrator-help"
+            [disabled]="full()"
+            (click)="openNew()"
+          >
+            Nuevo administrador
+          </button>
+          <p id="new-administrator-help" class="quipu-field-help">{{ newHelp() }}</p>
+        </div>
+      </div>
+      <p #countLine class="count" tabindex="-1">{{ countText() }}</p>
+      <app-administrators-list [rows]="rows()" (act)="change($event)" />
+    </section>
+
+    <p class="footer">{{ footer }}</p>
+  }
+}

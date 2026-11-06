@@ -1,0 +1,51 @@
+<form novalidate (submit)="submit($event)">
+  <app-dialog-frame heading="Agregar comprobante">
+    <div class="body">
+      <p class="lead">Queda como agregado por la administración, con el monto que verificaste.</p>
+
+      <app-form-field fieldId="proof-kind" label="Tipo de comprobante" [group]="true">
+        <app-proof-kind-choice [kind]="kind()" (kindChange)="choose($event)" />
+      </app-form-field>
+
+      @if (kind() === 'VOUCHER') {
+        <app-file-field
+          fieldId="proof-file"
+          help="JPG, PNG o PDF, hasta 5 MB. Puede ser la foto del recibo que entregaste."
+          [fileName]="file()?.name ?? null"
+          [error]="fileError()"
+          (chosen)="picked($event)"
+        />
+      } @else {
+        <p class="note">
+          Anota el efectivo que recibiste. Si luego tienes el recibo, agrégalo como voucher de
+          referencia.
+        </p>
+      }
+
+      <app-proof-amount-field
+        class="amount"
+        fieldId="proof-amount"
+        label="Monto verificado"
+        [value]="amount()"
+        [help]="help"
+        [error]="amountError()"
+        (valueChange)="amount.set($event)"
+      />
+
+      @if (kind() === 'VOUCHER') {
+        <app-proof-method-field
+          fieldId="proof-method"
+          [value]="method()"
+          placeholder="Por ejemplo, Yape"
+          (valueChange)="method.set($event)"
+        />
+      }
+    </div>
+    <ng-container dialogActions>
+      <button class="quipu-button quipu-button--tertiary" type="button" (click)="cancel()">
+        Cancelar
+      </button>
+      <button class="quipu-button quipu-button--primary" type="submit">Agregar comprobante</button>
+    </ng-container>
+  </app-dialog-frame>
+</form>

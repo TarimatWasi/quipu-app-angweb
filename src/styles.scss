@@ -1,0 +1,1033 @@
+@use 'sass:meta';
+@use '@angular/cdk';
+@use '@angular/material' as mat;
+
+// Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL-*.txt): sin llamadas a terceros.
+@font-face {
+  font-family: 'Fraunces';
+  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Nunito Sans';
+  src: url('/fonts/nunito-sans-latin.woff2') format('woff2');
+  // El archivo es variable (200 a 1000): el lienzo usa 800 en botones, etiquetas y títulos.
+  font-weight: 200 1000;
+  font-style: normal;
+  font-display: swap;
+}
+
+// Las dos familias del estándar (§3.3); el tema de Material y la escala de abajo usan estas.
+$quipu-plain-family: ('Nunito Sans', system-ui, sans-serif);
+$quipu-brand-family: ('Fraunces', Georgia, serif);
+
+// Fija un estilo de la escala tipográfica de Material (--mat-sys-<rol>, con sus partes).
+@mixin quipu-type($role, $weight, $size, $line-height, $family: $quipu-plain-family) {
+  $font: meta.inspect($family);
+  --mat-sys-#{$role}: #{$weight} #{$size} / #{$line-height} #{$font};
+  --mat-sys-#{$role}-font: #{$font};
+  --mat-sys-#{$role}-size: #{$size};
+  --mat-sys-#{$role}-line-height: #{$line-height};
+  --mat-sys-#{$role}-weight: #{$weight};
+  --mat-sys-#{$role}-tracking: 0;
+}
+
+// Jerarquía de los estilos (QP-UI-01): 1) aquí, los tokens --quipu-* son la única fuente de cada
+// valor; 2) los roles de Material (--mat-sys-*, --mat-<componente>-*) apuntan a esos tokens;
+// 3) más abajo, los elementos y las clases del kit (quipu-*) los usan; 4) un componente solo
+// agrega su propio layout con esos tokens, sin repetir valores.
+html {
+  @include mat.theme(
+    (
+      color: mat.$azure-palette,
+      typography: (
+        plain-family: $quipu-plain-family,
+        brand-family: $quipu-brand-family,
+        bold-weight: 800,
+        medium-weight: 700,
+        regular-weight: 400,
+      ),
+      density: 0,
+    )
+  );
+  color-scheme: light;
+
+  // 1. Color (Estándar UI §3.1 y §3.2). Contrastes medidos: obsidiana/piedra 14.9,
+  // chilca/piedra 5.5, alpaca/chilca 5.7, tinta2/piedra 8.2, borde/piedra 4.0.
+  --quipu-obsidiana: #141c18;
+  --quipu-alpaca: #f4f1ea;
+  --quipu-qolle: #e3b02a;
+  --quipu-cochinilla: #b0263f;
+  // Solo para el dibujo sobre obsidiana (no es texto).
+  --quipu-chilca-clara: #7cc29b;
+  --quipu-piedra: #eceee9;
+  --quipu-piedra-oscura: #dfe4dc;
+  --quipu-tinta: var(--quipu-obsidiana);
+  --quipu-tinta-secundaria: #3d4842;
+  --quipu-borde: #6b766f;
+  --quipu-borde-suave: #c9d0c8;
+  --quipu-chilca: #1e6b4a;
+  --quipu-chilca-oscura: #16553a;
+  --quipu-error: #ba1a1a;
+  --quipu-hover-cifra: #d3dad2;
+  --quipu-hover-fila: #fbfaf6;
+  // Tonos de fondo y texto que comparten los estados (P-08) y los avisos (P-09).
+  --quipu-verde-fondo: #d5e7dc;
+  --quipu-verde-texto: #14532d;
+  --quipu-amarillo-fondo: #f7e7b3;
+  --quipu-amarillo-texto: #4a3600;
+  --quipu-rojo-fondo: #f6dedc;
+  --quipu-rojo-texto: #7a1010;
+  --quipu-gris-punto: #9aa59e;
+  // Deshabilitado: fondo borde con texto alpaca y siempre una ayuda al lado (QP-UI-15).
+  --quipu-deshabilitado: var(--quipu-borde);
+  --quipu-sobre-deshabilitado: var(--quipu-alpaca);
+  // Sobre la obsidiana de la barra el foco es q'olle: el chilca no alcanza 3:1 ahí.
+  --quipu-foco-sobre-oscuro: var(--quipu-qolle);
+
+  // Estados (§3.2): punto, fondo y texto; nunca solo color (P-08).
+  --quipu-estado-pagado-punto: var(--quipu-chilca);
+  --quipu-estado-pagado-fondo: var(--quipu-verde-fondo);
+  --quipu-estado-pagado-texto: var(--quipu-verde-texto);
+  --quipu-estado-revision-punto: var(--quipu-qolle);
+  --quipu-estado-revision-fondo: var(--quipu-amarillo-fondo);
+  --quipu-estado-revision-texto: var(--quipu-amarillo-texto);
+  --quipu-estado-no-pagado-punto: var(--quipu-gris-punto);
+  --quipu-estado-no-pagado-fondo: var(--quipu-piedra-oscura);
+  --quipu-estado-no-pagado-texto: var(--quipu-tinta-secundaria);
+  --quipu-estado-atrasado-punto: var(--quipu-cochinilla);
+  --quipu-estado-atrasado-fondo: var(--quipu-rojo-fondo);
+  --quipu-estado-atrasado-texto: var(--quipu-rojo-texto);
+  --quipu-estado-rechazado-punto: var(--quipu-cochinilla);
+  --quipu-estado-rechazado-fondo: var(--quipu-rojo-fondo);
+  --quipu-estado-rechazado-texto: var(--quipu-rojo-texto);
+
+  // Avisos (P-09): el amarillo informa; el rojo pide corregir.
+  --quipu-aviso-info-fondo: var(--quipu-amarillo-fondo);
+  --quipu-aviso-info-texto: var(--quipu-amarillo-texto);
+  --quipu-aviso-error-fondo: var(--quipu-rojo-fondo);
+  --quipu-aviso-error-texto: var(--quipu-rojo-texto);
+
+  // 1. Forma y medida (§3.4): esquinas de 4 px (8 px en diálogos), controles de 48 px en la
+  // página y 40 px dentro de una fila, toques de 44 px.
+  --quipu-radio: 4px;
+  --quipu-radio-dialogo: 8px;
+  // P-16: caja de papel de hasta 480 px.
+  --quipu-dialogo-ancho: 30rem;
+  --quipu-alto-control: 48px;
+  --quipu-alto-control-fila: 40px;
+  --quipu-toque: 44px;
+  --quipu-borde-ancho: 1px;
+  --quipu-borde-ancho-enfasis: 2px;
+  // Campos (P-07, P-14): etiqueta a 6 px del campo, 14 px de relleno, 40 px a la derecha para la
+  // flecha de un selector o 96 px para «Mostrar»; un campo inactivo baja al 60 %.
+  --quipu-espacio-campo: 6px;
+  --quipu-relleno-campo: 14px;
+  --quipu-relleno-flecha: 40px;
+  --quipu-relleno-mostrar: 96px;
+  // Franja de 3 px entre piezas pegadas: filas de una tabla, tarjetas de una lista, segmentos.
+  --quipu-franja: 3px;
+  // Rellenos del lienzo (A7): celda de tabla, tarjeta de lista y panel destacado («Lo que toca
+  // ahora»), este último más chico en móvil.
+  --quipu-relleno-celda: var(--quipu-relleno-campo) 20px;
+  --quipu-relleno-tarjeta: var(--quipu-relleno-campo) 16px;
+  --quipu-relleno-panel: 28px 32px;
+  --quipu-relleno-panel-movil: 20px 18px;
+  --quipu-opacidad-inactivo: 0.6;
+  --quipu-subrayado-offset: 4px;
+  // Un ícono junto a su texto (el check del aviso emergente de éxito, P-17): a 10 px.
+  --quipu-espacio-icono: 10px;
+  // Peso de énfasis del kit: el texto en negrita de las clases globales y de los componentes.
+  --quipu-peso-enfasis: 700;
+  // Peso fuerte del lienzo (800): la cabecera de una tabla (A7), como botones y títulos.
+  --quipu-peso-fuerte: 800;
+  // Título de página (§3.3): 56 px en escritorio y 40 px en móvil, con tracking -0,03em.
+  --quipu-titulo-tracking: -0.03em;
+  --quipu-titulo-pagina-movil: 2.5rem;
+  // Cifra de una ficha o un filtro (P-05, P-11): Fraunces de 40 px (30 px en móvil).
+  --quipu-cifra-ficha: 2.5rem;
+  --quipu-cifra-ficha-movil: 1.875rem;
+  // Resumen de un alta (A3.1, A3.7): la cifra de sus fichas en Fraunces de 30 px (24 px en móvil),
+  // el formulario hasta 680 px junto a un resumen de 320 px o más, y un campo corto de 320 px.
+  --quipu-cifra-resumen: 1.875rem;
+  --quipu-cifra-resumen-movil: 1.5rem;
+  // Un valor largo de un resumen (más de 18 caracteres, A3.2): 24 px (20 px en móvil).
+  --quipu-cifra-larga: 1.5rem;
+  --quipu-cifra-larga-movil: 1.25rem;
+  // Relleno de una ficha de dato o de filtro (P-11, P-06): 18/20/20 px, 14/16/16 px en móvil.
+  --quipu-relleno-ficha: 1.125rem 1.25rem 1.25rem;
+  --quipu-relleno-ficha-movil: 0.875rem 1rem 1rem;
+  --quipu-columna-formulario: 42.5rem;
+  --quipu-columna-resumen: 20rem;
+  --quipu-campo-corto: 20rem;
+  // Acceso generado (A3.7): la clave temporal espaciada y el mensaje para el huésped a 17 px con
+  // interlineado de 1,6; el botón principal de la pantalla mide 52 px, como el del acceso.
+  --quipu-clave-tracking: 0.08em;
+  --quipu-mensaje-interlineado: 1.6;
+  --quipu-alto-boton-grande: var(--quipu-acceso-alto-boton);
+  // Acceso (A0, tablero Ingreso): título headline-medium (44 px) y 36 px en móvil, columna de
+  // 420 px con 18 px entre bloques, intro de 17 px y botón principal de 52 px.
+  --quipu-titulo-acceso-movil: 2.25rem;
+  --quipu-acceso-ancho: 26.25rem;
+  --quipu-acceso-espacio: 18px;
+  --quipu-acceso-alto-boton: 52px;
+  --quipu-texto-intro-size: 1.0625rem;
+  // Medida de un párrafo suelto de página (A0.7): unas 52 letras por línea.
+  --quipu-texto-medida: 52ch;
+  // Antetítulo sobre el título de página (A0.7): Fraunces de 20 px, a 8 px del h1.
+  --quipu-antetitulo-size: 1.25rem;
+  --quipu-espacio-antetitulo: 0.5rem;
+  // Relleno del main del shell (P-01): arriba y abajo, y a los lados (48 px, 16 en un teléfono).
+  --quipu-contenido-relleno-bloque: clamp(2rem, 6vw, 4.5rem);
+  --quipu-contenido-relleno-lados: clamp(1rem, 4vw, 3rem);
+  // Página de mensaje (A0.7): bloque de hasta 900 px, a 120 px de la barra (48 px en un teléfono).
+  --quipu-pagina-mensaje-ancho: 56.25rem;
+  --quipu-pagina-mensaje-relleno: 7.5rem;
+  --quipu-pagina-mensaje-relleno-movil: 3rem;
+  // Solo lo que flota (menús, aviso emergente) lleva sombra (§3.4).
+  --quipu-sombra-flotante: 0 12px 32px rgb(20 28 24 / 28%);
+
+  // 1. Movimiento (§3.5). Con «reducir movimiento» se quitan las transformaciones, no los colores.
+  --quipu-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --quipu-duracion-presion: 160ms;
+  --quipu-duracion-hover: 160ms;
+  --quipu-duracion-entrada: 300ms;
+  --quipu-duracion-pulso: 1.4s;
+  --quipu-ease-presion: var(--quipu-ease);
+  --quipu-ease-hover: ease;
+  --quipu-ease-entrada: ease-out;
+
+  // 2. Roles de color de Material, todos desde la paleta andina: nada sale de la paleta azul
+  // con la que arranca mat.theme.
+  --mat-sys-primary: var(--quipu-chilca);
+  --mat-sys-on-primary: var(--quipu-alpaca);
+  --mat-sys-primary-container: var(--quipu-piedra-oscura);
+  --mat-sys-on-primary-container: var(--quipu-tinta);
+  --mat-sys-secondary: var(--quipu-tinta-secundaria);
+  --mat-sys-on-secondary: var(--quipu-alpaca);
+  --mat-sys-secondary-container: var(--quipu-piedra-oscura);
+  --mat-sys-on-secondary-container: var(--quipu-tinta);
+  --mat-sys-tertiary: var(--quipu-chilca-oscura);
+  --mat-sys-on-tertiary: var(--quipu-alpaca);
+  --mat-sys-tertiary-container: var(--quipu-verde-fondo);
+  --mat-sys-on-tertiary-container: var(--quipu-verde-texto);
+  --mat-sys-primary-fixed: var(--quipu-verde-fondo);
+  --mat-sys-primary-fixed-dim: var(--quipu-chilca-clara);
+  --mat-sys-on-primary-fixed: var(--quipu-tinta);
+  --mat-sys-on-primary-fixed-variant: var(--quipu-chilca-oscura);
+  --mat-sys-secondary-fixed: var(--quipu-piedra-oscura);
+  --mat-sys-secondary-fixed-dim: var(--quipu-borde-suave);
+  --mat-sys-on-secondary-fixed: var(--quipu-tinta);
+  --mat-sys-on-secondary-fixed-variant: var(--quipu-tinta-secundaria);
+  --mat-sys-tertiary-fixed: var(--quipu-verde-fondo);
+  --mat-sys-tertiary-fixed-dim: var(--quipu-chilca-clara);
+  --mat-sys-on-tertiary-fixed: var(--quipu-tinta);
+  --mat-sys-on-tertiary-fixed-variant: var(--quipu-chilca-oscura);
+  --mat-sys-surface: var(--quipu-piedra);
+  --mat-sys-background: var(--quipu-piedra);
+  --mat-sys-on-surface: var(--quipu-tinta);
+  --mat-sys-on-background: var(--quipu-tinta);
+  --mat-sys-surface-variant: var(--quipu-piedra-oscura);
+  --mat-sys-on-surface-variant: var(--quipu-tinta-secundaria);
+  --mat-sys-surface-bright: var(--quipu-alpaca);
+  --mat-sys-surface-dim: var(--quipu-piedra-oscura);
+  --mat-sys-surface-container-lowest: var(--quipu-hover-fila);
+  --mat-sys-surface-container-low: var(--quipu-alpaca);
+  --mat-sys-surface-container: var(--quipu-alpaca);
+  --mat-sys-surface-container-high: var(--quipu-alpaca);
+  --mat-sys-surface-container-highest: var(--quipu-piedra-oscura);
+  --mat-sys-surface-tint: var(--quipu-chilca);
+  --mat-sys-inverse-surface: var(--quipu-obsidiana);
+  --mat-sys-inverse-on-surface: var(--quipu-alpaca);
+  --mat-sys-inverse-primary: var(--quipu-chilca-clara);
+  --mat-sys-outline: var(--quipu-borde);
+  --mat-sys-outline-variant: var(--quipu-borde-suave);
+  --mat-sys-error: var(--quipu-error);
+  --mat-sys-on-error: var(--quipu-alpaca);
+  --mat-sys-error-container: var(--quipu-rojo-fondo);
+  --mat-sys-on-error-container: var(--quipu-rojo-texto);
+  --mat-sys-corner-extra-small: var(--quipu-radio);
+  accent-color: var(--mat-sys-primary);
+  scrollbar-color: var(--mat-sys-outline) var(--mat-sys-surface);
+
+  // 2. Escala tipográfica del lienzo (§3.3) en los roles de Material: nunca baja de 14 px.
+  @include quipu-type(body-large, 400, 1rem, 1.5);
+  @include quipu-type(body-medium, 400, 0.9375rem, 1.5);
+  @include quipu-type(body-small, 400, 0.875rem, 1.5);
+  @include quipu-type(label-large, 800, 1rem, 1.2);
+  @include quipu-type(label-medium, 700, 0.875rem, 1.3);
+  @include quipu-type(label-small, 700, 0.875rem, 1.3);
+  @include quipu-type(title-large, 800, 1.25rem, 1.3);
+  @include quipu-type(title-medium, 800, 1.125rem, 1.35);
+  @include quipu-type(title-small, 800, 1rem, 1.4);
+  @include quipu-type(headline-small, 600, 1.75rem, 1.15, $quipu-brand-family);
+  @include quipu-type(headline-medium, 600, 2.75rem, 1.05, $quipu-brand-family);
+  @include quipu-type(headline-large, 600, 3.5rem, 1.05, $quipu-brand-family);
+  @include quipu-type(display-small, 600, 3.5rem, 1.05, $quipu-brand-family);
+  @include quipu-type(display-medium, 600, 4rem, 1, $quipu-brand-family);
+  @include quipu-type(display-large, 600, 5rem, 1, $quipu-brand-family);
+
+  // 2. Componentes de Material (P-10 botones, P-07 campos, P-16 diálogos) desde los tokens.
+  --mat-dialog-container-shape: var(--quipu-radio-dialogo);
+  --mat-dialog-container-max-width: var(--quipu-dialogo-ancho);
+  --mat-dialog-container-color: var(--quipu-alpaca);
+  --mat-dialog-subhead-color: var(--quipu-tinta);
+  --mat-dialog-subhead-font: var(--mat-sys-headline-small-font);
+  --mat-dialog-subhead-size: var(--mat-sys-headline-small-size);
+  --mat-dialog-subhead-weight: var(--mat-sys-headline-small-weight);
+  --mat-dialog-subhead-line-height: var(--mat-sys-headline-small-line-height);
+  --mat-dialog-subhead-tracking: 0;
+  --mat-dialog-supporting-text-color: var(--quipu-tinta);
+  --mat-dialog-supporting-text-font: var(--mat-sys-body-large-font);
+  --mat-dialog-supporting-text-size: var(--mat-sys-body-large-size);
+  --mat-dialog-supporting-text-weight: var(--mat-sys-body-large-weight);
+  --mat-dialog-supporting-text-line-height: var(--mat-sys-body-large-line-height);
+  --mat-dialog-supporting-text-tracking: 0;
+  --mat-button-filled-container-shape: var(--quipu-radio);
+  --mat-button-outlined-container-shape: var(--quipu-radio);
+  --mat-button-text-container-shape: var(--quipu-radio);
+  --mat-button-filled-container-height: var(--quipu-alto-control);
+  --mat-button-outlined-container-height: var(--quipu-alto-control);
+  --mat-button-filled-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-filled-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-filled-label-text-tracking: 0;
+  --mat-button-filled-horizontal-padding: 24px;
+  --mat-button-outlined-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-outlined-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-outlined-label-text-tracking: 0;
+  --mat-button-outlined-horizontal-padding: 20px;
+  --mat-button-outlined-outline-color: var(--quipu-chilca);
+  --mat-button-outlined-outline-width: var(--quipu-borde-ancho);
+  --mat-button-text-label-text-size: var(--mat-sys-label-large-size);
+  --mat-button-text-label-text-weight: var(--mat-sys-label-large-weight);
+  --mat-button-text-label-text-tracking: 0;
+  --mat-form-field-container-height: var(--quipu-alto-control);
+  --mat-form-field-container-vertical-padding: 12px;
+  --mat-form-field-container-text-size: var(--mat-sys-body-large-size);
+  --mat-form-field-container-text-tracking: 0;
+  --mat-form-field-container-text-line-height: 1.5rem;
+  --mat-form-field-outlined-container-shape: var(--quipu-radio);
+  --mat-form-field-outlined-outline-color: var(--quipu-borde);
+  --mat-form-field-outlined-hover-outline-color: var(--quipu-tinta);
+  --mat-form-field-outlined-focus-outline-width: var(--quipu-borde-ancho-enfasis);
+  --mat-form-field-outlined-label-text-size: var(--mat-sys-body-large-size);
+  --mat-form-field-outlined-label-text-tracking: 0;
+  --mat-form-field-outlined-label-text-color: var(--quipu-tinta-secundaria);
+  --mat-form-field-subscript-text-size: var(--mat-sys-body-medium-size);
+  --mat-form-field-subscript-text-tracking: 0;
+}
+
+body {
+  margin: 0;
+  font: var(--mat-sys-body-large);
+  background: var(--mat-sys-surface);
+  color: var(--mat-sys-on-surface);
+}
+
+// 3. Título de página (h1, §3.3): su tamaño vive solo aquí; ningún componente lo repite.
+h1 {
+  margin: 0 0 0.5rem;
+  font: var(--mat-sys-headline-large);
+  letter-spacing: var(--quipu-titulo-tracking);
+  text-wrap: balance;
+}
+
+@media (max-width: 599.98px) {
+  h1 {
+    font-size: var(--quipu-titulo-pagina-movil);
+  }
+}
+
+// Título de sección (h2, P-03): Nunito Sans 800 de 20 px.
+h2 {
+  font: var(--mat-sys-title-large);
+}
+
+// Antetítulo: Fraunces en tinta secundaria sobre el h1, dice de qué trata la página (A0.7). Sin
+// margen propio: el h1 que lo sigue pone el espacio (--quipu-espacio-antetitulo).
+.quipu-eyebrow {
+  margin: 0;
+  font-family: var(--mat-sys-headline-small-font);
+  font-size: var(--quipu-antetitulo-size);
+  font-weight: var(--mat-sys-headline-small-weight);
+  line-height: var(--mat-sys-headline-small-line-height);
+  color: var(--quipu-tinta-secundaria);
+}
+
+// El acceso (A0) usa un título más chico, como en el tablero Ingreso.
+app-auth-shell h1 {
+  font-size: var(--mat-sys-headline-medium-size);
+}
+
+@media (max-width: 599.98px) {
+  app-auth-shell h1 {
+    font-size: var(--quipu-titulo-acceso-movil);
+  }
+}
+
+a {
+  color: var(--mat-sys-primary);
+  font-weight: var(--quipu-peso-enfasis);
+  text-decoration: underline;
+  text-underline-offset: var(--quipu-subrayado-offset);
+}
+
+::selection {
+  background: var(--mat-sys-primary);
+  color: var(--mat-sys-on-primary);
+}
+
+:where(input, textarea) {
+  caret-color: var(--mat-sys-primary);
+}
+
+// Los botones responden al presionarlos.
+.mat-mdc-button-base {
+  transition: transform var(--quipu-duracion-presion) var(--quipu-ease-presion);
+}
+
+.mat-mdc-button-base:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mat-mdc-button-base {
+    transition: none;
+  }
+}
+
+// Los campos con contorno son transparentes: con fondo propio no dejan ver el tejido del acceso.
+.mat-mdc-form-field .mat-mdc-text-field-wrapper {
+  background: var(--mat-sys-surface);
+}
+
+// Oculto a la vista y presente para el lector de pantalla: la clase estándar de la CDK,
+// cdk-visually-hidden, en todo el proyecto (no se redefine en los componentes).
+@include cdk.a11y-visually-hidden();
+
+// P-09 Aviso de página: un bloque de tono sin borde, texto de 16 px. Es la única definición: la
+// usan app-page-notice (shared/ui) y los errores de formulario (quipu-alert = tono rojo).
+// Amarillo informa, verde confirma lo que acaba de pasar y rojo pide corregir.
+.quipu-notice,
+.quipu-alert {
+  margin: 0;
+  padding: 0.875rem 1.125rem;
+  border-radius: var(--quipu-radio);
+  font: var(--mat-sys-body-large);
+}
+
+.quipu-notice--info {
+  background: var(--quipu-aviso-info-fondo);
+  color: var(--quipu-aviso-info-texto);
+}
+
+.quipu-notice--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+}
+
+.quipu-notice--error,
+.quipu-alert {
+  background: var(--quipu-aviso-error-fondo);
+  color: var(--quipu-aviso-error-texto);
+}
+
+// P-16 Ícono de un diálogo (va en [dialogIcon] de app-dialog-frame): círculo de 48 px en el tono
+// del aviso que da (rojo: bloqueo; verde: algo cambió y se vuelve a cargar).
+.quipu-dialog-icon {
+  display: grid;
+  place-items: center;
+  width: var(--quipu-alto-control);
+  height: var(--quipu-alto-control);
+  border-radius: 50%;
+}
+
+.quipu-dialog-icon--error {
+  background: var(--quipu-rojo-fondo);
+  color: var(--quipu-rojo-texto);
+}
+
+.quipu-dialog-icon--success {
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+}
+
+// P-07 / P-14 Campo (TAR-218): etiqueta visible encima, campo de 48 px con fondo sólido, error de
+// 15 px y ayuda de 14 px debajo. Todo sale de los tokens de arriba. Uso:
+// <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
+.quipu-field {
+  display: grid;
+  align-content: start;
+  gap: var(--quipu-espacio-campo);
+}
+
+// A group of buttons named by its legend (app-form-field with group): without the frame of a fieldset.
+fieldset.quipu-field {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+// A legend does not take the gap of the grid: it keeps the same space under it as a label.
+fieldset.quipu-field > legend {
+  margin-bottom: var(--quipu-espacio-campo);
+  padding: 0;
+}
+
+.quipu-label {
+  font: var(--mat-sys-label-medium);
+  color: var(--quipu-tinta-secundaria);
+}
+
+.quipu-input {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--quipu-alto-control);
+  padding: 0 var(--quipu-relleno-campo);
+  border: var(--quipu-borde-ancho) solid var(--quipu-borde);
+  border-radius: var(--quipu-radio);
+  background-color: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  font: var(--mat-sys-body-large);
+}
+
+// Un texto de varias líneas (el motivo de A5.2): crece con sus filas en vez de la altura del control.
+.quipu-input--multiline {
+  height: auto;
+  min-height: var(--quipu-alto-control);
+  padding-block: 0.75rem;
+  resize: vertical;
+}
+
+// Un filtro de lista (A3) va sobre la piedra de la página, no sobre papel: mismo borde y medida.
+.quipu-input--filter {
+  background-color: var(--quipu-piedra);
+}
+
+.quipu-input:disabled {
+  opacity: var(--quipu-opacidad-inactivo);
+  cursor: not-allowed;
+}
+
+// El borde de 2 px no mueve el texto: el relleno pierde lo que gana el borde.
+.quipu-input[aria-invalid='true'] {
+  padding-inline: calc(
+    var(--quipu-relleno-campo) - var(--quipu-borde-ancho-enfasis) + var(--quipu-borde-ancho)
+  );
+  border: var(--quipu-borde-ancho-enfasis) solid var(--quipu-error);
+}
+
+// Monto en soles (A5.1, A5.2): el campo con «S/» delante, que no se lee aparte. Uso:
+// <span class="quipu-money"><span aria-hidden="true">S/</span><input class="quipu-input" inputmode="decimal"></span>
+.quipu-money {
+  position: relative;
+  display: block;
+
+  > span {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    font-weight: var(--quipu-peso-enfasis);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > .quipu-input,
+  > .quipu-input[aria-invalid='true'] {
+    display: block;
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.25rem);
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.quipu-field-error {
+  margin: 0;
+  font: var(--mat-sys-body-medium);
+  color: var(--quipu-error);
+}
+
+.quipu-field-help {
+  margin: 0;
+  font: var(--mat-sys-body-small);
+  color: var(--quipu-tinta-secundaria);
+}
+
+// «Mostrar» / «Ocultar» dentro del campo de contraseña (A0.1, A0.2, A0.4, A0.5): un botón de
+// texto con aria-pressed y aria-controls, centrado en el alto del campo.
+.quipu-reveal {
+  position: relative;
+
+  .quipu-input {
+    padding-right: var(--quipu-relleno-mostrar);
+  }
+}
+
+.quipu-reveal-toggle {
+  $inset: calc((var(--quipu-alto-control) - var(--quipu-alto-control-fila)) / 2);
+  position: absolute;
+  top: $inset;
+  right: $inset;
+  height: var(--quipu-alto-control-fila);
+  padding: 0 calc(var(--quipu-relleno-campo) - #{$inset});
+  border: 0;
+  border-radius: var(--quipu-radio);
+  background: transparent;
+  color: var(--quipu-chilca);
+  font: var(--mat-sys-body-medium);
+  font-weight: var(--quipu-peso-enfasis);
+  text-decoration: underline;
+  text-underline-offset: var(--quipu-subrayado-offset);
+  cursor: pointer;
+}
+
+// P-10 Botones (TAR-285): clases para <button> o <a>. Principal verde lleno (uno por zona),
+// secundario con borde verde y fondo transparente, terciario como enlace subrayado. 48 px en la
+// página; `quipu-button--row` los deja en 40 px dentro de una fila (el toque sigue en 44 px).
+.quipu-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-sizing: border-box;
+  min-height: var(--quipu-alto-control);
+  padding: 0 1.375rem;
+  border: var(--quipu-borde-ancho) solid transparent;
+  border-radius: var(--quipu-radio);
+  font: var(--mat-sys-label-large);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--quipu-duracion-presion) var(--quipu-ease-presion),
+    background-color var(--quipu-duracion-hover) var(--quipu-ease-hover),
+    color var(--quipu-duracion-hover) var(--quipu-ease-hover);
+}
+
+.quipu-button:active:not(:disabled, [aria-disabled='true']) {
+  transform: scale(0.97);
+}
+
+.quipu-button--primary {
+  background: var(--quipu-chilca);
+  color: var(--quipu-alpaca);
+}
+
+.quipu-button--primary:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--quipu-chilca-oscura);
+}
+
+.quipu-button--secondary {
+  border-color: var(--quipu-chilca);
+  background: transparent;
+  color: var(--quipu-chilca);
+}
+
+.quipu-button--secondary:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--quipu-piedra-oscura);
+}
+
+.quipu-button--tertiary {
+  min-height: var(--quipu-toque);
+  padding: 0;
+  background: none;
+  color: var(--quipu-chilca);
+  text-decoration: underline;
+  text-underline-offset: var(--quipu-subrayado-offset);
+}
+
+.quipu-button--tertiary:hover:not(:disabled, [aria-disabled='true']) {
+  color: var(--quipu-tinta);
+}
+
+// Peligro: cochinilla llena (alpaca sobre cochinilla 6.3:1) para la acción que quita algo, como
+// «Desactivar» en A7. Ocupa el lugar del principal: uno por zona.
+.quipu-button--danger {
+  background: var(--quipu-cochinilla);
+  color: var(--quipu-alpaca);
+}
+
+.quipu-button--danger:hover:not(:disabled, [aria-disabled='true']) {
+  background: var(--quipu-rojo-texto);
+}
+
+// El botón principal grande del acceso (A0), de A3.1 y de A3.7: 52 px.
+.quipu-button--big {
+  min-height: var(--quipu-alto-boton-grande);
+}
+
+.quipu-button--row {
+  min-height: var(--quipu-toque);
+  padding-block: 2px;
+}
+
+.quipu-button:is(:disabled, [aria-disabled='true']) {
+  border-color: transparent;
+  background: var(--quipu-deshabilitado);
+  color: var(--quipu-sobre-deshabilitado);
+  cursor: not-allowed;
+}
+
+.quipu-button--tertiary:is(:disabled, [aria-disabled='true']) {
+  background: none;
+  color: var(--quipu-borde);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quipu-button {
+    transition:
+      background-color var(--quipu-duracion-hover) var(--quipu-ease-hover),
+      color var(--quipu-duracion-hover) var(--quipu-ease-hover);
+  }
+
+  .quipu-button:active:not(:disabled, [aria-disabled='true']) {
+    transform: none;
+  }
+}
+
+// Control segmentado: una opción de pocas, botones pegados con aria-pressed (A7 «Tipo de
+// documento»). La elegida va en obsidiana; las otras en piedra oscura. Uso:
+// <div class="quipu-segmented" role="group"><button type="button" aria-pressed="true">…</button></div>
+.quipu-segmented {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--quipu-franja);
+
+  button {
+    min-height: var(--quipu-toque);
+    padding: 0 var(--quipu-relleno-campo);
+    border: 0;
+    border-radius: var(--quipu-radio);
+    background: var(--quipu-piedra-oscura);
+    color: var(--quipu-tinta);
+    font: var(--mat-sys-label-large);
+    cursor: pointer;
+  }
+
+  button[aria-pressed='true'] {
+    background: var(--quipu-obsidiana);
+    color: var(--quipu-alpaca);
+  }
+
+  button:disabled {
+    opacity: var(--quipu-opacidad-inactivo);
+    cursor: not-allowed;
+  }
+}
+
+// Cabecera y filtros de una lista (A3, A5): el título con su acción a la derecha; debajo, «Buscar»
+// con su lupa, los desplegables y «Mostrando N de M» con «Quitar filtros». Uso:
+// <div class="quipu-list-head"><h2>…</h2><a class="quipu-button …"></div>
+// <div class="quipu-filters"><div class="quipu-field quipu-search"><label>…</label>
+// <div class="quipu-search-box"><svg>…</svg><input class="quipu-input …"></div></div>…
+// <p class="quipu-list-count"><output>…</output></p></div>
+.quipu-list-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.quipu-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+  margin: 1.25rem 0 1rem;
+
+  > .quipu-field,
+  > app-form-field {
+    min-width: 12rem;
+  }
+}
+
+.quipu-search {
+  flex: 1 1 18rem;
+  max-width: 26rem;
+}
+
+.quipu-search-box {
+  position: relative;
+
+  svg {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  .quipu-input {
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.125rem);
+  }
+}
+
+.quipu-list-count {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 0.375rem;
+  min-height: var(--quipu-alto-control);
+  margin: 0 0 0 auto;
+  color: var(--quipu-tinta-secundaria);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 599.98px) {
+  .quipu-list-head > .quipu-button {
+    width: 100%;
+  }
+
+  .quipu-filters {
+    display: grid;
+
+    > .quipu-field,
+    > app-form-field {
+      min-width: 0;
+    }
+  }
+
+  .quipu-search {
+    max-width: none;
+  }
+
+  .quipu-list-count {
+    margin-left: 0;
+  }
+
+  .quipu-segmented.quipu-segmented--fill button {
+    flex: 1;
+  }
+}
+
+// Tabla del lienzo (A7, A3): filas de alpaca separadas por la franja de la piedra de la página, la
+// cabecera en piedra oscura y ninguna línea gris. Uso: <div class="quipu-table-wrap"><table
+// class="quipu-table">…</table></div>; el ancho mínimo es del componente (su layout).
+.quipu-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--quipu-radio);
+}
+
+.quipu-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--quipu-alpaca);
+
+  th,
+  td {
+    padding: var(--quipu-relleno-celda);
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  thead tr {
+    background: var(--quipu-piedra-oscura);
+  }
+
+  thead th {
+    font-size: var(--mat-sys-body-medium-size);
+    font-weight: var(--quipu-peso-fuerte);
+    color: var(--quipu-tinta);
+  }
+
+  tbody tr {
+    border-top: var(--quipu-franja) solid var(--quipu-piedra);
+  }
+
+  tbody tr:hover {
+    background: var(--quipu-hover-fila);
+  }
+
+  tbody th,
+  tfoot th {
+    font-weight: normal;
+  }
+
+  // Figures to the right and on one line; the action of a row to the right and on one line.
+  .align-end {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .align-action {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  // A figure column sorts with its arrow before the label, so the label stays on the right edge.
+  .align-end .quipu-sort {
+    flex-direction: row-reverse;
+  }
+
+  // The last row, such as the totals of A5.2.
+  tfoot tr {
+    border-top: var(--quipu-franja) solid var(--quipu-piedra);
+    background: var(--quipu-piedra-oscura);
+  }
+}
+
+// Cabecera ordenable de una tabla (A3, A3.2): un botón dentro del <th aria-sort>, con su flecha que
+// gira al invertir el orden. Uso: <button class="quipu-sort" [class.active]>…<svg class="quipu-sort-arrow">
+.quipu-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0;
+  border: 0;
+  background: none;
+  color: var(--quipu-tinta-secundaria);
+  font: inherit;
+  cursor: pointer;
+}
+
+.quipu-sort.active {
+  color: var(--quipu-tinta);
+}
+
+.quipu-sort-arrow {
+  flex: none;
+  transition: transform var(--quipu-duracion-hover) var(--quipu-ease);
+}
+
+.quipu-sort:not(.active) .quipu-sort-arrow {
+  opacity: var(--quipu-opacidad-inactivo);
+}
+
+.quipu-sort-arrow.down {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quipu-sort-arrow {
+    transition: none;
+  }
+}
+
+// El nombre de una fila o tarjeta en negrita; sin nombre aún, el texto en cursiva y tinta secundaria.
+.quipu-name {
+  font-weight: var(--quipu-peso-enfasis);
+}
+
+.quipu-unnamed {
+  font-style: italic;
+  color: var(--quipu-tinta-secundaria);
+}
+
+// Tarjetas de una lista en un teléfono (A7, A3): alpaca, separadas por la franja. Uso:
+// <ul class="quipu-card-list"><li class="quipu-card">…</li></ul>
+.quipu-card-list {
+  display: grid;
+  gap: var(--quipu-franja);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.quipu-card {
+  display: grid;
+  gap: 0.5rem;
+  padding: var(--quipu-relleno-tarjeta);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Panel «Lo que toca ahora» (A7, A3): un bloque de piedra oscura con lo pendiente; el componente
+// pone la cifra y el orden de sus piezas.
+.quipu-now-panel {
+  display: grid;
+  gap: 0.5rem;
+  padding: var(--quipu-relleno-panel);
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-piedra-oscura);
+
+  p {
+    margin: 0;
+  }
+}
+
+// Una lista se dibuja como tabla en pantalla ancha y como tarjetas en un teléfono: solo una se ve.
+.quipu-only-narrow {
+  display: none;
+}
+
+@media (max-width: 599.98px) {
+  .quipu-now-panel {
+    padding: var(--quipu-relleno-panel-movil);
+  }
+
+  // Its action takes the whole width on a phone.
+  .quipu-now-panel > .quipu-button {
+    width: 100%;
+  }
+
+  .quipu-only-wide {
+    display: none;
+  }
+
+  .quipu-only-narrow {
+    display: grid;
+  }
+}
+
+// P-01 Cenefa de 20 px bajo la barra (TAR-285): obsidiana con tres capas enmascaradas por el mismo
+// dibujo del acceso, cada una en su token. Hijos: .quipu-band-threads, .quipu-band-red, .quipu-band-gold.
+.quipu-band {
+  position: relative;
+  height: 20px;
+  background: var(--quipu-obsidiana);
+
+  span {
+    position: absolute;
+    inset: 0;
+    mask-repeat: repeat-x;
+    mask-position: left bottom;
+    mask-size: 20px 20px;
+  }
+}
+
+.quipu-band-threads {
+  background: var(--quipu-alpaca);
+  mask-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cpath%20d%3D%22M0%2018%20L10%206%20L20%2018%20L30%206%20L40%2018%20M0%2034%20L10%2022%20L20%2034%20L30%2022%20L40%2034%22%20fill%3D%22none%22%20stroke%3D%22black%22%20stroke-width%3D%223%22%2F%3E%3C%2Fsvg%3E');
+}
+
+.quipu-band-red {
+  background: var(--quipu-cochinilla);
+  mask-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cpath%20d%3D%22M10%2012%20L15%2018%20H5Z%20M30%2012%20L35%2018%20H25Z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+.quipu-band-gold {
+  background: var(--quipu-qolle);
+  mask-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2040%2040%22%3E%3Cpath%20d%3D%22M10%2028%20L15%2034%20H5Z%20M30%2028%20L35%2034%20H25Z%22%2F%3E%3C%2Fsvg%3E');
+}
+
+// P-07: los selectores nativos sin el aspecto del sistema, con una flecha de 16 px y 40 px de
+// relleno a la derecha. Los de Material (matNativeControl) ya dibujan la suya.
+select:not([matnativecontrol]) {
+  appearance: none;
+  padding-right: var(--quipu-relleno-flecha);
+  background-image: url('data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%233d4842%22%20stroke-width%3D%222.5%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M6%209l6%206%206-6%22%2F%3E%3C%2Fsvg%3E');
+  background-repeat: no-repeat;
+  background-position: right var(--quipu-relleno-campo) center;
+  background-size: 16px 16px;
+  cursor: pointer;
+}
+
+// Foco visible en todo lo interactivo (anillo chilca, 5.5:1 sobre la piedra).
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--mat-sys-primary);
+  outline-offset: 2px;
+}

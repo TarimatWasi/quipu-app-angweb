@@ -1,0 +1,14 @@
+@use '../../../shared/styles/list-page';
+
+// A5: only the layout of the page. Header, panel, list head, filters, table, cards, notices,
+// skeleton, badges and buttons are the kit's.
+@include list-page.layout;
+
+:host {
+  --payment-summary-skeleton-height: 152px;
+}
+@media (max-width: 599.98px) {
+  :host {
+    --payment-summary-skeleton-height: 200px;
+  }
+}

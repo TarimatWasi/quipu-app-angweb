@@ -1,0 +1,189 @@
+<app-page-header
+  heading="Revisar pago"
+  backLink="/admin/payments"
+  backTo="Pagos"
+  [backQuery]="backQuery"
+/>
+
+@if (refreshError(); as message) {
+  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+}
+@if (refreshing() && refreshError() === null) {
+  <output>Actualizando…</output>
+}
+@switch (state().kind) {
+  @case ('loading') {
+    <app-skeleton subject="el pago"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <section>
+            <h2>Comprobantes</h2>
+            <app-skeleton-block shape="badge" /><app-skeleton-block
+              class="detail"
+              shape="rectangle"
+              height="32rem"
+            /><app-skeleton-block class="detail" width="70%" />
+          </section>
+          <div class="side">
+            <section>
+              <h2>Lo que se está pagando</h2>
+              <app-skeleton-facts [labels]="['Huésped', 'Ambiente', 'Período', 'Cuota']" />
+            </section>
+            <section>
+              <h2>Montos</h2>
+              <app-skeleton-fields [labels]="['Monto declarado', 'Monto verificado']" />
+            </section>
+            <section>
+              <h2>Decisión</h2>
+              <app-skeleton-block shape="rectangle" />
+            </section>
+          </div>
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('not-found') {
+    <app-page-notice class="state" tone="error" heading="No encontramos el pago.">
+      <a routerLink="/admin/payments" [queryParams]="backQuery">Volver a Pagos</a>
+    </app-page-notice>
+  }
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
+  }
+}
+
+@if (payment(); as p) {
+  <div class="layout">
+    <app-review-proofs
+      class="proofs"
+      [entries]="entries()"
+      [canAdd]="editable()"
+      [full]="atProofLimit()"
+      [maxProofs]="maxProofs"
+      [busy]="blocked()"
+      (add)="addProof()"
+    />
+
+    <div class="side">
+      @if (facts(); as f) {
+        <section aria-labelledby="review-paying-title">
+          <h2 id="review-paying-title">Lo que se está pagando</h2>
+          <div class="facts">
+            <app-fact-tile class="who" label="Huésped" surface="stone">
+              <a class="guest" [routerLink]="['/admin/guests', p.guestId]">
+                @if (f.name; as fullName) {
+                  {{ fullName }}
+                } @else {
+                  <span class="quipu-unnamed">Sin nombre aún</span>
+                }
+              </a>
+              <span class="detail">{{ f.document }} · {{ f.type }}</span>
+            </app-fact-tile>
+            <app-fact-tile label="Ambiente" surface="stone" [value]="f.environment" />
+            <app-fact-tile [label]="f.whatLabel" surface="stone" [value]="f.what" />
+            <app-fact-tile [label]="f.dueLabel" surface="stone" [value]="f.due" />
+          </div>
+          @if (f.creditNote; as note) {
+            <p class="note">{{ note }}</p>
+          }
+        </section>
+      }
+
+      <div>
+        <app-review-amounts
+          [entries]="entries()"
+          [texts]="amounts()"
+          [invalidIds]="invalidIds()"
+          [editable]="editable()"
+          [busy]="blocked()"
+          [declaredTotal]="declaredTotal()"
+          [verifiedTotal]="verifiedTotalText()"
+          (typed)="typed($event)"
+        />
+        @if (balance(); as b) {
+          <div class="balance" role="status">
+            <app-page-notice [tone]="b.tone" [heading]="b.heading">{{ b.text }}</app-page-notice>
+          </div>
+        }
+      </div>
+
+      <section aria-labelledby="payment-decision-title">
+        <h2 id="payment-decision-title">{{ decisionTitle() }}</h2>
+
+        @if (p.status === 'REJECTED' && outcome() === null) {
+          <app-page-notice class="rejected" tone="error" [heading]="resolved()">
+            @if (p.rejectionReason; as reason) {
+              Motivo: {{ reason }}
+            }
+          </app-page-notice>
+        }
+
+        @if (actionError(); as message) {
+          <p id="payment-action-error" class="quipu-alert" role="alert" tabindex="-1">
+            {{ message }}
+          </p>
+        }
+
+        @if (outcome(); as done) {
+          <div class="outcome quipu-notice quipu-notice--success">
+            <h3 id="payment-outcome" tabindex="-1">
+              {{ done === 'APPROVED' ? 'Pago aprobado' : 'Pago rechazado' }}
+            </h3>
+            <p>{{ outcomeText() }}</p>
+            @if (noneLeft()) {
+              <p role="status">No quedan pagos por revisar.</p>
+            }
+            <div class="actions">
+              @if (!noneLeft()) {
+                <button
+                  class="quipu-button quipu-button--primary"
+                  type="button"
+                  [disabled]="blocked()"
+                  (click)="reviewNext()"
+                >
+                  Revisar el siguiente
+                </button>
+              }
+              <a
+                class="quipu-button quipu-button--tertiary"
+                routerLink="/admin/payments"
+                [queryParams]="backQuery"
+                >Volver a Pagos</a
+              >
+            </div>
+          </div>
+        } @else if (editable()) {
+          <div class="actions">
+            <button
+              class="quipu-button quipu-button--primary"
+              type="button"
+              [disabled]="!canApprove()"
+              [attr.aria-describedby]="'payment-decision-help'"
+              (click)="approve()"
+            >
+              Aprobar pago
+            </button>
+            <button
+              class="quipu-button quipu-button--secondary"
+              type="button"
+              [disabled]="blocked()"
+              (click)="reject()"
+            >
+              {{ p.status === 'REJECTED' ? 'Rechazar de nuevo' : 'Rechazar con motivo' }}
+            </button>
+          </div>
+          <p id="payment-decision-help" class="help">{{ help() }}</p>
+        } @else {
+          <div class="closed">
+            <app-status-badge tone="paid" label="Aprobado" />
+            <p>{{ resolved() }}</p>
+          </div>
+        }
+      </section>
+    </div>
+  </div>
+}

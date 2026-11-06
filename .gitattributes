@@ -1,0 +1,4 @@
+# Finales de línea LF en el árbol de trabajo (también en Windows): Prettier 3 usa LF por defecto y
+# los scripts, el Dockerfile y nginx.conf no deben llegar con CRLF al contenedor. Los binarios
+# (imágenes, fuentes) los detecta Git solo con text=auto.
+* text=auto eol=lf

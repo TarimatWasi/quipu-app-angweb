@@ -1,0 +1,158 @@
+<app-page-header heading="Nuevo huésped" backLink="/admin/guests" backTo="Huéspedes" />
+
+<div class="layout">
+  <aside class="summary" aria-labelledby="summary-title">
+    <h2 id="summary-title">Lo que se va a crear</h2>
+    <div class="facts">
+      @for (fact of facts(); track fact.label) {
+        <app-fact-tile
+          surface="stone"
+          [class.wide]="fact.wide"
+          [label]="fact.label"
+          [value]="fact.value"
+        />
+      }
+    </div>
+    <p class="note">
+      Queda en <app-status-badge tone="review" label="Pendiente de activación" /> hasta que use su
+      acceso. Su nombre y sus datos los completa el huésped.
+    </p>
+  </aside>
+
+  <form
+    class="main"
+    novalidate
+    aria-label="Datos del nuevo huésped"
+    [formRoot]="guestForm"
+    [attr.aria-describedby]="generalError() ? generalErrorId : null"
+  >
+    <section class="section" aria-labelledby="who-title">
+      <h2 id="who-title">Quién es</h2>
+      <app-form-field
+        fieldId="new-guest-type"
+        label="Tipo de huésped"
+        [group]="true"
+        [help]="typeHelp()"
+      >
+        <div class="quipu-segmented">
+          @for (option of guestTypes; track option.value) {
+            <button
+              type="button"
+              aria-describedby="new-guest-type-help"
+              [attr.aria-pressed]="option.value === type() ? 'true' : 'false'"
+              [disabled]="saving()"
+              (click)="chooseType(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </app-form-field>
+
+      <app-form-field fieldId="new-guest-document-type" label="Tipo de documento" [group]="true">
+        <div class="quipu-segmented">
+          @for (option of documentTypes; track option.value) {
+            <button
+              type="button"
+              [attr.aria-pressed]="option.value === documentType() ? 'true' : 'false'"
+              [disabled]="saving()"
+              (click)="chooseDocumentType(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </app-form-field>
+
+      <app-form-field
+        class="narrow"
+        fieldId="new-guest-document"
+        label="Número de documento"
+        [help]="documentHelp()"
+        [error]="numberError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input figures"
+          autocomplete="off"
+          aria-required="true"
+          [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
+          [formField]="guestForm.documentNumber"
+        />
+      </app-form-field>
+    </section>
+
+    <section class="section" aria-labelledby="notify-title">
+      <h2 id="notify-title">Para avisarle <span class="optional">(opcional)</span></h2>
+      <app-form-field
+        fieldId="new-guest-phone"
+        label="Teléfono"
+        [help]="phoneHelp"
+        [error]="phoneError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input figures"
+          type="tel"
+          inputmode="tel"
+          autocomplete="off"
+          [formField]="guestForm.phone"
+        />
+      </app-form-field>
+      <app-form-field
+        fieldId="new-guest-email"
+        label="Correo"
+        [help]="emailHelp"
+        [error]="emailError()"
+      >
+        <input
+          appFieldControl
+          class="quipu-input"
+          type="email"
+          autocomplete="off"
+          [formField]="guestForm.contactEmail"
+        />
+      </app-form-field>
+    </section>
+
+    <section class="section" aria-labelledby="access-title">
+      <h2 id="access-title">Cómo entregar el acceso</h2>
+      <app-form-field
+        fieldId="new-guest-access"
+        label="Cómo entregar el acceso"
+        [group]="true"
+        [hiddenLabel]="true"
+        [help]="accessHelp()"
+      >
+        <div class="quipu-segmented">
+          @for (option of accessModes; track option.value) {
+            <button
+              type="button"
+              aria-describedby="new-guest-access-help"
+              [attr.aria-pressed]="option.value === accessMode() ? 'true' : 'false'"
+              [disabled]="saving()"
+              (click)="chooseAccessMode(option.value)"
+            >
+              {{ option.label }}
+            </button>
+          }
+        </div>
+      </app-form-field>
+    </section>
+
+    @if (generalError(); as message) {
+      <p [id]="generalErrorId" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
+    }
+
+    <div class="actions">
+      <button
+        class="quipu-button quipu-button--primary quipu-button--big"
+        type="submit"
+        [disabled]="saving()"
+      >
+        {{ saving() ? 'Creando…' : 'Crear huésped' }}
+      </button>
+      <a class="quipu-button quipu-button--tertiary" routerLink="/admin/guests">Cancelar</a>
+    </div>
+  </form>
+</div>
