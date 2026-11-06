@@ -313,6 +313,27 @@ const violations = [
     'QP-ANGWEB-ORG-02',
   ],
   ['src/app/a.spec.ts', 'export const a = jasmine;', 'FE-ANG-TST-01'],
+  // TAR-297: the kit instead of Material buttons, snackbars, form fields and tables.
+  [
+    'src/app/features/f/pages/a.component.ts',
+    "import { MatButton } from '@angular/material/button';\nexport const a = MatButton;",
+    'QP-UI-01',
+  ],
+  [
+    'src/app/shared/a.ts',
+    "import { MatSnackBar } from '@angular/material/snack-bar';\nexport const a = MatSnackBar;",
+    'QP-UI-01',
+  ],
+  [
+    'src/app/layout/a.ts',
+    "import { MatFormField } from '@angular/material/form-field';\nexport const a = MatFormField;",
+    'QP-UI-01',
+  ],
+  [
+    'src/app/features/f/components/a.component.ts',
+    "import { MatTable } from '@angular/material/table';\nexport const a = MatTable;",
+    'QP-UI-01',
+  ],
   // Templates.
   ['src/app/a.html', '<button>x</button>', 'button-has-type'],
   ['src/app/a.html', '<div *ngIf="a">x</div>', 'prefer-control-flow'],
