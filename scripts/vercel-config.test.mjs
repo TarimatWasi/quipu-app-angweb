@@ -104,16 +104,13 @@ test('every destination is https and every rule is host-conditional', () => {
   }
 });
 
-// ADR-O03 / TAR-167: la rama development la despliega el pipeline (workflow deploy), no la integración
-// de Git de Vercel; desactivar solo esa rama evita desplegar dos veces y conserva los previews de PR.
-test('the development branch is deployed by the pipeline, not by the Vercel Git integration', () => {
+// TAR-301: development se despliega con la integración de Git de Vercel (preview ligado a
+// quipu-dev.tarimatwasi.com); solo se apaga la rama aislada de revisión de CSRF.
+test('the Vercel Git integration deploys development and only the isolated CSRF review branch is disabled', () => {
   const enabled = config.git?.deploymentEnabled;
   assert.ok(enabled && typeof enabled === 'object', 'git.deploymentEnabled must be an object');
-  assert.equal(enabled.development, false);
-});
-
-test('only development and the isolated CSRF review branch are disabled, preserving other PR previews', () => {
+  assert.notEqual(enabled.development, false);
   // TAR-300: no preview deploy while backend/contract enforcement is being reviewed in parallel.
-  assert.deepEqual(Object.keys(config.git.deploymentEnabled), ['development', 'feat/TAR-300-csrf']);
-  assert.equal(config.git.deploymentEnabled['feat/TAR-300-csrf'], false);
+  assert.deepEqual(Object.keys(enabled), ['feat/TAR-300-csrf']);
+  assert.equal(enabled['feat/TAR-300-csrf'], false);
 });
