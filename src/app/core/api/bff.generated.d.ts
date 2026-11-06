@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract 5211bb61b3d5f178adc4bc0530763de564488541 (TarimatWasi/quipu-lib-contracts), spec sha256 d558b4035ca02e5557890b3c94be98533e2d1bfd71acf2498db7459b33109669.
+ * Generated from the BFF contract v0.21.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d558b4035ca02e5557890b3c94be98533e2d1bfd71acf2498db7459b33109669.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
