@@ -1,5 +1,11 @@
 import type { GuestDetail, PeriodStatus, Stay } from '@core/api/clients/admin-guests.service';
-import { formatDate, formatMoney, formatPeriod, monthName } from '@shared/payments/payment-format';
+import {
+  daysAgo,
+  formatDate,
+  formatMoney,
+  formatPeriod,
+  monthName,
+} from '@shared/payments/payment-format';
 import { joinWords, onboardingSteps } from './detail-side';
 import { isAccessExpired, limaDay, whenText } from './guest-list-texts';
 import { stayDatesWithYear } from './guest-texts';
@@ -235,16 +241,6 @@ function rejectedPanel(rejected: Charge & { readonly paymentId: string }): Detai
 
 function isRejected(charge: Charge): charge is Charge & { readonly paymentId: string } {
   return charge.state === 'UNPAID' && charge.paymentId !== null;
-}
-
-/** «hoy», «hace 1 día», «hace 4 días»: how long ago a payment was sent, by days in Lima. */
-export function daysAgo(sentAt: string, now: Date): string | null {
-  const sent = limaDay(sentAt);
-  const today = limaDay(now.toISOString());
-  if (sent === null || today === null) return null;
-  const days = Math.round((Date.parse(today) - Date.parse(sent)) / 86_400_000);
-  if (days <= 0) return 'hoy';
-  return days === 1 ? 'hace 1 día' : `hace ${String(days)} días`;
 }
 
 /** 8: a payment waiting for its review, the oldest one. */

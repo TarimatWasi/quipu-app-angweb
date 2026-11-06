@@ -1,4 +1,5 @@
 import type { components, operations } from '@core/api/bff.generated';
+import { COLLATOR, matchesAny } from '@shared/text/search';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import { documentText, GUEST_STATUS_BADGES, GUEST_TYPE_LABELS, STATUS_TONES } from './guest-texts';
 import { accessText, environmentText } from './guest-list-texts';
@@ -69,18 +70,8 @@ export function hasFilters(filters: GuestFilters): boolean {
   return filters.search.trim() !== '' || filters.type !== 'ALL' || filters.state !== 'ALL';
 }
 
-/** Lower case and without accents, so «huaman» finds «Huamán». */
-function fold(text: string): string {
-  return text
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
-}
-
 /** «Buscar» over what is loaded: the name, the document and the environment. */
 export function matchesSearch(guest: GuestSummary, search: string): boolean {
-  const wanted = fold(search.trim());
-  if (wanted === '') return true;
   const environment = environmentText(guest);
   const haystack = [
     guest.name ?? '',
@@ -88,7 +79,7 @@ export function matchesSearch(guest: GuestSummary, search: string): boolean {
     guest.environment?.code ?? '',
     environment.main,
   ];
-  return haystack.some((text) => fold(text).includes(wanted));
+  return matchesAny(haystack, search);
 }
 
 const STATUS_RANK: Readonly<Record<GuestStatus, number>> = {
@@ -97,8 +88,6 @@ const STATUS_RANK: Readonly<Record<GuestStatus, number>> = {
   ACTIVE: 2,
   INACTIVE: 3,
 };
-
-const COLLATOR = new Intl.Collator('es', { sensitivity: 'base', numeric: true });
 
 /** By name; a guest without a name yet goes after the named ones, by its document. */
 function byName(a: GuestSummary, b: GuestSummary): number {

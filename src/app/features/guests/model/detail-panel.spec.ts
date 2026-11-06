@@ -1,5 +1,5 @@
 import type { GuestDetail, PeriodStatus, Stay } from '@core/api/clients/admin-guests.service';
-import { daysAgo, detailPanel, owesAnything } from './detail-panel';
+import { detailPanel, owesAnything } from './detail-panel';
 import type { PanelInput } from './detail-panel';
 
 type Contract = NonNullable<GuestDetail['contract']>;
@@ -332,10 +332,7 @@ describe('A3.2 «Lo que toca ahora»', () => {
     expect(panel({ periods }).figure).toBe('0');
   });
 
-  it('says how long ago a payment was sent and whether the guest owes', () => {
-    expect(daysAgo('2026-11-05T14:00:00Z', NOW)).toBe('hoy');
-    expect(daysAgo('2026-11-04T14:00:00Z', NOW)).toBe('hace 1 día');
-    expect(daysAgo('no', NOW)).toBeNull();
+  it('says whether the guest owes', () => {
     expect(
       owesAnything({ guest: guestOf(), periods: [period('2026-10', 'OVERDUE')], stays: [] }),
     ).toBe(true);

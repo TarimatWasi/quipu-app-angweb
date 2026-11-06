@@ -114,8 +114,53 @@ async function createDirect(db: MockDb, req: MockRequest): Promise<PaymentRecord
   return payment;
 }
 
+type Dashboard = operations['getAdminDashboard']['responses'][200]['content']['application/json'];
+
+/**
+ * The part of the administrator's home that A5 reads: the vouchers waiting, oldest first (at
+ * most 20), how many there are, and the rejected payments not yet corrected with their oldest.
+ * The rest of the home (A1) is not simulated yet (TAR-290).
+ */
+function queueDashboard(
+  db: MockDb,
+): Pick<Dashboard, 'pendingVouchers' | 'pendingVouchersTotal' | 'rejected'> {
+  const pending = db.data.payments
+    .filter((payment) => payment.status === 'PENDING')
+    .sort((a, b) => a.submittedAt.localeCompare(b.submittedAt));
+  const rejected = db.data.payments
+    .filter((payment) => payment.status === 'REJECTED')
+    .sort((a, b) => (a.reviewedAt ?? '').localeCompare(b.reviewedAt ?? ''));
+  const oldest = rejected[0];
+  const item = oldest === undefined ? null : queueItem(db, oldest);
+  return {
+    pendingVouchers: pending.slice(0, 20).map((payment) => queueItem(db, payment)),
+    pendingVouchersTotal: pending.length,
+    rejected: {
+      count: rejected.length,
+      oldest:
+        oldest === undefined || item === null
+          ? null
+          : {
+              paymentId: oldest.id,
+              guestName: item.guestName,
+              period: item.period,
+              stayStartDate: item.stayStartDate,
+              stayEndDate: item.stayEndDate,
+              rejectedAt: oldest.reviewedAt ?? oldest.submittedAt,
+            },
+    },
+  };
+}
+
 /** The review queue (A5), the review (A5.2) and the direct payment (A5.1). */
 export const ADMIN_PAYMENT_ROUTES: readonly MockRoute[] = [
+  {
+    key: 'GET /bff/admin/dashboard',
+    handler: (_req, ctx) => {
+      ctx.requireAdmin();
+      return ok(queueDashboard(ctx.db));
+    },
+  },
   {
     key: 'GET /bff/admin/payments',
     handler: (req, ctx) => {

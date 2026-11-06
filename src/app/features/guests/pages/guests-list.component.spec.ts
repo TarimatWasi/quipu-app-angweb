@@ -144,7 +144,7 @@ async function setup() {
     [...root.querySelectorAll('tbody th')].map((cell) =>
       (cell.querySelector('.quipu-name, .quipu-unnamed')?.textContent ?? '').trim(),
     );
-  const count = () => root.querySelector('.count output')?.textContent.trim() ?? '';
+  const count = () => root.querySelector('.quipu-list-count output')?.textContent.trim() ?? '';
   return {
     root,
     view,
@@ -181,7 +181,7 @@ describe('GuestsListComponent (A3)', () => {
     const add = view.getByRole('link', { name: 'Nuevo huésped' });
     expect(add.getAttribute('href')).toBe('/admin/guests/new');
     expect(add.classList).toContain('quipu-button--secondary');
-    expect(add.closest('.all-head')?.querySelector('h2')?.textContent.trim()).toBe(
+    expect(add.closest('.quipu-list-head')?.querySelector('h2')?.textContent.trim()).toBe(
       'Todos los huéspedes',
     );
   });
@@ -305,7 +305,9 @@ describe('GuestsListComponent (A3)', () => {
     const { root, view, backend, answer, search, click, names, count } = await setup();
     await answer(page([ROSA, ANA, EXPIRED]));
     expect(count()).toBe('Mostrando 3 de 3 cargados');
-    expect(root.querySelector('.count output')?.getAttribute('aria-live')).toBe('polite');
+    expect(root.querySelector('.quipu-list-count output')?.getAttribute('aria-live')).toBe(
+      'polite',
+    );
     expect(view.queryByRole('button', { name: 'Quitar filtros' })).toBeNull();
 
     await search('cabaña');

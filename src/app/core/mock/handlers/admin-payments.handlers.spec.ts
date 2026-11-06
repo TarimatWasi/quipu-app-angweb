@@ -14,6 +14,11 @@ import type { MockHarness } from '../mock-bff.testing';
 type Schemas = components['schemas'];
 type QueuePage = Schemas['PagedPaymentQueue'];
 type Payment = Schemas['Payment'];
+interface QueueDashboard {
+  readonly pendingVouchers: Schemas['PaymentQueueItem'][];
+  readonly pendingVouchersTotal: number;
+  readonly rejected: Schemas['DashboardRejected'];
+}
 
 const ids = (page: QueuePage) => page.content.map((item) => item.id);
 
@@ -26,6 +31,21 @@ async function admin(): Promise<MockHarness> {
 describe('admin payments in the simulated BFF', () => {
   afterEach(() => {
     resetMockSettings();
+  });
+
+  it('counts the queue for A5 in the dashboard: the pending ones oldest first and the rejected ones', async () => {
+    const mock = await admin();
+    const pending = await mock.get<QueuePage>('/bff/admin/payments', { status: 'PENDING' });
+    const before = await mock.get<QueueDashboard>('/bff/admin/dashboard');
+    expect(before.pendingVouchersTotal).toBe(pending.content.length);
+    expect(before.pendingVouchers.map((item) => item.id)).toEqual(ids(pending));
+
+    const id = pending.content[0]?.id ?? '';
+    await mock.send('PATCH', `/bff/admin/payments/${id}`, { status: 'REJECTED', reason: 'Falta' });
+    const after = await mock.get<QueueDashboard>('/bff/admin/dashboard');
+    expect(after.pendingVouchersTotal).toBe(pending.content.length - 1);
+    expect(after.rejected.count).toBe(before.rejected.count + 1);
+    expect(after.rejected.oldest).not.toBeNull();
   });
 
   it('approving a payment moves it from the pending view to the approved one', async () => {
