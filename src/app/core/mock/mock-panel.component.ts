@@ -1,3 +1,5 @@
+import { MockControlsComponent } from './mock-controls.component';
+import { MockRequestControls } from './mock-request-controls';
 import { DOCUMENT } from '@angular/common';
 import { Component, computed, inject, InjectionToken, signal } from '@angular/core';
 import { Router } from '@angular/router';
@@ -25,6 +27,7 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
  */
 @Component({
   selector: 'app-mock-panel',
+  imports: [MockControlsComponent],
   template: `
     <div class="panel">
       <button
@@ -59,6 +62,11 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
             </select>
             <p class="hint">Clave de las cuentas demo: {{ clave }}</p>
           </fieldset>
+          <app-mock-controls
+            [active]="current() === 'normal'"
+            (scenarioReset)="syncScenario()"
+            (reloadRequested)="reloadPage()"
+          />
         </form>
       }
     </div>
@@ -67,8 +75,9 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
     .panel {
       position: fixed;
       inset: auto auto 1rem 1rem;
-      z-index: 1000;
-      max-width: 18rem;
+      z-index: 2000;
+      width: min(24rem, calc(100vw - 2rem));
+      max-height: calc(100dvh - 2rem);
       font:
         0.875rem/1.4 system-ui,
         sans-serif;
@@ -82,6 +91,9 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
       cursor: pointer;
     }
     .body {
+      max-height: calc(100dvh - 6rem);
+      overflow-y: auto;
+      overscroll-behavior: contain;
       margin-top: 0.5rem;
       padding: 0.75rem;
       border: 1px solid #5b3a00;
@@ -106,6 +118,7 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
   `,
 })
 export class MockPanelComponent {
+  private readonly controls = inject(MockRequestControls);
   private readonly bff = inject(MockBff);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
@@ -123,6 +136,14 @@ export class MockPanelComponent {
   protected readonly current = signal(this.bff.scenario());
   protected readonly scenarioLabel = computed(() => MOCK_SCENARIOS[this.current()]);
 
+  protected reloadPage(): void {
+    this.reload();
+  }
+
+  protected syncScenario(): void {
+    this.current.set(this.bff.scenario());
+  }
+
   protected toggle(): void {
     this.open.update((open) => !open);
   }
@@ -136,6 +157,7 @@ export class MockPanelComponent {
    * router: the app learns the new session from /me, as after a reload, but nothing is reloaded.
    */
   async switchRole(key: string): Promise<void> {
+    this.controls.cancelAll();
     if (isDemoUserKey(key)) {
       this.bff.signIn(DEMO_USERS[key]);
       await firstValueFrom(this.auth.restore());
@@ -156,6 +178,7 @@ export class MockPanelComponent {
     if (!isMockScenario(scenario)) {
       return;
     }
+    this.controls.reset();
     this.current.set(scenario);
     if (this.bff.setScenario(scenario)) {
       this.reload();

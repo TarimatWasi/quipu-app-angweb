@@ -1,47 +1,40 @@
-<a class="back" [routerLink]="['/admin/guests', guestId]">
-  <svg
-    aria-hidden="true"
-    width="18"
-    height="18"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    stroke-width="2.4"
-    stroke-linecap="round"
-    stroke-linejoin="round"
-  >
-    <path d="M15 6l-6 6 6 6" />
-  </svg>
-  {{ backLabel() }}
-</a>
-<div class="title">
-  <h1>{{ stayId === null ? 'Registrar estadía' : 'Corregir estadía' }}</h1>
-  <p class="today">{{ today }}</p>
-</div>
+<app-guest-form-header
+  [guestId]="guestId"
+  [heading]="stayId === null ? 'Registrar estadía' : 'Corregir estadía'"
+  [backLabel]="backLabel()"
+  [today]="today"
+/>
 
+@if (refreshError(); as message) {
+  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+}
+@if (refreshing() && refreshError() === null) {
+  <output>Actualizando…</output>
+}
 @switch (state().kind) {
   @case ('loading') {
-    @if (timing.skeleton()) {
-      <div class="layout" aria-busy="true" aria-label="Cargando la estadía">
-        <div class="fields">
-          <div class="sk sk-title"></div>
-          @for (field of skeletonRows; track field) {
-            <div>
-              <div class="sk sk-label"></div>
-              <div class="sk sk-field"></div>
+    <app-skeleton subject="la estadía"
+      ><ng-template appSkeletonContent>
+        <app-form-summary-layout class="layout">
+          <div class="fields">
+            <h2>La estadía</h2>
+            <app-skeleton-fields [labels]="['Ambiente']" />
+            <div class="dates">
+              <app-skeleton-fields [labels]="['Llegada']" /><app-skeleton-fields
+                [labels]="['Salida']"
+              />
             </div>
-          }
-        </div>
-        <div class="facts">
-          @for (fact of skeletonRows; track fact) {
-            <div class="sk sk-fact"></div>
-          }
-        </div>
-      </div>
-    }
-    @if (timing.slow()) {
-      <output class="notice warn">{{ slowText }}</output>
-    }
+            <app-skeleton-fields [labels]="['Monto acordado']" /><app-skeleton-block
+              shape="rectangle"
+              width="12rem"
+            />
+          </div>
+          <aside aria-label="Cómo está hoy">
+            <h2>Cómo está hoy</h2>
+            <app-skeleton-facts [labels]="['Huésped', 'Fechas', 'Noches', 'Monto']" />
+          </aside>
+        </app-form-summary-layout> </ng-template
+    ></app-skeleton>
   }
   @case ('not-found') {
     <p class="notice error" role="alert">
@@ -52,11 +45,13 @@
   @case ('error') {
     <p class="notice error" role="alert">
       <strong>{{ loadError() }}</strong>
-      <button class="link-button" type="button" (click)="retry()">Reintentar</button>
+      <button class="link-button" type="button" [disabled]="retrying()" (click)="retry()">
+        {{ retrying() ? 'Cargando…' : 'Reintentar' }}
+      </button>
     </p>
   }
   @case ('ready') {
-    <div class="layout">
+    <app-form-summary-layout class="layout">
       <aside aria-labelledby="side-title">
         <h2 id="side-title">{{ sideTitle() }}</h2>
         <dl class="facts">
@@ -70,7 +65,13 @@
         <p class="note">{{ sideNote() }}</p>
       </aside>
 
-      <form novalidate aria-labelledby="form-title" (submit)="submit($event)">
+      <form
+        [attr.aria-busy]="refreshing()"
+        [inert]="refreshing() || refreshError() !== null"
+        novalidate
+        aria-labelledby="form-title"
+        (submit)="submit($event)"
+      >
         @if (paidNote()) {
           <p class="notice warn first">
             <strong>Esta estadía tiene un pago pendiente de revisión.</strong>
@@ -83,6 +84,7 @@
             <label for="stay-environment">Ambiente</label>
             <select
               id="stay-environment"
+              [attr.aria-busy]="freeState().kind === 'loading' || freeRetrying()"
               class="control"
               [attr.aria-required]="legacy() ? null : 'true'"
               [value]="draft().environmentId"
@@ -112,8 +114,13 @@
               @case ('error') {
                 <span class="error">
                   {{ freeError() }}
-                  <button class="link-button" type="button" (click)="retryFree()">
-                    Reintentar
+                  <button
+                    class="link-button"
+                    type="button"
+                    [disabled]="freeRetrying()"
+                    (click)="retryFree()"
+                  >
+                    {{ freeRetrying() ? 'Cargando…' : 'Reintentar' }}
                   </button>
                 </span>
               }
@@ -198,6 +205,6 @@
           <a [routerLink]="['/admin/guests', guestId]">Cancelar</a>
         </div>
       </form>
-    </div>
+    </app-form-summary-layout>
   }
 }

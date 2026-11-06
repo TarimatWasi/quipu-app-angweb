@@ -1,8 +1,13 @@
 import { Routes } from '@angular/router';
-import { AccountHomeComponent } from './pages/account-home.component';
 
 /** H1 and T1: the guest's panels inside the home; src/app/home.routes.ts nests them there. */
-export const HOME_PANEL_ROUTES: Routes = [{ path: '', component: AccountHomeComponent }];
+export const HOME_PANEL_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./pages/account-home.component').then((m) => m.AccountHomeComponent),
+  },
+];
 
 // H3, H4 and T2 load on demand: the home reaches this file for every role, and the guest's
 // payment pages must not travel with it.

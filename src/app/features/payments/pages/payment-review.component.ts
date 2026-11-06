@@ -1,3 +1,7 @@
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
+import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
@@ -121,6 +125,10 @@ function added(proof: AddedProof): ProofEdit {
 @Component({
   selector: 'app-payment-review',
   imports: [
+    SkeletonFieldsComponent,
+    SkeletonFactsComponent,
+    SkeletonBlockComponent,
+    SkeletonContentDirective,
     FactTileComponent,
     LoadErrorComponent,
     PageHeaderComponent,
@@ -148,6 +156,12 @@ export class PaymentReviewComponent {
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly amounts = signal<Readonly<Record<string, string>>>({});
   protected readonly busy = signal(false);
+  protected readonly retrying = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
+  protected readonly blocked = computed(
+    () => this.busy() || this.refreshing() || this.refreshError() !== null,
+  );
   protected readonly actionError = signal<string | null>(null);
   protected readonly outcome = signal<Outcome | null>(null);
   protected readonly noneLeft = signal(false);
@@ -213,7 +227,7 @@ export class PaymentReviewComponent {
   protected readonly canApprove = computed(
     () =>
       this.editable() &&
-      !this.busy() &&
+      !this.blocked() &&
       (this.payment()?.proofs.length ?? 0) > 0 &&
       this.invalidIds().size === 0 &&
       !this.unseenVoucher() &&
@@ -239,6 +253,7 @@ export class PaymentReviewComponent {
     // Leaving the page counts as another visit too: late answers of this one are ignored.
     inject(DestroyRef).onDestroy(() => {
       this.visit++;
+      this.request++;
     });
     route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.visit++;
@@ -267,7 +282,7 @@ export class PaymentReviewComponent {
 
   protected async reject(): Promise<void> {
     const payment = this.payment();
-    if (!payment || !this.editable() || this.busy()) return;
+    if (!payment || !this.editable() || this.blocked()) return;
     const visit = this.visit;
     const ref = openRejectDialog(this.dialog, {
       again: payment.status === 'REJECTED',
@@ -281,7 +296,7 @@ export class PaymentReviewComponent {
 
   protected async addProof(): Promise<void> {
     const payment = this.payment();
-    if (!payment || !this.editable() || this.busy() || this.atProofLimit()) return;
+    if (!payment || !this.editable() || this.blocked() || this.atProofLimit()) return;
     const balance = this.rawBalance();
     const missing = balance?.kind === 'short' ? balance.difference : 0;
     const visit = this.visit;
@@ -318,7 +333,9 @@ export class PaymentReviewComponent {
   }
 
   protected retry(): void {
-    void this.load(this.currentId);
+    if (this.retrying() || this.refreshing()) return;
+    this.retrying.set(true);
+    void this.load(this.currentId, true);
   }
 
   private async resolve(call: Observable<unknown>, outcome: Outcome): Promise<void> {
@@ -381,7 +398,7 @@ export class PaymentReviewComponent {
     const choice = await firstValueFrom(ref.afterClosed());
     if (visit !== this.visit) return;
     if (choice === 'reload') {
-      await this.load(this.currentId);
+      await this.load(this.currentId, true);
     } else if (choice === 'back') {
       await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
     }
@@ -421,8 +438,12 @@ export class PaymentReviewComponent {
   /** Loads the payment; `quiet` keeps the page on screen while it reloads. */
   private async load(id: string, quiet = false, keepDrafts = false): Promise<void> {
     const request = ++this.request;
+    const refreshing = quiet && this.payment() !== null;
+    this.refreshing.set(refreshing);
     this.currentId = id;
     if (!quiet) {
+      this.refreshError.set(null);
+      this.retrying.set(false);
       this.state.set({ kind: 'loading' });
       this.payment.set(null);
       this.amounts.set({});
@@ -432,17 +453,33 @@ export class PaymentReviewComponent {
       if (request !== this.request) return;
       this.amounts.update((current) => amountTexts(payment.proofs, keepDrafts ? current : {}));
       this.payment.set(payment);
+      this.refreshError.set(null);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request !== this.request) return;
-      this.payment.set(null);
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set(
-        notFound
-          ? { kind: 'not-found' }
-          : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-      );
+      if (request === this.request) this.failLoad(error, refreshing);
+    } finally {
+      if (request === this.request) this.endLoad();
     }
+  }
+
+  /** A failed refresh keeps the page and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) {
+      this.refreshError.set(this.loadErrorText);
+      return;
+    }
+    this.payment.set(null);
+    this.state.set(
+      notFound
+        ? { kind: 'not-found' }
+        : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
+    );
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 
   private focus(selector: string): void {

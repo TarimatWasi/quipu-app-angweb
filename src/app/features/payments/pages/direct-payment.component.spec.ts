@@ -228,6 +228,13 @@ describe('DirectPaymentComponent (A5.1)', () => {
     });
 
     await ui.click(ui.page().getByRole('button', { name: 'Cargar más huéspedes' }));
+    const failed = await ui.expect1(isGuests);
+    expect(failed.request.params.get('after')).toBe('cur+1/==');
+    await ui.flush(failed, { code: 'UNEXPECTED_ERROR', message: 'No disponible' }, 500);
+    await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+    expect(
+      ui.page().getByRole<HTMLButtonElement>('button', { name: 'Cargando\u2026' }).disabled,
+    ).toBe(true);
     const next = await ui.expect1(isGuests);
     expect(next.request.params.get('after')).toBe('cur+1/==');
     await ui.flush(next, {

@@ -375,6 +375,30 @@ export const createConfig = (features) =>
       rules: folderImports(patterns, [...paths, httpClientPath]),
     })),
     {
+      // The adopted skeleton standard: features compose regions rather than owning their timers.
+      // Keep tests free to inject short timings; countdowns and unrelated timers are unaffected.
+      files: ['src/app/features/**/*.ts'],
+      ignores: ['**/*.spec.ts', '**/*.testing.ts'],
+      rules: {
+        'no-restricted-syntax': [
+          'error',
+          ...restrictedSyntax,
+          absoluteUrl,
+          absoluteUrlTemplate,
+          {
+            selector: 'ImportDeclaration[source.value=/skeleton\\/load-timing$/]',
+            message:
+              'QP-UI-16: compose app-skeleton or app-data-table; loading timers belong to shared/ui/skeleton',
+          },
+          {
+            selector:
+              'ImportDeclaration[source.value=/skeleton\\/skeleton.component$/] ImportSpecifier[imported.name="SKELETON_TIMING"]',
+            message: 'QP-UI-16: keep the shared loading thresholds; override timings only in tests',
+          },
+        ],
+      },
+    },
+    {
       files: ['src/app/core/mock/**/*.ts'],
       rules: {
         'no-restricted-syntax': [

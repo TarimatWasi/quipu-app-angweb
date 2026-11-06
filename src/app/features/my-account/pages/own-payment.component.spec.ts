@@ -193,14 +193,16 @@ const error = (code: string, message: string, field?: string) => ({
 /** H3 opened with the account status answered. */
 async function newContractPayment(url = '/guest/payments/new') {
   const ui = await setup(url);
-  expect(ui.page().getByRole('status').textContent).toContain('Cargando');
+  expect(
+    ui.page().getByRole('region', { name: 'Cargando tu pago' }).getAttribute('aria-busy'),
+  ).toBe('true');
   await ui.flush(await ui.expect1(isStatus), PERIODS);
   return ui;
 }
 
 /** The single proof as cash of `amount`. */
 async function cash(ui: Ui, n: number, amount: string) {
-  await ui.click(ui.proof(n).getByLabelText('Efectivo, sin voucher'));
+  await ui.click(ui.proof(n).getByRole('button', { name: 'Efectivo, sin voucher' }));
   await ui.type(ui.proof(n).getByLabelText('Monto (S/)'), amount);
 }
 
@@ -210,6 +212,22 @@ describe('OwnPaymentComponent (H3, T2)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('keeps a load error and prevents duplicate retries without replacing it by a skeleton', async () => {
+    const ui = await setup('/guest/payments/new');
+    await ui.flush(
+      await ui.expect1(isStatus),
+      { code: 'UNEXPECTED_ERROR', message: 'No disponible' },
+      500,
+    );
+    await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+    expect(
+      ui.page().getByRole<HTMLButtonElement>('button', { name: 'Cargando\u2026' }).disabled,
+    ).toBe(true);
+    expect(ui.page().queryByRole('region', { name: 'Cargando tu pago' })).toBeNull();
+    await ui.flush(await ui.expect1(isStatus), PERIODS);
+    expect(ui.page().getByLabelText('Mes')).toBeTruthy();
   });
 
   describe('H3, a first payment of the guest with a contract', () => {
@@ -296,6 +314,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
 
       expect(ui.page().getByText('Elige el período', { selector: 'p' })).toBeTruthy();
       expect(ui.page().getByLabelText('Mes').getAttribute('aria-invalid')).toBe('true');
+      expect(ui.page().getByLabelText('Mes').getAttribute('aria-describedby')).toBe(
+        'op-period-error op-period-help',
+      );
       expect(ui.proof(1).getByText('El monto debe ser mayor a 0')).toBeTruthy();
       expect(ui.proof(1).getByText('Sube el archivo del voucher')).toBeTruthy();
       ui.http.expectNone(isGuestUpload);
@@ -509,6 +530,28 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       ]);
       expect(sent.files).toEqual(['voucher.pdf']);
       await ui.flush(req, { id: 'pay/7', status: 'PENDING' });
+    });
+
+    it('keeps the sent voucher when the file picker is cancelled and allows retrying an invalid file', async () => {
+      const ui = await setup('/guest/payments/pay%2F7');
+      await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
+      const file = ui.proof(1).getByLabelText<HTMLInputElement>('Archivo del voucher');
+
+      Object.defineProperty(file, 'files', { value: [], configurable: true });
+      fireEvent.change(file);
+      await settle(ui.harness);
+      expect(ui.proof(1).getByText('yape.png')).toBeTruthy();
+      expect(file.getAttribute('aria-invalid')).toBeNull();
+
+      await ui.pick(file, new File(['x'], 'nota.txt', { type: 'text/plain' }));
+      expect(file.getAttribute('aria-invalid')).toBe('true');
+      expect(ui.proof(1).getByText('yape.png')).toBeTruthy();
+
+      await ui.pick(file, voucherFile());
+      expect(file.getAttribute('aria-invalid')).toBeNull();
+      expect(ui.proof(1).getByText('voucher.pdf')).toBeTruthy();
+      expect(ui.proof(1).queryByText('yape.png')).toBeNull();
+      ui.http.expectNone(isPut('guest', 'pay%2F7'));
     });
 
     it('shows «Tu pago ya cambió» when it can no longer be corrected and opens it read-only', async () => {

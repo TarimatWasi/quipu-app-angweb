@@ -36,4 +36,19 @@ describe('LoadTiming (P-12)', () => {
     expect(timing.skeleton()).toBe(false);
     expect(timing.slow()).toBe(false);
   });
+  it('restarts the configured delay without leaving timers from the previous load', () => {
+    const timing = new LoadTiming({ showAfterMs: 50, slowNoticeAfterMs: 100 });
+    timing.start();
+    vi.advanceTimersByTime(40);
+    timing.start();
+    vi.advanceTimersByTime(49);
+    expect(timing.skeleton()).toBe(false);
+    expect(timing.slow()).toBe(false);
+    vi.advanceTimersByTime(1);
+    expect(timing.skeleton()).toBe(true);
+    vi.advanceTimersByTime(50);
+    expect(timing.slow()).toBe(true);
+    timing.stop();
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });

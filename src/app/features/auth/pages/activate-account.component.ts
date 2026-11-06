@@ -1,5 +1,5 @@
 import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FieldTree, form, FormField, FormRoot } from '@angular/forms/signals';
+import { FieldTree, form, FormRoot } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -29,7 +29,7 @@ function tokenOf(route: ActivatedRoute): string | null {
  */
 @Component({
   selector: 'app-activate-account',
-  imports: [AuthShellComponent, FormRoot, FormField, NewPasswordFieldComponent, RouterLink],
+  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, RouterLink],
   templateUrl: './activate-account.component.html',
   styles: FORM_PAGE_STYLES,
 })

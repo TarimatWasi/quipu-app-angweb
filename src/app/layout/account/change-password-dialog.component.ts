@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, required } from '@angular/forms/signals';
@@ -11,6 +12,8 @@ import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 
 /** Id the dialog is described by (`aria-describedby`): the sentence under the title. */
 export const CHANGE_PASSWORD_TEXT_ID = 'change-password-text';
@@ -35,7 +38,14 @@ interface ChangePasswordModel {
  */
 @Component({
   selector: 'app-change-password-dialog',
-  imports: [DialogFrameComponent, FormRoot, FormField, NewPasswordFieldComponent],
+  imports: [
+    DialogFrameComponent,
+    FormRoot,
+    FormField,
+    NewPasswordFieldComponent,
+    FormFieldComponent,
+    FieldControlDirective,
+  ],
   template: `
     <form
       [formRoot]="changeForm"
@@ -47,29 +57,28 @@ interface ChangePasswordModel {
           <p [id]="textId">
             Seguirás con la sesión abierta aquí. La próxima vez entra con la contraseña nueva.
           </p>
-          <div class="quipu-field">
-            <label class="quipu-label" for="current-password">Contraseña actual</label>
+          <app-form-field
+            fieldId="current-password"
+            label="Contraseña actual"
+            [error]="currentError()"
+          >
             <input
+              appFieldControl
               class="quipu-input"
-              id="current-password"
               type="password"
               autocomplete="current-password"
               aria-required="true"
               [formField]="changeForm.currentPassword"
-              [attr.aria-invalid]="currentError() ? 'true' : null"
-              [attr.aria-describedby]="currentError() ? 'current-password-error' : null"
             />
-            @if (currentError(); as message) {
-              <p id="current-password-error" class="quipu-field-error">{{ message }}</p>
-            }
             <a
+              fieldAfter
               class="recover"
               href="/forgot-password"
               [attr.aria-disabled]="saving() ? 'true' : null"
               (click)="recover($event)"
               >¿No la recuerdas?</a
             >
-          </div>
+          </app-form-field>
           <app-new-password-field [field]="changeForm.newPassword" />
           @if (serverError(); as message) {
             <p [id]="generalErrorId" class="quipu-alert" tabindex="-1">{{ message }}</p>
@@ -110,6 +119,7 @@ interface ChangePasswordModel {
 })
 export class ChangePasswordDialogComponent {
   private readonly ref = inject<MatDialogRef<ChangePasswordDialogComponent, boolean>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly injector = inject(Injector);
@@ -161,23 +171,24 @@ export class ChangePasswordDialogComponent {
 
   /** Runs when the form is valid. A failure comes back as errors, so the dialog stays editable. */
   private async change() {
-    this.serverError.set(null);
-    this.ref.disableClose = true;
-    const { currentPassword, newPassword } = this.model();
-    try {
-      await firstValueFrom(this.auth.changePassword(newPassword, currentPassword));
-    } catch (error: unknown) {
-      this.ref.disableClose = false;
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.ref.close();
-        return undefined;
+    return this.submission.run(async () => {
+      this.serverError.set(null);
+
+      const { currentPassword, newPassword } = this.model();
+      try {
+        await firstValueFrom(this.auth.changePassword(newPassword, currentPassword));
+      } catch (error: unknown) {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          // The session interceptor already forgot the session and goes to the login.
+          this.ref.close();
+          return undefined;
+        }
+        return this.failure(toBffError(error));
       }
-      return this.failure(toBffError(error));
-    }
-    this.ref.disableClose = false;
-    this.ref.close(true);
-    return undefined;
+
+      this.ref.close(true);
+      return undefined;
+    });
   }
 
   private failure({ code, field, message }: BffError) {
@@ -220,4 +231,12 @@ export function openChangePasswordDialog(
       maxWidth: 'calc(100vw - 2rem)',
     },
   );
+}
+
+/** Keeps Material and the password form behind the account-menu interaction. */
+export function openChangePasswordFromInjector(
+  injector: Injector,
+  restoreFocus: RestoreFocusValue = true,
+) {
+  return openChangePasswordDialog(injector.get(MatDialog), restoreFocus);
 }

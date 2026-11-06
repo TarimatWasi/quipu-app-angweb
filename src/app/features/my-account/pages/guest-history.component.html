@@ -71,13 +71,26 @@
 
   @switch (state().kind) {
     @case ('loading') {
-      <output class="muted">Cargando pagos…</output>
+      @if (loadingMore()) {
+        <button class="quipu-button quipu-button--secondary more" type="button" disabled>
+          Cargando…
+        </button>
+      } @else {
+        <app-skeleton subject="tus pagos"
+          ><ng-template appSkeletonContent><app-skeleton-cards [action]="true" /></ng-template
+        ></app-skeleton>
+      }
     }
     @case ('error') {
       <div class="quipu-alert" role="alert">
         <p>{{ loadError() }}</p>
-        <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
-          Reintentar
+        <button
+          class="quipu-button quipu-button--secondary"
+          type="button"
+          [disabled]="retrying()"
+          (click)="retry()"
+        >
+          {{ retrying() ? 'Cargando…' : 'Reintentar' }}
         </button>
       </div>
     }

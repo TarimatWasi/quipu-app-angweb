@@ -1,0 +1,76 @@
+<details>
+  <summary>Inspección interactiva</summary>
+  <p>
+    Configura antes de navegar o pulsar una acción. Los cambios afectan a las próximas peticiones,
+    sin recargar ni reiniciar la edición.
+  </p>
+  @if (!active()) {
+    <p>
+      Usa el escenario Normal para que estos controles no se mezclen con los errores o demoras
+      globales.
+    </p>
+  }
+  <label for="mock-failure">Error para armar o liberar una petición</label>
+  <select id="mock-failure" (change)="chooseFailure($event)">
+    <option value="server">Error del servidor (500)</option>
+    <option value="conflict">Conflicto de edición (409)</option>
+    <option value="validation">Validación de comprobantes (400)</option>
+    <option value="storage">Archivo no disponible (503)</option>
+  </select>
+  @for (target of targets; track target.key; let index = $index) {
+    <label [for]="'mock-target-' + target.key">{{ target.label }}</label>
+    <select [id]="'mock-target-' + target.key" (change)="configure(index, $event)">
+      @for (mode of modes; track mode.key) {
+        <option
+          [value]="mode.key"
+          [selected]="(controls.rules()[target.key]?.mode ?? 'normal') === mode.key"
+        >
+          {{ mode.label }}
+        </option>
+      }
+    </select>
+    @if (controls.rules()[target.key]?.mode === 'fail-next') {
+      <small>Error armado: {{ controls.rules()[target.key]?.failure }}. Se consume una vez.</small>
+    }
+  }
+  <p>Autenticación excluida. «Normal» no libera las peticiones ya retenidas.</p>
+  @if (!controls.storageAvailable()) {
+    <output>Los controles solo se conservan en esta pestaña; no sobreviven a una recarga.</output>
+  }
+  <button type="button" (click)="reloadView()">Recargar pantalla conservando controles</button>
+  <p>Recargar reinicia los datos demo. Para conservarlos, navega a otra pantalla y vuelve.</p>
+  <h3>Peticiones retenidas ({{ controls.pending().length }})</h3>
+  <ul>
+    @for (request of controls.pending(); track request.id) {
+      <li>
+        <strong>{{ request.label }} #{{ request.id }}</strong>
+        <code>{{ request.method }} {{ request.path }}</code>
+        <div class="actions">
+          <button type="button" (click)="controls.resolve(request.id)">
+            Liberar #{{ request.id }}
+          </button>
+          <button type="button" (click)="controls.resolve(request.id, kind())">
+            Error #{{ request.id }}
+          </button>
+        </div>
+      </li>
+    } @empty {
+      <li>Ninguna. Activa «Retener» y navega o ejecuta una acción.</li>
+    }
+  </ul>
+  <button type="button" (click)="controls.reset()">Limpiar controles y cancelar esperas</button>
+  <h3>Datos de maquetado</h3>
+  <label for="mock-presentation">Muestra de datos</label>
+  <select id="mock-presentation" (change)="choosePreset($event)">
+    @for (item of presets; track item.key) {
+      <option [value]="item.key" [selected]="preset() === item.key">{{ item.label }}</option>
+    }
+  </select>
+  <p>
+    Aplicar reinicia la edición y los datos, limpia los controles y vuelve al escenario Normal.
+    «Muchos pagos» contiene duplicados ficticios para revisar el listado.
+  </p>
+  <button type="button" (click)="applyData()">Aplicar datos y recargar</button>
+  <button type="button" (click)="applyData(true)">Restablecer datos y recargar</button>
+  <output>{{ notice() }}</output>
+</details>

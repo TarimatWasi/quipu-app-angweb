@@ -1,3 +1,6 @@
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -54,7 +57,7 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
  */
 @Component({
   selector: 'app-guest-home-panel',
-  imports: [RouterLink],
+  imports: [RouterLink, SkeletonComponent, SkeletonContentDirective, SkeletonCardsComponent],
   template: `
     <section class="panel" aria-labelledby="guest-payments-title">
       <h2 id="guest-payments-title">Tus pagos</h2>
@@ -67,13 +70,20 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
       }
       @switch (state().kind) {
         @case ('loading') {
-          <output class="muted">Cargando tu estado de cuenta…</output>
+          <app-skeleton subject="tu estado de cuenta"
+            ><ng-template appSkeletonContent><app-skeleton-cards [count]="2" /></ng-template
+          ></app-skeleton>
         }
         @case ('error') {
           <div class="quipu-alert" role="alert">
             <p>{{ loadError() }}</p>
-            <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
-              Reintentar
+            <button
+              class="quipu-button quipu-button--secondary"
+              type="button"
+              [disabled]="retrying()"
+              (click)="retry()"
+            >
+              {{ retrying() ? 'Cargando…' : 'Reintentar' }}
             </button>
           </div>
         }
@@ -133,6 +143,7 @@ export class GuestHomePanelComponent implements OnInit {
   protected readonly periods = signal<readonly PeriodStatus[]>([]);
   /** The own credit; null while it is read or when it could not be read. */
   protected readonly credit = signal<GuestCredit | null>(null);
+  protected readonly retrying = signal(false);
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly loadError = computed(() => {
     const state = this.state();
@@ -167,6 +178,8 @@ export class GuestHomePanelComponent implements OnInit {
   // Move with every load, so a late answer of a previous load is ignored.
   private statusRequest = 0;
   private creditRequest = 0;
+  private creditLoaded = false;
+  private creditPending = false;
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
@@ -179,7 +192,9 @@ export class GuestHomePanelComponent implements OnInit {
   }
 
   protected retry(): void {
-    this.load();
+    if (this.retrying() || this.state().kind === 'loading') return;
+    void this.loadStatus();
+    if (!this.creditLoaded && !this.creditPending) void this.loadCredit();
   }
 
   protected monthOf(period: PeriodStatus): string {
@@ -193,7 +208,9 @@ export class GuestHomePanelComponent implements OnInit {
 
   private async loadStatus(): Promise<void> {
     const request = ++this.statusRequest;
-    this.state.set({ kind: 'loading' });
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const periods = await firstValueFrom(this.payments.accountStatus());
       if (this.destroyed || request !== this.statusRequest) return;
@@ -202,19 +219,26 @@ export class GuestHomePanelComponent implements OnInit {
     } catch (error: unknown) {
       if (this.destroyed || request !== this.statusRequest) return;
       this.state.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+    } finally {
+      if (!this.destroyed) this.retrying.set(false);
     }
   }
 
   /** The notice is optional: any error only leaves it out (H1 works without it). */
   private async loadCredit(): Promise<void> {
+    if (this.creditPending) return;
+    this.creditPending = true;
     const request = ++this.creditRequest;
     try {
       const credit = await firstValueFrom(this.payments.credit());
       if (this.destroyed || request !== this.creditRequest) return;
       this.credit.set(credit);
+      this.creditLoaded = true;
     } catch {
       if (this.destroyed || request !== this.creditRequest) return;
       this.credit.set(null);
+    } finally {
+      if (request === this.creditRequest) this.creditPending = false;
     }
   }
 }

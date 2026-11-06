@@ -1,5 +1,5 @@
-import { Component, inject } from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
+import { Component, inject, Injector } from '@angular/core';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import type { LockCountdown } from './lock-countdown';
@@ -78,4 +78,16 @@ export class AccountLockedDialogComponent {
   protected close(): void {
     this.ref.close();
   }
+}
+
+/** Loaded only after the BFF locks the account; a normal login needs no dialog or overlay. */
+export function openAccountLockedDialog(injector: Injector, countdown: LockCountdown) {
+  return injector.get(MatDialog).open(AccountLockedDialogComponent, {
+    role: 'alertdialog',
+    ariaModal: true,
+    ariaDescribedBy: ACCOUNT_LOCKED_TEXT_ID,
+    data: { countdown },
+    restoreFocus: false,
+    maxWidth: 'calc(100vw - 2rem)',
+  });
 }

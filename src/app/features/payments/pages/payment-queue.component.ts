@@ -1,4 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { AsyncContentState } from '@shared/data/async-content';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { PageLoadState } from '@shared/data/page-load-state';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -13,7 +17,7 @@ import { ShowMoreComponent } from '@shared/ui/show-more/show-more.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { PaymentsTableComponent } from '../components/payments-table.component';
 import { AdminPaymentsService } from '../data/admin-payments.service';
-import type { PaymentQueueItem, QueueSummary } from '../data/admin-payments.service';
+import type { PaymentQueueItem, QueueSummary, PaymentStatus } from '../data/admin-payments.service';
 import {
   countText,
   DEFAULT_SORT,
@@ -30,8 +34,6 @@ import {
 import type { QueueFilters, QueueSort, QueueView, SortKey } from '../model/payment-queue';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
-
-type Phase = 'loading' | 'error' | 'ready';
 
 /**
  * A5 «Pagos» (RF-05): «Lo que toca ahora» with the payments waiting over every page, and the
@@ -54,6 +56,8 @@ type Phase = 'loading' | 'error' | 'ready';
     RouterLink,
     ShowMoreComponent,
     SkeletonComponent,
+    SkeletonBlockComponent,
+    SkeletonContentDirective,
   ],
   templateUrl: './payment-queue.component.html',
   styleUrl: './payment-queue.component.scss',
@@ -62,6 +66,7 @@ export class PaymentQueueComponent {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
+  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly views = QUEUE_VIEWS;
   protected readonly phoneSorts = PHONE_SORTS;
@@ -75,25 +80,18 @@ export class PaymentQueueComponent {
 
   private readonly items = signal<readonly PaymentQueueItem[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
-  protected readonly loading = signal(false);
-  /** Whether the last read failed, and whether it was the first page (instead of the list) or a next one. */
-  private readonly failure = signal<'first' | 'more' | null>(null);
-  /** True once a first page answered: from then on a new view keeps the page and only the list waits. */
-  private readonly answered = signal(false);
-  /** The first page of the view on screen answered, so «empty» is never shown while it loads. */
-  private readonly viewLoaded = signal(false);
-  private readonly summary = signal<QueueSummary | null>(null);
+  private readonly pageLoad = new PageLoadState<PaymentStatus>();
+  private readonly summary = new AsyncContentState<QueueSummary>();
+  protected readonly summaryState = this.summary.state;
 
-  protected readonly phase = computed<Phase>(() => {
-    if (this.answered()) return 'ready';
-    return this.failure() === null ? 'loading' : 'error';
-  });
-  protected readonly retrying = computed(() => this.failure() !== null && this.loading());
-  protected readonly listFailed = computed(() => this.failure() === 'first');
-  protected readonly moreFailed = computed(() => this.failure() === 'more');
-  protected readonly loadingList = computed(() => this.loading() && !this.viewLoaded());
-  protected readonly loadingMore = computed(() => this.loading() && this.viewLoaded());
-  protected readonly showEmpty = computed(() => this.viewLoaded() && !this.loading());
+  protected readonly loading = this.pageLoad.loading;
+  protected readonly phase = this.pageLoad.phase;
+  protected readonly retrying = this.pageLoad.retrying;
+  protected readonly listFailed = this.pageLoad.firstFailed;
+  protected readonly moreFailed = this.pageLoad.moreFailed;
+  protected readonly loadingList = this.pageLoad.loadingFirst;
+  protected readonly loadingMore = this.pageLoad.loadingMore;
+  protected readonly showEmpty = this.pageLoad.showEmpty;
 
   protected readonly filtered = computed(() => hasFilters(this.filters()));
   protected readonly rows = computed(() => {
@@ -107,21 +105,24 @@ export class PaymentQueueComponent {
     countText(this.rows().length, this.loadedCount(), this.nextCursor() !== null),
   );
   protected readonly panel = computed(() => {
-    const summary = this.summary();
+    const summary = this.summary.data();
     return summary === null ? null : queueNowPanel(this.view().status, summary, new Date());
   });
 
-  // Moves with every new read of the list, so a late answer of a previous view or page is ignored.
-  private request = 0;
   private started = false;
 
   constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.pageLoad.invalidate();
+      this.summary.dispose();
+    });
     // The address decides the view (?vista=), also when only it changes on this same page.
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const view = QUEUE_VIEWS.find((v) => v.param === params.get('vista')) ?? QUEUE_VIEWS[0];
       if (this.started && view === this.view()) return;
       this.started = true;
       this.view.set(view);
+      this.pageLoad.reset();
       this.filters.set(NO_FILTERS);
       this.sort.set(DEFAULT_SORT);
       void this.load();
@@ -158,49 +159,43 @@ export class PaymentQueueComponent {
 
   /** «Reintentar» asks again what failed: the first page of the view or the next one. */
   protected retry(): void {
-    void this.load(this.failure() === 'more' ? (this.nextCursor() ?? undefined) : undefined);
+    if (this.loading()) return;
+    void this.load(this.moreFailed() ? (this.nextCursor() ?? undefined) : undefined, true);
   }
 
   protected more(): void {
     const cursor = this.nextCursor();
-    if (cursor !== null) {
+    if (cursor !== null && !this.loading()) {
       void this.load(cursor);
     }
   }
 
   /** The panel is a help over the list: without it the queue still works. */
-  private async loadSummary(): Promise<void> {
+  protected async loadSummary(): Promise<void> {
+    const request = this.summary.begin();
+    if (request === null) return;
     try {
-      this.summary.set(await firstValueFrom(this.payments.queueSummary()));
+      const summary = await firstValueFrom(this.payments.queueSummary());
+      this.summary.succeed(request, summary);
     } catch {
-      this.summary.set(null);
+      this.summary.fail(request, 'No se pudo cargar el resumen de pagos.');
     }
   }
 
-  private async load(after?: string): Promise<void> {
-    const request = ++this.request;
+  private async load(after?: string, retrying = false): Promise<void> {
     const status = this.view().status;
     if (after === undefined) {
       this.items.set([]);
       this.nextCursor.set(null);
-      this.viewLoaded.set(false);
     }
-    this.loading.set(true);
-    this.failure.set(null);
+    const sequence = this.pageLoad.begin({ query: status, after: after ?? null }, retrying);
     try {
       const page = await firstValueFrom(this.payments.list(status, after));
-      if (request !== this.request) return;
+      if (!this.pageLoad.succeed(sequence)) return;
       this.items.update((items) => [...items, ...page.content]);
       this.nextCursor.set(page.nextCursor);
-      this.viewLoaded.set(true);
-      this.answered.set(true);
     } catch {
-      if (request !== this.request) return;
-      this.failure.set(after === undefined ? 'first' : 'more');
-    } finally {
-      if (request === this.request) {
-        this.loading.set(false);
-      }
+      this.pageLoad.fail(sequence);
     }
   }
 }

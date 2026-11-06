@@ -1,3 +1,11 @@
+import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
+import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
+import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -31,11 +39,8 @@ import {
   documentText,
   GUEST_STATUS_BADGES,
   guestName,
-  SKELETON_ROWS,
-  SLOW_TEXT,
   todayText,
 } from '../model/guest-texts';
-import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { ToastService } from '@shared/ui/toast/toast.service';
 
@@ -62,7 +67,17 @@ const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map(
  */
 @Component({
   selector: 'app-document-form',
-  imports: [RouterLink],
+  imports: [
+    FormSummaryLayoutComponent,
+    GuestFormHeaderComponent,
+    LoadErrorComponent,
+    SkeletonBlockComponent,
+    SkeletonFactsComponent,
+    SkeletonFieldsComponent,
+    SkeletonContentDirective,
+    SkeletonComponent,
+    RouterLink,
+  ],
   templateUrl: './document-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
@@ -79,12 +94,12 @@ export class DocumentFormComponent implements OnInit {
   protected readonly documentTypes = DOCUMENT_TYPES;
   protected readonly lockedText = LOCKED_TEXT;
   protected readonly today = todayText();
-  protected readonly slowText = SLOW_TEXT;
-  protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly describedBy = describedBy;
-  protected readonly timing = new LoadTiming();
   protected guestId = '';
 
+  protected readonly retrying = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly loaded = signal<PendingGuestDetail | null>(null);
   /** The name the back link uses, kept when the guest turns out to be no longer pending. */
@@ -120,7 +135,12 @@ export class DocumentFormComponent implements OnInit {
     };
   });
   protected readonly canSave = computed(
-    () => this.state().kind === 'ready' && !this.busy() && Object.keys(this.changes()).length > 0,
+    () =>
+      this.state().kind === 'ready' &&
+      !this.busy() &&
+      !this.refreshing() &&
+      this.refreshError() === null &&
+      Object.keys(this.changes()).length > 0,
   );
   protected readonly saveLabel = computed(() =>
     this.busy() ? 'Guardando…' : 'Corregir documento',
@@ -139,7 +159,6 @@ export class DocumentFormComponent implements OnInit {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
-      this.timing.stop();
     });
   }
 
@@ -159,6 +178,7 @@ export class DocumentFormComponent implements OnInit {
   }
 
   protected retry(): void {
+    if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
     void this.load();
   }
 
@@ -223,15 +243,18 @@ export class DocumentFormComponent implements OnInit {
   /** Loads the guest with its current `version` and starts the form from its document. */
   private async load(): Promise<void> {
     const request = ++this.request;
-    this.state.set({ kind: 'loading' });
-    this.timing.start();
+    const refreshing = this.state().kind === 'ready';
+    this.refreshing.set(refreshing);
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
     this.submitted.set(false);
     this.serverError.set(null);
     this.generalError.set(null);
     try {
       const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (request !== this.request) return;
-      this.timing.stop();
+      if (!this.isCurrent(request)) return;
+      this.refreshError.set(null);
       this.who.set(guestName(guest));
       if (guest.status !== 'PENDING_ACTIVATION') {
         this.loaded.set(null);
@@ -243,14 +266,26 @@ export class DocumentFormComponent implements OnInit {
       this.documentNumber.set(guest.documentNumber);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request !== this.request) return;
-      this.timing.stop();
-      const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set(
-        notFound
-          ? { kind: 'not-found' }
-          : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-      );
+      if (this.isCurrent(request)) this.failLoad(error, refreshing);
+    } finally {
+      if (this.isCurrent(request)) this.endLoad();
     }
+  }
+
+  private isCurrent(request: number): boolean {
+    return !this.destroyed && request === this.request;
+  }
+
+  /** A failed refresh keeps the form and says so; any other failure replaces it. */
+  private failLoad(error: unknown, refreshing: boolean): void {
+    const { message } = toBffErrorWithServerMessage(error);
+    const notFound = error instanceof HttpErrorResponse && error.status === 404;
+    if (refreshing && !notFound) this.refreshError.set(message);
+    else this.state.set(notFound ? { kind: 'not-found' } : { kind: 'error', message });
+  }
+
+  private endLoad(): void {
+    this.retrying.set(false);
+    this.refreshing.set(false);
   }
 }

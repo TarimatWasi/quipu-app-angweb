@@ -115,7 +115,9 @@ describe('GuestHistoryComponent (H4)', () => {
 
   it('lists the own payments with their state, the rejected one with its reason and «Corregir pago»', async () => {
     const ui = await setup();
-    expect(ui.page().getByRole('status').textContent).toContain('Cargando pagos');
+    expect(
+      ui.page().getByRole('region', { name: 'Cargando tus pagos' }).getAttribute('aria-busy'),
+    ).toBe('true');
     const req = await ui.expect1();
     expect(req.request.params.get('limit')).toBe('20');
     expect(req.request.params.has('after')).toBe(false);
@@ -211,6 +213,10 @@ describe('GuestHistoryComponent (H4)', () => {
     expect(ui.page().getByRole('alert').textContent).toContain('No puedes ver este historial.');
     expect(ui.page().queryByText('Aún no tienes pagos.')).toBeNull();
     await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+    expect(
+      ui.page().getByRole<HTMLButtonElement>('button', { name: 'Cargando\u2026' }).disabled,
+    ).toBe(true);
+    expect(ui.page().queryByRole('region', { name: 'Cargando tus pagos' })).toBeNull();
     const again = await ui.expect1();
     expect(again.request.params.has('after')).toBe(false);
     await ui.flush(again, { content: [item(PENDING)], nextCursor: null, creditBalance: 0 });

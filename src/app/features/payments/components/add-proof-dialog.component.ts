@@ -1,17 +1,15 @@
+import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
+import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
+import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
+import { proofAmountError, proofFileError } from '@shared/payments/proof-fields';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
-import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import type { ProofKind } from '../model/proof-kind';
 import { formatMoney, parseAmount } from '@shared/payments/payment-format';
-import {
-  AMOUNT_TEXT,
-  INVALID_FILE_TEXT,
-  isValidVoucher,
-  MISSING_FILE_TEXT,
-} from '@shared/payments/proof-rules';
+import { isValidVoucher } from '@shared/payments/proof-rules';
 
 export interface AddProofDialogData {
   /** What is still missing to cover what is due; 0 when nothing is missing. */
@@ -26,15 +24,20 @@ export interface AddedProof {
   readonly file?: File;
 }
 
-const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
-
 /**
  * A5.2 "Agregar comprobante": a voucher (file and optional method, with the Yape and Transferencia
  * shortcuts) or cash without a voucher. The amount is the verified one; the help says what is missing.
  */
 @Component({
   selector: 'app-add-proof-dialog',
-  imports: [DialogFrameComponent, FieldControlDirective, FileFieldComponent, FormFieldComponent],
+  imports: [
+    DialogFrameComponent,
+    ProofKindChoiceComponent,
+    ProofAmountFieldComponent,
+    ProofMethodFieldComponent,
+    FileFieldComponent,
+    FormFieldComponent,
+  ],
   templateUrl: './add-proof-dialog.component.html',
   styles: `
     .body {
@@ -55,7 +58,6 @@ export class AddProofDialogComponent {
   private readonly ref = inject<MatDialogRef<AddProofDialogComponent, AddedProof>>(MatDialogRef);
   private readonly data = inject<AddProofDialogData>(MAT_DIALOG_DATA);
 
-  protected readonly shortcuts = METHOD_SHORTCUTS;
   protected readonly kind = signal<ProofKind>('VOUCHER');
   protected readonly amount = signal('');
   protected readonly method = signal('');
@@ -73,21 +75,21 @@ export class AddProofDialogComponent {
     return value !== null && value > 0 ? value : null;
   });
   protected readonly amountError = computed(() =>
-    this.submitted() && this.parsedAmount() === null ? AMOUNT_TEXT : null,
+    proofAmountError(this.amount(), this.submitted()),
   );
-  protected readonly fileError = computed(() => {
-    if (this.kind() !== 'VOUCHER') return null;
-    if (this.fileInvalid()) return INVALID_FILE_TEXT;
-    return this.submitted() && this.file() === null ? MISSING_FILE_TEXT : null;
-  });
+  protected readonly fileError = computed(() =>
+    proofFileError(
+      {
+        kind: this.kind(),
+        file: this.file(),
+        fileInvalid: this.fileInvalid(),
+      },
+      this.submitted(),
+    ),
+  );
 
   protected choose(kind: ProofKind): void {
     this.kind.set(kind);
-  }
-
-  protected typed(target: EventTarget | null, into: 'amount' | 'method'): void {
-    const value = target instanceof HTMLInputElement ? target.value : '';
-    this[into].set(value);
   }
 
   protected picked(chosen: File | null): void {

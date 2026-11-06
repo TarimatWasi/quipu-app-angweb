@@ -1,8 +1,13 @@
+import {
+  isPresentationPreset,
+  presentationData,
+  PresentationPreset,
+} from './data/presentation-presets';
 import type { HttpParams } from '@angular/common/http';
 import { inject, Injectable, InjectionToken, signal } from '@angular/core';
 import { DEMO_USERS, isDemoUserKey } from './data/demo-users';
 import type { DemoUser } from './data/demo-users';
-import type { MockDb } from './data/mock-db';
+import { MockDb } from './data/mock-db';
 import { seedDb } from './data/seed';
 import { MOCK_ROUTES } from './handlers/mock-routes';
 import { MockRegistry } from './mock-registry';
@@ -50,7 +55,8 @@ export class MockBff implements MockContext {
   private readonly registry = new MockRegistry(MOCK_ROUTES);
   private readonly latency = inject(MOCK_LATENCY);
   private currentScenario: MockScenario = this.storedScenario();
-  private database: MockDb = seedDb(this.currentScenario);
+  private presentation: PresentationPreset = this.storedPresentation();
+  private database: MockDb = this.seed(this.currentScenario);
   // The session lives here; the storage only carries it across a reload, so a browser that blocks
   // the storage still keeps the session for as long as the page is open.
   private readonly currentUser = signal<DemoUser | null>(this.storedUser());
@@ -70,8 +76,23 @@ export class MockBff implements MockContext {
   /** Changes the scenario and starts its data again; true when it will survive a reload. */
   setScenario(scenario: MockScenario): boolean {
     this.currentScenario = scenario;
-    this.database = seedDb(scenario);
+    this.database = this.seed(scenario);
     return writeMockSetting('quipu-mock:scenario', scenario);
+  }
+
+  presentationPreset(): PresentationPreset {
+    return this.presentation;
+  }
+
+  setPresentation(preset: PresentationPreset): boolean {
+    this.presentation = preset;
+    this.database = this.seed(this.currentScenario);
+    return writeMockSetting('quipu-mock:presentation', preset);
+  }
+
+  private storedPresentation(): PresentationPreset {
+    const value = readMockSetting('quipu-mock:presentation') ?? 'standard';
+    return isPresentationPreset(value) ? value : 'standard';
   }
 
   user(): DemoUser | null {
@@ -169,6 +190,11 @@ export class MockBff implements MockContext {
       raise(403, 'AUTH_PASSWORD_CHANGE_REQUIRED', 'Debes cambiar tu contraseña para continuar');
     }
     return user;
+  }
+
+  private seed(scenario: MockScenario): MockDb {
+    const db = seedDb(scenario);
+    return new MockDb(presentationData(db.data, this.presentation));
   }
 
   private storedUser(): DemoUser | null {

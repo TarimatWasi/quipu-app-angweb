@@ -1,3 +1,9 @@
+import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
+import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
+import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -16,20 +22,15 @@ import {
   AdminPaymentsService,
   DirectPayment,
   PayablePeriod,
-  ProofInput,
   ProofKind,
 } from '../data/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { FieldErrors } from '@shared/forms/field-errors';
+import { ProofDrafts } from '@shared/payments/proof-drafts';
+import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { balanceOf, formatMoney, parseAmount, periodLabel } from '@shared/payments/payment-format';
-import {
-  AMOUNT_TEXT,
-  INVALID_FILE_TEXT,
-  MAX_PROOFS,
-  MISSING_FILE_TEXT,
-  PERIOD_TEXT,
-  isValidVoucher,
-} from '@shared/payments/proof-rules';
+import { balanceOf, formatMoney, periodLabel } from '@shared/payments/payment-format';
+import { MAX_PROOFS, PERIOD_TEXT } from '@shared/payments/proof-rules';
 import { matchesAny } from '@shared/text/search';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -47,7 +48,6 @@ import { ToastService } from '@shared/ui/toast/toast.service';
 export const GUEST_TEXT = 'Elige un huésped';
 export const FUTURE_DATE_TEXT = 'La fecha no puede ser posterior a hoy';
 export const PROOF_LIMIT_TEXT = `Hasta ${String(MAX_PROOFS)} comprobantes por pago.`;
-const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 const GENERAL_ERROR_ID = 'direct-payment-error';
 /** How many guests the picker lists at once, before narrowing them with «Huésped». */
 const GUESTS_SHOWN = 6;
@@ -114,25 +114,9 @@ function optionOf(item: PayablePeriod): PeriodOption | null {
   };
 }
 
-interface ProofDraft {
-  /** Stable id of the row on this page, for the DOM ids and the `track`. */
-  readonly key: number;
-  readonly kind: ProofKind;
-  readonly amount: string;
-  readonly method: string;
-  readonly file: File | null;
-  readonly fileInvalid: boolean;
-}
-
 /** Today in the time of the residence, as yyyy-mm-dd. */
 function todayInLima(): string {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima' }).format(new Date());
-}
-
-/** `proofs[2].amount` → { index: 2, part: 'amount' }. */
-function proofField(field: string): { index: number; part: 'amount' | 'file' } | null {
-  const match = /^proofs\[(\d+)\]\.(amount|file)$/.exec(field);
-  return match ? { index: Number(match[1]), part: match[2] as 'amount' | 'file' } : null;
 }
 
 type LoadState =
@@ -149,6 +133,12 @@ type LoadState =
 @Component({
   selector: 'app-direct-payment',
   imports: [
+    ProofKindChoiceComponent,
+    ProofAmountFieldComponent,
+    ProofMethodFieldComponent,
+    SkeletonComponent,
+    SkeletonContentDirective,
+    SkeletonCardsComponent,
     FileFieldComponent,
     FieldControlDirective,
     FormFieldComponent,
@@ -171,12 +161,11 @@ export class DirectPaymentComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
-  // Before `proofs`, whose first row takes a key when the field is initialized.
-  private nextKey = 1;
+  private readonly proofDrafts = new ProofDrafts();
+  private readonly fieldErrors = new FieldErrors();
 
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly proofLimitText = PROOF_LIMIT_TEXT;
-  protected readonly shortcuts = METHOD_SHORTCUTS;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly today = todayInLima();
   protected readonly formatMoney = formatMoney;
@@ -202,6 +191,8 @@ export class DirectPaymentComponent {
     () => this.guestOptions().find((option) => option.id === this.guestId()) ?? null,
   );
   protected readonly guestsCursor = signal<string | null>(null);
+  protected readonly guestsRetrying = signal(false);
+  protected readonly periodsRetrying = signal(false);
   protected readonly guestsState = signal<LoadState>({ kind: 'idle' });
 
   protected readonly guestsLoadError = computed(() => {
@@ -218,13 +209,13 @@ export class DirectPaymentComponent {
   });
   protected readonly periodChoice = signal('');
   protected readonly receivedOn = signal('');
-  protected readonly proofs = signal<readonly ProofDraft[]>([this.draft()]);
+  protected readonly proofs = this.proofDrafts.drafts;
 
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
   /** Errors the BFF tied to a field (`field`), shown next to it until that field changes. */
-  protected readonly serverErrors = signal<Readonly<Record<string, string>>>({});
+  protected readonly serverErrors = this.fieldErrors.values;
 
   protected readonly options = computed(() =>
     this.periods()
@@ -241,9 +232,7 @@ export class DirectPaymentComponent {
   protected readonly selected = computed(
     () => this.options().find((option) => option.key === this.periodChoice())?.item ?? null,
   );
-  protected readonly sum = computed(() =>
-    this.proofs().reduce((total, proof) => total + (parseAmount(proof.amount) ?? 0), 0),
-  );
+  protected readonly sum = this.proofDrafts.sum;
   protected readonly balance = computed(() => {
     const item = this.selected();
     return item ? balanceOf(this.sum(), item.amountDue, item.lastPeriod) : null;
@@ -289,11 +278,12 @@ export class DirectPaymentComponent {
       ? `Faltan ${formatMoney(balance.difference)} para cubrir lo que corresponde: no se puede registrar.`
       : null;
   });
-  protected readonly atProofLimit = computed(() => this.proofs().length >= MAX_PROOFS);
+  protected readonly atProofLimit = this.proofDrafts.atLimit;
 
   // Moves with every load of the periods, so a late answer for a previous guest is ignored.
   private periodsRequest = 0;
   private guestsRequest = 0;
+  private failedGuestsAfter: string | undefined;
   private destroyed = false;
   /** Where to go back when the guest came preselected (A3.2, A4.2); A5 otherwise. */
   private readonly origin: UrlTree | null;
@@ -324,14 +314,17 @@ export class DirectPaymentComponent {
 
   protected moreGuests(): void {
     const cursor = this.guestsCursor();
-    if (cursor !== null) void this.loadGuests(cursor);
+    if (cursor !== null && this.guestsState().kind !== 'loading' && !this.guestsRetrying())
+      void this.loadGuests(cursor);
   }
 
   protected retryGuests(): void {
-    void this.loadGuests();
+    if (this.guestsRetrying() || this.guestsState().kind === 'loading') return;
+    void this.loadGuests(this.failedGuestsAfter);
   }
 
   protected retryPeriods(): void {
+    if (this.periodsRetrying() || this.periodsState().kind === 'loading') return;
     void this.loadPeriods(this.guestId());
   }
 
@@ -346,6 +339,8 @@ export class DirectPaymentComponent {
   }
 
   private selectGuest(id: string): void {
+    this.periodsRetrying.set(false);
+    this.periodsState.set({ kind: 'idle' });
     this.guestId.set(id);
     this.periodChoice.set('');
     this.clearServer('guestId', 'period');
@@ -369,62 +364,45 @@ export class DirectPaymentComponent {
   }
 
   protected kindOf(index: number, kind: ProofKind): void {
-    this.updateProof(index, { kind });
+    this.proofDrafts.update(index, { kind });
     this.clearServer(`proofs[${String(index)}].file`);
   }
 
-  protected typedAmount(index: number, target: EventTarget | null): void {
-    this.updateProof(index, { amount: target instanceof HTMLInputElement ? target.value : '' });
+  protected typedAmount(index: number, amount: string): void {
+    this.proofDrafts.update(index, {
+      amount,
+    });
     this.clearServer(`proofs[${String(index)}].amount`, 'proofs');
   }
 
   protected typedMethod(index: number, value: string): void {
-    this.updateProof(index, { method: value });
-  }
-
-  protected methodFrom(target: EventTarget | null): string {
-    return target instanceof HTMLInputElement ? target.value : '';
+    this.proofDrafts.update(index, { method: value });
   }
 
   protected picked(index: number, chosen: File | null): void {
-    const valid = chosen !== null && isValidVoucher(chosen);
-    this.updateProof(index, {
-      file: valid ? chosen : null,
-      fileInvalid: chosen !== null && !valid,
-    });
+    this.proofDrafts.chooseFile(index, chosen);
     this.clearServer(`proofs[${String(index)}].file`);
   }
 
   protected addProof(): void {
-    if (this.atProofLimit()) return;
-    this.proofs.update((proofs) => [...proofs, this.draft()]);
-    this.clearServer('proofs');
+    if (this.proofDrafts.add()) this.clearServer('proofs');
   }
 
   /** Server errors of a proof point to it by position, so they no longer hold once one is removed. */
   protected removeProof(index: number): void {
-    if (this.proofs().length <= 1) return;
-    this.proofs.update((proofs) => proofs.filter((_, i) => i !== index));
-    this.serverErrors.update((errors) =>
-      Object.fromEntries(Object.entries(errors).filter(([field]) => !field.startsWith('proofs'))),
-    );
+    if (this.proofDrafts.remove(index)) this.fieldErrors.clearPrefix('proofs');
   }
 
   protected amountError(index: number): string | null {
     const server = this.serverErrors()[`proofs[${String(index)}].amount`];
     if (server) return server;
-    const proof = this.proofs()[index];
-    const amount = proof ? parseAmount(proof.amount) : null;
-    return this.submitted() && (amount === null || amount <= 0) ? AMOUNT_TEXT : null;
+    return this.proofDrafts.amountError(index, this.submitted());
   }
 
   protected fileError(index: number): string | null {
     const server = this.serverErrors()[`proofs[${String(index)}].file`];
     if (server) return server;
-    const proof = this.proofs()[index];
-    if (proof?.kind !== 'VOUCHER') return null;
-    if (proof.fileInvalid) return INVALID_FILE_TEXT;
-    return this.submitted() && proof.file === null ? MISSING_FILE_TEXT : null;
+    return this.proofDrafts.fileError(index, this.submitted());
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -469,21 +447,7 @@ export class DirectPaymentComponent {
     ) {
       return null;
     }
-    const files: File[] = [];
-    const inputs: ProofInput[] = proofs.map((proof) => {
-      const amount = parseAmount(proof.amount) ?? 0;
-      if (proof.kind === 'VOUCHER' && proof.file !== null) {
-        const method = proof.method.trim();
-        files.push(proof.file);
-        return {
-          kind: 'VOUCHER',
-          amount,
-          ...(method ? { method } : {}),
-          fileIndex: files.length - 1,
-        };
-      }
-      return { kind: 'CASH', amount };
-    });
+    const { proofs: inputs, files } = serializeProofs(proofs);
     const target = item.period !== null ? { period: item.period } : { stayId: item.stayId ?? '' };
     const receivedOn = this.receivedOn();
     return {
@@ -542,10 +506,12 @@ export class DirectPaymentComponent {
 
   private async loadGuests(after?: string): Promise<void> {
     const request = ++this.guestsRequest;
-    this.guestsState.set({ kind: 'loading' });
+    const isRetry = this.guestsState().kind === 'error';
+    this.guestsRetrying.set(isRetry);
+    if (!isRetry) this.guestsState.set({ kind: 'loading' });
     try {
       const page = await firstValueFrom(this.guests.list(after));
-      if (request !== this.guestsRequest) return;
+      if (this.destroyed || request !== this.guestsRequest) return;
       const options = page.content.map((guest) => ({
         id: guest.id,
         label: guestLabel(guest),
@@ -556,65 +522,52 @@ export class DirectPaymentComponent {
         after === undefined ? options : [...current, ...options],
       );
       this.guestsCursor.set(page.nextCursor);
+      this.failedGuestsAfter = undefined;
       this.guestsState.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request !== this.guestsRequest) return;
+      if (this.destroyed || request !== this.guestsRequest) return;
+      this.failedGuestsAfter = after;
       this.guestsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+    } finally {
+      if (!this.destroyed && request === this.guestsRequest) this.guestsRetrying.set(false);
     }
   }
 
   private async loadPreselected(id: string): Promise<void> {
     try {
       const guest = await firstValueFrom(this.guests.get(id));
+      if (this.destroyed) return;
       this.preselectedGuest.set(guestText(guest));
     } catch {
       // The periods say whether the guest exists; the label is only a help.
-      this.preselectedGuest.set(null);
+      if (!this.destroyed) this.preselectedGuest.set(null);
     }
   }
 
   private async loadPeriods(guestId: string): Promise<void> {
     const request = ++this.periodsRequest;
     this.periods.set([]);
-    this.periodsState.set({ kind: 'loading' });
+    const isRetry = this.periodsState().kind === 'error';
+    this.periodsRetrying.set(isRetry);
+    if (!isRetry) this.periodsState.set({ kind: 'loading' });
     try {
       const periods = await firstValueFrom(this.payments.payablePeriods(guestId));
-      if (request !== this.periodsRequest) return;
+      if (this.destroyed || request !== this.periodsRequest) return;
       this.periods.set(periods);
       if (!this.options().some((option) => option.key === this.periodChoice())) {
         this.periodChoice.set('');
       }
       this.periodsState.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request !== this.periodsRequest) return;
+      if (this.destroyed || request !== this.periodsRequest) return;
       this.periodChoice.set('');
       this.periodsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+    } finally {
+      if (!this.destroyed && request === this.periodsRequest) this.periodsRetrying.set(false);
     }
-  }
-
-  private draft(): ProofDraft {
-    return {
-      key: this.nextKey++,
-      kind: 'VOUCHER',
-      amount: '',
-      method: '',
-      file: null,
-      fileInvalid: false,
-    };
-  }
-
-  private updateProof(index: number, changes: Partial<Omit<ProofDraft, 'key'>>): void {
-    this.proofs.update((proofs) =>
-      proofs.map((proof, i) => (i === index ? { ...proof, ...changes } : proof)),
-    );
   }
 
   private clearServer(...fields: string[]): void {
-    const errors = this.serverErrors();
-    if (fields.some((field) => field in errors)) {
-      this.serverErrors.set(
-        Object.fromEntries(Object.entries(errors).filter(([key]) => !fields.includes(key))),
-      );
-    }
+    this.fieldErrors.clear(...fields);
   }
 }

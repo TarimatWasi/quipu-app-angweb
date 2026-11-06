@@ -160,6 +160,9 @@ async function registerReady(): Promise<Ui> {
 /** A3.5 opened to correct the stay s/1, loaded with its version and its free environments. */
 async function correctReady(stay: Stay = stayOf()): Promise<Ui> {
   const ui = await setup('/admin/guests/g1/stays/s%2F1');
+  expect(
+    ui.page().getByRole('region', { name: 'Cargando la estad\u00eda' }).getAttribute('aria-busy'),
+  ).toBe('true');
   await ui.flush(await ui.expect1(isStays), { content: [stay], nextCursor: null });
   await ui.flush(await ui.expect1(isEnvironments), FREE);
   return ui;

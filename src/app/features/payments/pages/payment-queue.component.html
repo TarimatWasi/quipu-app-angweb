@@ -1,18 +1,21 @@
 <app-page-header heading="Pagos" />
 
-@switch (phase()) {
-  @case ('loading') {
-    <app-skeleton class="state" shape="table" subject="la cola de pagos" />
-  }
-  @case ('error') {
+@if (view().status !== 'APPROVED') {
+  @let summary = summaryState();
+  @if (summary.status === 'initial-loading') {
+    <app-skeleton class="now" subject="el resumen de pagos">
+      <ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="var(--payment-summary-skeleton-height)"
+      /></ng-template>
+    </app-skeleton>
+  } @else if (summary.status === 'initial-error') {
     <app-load-error
-      class="state"
-      [message]="loadErrorText"
-      [retrying]="retrying()"
-      (retry)="retry()"
+      class="now"
+      [message]="summary.message"
+      [retrying]="summary.retrying"
+      (retry)="loadSummary()"
     />
-  }
-  @case ('ready') {
+  } @else {
     @if (panel(); as now) {
       <app-now-panel
         class="now"
@@ -31,7 +34,61 @@
         }
       </app-now-panel>
     }
+  }
+}
 
+@switch (phase()) {
+  @case ('loading') {
+    <section class="all" aria-labelledby="payments-loading-title">
+      <div class="quipu-list-head">
+        <h2 id="payments-loading-title">Pagos recibidos</h2>
+        <a class="quipu-button quipu-button--secondary" routerLink="/admin/payments/new"
+          >Registrar pago directo</a
+        >
+      </div>
+      <ng-template #loadingFilters>
+        <div class="quipu-segmented quipu-segmented--fill views">
+          @for (option of views; track option.status) {
+            <button type="button" disabled [attr.aria-pressed]="option === view()">
+              {{ option.label }}
+            </button>
+          }
+        </div>
+        <div class="quipu-filters">
+          <div class="quipu-field quipu-search">
+            <span class="quipu-label">Buscar</span>
+            <app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-field">
+            <span class="quipu-label">Tipo de huésped</span>
+            <app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-field quipu-only-narrow">
+            <span class="quipu-label">Ordenar por</span>
+            <app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
+        </div>
+      </ng-template>
+      <app-payments-table
+        [loading]="true"
+        [skeletonBefore]="loadingFilters"
+        [rows]="[]"
+        [sort]="sort()"
+        [view]="view().param"
+        [caption]="view().label"
+      />
+    </section>
+  }
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
+  }
+  @case ('ready') {
     <section class="all" aria-labelledby="payments-list-title">
       <div class="quipu-list-head">
         <h2 id="payments-list-title">Pagos recibidos</h2>

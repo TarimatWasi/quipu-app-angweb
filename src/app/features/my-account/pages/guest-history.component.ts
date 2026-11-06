@@ -1,3 +1,6 @@
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -33,7 +36,7 @@ const SURPLUS_TEXTS: Readonly<Record<NonNullable<GuestPayment['surplus']>['outco
  */
 @Component({
   selector: 'app-guest-history',
-  imports: [RouterLink],
+  imports: [SkeletonCardsComponent, SkeletonContentDirective, SkeletonComponent, RouterLink],
   templateUrl: './guest-history.component.html',
   styles: [PAYMENT_PAGE_STYLES, OWN_PAYMENT_STYLES],
 })
@@ -49,6 +52,7 @@ export class GuestHistoryComponent implements OnInit {
   protected readonly items = signal<readonly GuestHistoryItem[]>([]);
   protected readonly cursor = signal<string | null>(null);
   protected readonly creditBalance = signal(0);
+  protected readonly retrying = signal(false);
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   /** Whether the failed load was "Mostrar más" (the rows already shown stay). */
   protected readonly loadingMore = signal(false);
@@ -71,11 +75,13 @@ export class GuestHistoryComponent implements OnInit {
   }
 
   protected more(): void {
+    if (this.retrying() || this.state().kind === 'loading') return;
     const cursor = this.cursor();
     if (cursor !== null) void this.load(cursor);
   }
 
   protected retry(): void {
+    if (this.retrying() || this.state().kind === 'loading') return;
     if (this.loadingMore()) {
       this.more();
     } else {
@@ -105,7 +111,9 @@ export class GuestHistoryComponent implements OnInit {
   private async load(after?: string): Promise<void> {
     const request = ++this.request;
     this.loadingMore.set(after !== undefined);
-    this.state.set({ kind: 'loading' });
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const page = await firstValueFrom(this.payments.history(after));
       if (this.destroyed || request !== this.request) return;
@@ -118,6 +126,8 @@ export class GuestHistoryComponent implements OnInit {
     } catch (error: unknown) {
       if (this.destroyed || request !== this.request) return;
       this.state.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+    } finally {
+      if (!this.destroyed && request === this.request) this.retrying.set(false);
     }
   }
 }

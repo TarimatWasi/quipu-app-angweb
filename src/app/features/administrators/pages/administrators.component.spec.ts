@@ -118,7 +118,7 @@ describe('AdministratorsComponent (A7)', () => {
     expect(within(root).getByLabelText('Cargando Administradores').getAttribute('aria-busy')).toBe(
       'true',
     );
-    expect(root.querySelector('table')).toBeNull();
+    expect(root.querySelector('table')?.closest('[aria-hidden="true"]')).toBeTruthy();
 
     await answerList(FOUR);
     expect(root.querySelector('app-skeleton')).toBeNull();
@@ -365,7 +365,7 @@ describe('AdministratorsComponent (A7) changes', () => {
   ])(
     '«%s» asks the password, calls the BFF, reads the list again and toasts',
     async (action, title, path, confirm, done) => {
-      const { root, answerList, backend, click, type, toast, table } = await setup();
+      const { root, answerList, failList, backend, click, type, toast, table } = await setup();
       await answerList(FOUR);
 
       await click(table().getByRole('button', { name: action }));
@@ -377,6 +377,13 @@ describe('AdministratorsComponent (A7) changes', () => {
       expect(post.request.method).toBe('POST');
       expect(post.request.body).toEqual({ currentPassword: 'Quipu2026' });
       post.flush(null, { status: 204, statusText: 'No Content' });
+      await failList();
+      expect(table().getByText('Julio Mamani')).toBeTruthy();
+      expect(root.querySelector('app-skeleton')).toBeNull();
+      await click(within(root).getByRole('button', { name: 'Reintentar' }));
+      expect(
+        within(root).getByRole<HTMLButtonElement>('button', { name: 'Cargando\u2026' }).disabled,
+      ).toBe(true);
       await answerList(FOUR);
 
       await vi.waitFor(() => {

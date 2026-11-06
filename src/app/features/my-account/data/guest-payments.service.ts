@@ -1,3 +1,4 @@
+import { proofsBody } from '@shared/payments/proofs-body';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
@@ -10,7 +11,6 @@ import {
   OwnProofEdit,
   OwnProofInput,
   paymentUrl,
-  proofsBody,
 } from './own-payments';
 
 export type PeriodStatus = components['schemas']['PeriodStatus'];

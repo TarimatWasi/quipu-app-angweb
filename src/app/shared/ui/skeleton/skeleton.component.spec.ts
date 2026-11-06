@@ -1,110 +1,100 @@
+import { Component, signal } from '@angular/core';
 import { render, screen } from '@testing-library/angular';
-import {
-  SKELETON_TIMING,
-  SkeletonComponent,
-  SkeletonShape,
-  SLOW_SERVER_NOTICE,
-} from './skeleton.component';
-
-async function renderSkeleton(shape: SkeletonShape, subject = 'Pagos') {
-  const result = await render(SkeletonComponent, { inputs: { shape, subject } });
-  const advance = (ms: number) => {
-    vi.advanceTimersByTime(ms);
-    result.fixture.detectChanges();
-  };
-  const blocks = () => result.container.querySelectorAll('.sk').length;
-  return { ...result, advance, blocks };
+import { SkeletonComponent, SKELETON_TIMING, SLOW_SERVER_NOTICE } from './skeleton.component';
+import { SkeletonContentDirective } from './skeleton-content.directive';
+import { SkeletonFieldsComponent } from './skeleton-fields.component';
+import { SkeletonFactsComponent } from './skeleton-facts.component';
+import { SkeletonCardsComponent } from './skeleton-cards.component';
+import { SkeletonBlockComponent } from './skeleton-block.component';
+@Component({
+  imports: [
+    SkeletonComponent,
+    SkeletonContentDirective,
+    SkeletonFieldsComponent,
+    SkeletonFactsComponent,
+    SkeletonCardsComponent,
+  ],
+  template: `<app-skeleton subject="Pagos" [announceSlow]="announceSlow()"
+    ><ng-template appSkeletonContent
+      ><app-skeleton-fields [labels]="['Monto', 'Medio']" /><app-skeleton-facts
+        [labels]="['Nombre', 'Documento']" /><app-skeleton-cards
+        [count]="2"
+        [action]="true" /></ng-template
+  ></app-skeleton>`,
+})
+class HostComponent {
+  readonly announceSlow = signal(true);
 }
-
-describe('SkeletonComponent (P-12 cargando)', () => {
+describe('Skeleton loading region and patterns', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
-
   afterEach(() => {
     vi.useRealTimers();
   });
-
-  it('is busy from the start, named «Cargando …», but shows nothing before 300 ms', async () => {
-    const { advance, blocks } = await renderSkeleton('list');
-
-    const region = screen.getByRole('region', { name: 'Cargando Pagos' });
-    expect(region.getAttribute('aria-busy')).toBe('true');
-    advance(299);
-    expect(blocks()).toBe(0);
-
-    advance(1);
-    expect(blocks()).toBeGreaterThan(0);
+  it('is busy immediately, delays the projected layout and hides decorative content', async () => {
+    const { fixture, container } = await render(HostComponent);
+    expect(screen.getByRole('region', { name: 'Cargando Pagos' }).getAttribute('aria-busy')).toBe(
+      'true',
+    );
+    vi.advanceTimersByTime(299);
+    fixture.detectChanges();
+    expect(container.querySelector('app-skeleton-fields')).toBeNull();
+    vi.advanceTimersByTime(1);
+    fixture.detectChanges();
+    expect(container.querySelectorAll('app-skeleton-fields .quipu-field')).toHaveLength(2);
+    expect(container.querySelectorAll('app-skeleton-facts > div')).toHaveLength(2);
+    expect(container.querySelectorAll('app-skeleton-cards .card')).toHaveLength(2);
+    expect(
+      container.querySelector('app-skeleton-fields')?.closest('[aria-hidden="true"]'),
+    ).toBeTruthy();
+    expect(container.querySelector('input, button, a')).toBeNull();
   });
-
-  it('adds the yellow notice of the server waking up at 8 s, not before', async () => {
-    const { advance, container } = await renderSkeleton('list');
-
-    advance(7_999);
-    expect(screen.queryByText(SLOW_SERVER_NOTICE)).toBeNull();
-    // The live region is already there, empty and outside the busy region, before the text comes.
-    const live = container.querySelector(':scope > output');
+  it('announces the slow server outside the busy region only at 8 seconds', async () => {
+    const { fixture, container } = await render(HostComponent);
+    const live = container.querySelector('app-skeleton > output');
     expect(live?.textContent.trim()).toBe('');
+    vi.advanceTimersByTime(7999);
+    fixture.detectChanges();
+    expect(screen.queryByText(SLOW_SERVER_NOTICE)).toBeNull();
+    vi.advanceTimersByTime(1);
+    fixture.detectChanges();
+    expect(screen.getByText(SLOW_SERVER_NOTICE).closest('output')).toBe(live);
     expect(live?.closest('[aria-busy]')).toBeNull();
-
-    advance(1);
-    const notice = screen.getByText(SLOW_SERVER_NOTICE);
-    expect(notice.closest('output')).toBe(live);
-    expect(notice.closest('[aria-busy]')).toBeNull();
-    expect(notice.closest('app-page-notice')?.classList).toContain('quipu-notice--info');
-    expect(notice.closest('[role="alert"]')).toBeNull();
   });
-
-  it('stops its timers when the answer arrives and the screen removes it', async () => {
-    const { fixture } = await renderSkeleton('detail');
-
-    fixture.destroy();
-
-    expect(vi.getTimerCount()).toBe(0);
-  });
-
-  it('takes its times from SKELETON_TIMING', async () => {
-    const { fixture, container } = await render(SkeletonComponent, {
-      inputs: { shape: 'form', subject: 'Subir voucher' },
+  it('uses injectable timing and clears both timers on destruction', async () => {
+    const { fixture, container } = await render(HostComponent, {
       providers: [
         { provide: SKELETON_TIMING, useValue: { showAfterMs: 50, slowNoticeAfterMs: 100 } },
       ],
     });
-
     vi.advanceTimersByTime(50);
     fixture.detectChanges();
-    expect(container.querySelectorAll('.sk').length).toBeGreaterThan(0);
+    expect(container.querySelector('app-skeleton-fields')).toBeTruthy();
     vi.advanceTimersByTime(50);
     fixture.detectChanges();
     expect(screen.getByText(SLOW_SERVER_NOTICE)).toBeTruthy();
+    fixture.destroy();
+    expect(vi.getTimerCount()).toBe(0);
   });
-
-  // Each shape draws its own blocks (Cargando.dc.html): the list has the panel, four figures, the
-  // filter bar and five rows; the table (A3), the same without the figures; the detail, the panel, five rows and five tiles; the form, four
-  // fields with their labels, the button and four tiles.
-  it.each([
-    ['list', 1 + 1 + 4 + 1 + 5, 5],
-    ['table', 1 + 1 + 1 + 5, 5],
-    ['detail', 1 + 1 + 5 + 1 + 4 + 1, 5],
-    ['form', 1 + 4 * 2 + 1 + 1 + 4, 0],
-  ] as const)('the %s shape draws %i blocks, %i of them rows', async (shape, total, rows) => {
-    const { advance, container } = await renderSkeleton(shape);
-
-    advance(300);
-
-    expect(container.querySelectorAll('.sk')).toHaveLength(total);
-    expect(container.querySelectorAll('.sk.row')).toHaveLength(rows);
-    expect(container.querySelectorAll('.sk.input')).toHaveLength(shape === 'form' ? 4 : 0);
+  it('allows a sibling region of the same request to own the slow announcement', async () => {
+    const { fixture, container } = await render(HostComponent);
+    fixture.componentInstance.announceSlow.set(false);
+    vi.advanceTimersByTime(8000);
+    fixture.detectChanges();
+    expect(container.querySelector('app-skeleton-fields')).toBeTruthy();
+    expect(screen.queryByText(SLOW_SERVER_NOTICE)).toBeNull();
+    expect(screen.getByRole('region', { name: 'Cargando Pagos' }).getAttribute('aria-busy')).toBe(
+      'true',
+    );
   });
-
-  it('pulses for 1.4 s and stays still with reduced motion', () => {
-    const styles = String(
-      (SkeletonComponent as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles,
-    );
-
-    expect(styles).toContain('quipu-duracion-pulso)');
-    expect(styles).toMatch(
-      /prefers-reduced-motion:\s*reduce\)\s*\{\s*\.sk\[[^\]]*\]\s*\{\s*animation:\s*none/,
-    );
+  it('centralizes the pulse and reduced motion on the decorative block', async () => {
+    await render(SkeletonBlockComponent);
+    const styles = Array.from(document.head.querySelectorAll('style'))
+      .map((style) => style.textContent)
+      .join('\n');
+    expect(styles).toContain('quipu-duracion-pulso');
+    expect(styles).toContain('prefers-reduced-motion');
+    expect(styles).toMatch(/animation:\s*none/);
   });
 });

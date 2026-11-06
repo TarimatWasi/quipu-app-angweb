@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import {
@@ -91,6 +92,7 @@ const ERROR_ID = 'account-email-error';
 })
 export class AccountEmailDialogComponent {
   private readonly ref = inject<MatDialogRef<AccountEmailDialogComponent, boolean>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   private readonly data = inject<AccountEmailData>(MAT_DIALOG_DATA);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -131,28 +133,27 @@ export class AccountEmailDialogComponent {
   /** Runs when the form is valid. A failure comes back as errors, so the dialog stays editable. */
   // The explicit type breaks the circular inference between the form and its submit action.
   private async save(): Promise<FieldErrors | undefined> {
-    this.error.set(null);
-    this.ref.disableClose = true;
-    try {
-      await firstValueFrom(this.data.save(this.model().email.trim()), { defaultValue: null });
-      this.ref.disableClose = false;
-      this.ref.close(true);
-      return undefined;
-    } catch (error: unknown) {
-      this.ref.disableClose = false;
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.ref.close();
+    return this.submission.run(async () => {
+      this.error.set(null);
+      try {
+        await firstValueFrom(this.data.save(this.model().email.trim()), { defaultValue: null });
+        this.ref.close(true);
         return undefined;
+      } catch (error: unknown) {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          // The session interceptor already forgot the session and goes to the login.
+          this.ref.close();
+          return undefined;
+        }
+        const problem = emailProblem(callFailure(error));
+        focusFirstProblem(this.host, this.injector, ERROR_ID);
+        if (problem.place === 'general') {
+          this.error.set(problem.message);
+          return undefined;
+        }
+        return [{ fieldTree: this.emailForm.email, kind: 'server', message: problem.message }];
       }
-      const problem = emailProblem(callFailure(error));
-      focusFirstProblem(this.host, this.injector, ERROR_ID);
-      if (problem.place === 'general') {
-        this.error.set(problem.message);
-        return undefined;
-      }
-      return [{ fieldTree: this.emailForm.email, kind: 'server', message: problem.message }];
-    }
+    });
   }
 }
 

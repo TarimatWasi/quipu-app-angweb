@@ -6,6 +6,8 @@
 /** RN-22: a payment gathers from one to five proofs. */
 export const MAX_PROOFS = 5;
 
+export const PAYMENT_METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
+
 /** RF-15: JPG, PNG or PDF of 5 MB at most; the BFF checks them again by content. */
 export const VOUCHER_TYPES: readonly string[] = ['image/jpeg', 'image/png', 'application/pdf'];
 export const VOUCHER_MAX_BYTES = 5 * 1024 * 1024;

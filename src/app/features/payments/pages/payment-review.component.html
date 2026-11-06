@@ -5,9 +5,41 @@
   [backQuery]="backQuery"
 />
 
+@if (refreshError(); as message) {
+  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+}
+@if (refreshing() && refreshError() === null) {
+  <output>Actualizando…</output>
+}
 @switch (state().kind) {
   @case ('loading') {
-    <app-skeleton class="state" shape="detail" subject="el pago" />
+    <app-skeleton subject="el pago"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <section>
+            <h2>Comprobantes</h2>
+            <app-skeleton-block shape="badge" /><app-skeleton-block
+              class="detail"
+              shape="rectangle"
+              height="32rem"
+            /><app-skeleton-block class="detail" width="70%" />
+          </section>
+          <div class="side">
+            <section>
+              <h2>Lo que se está pagando</h2>
+              <app-skeleton-facts [labels]="['Huésped', 'Ambiente', 'Período', 'Cuota']" />
+            </section>
+            <section>
+              <h2>Montos</h2>
+              <app-skeleton-fields [labels]="['Monto declarado', 'Monto verificado']" />
+            </section>
+            <section>
+              <h2>Decisión</h2>
+              <app-skeleton-block shape="rectangle" />
+            </section>
+          </div>
+        </div> </ng-template
+    ></app-skeleton>
   }
   @case ('not-found') {
     <app-page-notice class="state" tone="error" heading="No encontramos el pago.">
@@ -15,7 +47,12 @@
     </app-page-notice>
   }
   @case ('error') {
-    <app-load-error class="state" [message]="loadErrorText" (retry)="retry()" />
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
   }
 }
 
@@ -27,7 +64,7 @@
       [canAdd]="editable()"
       [full]="atProofLimit()"
       [maxProofs]="maxProofs"
-      [busy]="busy()"
+      [busy]="blocked()"
       (add)="addProof()"
     />
 
@@ -62,7 +99,7 @@
           [texts]="amounts()"
           [invalidIds]="invalidIds()"
           [editable]="editable()"
-          [busy]="busy()"
+          [busy]="blocked()"
           [declaredTotal]="declaredTotal()"
           [verifiedTotal]="verifiedTotalText()"
           (typed)="typed($event)"
@@ -105,7 +142,7 @@
                 <button
                   class="quipu-button quipu-button--primary"
                   type="button"
-                  [disabled]="busy()"
+                  [disabled]="blocked()"
                   (click)="reviewNext()"
                 >
                   Revisar el siguiente
@@ -133,7 +170,7 @@
             <button
               class="quipu-button quipu-button--secondary"
               type="button"
-              [disabled]="busy()"
+              [disabled]="blocked()"
               (click)="reject()"
             >
               {{ p.status === 'REJECTED' ? 'Rechazar de nuevo' : 'Rechazar con motivo' }}

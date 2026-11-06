@@ -49,7 +49,7 @@ function dashboard(summary: Partial<QueueSummary> = {}) {
   };
 }
 
-async function setup(url = '/admin/payments', summary: object | null = dashboard()) {
+async function setup(url = '/admin/payments', summary: object | null | 'pending' = dashboard()) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -67,9 +67,10 @@ async function setup(url = '/admin/payments', summary: object | null = dashboard
   const home = await vi.waitFor(() => http.expectOne(isDashboard));
   if (summary === null) {
     home.flush({ code: 'X', message: 'x' }, { status: 500, statusText: 'x' });
-  } else {
+  } else if (summary !== 'pending') {
     home.flush(summary);
   }
+  await settle(harness);
   const root = () => present(harness.routeNativeElement);
   const ui = () => within(root());
   const answer = async (body: object, status = 200) => {
@@ -78,7 +79,7 @@ async function setup(url = '/admin/payments', summary: object | null = dashboard
     await settle(harness);
     return req;
   };
-  return { harness, http, ui, answer, root };
+  return { harness, http, ui, answer, root, home };
 }
 
 function cellsOf(rowElement: HTMLElement | undefined): string[] {
@@ -96,11 +97,41 @@ describe('PaymentQueueComponent (A5)', () => {
   it('shows the skeleton while the first page loads, then «Pagos recibidos»', async () => {
     const { ui, answer } = await setup();
     expect(ui().getByRole('heading', { level: 1, name: 'Pagos' })).toBeTruthy();
-    expect(ui().queryByRole('heading', { name: 'Pagos recibidos' })).toBeNull();
+    expect(ui().getByRole('heading', { name: 'Pagos recibidos' })).toBeTruthy();
+    expect(ui().getByRole('region', { name: 'Cargando Por revisar' })).toBeTruthy();
+    expect(ui().getByRole('region', { name: 'Lo que toca ahora' })).toBeTruthy();
 
     await answer({ content: [row()], nextCursor: null });
 
     expect(ui().getByRole('heading', { name: 'Pagos recibidos' })).toBeTruthy();
+  });
+
+  it('shows the list while the independent summary is still loading', async () => {
+    const { ui, answer, home, harness } = await setup('/admin/payments', 'pending');
+    await answer({ content: [row()], nextCursor: null });
+    expect(ui().getByRole('table', { name: 'Por revisar' })).toBeTruthy();
+    expect(ui().getByRole('region', { name: 'Cargando el resumen de pagos' })).toBeTruthy();
+    home.flush(dashboard());
+    await settle(harness);
+    expect(ui().getByRole('region', { name: 'Lo que toca ahora' })).toBeTruthy();
+    expect(ui().queryByLabelText('Cargando el resumen de pagos')).toBeNull();
+  });
+
+  it('retries a failed summary without replacing or reloading the list', async () => {
+    const { ui, answer, harness, http } = await setup('/admin/payments', null);
+    await answer({ content: [row()], nextCursor: null });
+    fireEvent.click(ui().getByRole('button', { name: 'Reintentar' }));
+    await settle(harness);
+    expect(ui().getByRole('button', { name: 'Cargando\u2026' }).hasAttribute('disabled')).toBe(
+      true,
+    );
+    expect(ui().getByRole('table', { name: 'Por revisar' })).toBeTruthy();
+    expect(ui().queryByLabelText('Cargando el resumen de pagos')).toBeNull();
+    http.expectNone(isQueue);
+    const request = http.expectOne(isDashboard);
+    request.flush(dashboard());
+    await settle(harness);
+    expect(ui().getByRole('region', { name: 'Lo que toca ahora' })).toBeTruthy();
   });
 
   it('offers «Registrar pago directo» (A5.1) in every view', async () => {
@@ -206,7 +237,7 @@ describe('PaymentQueueComponent (A5)', () => {
   });
 
   it('says the queue could not load and asks again on «Reintentar»', async () => {
-    const { ui, answer } = await setup();
+    const { ui, answer, harness } = await setup();
 
     await answer({ code: 'RATE_LIMITED', message: 'Espera un momento, por favor' }, 429);
 
@@ -214,6 +245,10 @@ describe('PaymentQueueComponent (A5)', () => {
     expect(ui().queryByRole('table')).toBeNull();
 
     fireEvent.click(ui().getByRole('button', { name: 'Reintentar' }));
+    await settle(harness);
+    expect(ui().getByRole('button', { name: 'Cargando…' }).hasAttribute('disabled')).toBe(true);
+    expect(ui().getByText('No se pudo cargar la cola de pagos.')).toBeTruthy();
+    expect(ui().queryByLabelText(/Cargando la cola/)).toBeNull();
     await answer({ content: [row()], nextCursor: null });
 
     expect(ui().queryByText('No se pudo cargar la cola de pagos.')).toBeNull();

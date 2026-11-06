@@ -3,7 +3,14 @@
 // Evidence for the comparison with the canvas, not a test: there is no expectation on the screen
 // and no baseline (toHaveScreenshot is fase 2).
 import { test } from '@playwright/test';
-import { CAPTURE_STYLE, chooseScenario, ensureOn, signIn, waitUntilStable } from './mock-session';
+import {
+  CAPTURE_INSTANT,
+  CAPTURE_STYLE,
+  chooseScenario,
+  ensureOn,
+  signIn,
+  waitUntilStable,
+} from './mock-session';
 import { SCREENS } from './screens';
 
 const SCREENSHOT_DIR = 'playwright-output/screenshots';
@@ -23,6 +30,7 @@ if (repeated.length > 0) {
 
 for (const { screen, scenario, name } of captures) {
   test(name, async ({ page }, testInfo) => {
+    await page.clock.setFixedTime(CAPTURE_INSTANT);
     const width = testInfo.project.use.viewport?.width ?? 0;
     if (screen.role !== 'anonymous') {
       await signIn(page, screen.role);
@@ -33,6 +41,14 @@ for (const { screen, scenario, name } of captures) {
     }
     await waitUntilStable(page, screen.readiness ?? 'content');
     ensureOn(page, screen.path);
+    if (screen.accountMenu) {
+      const account = page.getByRole('button', { name: /^Tu cuenta:/ });
+      await (
+        (await account.isVisible())
+          ? account
+          : page.getByRole('button', { name: 'Menú', exact: true })
+      ).click();
+    }
     if (screen.open !== undefined) {
       await page.getByRole('button', { name: screen.open, exact: true }).first().click();
       await page.getByRole('dialog').waitFor();

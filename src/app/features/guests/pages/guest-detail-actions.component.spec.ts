@@ -200,6 +200,35 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
     expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Sin contrato');
   });
 
+  it('keeps the notice of a failed reload while the clock ticks, until a reload succeeds', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const ui = await setup({
+        detail: of(guestOf({ status: 'INACTIVE', contract: undefined })),
+        months: [],
+      });
+      ui.service.get.mockReturnValue(throwError(() => httpError(503)));
+      await ui.click(within(ui.panel()).getByRole('button', { name: 'Reactivar huésped' }));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      await ui.harness.fixture.whenStable();
+      expect(squash(ui.page().getByRole('alert').textContent)).toContain(
+        'No se pudo cargar el huésped',
+      );
+
+      vi.advanceTimersByTime(60_000);
+      await ui.harness.fixture.whenStable();
+      expect(squash(ui.page().getByRole('alert').textContent)).toContain(
+        'No se pudo cargar el huésped',
+      );
+
+      ui.service.get.mockReturnValue(of(guestOf({ contract: undefined })));
+      await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+      expect(ui.page().queryByRole('alert')).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('says the access expired while inactive once reactivated, and offers another', async () => {
     const lapsed = {
       contract: undefined,

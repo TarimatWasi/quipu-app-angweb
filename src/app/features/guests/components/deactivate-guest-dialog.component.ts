@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -80,12 +81,13 @@ const ERROR_ID = 'deactivate-guest-error';
 export class DeactivateGuestDialogComponent {
   private readonly ref =
     inject<MatDialogRef<DeactivateGuestDialogComponent, boolean>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   protected readonly data = inject<DeactivateGuestData>(MAT_DIALOG_DATA);
 
   protected readonly textId = TEXT_ID;
   protected readonly errorId = ERROR_ID;
   protected readonly blocked = signal(this.data.blocked);
-  protected readonly busy = signal(false);
+  protected readonly busy = this.submission.pending;
   protected readonly error = signal<string | null>(null);
   protected readonly heading = computed(() =>
     this.blocked() ? ACTIVE_CONTRACT_TITLE : deactivateTitle(this.data.who),
@@ -99,16 +101,15 @@ export class DeactivateGuestDialogComponent {
   }
 
   protected async deactivate(): Promise<void> {
-    if (this.busy()) return;
-    this.busy.set(true);
-    this.error.set(null);
-    this.ref.disableClose = true;
-    try {
-      await firstValueFrom(this.data.deactivate(), { defaultValue: null });
-      this.finish(true);
-    } catch (error: unknown) {
-      this.failed(error);
-    }
+    return this.submission.run(async () => {
+      this.error.set(null);
+      try {
+        await firstValueFrom(this.data.deactivate(), { defaultValue: null });
+        this.finish(true);
+      } catch (error: unknown) {
+        this.failed(error);
+      }
+    });
   }
 
   private failed(error: unknown): void {
@@ -118,8 +119,6 @@ export class DeactivateGuestDialogComponent {
       return;
     }
     const failure = callFailure(error);
-    this.ref.disableClose = false;
-    this.busy.set(false);
     if (hasActiveContract(failure)) {
       this.blocked.set(true);
       return;
@@ -128,7 +127,6 @@ export class DeactivateGuestDialogComponent {
   }
 
   private finish(result?: boolean): void {
-    this.ref.disableClose = false;
     this.ref.close(result);
   }
 }
