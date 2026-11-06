@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import {
@@ -87,6 +88,7 @@ interface NewAdministratorModel {
 export class NewAdministratorDialogComponent {
   private readonly ref =
     inject<MatDialogRef<NewAdministratorDialogComponent, NewAdministratorResult>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   private readonly data = inject<NewAdministratorData>(MAT_DIALOG_DATA);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -147,30 +149,31 @@ export class NewAdministratorDialogComponent {
 
   /** Runs when the form is valid. A failure comes back as errors, so the dialog stays editable. */
   private async create() {
-    this.topError.set(null);
-    this.bottomError.set(null);
-    this.ref.disableClose = true;
-    const { documentType, documentNumber, email: account, currentPassword } = this.model();
-    const input = {
-      documentType,
-      documentNumber: documentNumber.trim(),
-      email: account.trim(),
-      currentPassword,
-    };
-    try {
-      const created = await firstValueFrom(this.data.create(input));
-      this.ref.disableClose = false;
-      this.ref.close({ email: input.email, emailSent: created.emailSent });
-      return undefined;
-    } catch (error: unknown) {
-      this.ref.disableClose = false;
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.ref.close();
+    return this.submission.run(async () => {
+      this.topError.set(null);
+      this.bottomError.set(null);
+
+      const { documentType, documentNumber, email: account, currentPassword } = this.model();
+      const input = {
+        documentType,
+        documentNumber: documentNumber.trim(),
+        email: account.trim(),
+        currentPassword,
+      };
+      try {
+        const created = await firstValueFrom(this.data.create(input));
+
+        this.ref.close({ email: input.email, emailSent: created.emailSent });
         return undefined;
+      } catch (error: unknown) {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          // The session interceptor already forgot the session and goes to the login.
+          this.ref.close();
+          return undefined;
+        }
+        return this.failure(error);
       }
-      return this.failure(error);
-    }
+    });
   }
 
   private failure(error: unknown) {

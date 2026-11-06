@@ -23,10 +23,13 @@ export interface ScreenCapture {
   readonly readiness?: ScreenReadiness;
   /** The name of a button to press before the capture, to show the dialog it opens. */
   readonly open?: string;
+  readonly accountMenu?: boolean;
 }
 
 // Ids of the seeded data (src/app/core/mock/data): mockId(kind, n) of mock-db.ts.
 const PENDING_PAYMENT_OF_LUIS = '00000005-0000-4000-8000-000000000005';
+const REJECTED_PAYMENT_OF_LUIS = '00000005-0000-4000-8000-000000000004';
+const PENDING_PAYMENT_OF_ANA = '00000005-0000-4000-8000-000000000013';
 const TEMPORARY_GUEST_ANA = '00000001-0000-4000-8000-000000000003';
 // A3.2: one guest per state of «Lo que toca ahora» (GUEST_IDS of demo-users.ts).
 const GUEST_LUIS_OWING = '00000001-0000-4000-8000-000000000001';
@@ -82,6 +85,14 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'temporary-guest',
     scenarios: ['normal'],
   },
+  {
+    id: 'cuenta-cambio-clave',
+    path: '/home',
+    role: 'admin',
+    scenarios: ['normal'],
+    accountMenu: true,
+    open: 'Cambiar contraseña',
+  },
   { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['normal'] },
   { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest', scenarios: ['normal'] },
   { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest', scenarios: ['normal'] },
@@ -90,6 +101,13 @@ export const SCREENS: readonly ScreenCapture[] = [
     path: '/admin/payments',
     role: 'admin',
     scenarios: ['normal', 'empty', 'load-error'],
+  },
+  {
+    id: 'a5-cola',
+    path: '/admin/payments',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
   },
   {
     id: 'a5-cola-rechazados',
@@ -119,10 +137,28 @@ export const SCREENS: readonly ScreenCapture[] = [
     open: 'Agregar comprobante',
   },
   { id: 'h3-nuevo', path: '/guest/payments/new', role: 'contract-guest', scenarios: ['normal'] },
+  {
+    id: 'h3-correccion',
+    path: `/guest/payments/${REJECTED_PAYMENT_OF_LUIS}`,
+    role: 'contract-guest',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'h3-lectura',
+    path: `/guest/payments/${PENDING_PAYMENT_OF_LUIS}`,
+    role: 'contract-guest',
+    scenarios: ['normal'],
+  },
   { id: 'h4-historial', path: '/guest/payments', role: 'contract-guest', scenarios: ['normal'] },
   {
     id: 't2-pago',
     path: '/temporary-guest/payment',
+    role: 'temporary-guest',
+    scenarios: ['normal'],
+  },
+  {
+    id: 't2-lectura',
+    path: `/temporary-guest/payment/${PENDING_PAYMENT_OF_ANA}`,
     role: 'temporary-guest',
     scenarios: ['normal'],
   },
@@ -182,6 +218,13 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['normal', 'load-error'],
   },
   {
+    id: 'a7-nuevo-administrador',
+    path: '/admin/administrators',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Nuevo administrador',
+  },
+  {
     id: 'a7-administradores',
     path: '/admin/administrators',
     role: 'admin',
@@ -194,4 +237,59 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal'],
   },
+  {
+    id: 'a3-5-documento',
+    path: guestPage(GUEST_PENDING) + '/document',
+    role: 'admin',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'a3-5-documento',
+    path: guestPage(GUEST_PENDING) + '/document',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 'a3-5-estadia-corregir',
+    path: guestPage(TEMPORARY_GUEST_ANA) + '/stays/00000004-0000-4000-8000-000000000002',
+    role: 'admin',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'a3-5-estadia-corregir',
+    path: guestPage(TEMPORARY_GUEST_ANA) + '/stays/00000004-0000-4000-8000-000000000002',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  ...[
+    { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest' },
+    { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest' },
+    { id: 'h3-nuevo', path: '/guest/payments/new', role: 'contract-guest' },
+    {
+      id: 'h3-correccion',
+      path: `/guest/payments/${REJECTED_PAYMENT_OF_LUIS}`,
+      role: 'contract-guest',
+    },
+    {
+      id: 'h3-lectura',
+      path: `/guest/payments/${PENDING_PAYMENT_OF_LUIS}`,
+      role: 'contract-guest',
+    },
+    { id: 'h4-historial', path: '/guest/payments', role: 'contract-guest' },
+    { id: 't2-pago', path: '/temporary-guest/payment', role: 'temporary-guest' },
+    {
+      id: 't2-lectura',
+      path: `/temporary-guest/payment/${PENDING_PAYMENT_OF_ANA}`,
+      role: 'temporary-guest',
+    },
+    { id: 'a5-2-revision', path: `/admin/payments/${PENDING_PAYMENT_OF_LUIS}`, role: 'admin' },
+    { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin' },
+  ].map((screen) => ({
+    ...screen,
+    role: screen.role as ScreenRole,
+    scenarios: ['slow'] as const,
+    readiness: 'skeleton' as const,
+  })),
 ];

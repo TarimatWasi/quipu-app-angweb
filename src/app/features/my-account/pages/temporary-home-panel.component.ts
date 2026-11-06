@@ -1,3 +1,6 @@
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
@@ -31,13 +34,15 @@ type LoadState =
  */
 @Component({
   selector: 'app-temporary-home-panel',
-  imports: [RouterLink],
+  imports: [RouterLink, SkeletonComponent, SkeletonContentDirective, SkeletonCardsComponent],
   template: `
     <section class="panel" aria-labelledby="stay-payment-title">
       <h2 id="stay-payment-title">Tu pago</h2>
       @switch (state().kind) {
         @case ('loading') {
-          <output class="muted">Cargando el estado de tu pago…</output>
+          <app-skeleton subject="el estado de tu pago"
+            ><ng-template appSkeletonContent><app-skeleton-cards [count]="1" /></ng-template
+          ></app-skeleton>
         }
         @case ('no-stay') {
           <p>{{ noStayMessage() }}</p>
@@ -45,8 +50,13 @@ type LoadState =
         @case ('error') {
           <div class="quipu-alert" role="alert">
             <p>{{ loadError() }}</p>
-            <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
-              Reintentar
+            <button
+              class="quipu-button quipu-button--secondary"
+              type="button"
+              [disabled]="retrying()"
+              (click)="retry()"
+            >
+              {{ retrying() ? 'Cargando…' : 'Reintentar' }}
             </button>
           </div>
         }
@@ -98,6 +108,7 @@ export class TemporaryHomePanelComponent implements OnInit {
 
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
   protected readonly stay = signal<StayPaymentStatus | null>(null);
+  protected readonly retrying = signal(false);
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly loadError = computed(() => {
     const state = this.state();
@@ -137,11 +148,14 @@ export class TemporaryHomePanelComponent implements OnInit {
   }
 
   protected retry(): void {
+    if (this.retrying() || this.state().kind === 'loading') return;
     void this.load();
   }
 
   private async load(): Promise<void> {
-    this.state.set({ kind: 'loading' });
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const stay = await firstValueFrom(this.payments.paymentStatus());
       if (this.destroyed) return;
@@ -153,6 +167,8 @@ export class TemporaryHomePanelComponent implements OnInit {
       // The guest has no stay yet (RESOURCE_NOT_FOUND): the BFF's own text says so.
       const noStay = error instanceof HttpErrorResponse && error.status === 404;
       this.state.set({ kind: noStay ? 'no-stay' : 'error', message });
+    } finally {
+      if (!this.destroyed) this.retrying.set(false);
     }
   }
 }

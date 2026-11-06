@@ -139,7 +139,7 @@ describe('home payment panels', () => {
       expect(ui.getByRole('link', { name: 'Historial de pagos' })).toBeTruthy();
       await click(ui.getByRole('button', { name: 'Reintentar' }));
       http.expectOne(isStatus).flush([]);
-      http.expectOne(isCredit).flush(NO_CREDIT);
+      http.expectNone(isCredit);
     });
 
     it('shows the credit in a notice and what is left to pay of each month (RN-38)', async () => {

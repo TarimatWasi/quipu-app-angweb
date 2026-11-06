@@ -578,6 +578,23 @@ describe('LoginComponent', () => {
       expect(document.activeElement?.textContent).toContain('Entendido');
     });
 
+    it('does not open the lock dialog when the login was left while its response was settling', async () => {
+      const { fixture, fillValid, submit, request } = await setup();
+      await fillValid();
+      await submit();
+      (await request()).flush(LOCKED, {
+        status: 423,
+        statusText: 'Locked',
+        headers: RETRY_AFTER,
+      });
+      fixture.destroy();
+
+      await import('../components/account-locked-dialog.component');
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(document.body.querySelector('[role="alertdialog"]')).toBeNull();
+    });
+
     it('hides the digits that change every second from screen readers', async () => {
       await lockedSetup();
 

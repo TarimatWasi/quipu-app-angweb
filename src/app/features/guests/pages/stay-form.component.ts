@@ -1,3 +1,12 @@
+import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
+import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
+import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { FieldErrors } from '@shared/forms/field-errors';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   afterNextRender,
@@ -36,13 +45,10 @@ import {
   guestName,
   NO_ENVIRONMENT,
   nightsBetween,
-  SKELETON_ROWS,
-  SLOW_TEXT,
   STAY_CREATED_TEXT,
   STAY_UPDATED_TEXT,
   todayText,
 } from '../model/guest-texts';
-import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { openGuestNoticeDialog } from '../components/guest-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -159,7 +165,17 @@ function nightsValue(start: string, end: string): string {
  */
 @Component({
   selector: 'app-stay-form',
-  imports: [RouterLink],
+  imports: [
+    FormSummaryLayoutComponent,
+    GuestFormHeaderComponent,
+    LoadErrorComponent,
+    SkeletonBlockComponent,
+    SkeletonFactsComponent,
+    SkeletonFieldsComponent,
+    SkeletonContentDirective,
+    SkeletonComponent,
+    RouterLink,
+  ],
   templateUrl: './stay-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
@@ -175,15 +191,16 @@ export class StayFormComponent implements OnInit {
 
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly today = todayText();
-  protected readonly slowText = SLOW_TEXT;
-  protected readonly skeletonRows = SKELETON_ROWS;
   protected readonly describedBy = describedBy;
-  protected readonly timing = new LoadTiming();
   protected guestId = '';
   /** The stay being corrected, or null when a new one is registered. */
   protected stayId: string | null = null;
 
   protected readonly guest = signal<GuestDetail | null>(null);
+  protected readonly retrying = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
+  protected readonly freeRetrying = signal(false);
   protected readonly state = signal<LoadState>({ kind: 'ready' });
   protected readonly loaded = signal<Stay | null>(null);
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
@@ -195,7 +212,8 @@ export class StayFormComponent implements OnInit {
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
   /** Errors the BFF tied to a field, shown next to it until that field changes. */
-  protected readonly serverErrors = signal<Readonly<Partial<Record<FieldKey, string>>>>({});
+  private readonly fieldErrors = new FieldErrors<FieldKey>();
+  protected readonly serverErrors = this.fieldErrors.values;
 
   protected readonly backLabel = computed(() => {
     const guest = this.guest();
@@ -252,7 +270,12 @@ export class StayFormComponent implements OnInit {
     return (Object.keys(initial) as (keyof Draft)[]).some((key) => draft[key] !== initial[key]);
   });
   protected readonly canSave = computed(
-    () => this.state().kind === 'ready' && !this.busy() && this.dirty(),
+    () =>
+      this.state().kind === 'ready' &&
+      !this.busy() &&
+      !this.refreshing() &&
+      this.refreshError() === null &&
+      this.dirty(),
   );
   protected readonly saveLabel = computed(() => {
     if (this.stayId === null) return this.busy() ? 'Registrando…' : 'Registrar estadía';
@@ -300,7 +323,6 @@ export class StayFormComponent implements OnInit {
   constructor() {
     inject(DestroyRef).onDestroy(() => {
       this.destroyed = true;
-      this.timing.stop();
     });
   }
 
@@ -333,11 +355,15 @@ export class StayFormComponent implements OnInit {
   }
 
   protected retry(): void {
+    if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
     if (this.stayId !== null) void this.loadStay(this.stayId);
   }
 
   protected retryFree(): void {
-    this.refreshFree();
+    if (this.freeRetrying() || this.freeState().kind === 'loading') return;
+    if (!this.datesReady()) return;
+    this.freeRetrying.set(true);
+    void this.loadFree();
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -412,12 +438,7 @@ export class StayFormComponent implements OnInit {
 
   private update(changes: Partial<Draft>, field: FieldKey): void {
     this.draft.update((draft) => ({ ...draft, ...changes }));
-    const errors = this.serverErrors();
-    if (errors[field] !== undefined) {
-      this.serverErrors.set(
-        Object.fromEntries(Object.entries(errors).filter(([key]) => key !== field)),
-      );
-    }
+    this.fieldErrors.clear(field);
   }
 
   private async failed(error: unknown): Promise<void> {
@@ -491,34 +512,45 @@ export class StayFormComponent implements OnInit {
   /** Loads the stay to correct with its current `version` and starts the form from it. */
   private async loadStay(stayId: string): Promise<void> {
     const request = ++this.stayRequest;
-    this.state.set({ kind: 'loading' });
-    this.timing.start();
+    const refreshing = this.state().kind === 'ready' && this.loaded() !== null;
+    this.refreshing.set(refreshing);
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
     this.submitted.set(false);
     this.serverErrors.set({});
     this.generalError.set(null);
     try {
       const stay = await firstValueFrom(this.guests.findStay(this.guestId, stayId));
-      if (request !== this.stayRequest) return;
-      this.timing.stop();
+      if (this.destroyed || request !== this.stayRequest) return;
+      this.refreshError.set(null);
       this.loaded.set(stay);
       this.rejected.set(null);
       this.draft.set(stay ? draftOf(stay) : EMPTY_DRAFT);
       this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
       if (stay) this.refreshFree();
     } catch (error: unknown) {
-      if (request !== this.stayRequest) return;
-      this.timing.stop();
+      if (this.destroyed || request !== this.stayRequest) return;
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set(
-        notFound
-          ? { kind: 'not-found' }
-          : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-      );
+      if (refreshing && !notFound)
+        this.refreshError.set(toBffErrorWithServerMessage(error).message);
+      else
+        this.state.set(
+          notFound
+            ? { kind: 'not-found' }
+            : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
+        );
+    } finally {
+      if (!this.destroyed && request === this.stayRequest) {
+        this.retrying.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
 
   /** Asks the environments free for the dates typed, or clears them while the dates are not valid. */
   private refreshFree(): void {
+    this.freeRetrying.set(false);
     if (this.datesReady()) {
       void this.loadFree();
       return;
@@ -533,16 +565,18 @@ export class StayFormComponent implements OnInit {
   private async loadFree(): Promise<void> {
     const request = ++this.freeRequest;
     const { start, end } = this.draft();
-    this.freeState.set({ kind: 'loading' });
+    if (!this.freeRetrying()) this.freeState.set({ kind: 'loading' });
     try {
       const free = await firstValueFrom(this.environments.allFree(start, end));
-      if (request !== this.freeRequest) return;
+      if (this.destroyed || request !== this.freeRequest) return;
       this.free.set(free);
       this.freeState.set({ kind: 'ready' });
       this.keepChoiceIfOffered();
     } catch (error: unknown) {
-      if (request !== this.freeRequest) return;
+      if (this.destroyed || request !== this.freeRequest) return;
       this.freeState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
+    } finally {
+      if (!this.destroyed && request === this.freeRequest) this.freeRetrying.set(false);
     }
   }
 

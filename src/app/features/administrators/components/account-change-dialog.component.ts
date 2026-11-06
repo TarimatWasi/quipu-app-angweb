@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, maxLength, required } from '@angular/forms/signals';
@@ -103,6 +104,7 @@ const BOTTOM_ERROR_ID = 'account-change-error';
 })
 export class AccountChangeDialogComponent {
   private readonly ref = inject<MatDialogRef<AccountChangeDialogComponent, boolean>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   private readonly data = inject<AccountChangeData>(MAT_DIALOG_DATA);
   private readonly injector = inject(Injector);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
@@ -146,25 +148,26 @@ export class AccountChangeDialogComponent {
 
   /** Runs when the form is valid. A failure comes back as errors, so the dialog stays editable. */
   private async confirm() {
-    this.topError.set(null);
-    this.bottomError.set(null);
-    this.ref.disableClose = true;
-    try {
-      await firstValueFrom(this.data.change(this.model().currentPassword), {
-        defaultValue: undefined,
-      });
-      this.ref.disableClose = false;
-      this.ref.close(true);
-      return undefined;
-    } catch (error: unknown) {
-      this.ref.disableClose = false;
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.ref.close();
+    return this.submission.run(async () => {
+      this.topError.set(null);
+      this.bottomError.set(null);
+
+      try {
+        await firstValueFrom(this.data.change(this.model().currentPassword), {
+          defaultValue: undefined,
+        });
+
+        this.ref.close(true);
         return undefined;
+      } catch (error: unknown) {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          // The session interceptor already forgot the session and goes to the login.
+          this.ref.close();
+          return undefined;
+        }
+        return this.failure(error);
       }
-      return this.failure(error);
-    }
+    });
   }
 
   private failure(error: unknown) {

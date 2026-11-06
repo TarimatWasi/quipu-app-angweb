@@ -1,3 +1,4 @@
+import { proofsBody } from '@shared/payments/proofs-body';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
 import { map, Observable } from 'rxjs';
@@ -105,11 +106,7 @@ export class AdminPaymentsService {
     proofs: readonly ProofEdit[],
     files: readonly File[],
   ): Observable<unknown> {
-    const body = new FormData();
-    body.append('proofs', new Blob([JSON.stringify(proofs)], { type: 'application/json' }));
-    for (const file of files) {
-      body.append('files', file, file.name);
-    }
+    const body = proofsBody(proofs, files);
     return this.http.put(`${this.url(id)}/proofs`, body);
   }
 
@@ -126,20 +123,11 @@ export class AdminPaymentsService {
    * part and the voucher files in the order their `fileIndex` points to.
    */
   createDirect(payment: DirectPayment, files: readonly File[]): Observable<PaymentSummary> {
-    const body = new FormData();
-    body.append('guestId', payment.guestId);
-    if (payment.target.period !== undefined) {
-      body.append('period', payment.target.period);
-    } else {
-      body.append('stayId', payment.target.stayId);
-    }
-    if (payment.receivedOn !== undefined) {
-      body.append('receivedOn', payment.receivedOn);
-    }
-    body.append('proofs', new Blob([JSON.stringify(payment.proofs)], { type: 'application/json' }));
-    for (const file of files) {
-      body.append('files', file, file.name);
-    }
+    const fields: Record<string, string> = { guestId: payment.guestId };
+    if (payment.target.period !== undefined) fields['period'] = payment.target.period;
+    else fields['stayId'] = payment.target.stayId;
+    if (payment.receivedOn !== undefined) fields['receivedOn'] = payment.receivedOn;
+    const body = proofsBody(payment.proofs, files, fields);
     return this.http.post<PaymentSummary>(this.base, body);
   }
 

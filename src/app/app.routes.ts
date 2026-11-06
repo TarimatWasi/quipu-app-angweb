@@ -6,7 +6,10 @@ import { contractGuestGuard, temporaryGuestGuard } from '@core/guards/guest.guar
 import { NO_ACCESS_PATH } from '@core/guards/no-access';
 import { passwordChangeGuard } from '@core/guards/password-change.guard';
 import { sessionRestoredGuard } from '@core/guards/session-restored.guard';
-import { AppShellComponent, NO_CURRENT_SECTION } from '@layout/app-shell/app-shell.component';
+import { NO_CURRENT_SECTION } from '@layout/app-shell/app-shell-route-data';
+
+const loadAppShell = () =>
+  import('@layout/app-shell/app-shell.component').then((m) => m.AppShellComponent);
 
 export const routes: Routes = [
   {
@@ -40,7 +43,7 @@ export const routes: Routes = [
   // Pages behind the login share the app bar (layout/), which is their parent route.
   {
     path: '',
-    component: AppShellComponent,
+    loadComponent: loadAppShell,
     canActivate: [authGuard],
     children: [
       {
@@ -89,7 +92,7 @@ export const routes: Routes = [
   // session of a reload to know which bar and button to show, and no section of the menu is marked.
   {
     path: '',
-    component: AppShellComponent,
+    loadComponent: loadAppShell,
     canActivate: [sessionRestoredGuard],
     data: { [NO_CURRENT_SECTION]: true },
     children: [

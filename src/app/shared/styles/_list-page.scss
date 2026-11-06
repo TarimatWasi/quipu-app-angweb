@@ -1,0 +1,27 @@
+// Shared spacing of the existing guest and payment lists. Scoped by each consuming component.
+@mixin layout {
+  :host {
+    display: block;
+  }
+
+  .state {
+    margin-top: 1.5rem;
+  }
+
+  .now {
+    margin-top: 2rem;
+  }
+
+  .all {
+    margin-top: 2.5rem;
+  }
+
+  .views {
+    margin-top: 1rem;
+  }
+
+  .more-error {
+    display: block;
+    margin-top: 1rem;
+  }
+}

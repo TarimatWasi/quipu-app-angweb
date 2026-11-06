@@ -1,3 +1,6 @@
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -12,7 +15,14 @@ import type { StayRow } from '../model/stay-rows';
  */
 @Component({
   selector: 'app-guest-stays',
-  imports: [EmptyStateComponent, RouterLink, StatusBadgeComponent],
+  imports: [
+    SkeletonComponent,
+    SkeletonContentDirective,
+    SkeletonCardsComponent,
+    EmptyStateComponent,
+    RouterLink,
+    StatusBadgeComponent,
+  ],
   template: `
     <section class="section" aria-labelledby="stays-title">
       <div class="section-head">
@@ -26,7 +36,11 @@ import type { StayRow } from '../model/stay-rows';
         }
       </div>
 
-      @if (rows().length > 0) {
+      @if (loading()) {
+        <app-skeleton subject="las estadías"
+          ><ng-template appSkeletonContent><app-skeleton-cards [action]="true" /></ng-template
+        ></app-skeleton>
+      } @else if (rows().length > 0) {
         <ul class="quipu-card-list stays" aria-label="Estadías">
           @for (stay of rows(); track stay.id) {
             <li class="quipu-card">
@@ -121,6 +135,7 @@ import type { StayRow } from '../model/stay-rows';
 })
 export class GuestStaysComponent {
   readonly guestId = input.required<string>();
+  readonly loading = input(false);
   readonly rows = input.required<readonly StayRow[]>();
   /** Only an active guest takes a new stay (RN-35). */
   readonly canRegister = input.required<boolean>();

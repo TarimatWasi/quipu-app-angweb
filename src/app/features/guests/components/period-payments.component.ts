@@ -1,3 +1,5 @@
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
@@ -25,7 +27,7 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   { key: 'month', label: 'Mes', sortable: true, rowHeader: true },
   { key: 'due', label: 'Vence', sortable: true },
   { key: 'amount', label: 'Monto', sortable: true, align: 'end' },
-  { key: 'state', label: 'Estado', sortable: true },
+  { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado', sortable: true },
   { key: 'action', label: 'Acciones', hiddenLabel: true, align: 'action' },
 ];
 
@@ -41,6 +43,8 @@ function isState(key: string | null): key is PeriodState {
 @Component({
   selector: 'app-period-payments',
   imports: [
+    SkeletonBlockComponent,
+    DataSkeletonCardDirective,
     DataCardDirective,
     DataCellDirective,
     DataTableComponent,
@@ -52,21 +56,24 @@ function isState(key: string | null): key is PeriodState {
   template: `
     <section class="section" aria-labelledby="periods-title">
       <h2 id="periods-title">Pagos por mes</h2>
-      @if (rows().length === 0) {
+      @if (!loading() && rows().length === 0) {
         <app-empty-state heading="Aún no tiene meses por cobrar.">
           Aparecen cuando le cargues un contrato.
         </app-empty-state>
       } @else {
-        <app-status-filter
-          noun="meses"
-          [segments]="segments()"
-          [selected]="selected()"
-          (chosen)="choose($event)"
-        />
-        <p class="count">
-          <output aria-live="polite">{{ showing() }}</output>
-        </p>
+        @if (!loading()) {
+          <app-status-filter
+            noun="meses"
+            [segments]="segments()"
+            [selected]="selected()"
+            (chosen)="choose($event)"
+          />
+          <p class="count">
+            <output aria-live="polite">{{ showing() }}</output>
+          </p>
+        }
         <app-data-table
+          [loading]="loading()"
           caption="Pagos por mes"
           [columns]="columns"
           [rows]="shown()"
@@ -74,6 +81,10 @@ function isState(key: string | null): key is PeriodState {
           [sort]="sort()"
           (sortBy)="sortBy($event)"
         >
+          <ng-template appDataSkeletonCard
+            ><app-skeleton-block width="65%" /><app-skeleton-block
+              shape="badge" /><app-skeleton-block width="85%" /><app-skeleton-block width="7rem"
+          /></ng-template>
           <ng-template appDataCell="month" [appDataCellRows]="shown()" let-row>
             {{ row.month }}
           </ng-template>
@@ -166,6 +177,7 @@ function isState(key: string | null): key is PeriodState {
   `,
 })
 export class PeriodPaymentsComponent {
+  readonly loading = input(false);
   readonly rows = input.required<readonly PeriodRow[]>();
 
   protected readonly columns = COLUMNS;

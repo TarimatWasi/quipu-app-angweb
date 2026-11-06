@@ -6,49 +6,10 @@ export const GUEST_PAGE_STYLES = `
   :host {
     display: block;
   }
-  .back {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 0;
-    font-weight: 700;
-    text-underline-offset: 4px;
-  }
-  .title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 6px 24px;
-    margin-top: 6px;
-  }
-  h1 {
-    margin: 0;
-  }
-  .today {
-    margin: 0;
-    font-size: 18px;
-    color: var(--mat-sys-on-surface-variant);
-  }
   h2 {
     margin: 0 0 14px;
     font-size: 20px;
     font-weight: 800;
-  }
-  .layout {
-    display: grid;
-    gap: 40px 56px;
-    margin-top: 32px;
-    align-items: start;
-    grid-template-columns: minmax(0, 1.4fr) minmax(320px, 1fr);
-  }
-  .layout > * {
-    min-width: 0;
-  }
-  @media (max-width: 900px) {
-    .layout {
-      grid-template-columns: 1fr;
-    }
   }
   .facts {
     display: grid;
@@ -128,16 +89,5 @@ export const GUEST_PAGE_STYLES = `
     text-decoration: underline;
     text-underline-offset: 4px;
     cursor: pointer;
-  }
-  .sk {
-    border-radius: 4px;
-    background: var(--quipu-piedra-oscura);
-    animation: sk 1.4s ease-in-out infinite;
-  }
-  @keyframes sk {
-    50% { opacity: 0.55; }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .sk { animation: none; }
   }
 `;

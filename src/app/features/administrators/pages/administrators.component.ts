@@ -1,9 +1,12 @@
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import {
   afterRenderEffect,
   Component,
   computed,
   ElementRef,
   inject,
+  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -53,6 +56,8 @@ const NO_ADMINISTRATORS: readonly AdministratorSummary[] = [];
     PageNoticeComponent,
     PendingSummaryComponent,
     SkeletonComponent,
+    SkeletonBlockComponent,
+    SkeletonContentDirective,
   ],
   templateUrl: './administrators.component.html',
   styleUrl: './administrators.component.scss',
@@ -74,13 +79,18 @@ export class AdministratorsComponent {
   /** The email of an administrator just created whose link could not be sent; null otherwise. */
   protected readonly unsentEmail = signal<string | null>(null);
 
-  private readonly loaded = computed(() =>
-    this.list.hasValue() ? this.list.value() : NO_ADMINISTRATORS,
-  );
+  private readonly lastList = linkedSignal<
+    readonly AdministratorSummary[] | undefined,
+    readonly AdministratorSummary[] | undefined
+  >({
+    source: () => (this.list.hasValue() ? this.list.value() : undefined),
+    computation: (value, previous) => value ?? previous?.value,
+  });
+  private readonly loaded = computed(() => this.lastList() ?? NO_ADMINISTRATORS);
   /** Only the first read shows the skeleton; «Reintentar» keeps the notice while it reads again. */
   protected readonly retrying = computed(() => this.retried() && this.list.isLoading());
   protected readonly view = computed<View>(() => {
-    if (this.list.hasValue()) return 'ready';
+    if (this.lastList() !== undefined) return 'ready';
     return this.list.error() !== undefined || this.retrying() ? 'error' : 'loading';
   });
   protected readonly counts = computed(() => countsOf(this.loaded()));
@@ -108,6 +118,7 @@ export class AdministratorsComponent {
   }
 
   protected retry(): void {
+    if (this.list.isLoading()) return;
     this.retried.set(true);
     this.list.reload();
   }
@@ -139,6 +150,7 @@ export class AdministratorsComponent {
       .afterClosed()
       .subscribe((done) => {
         if (done !== true) return;
+        this.retried.set(false);
         this.list.reload();
         this.toasts.show(texts.done, { tone: 'success' });
       });
@@ -146,6 +158,7 @@ export class AdministratorsComponent {
 
   /** The toast, or the yellow notice that stays when the link could not be emailed. */
   private created({ email, emailSent }: NewAdministratorResult): void {
+    this.retried.set(false);
     this.list.reload();
     this.checkFocus.set(true);
     if (emailSent) {

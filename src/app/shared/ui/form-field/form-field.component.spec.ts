@@ -15,6 +15,7 @@ import { FormFieldComponent } from './form-field.component';
       [optional]="true"
     >
       <input appFieldControl class="quipu-input" type="tel" />
+      <a fieldAfter href="/help">Ayuda</a>
     </app-form-field>
     <app-form-field fieldId="amount" label="Monto recibido" [money]="true">
       <input appFieldControl class="quipu-input" inputmode="decimal" />
@@ -64,6 +65,15 @@ describe('FormFieldComponent (P-07)', () => {
     host.help.set(null);
     await fixture.whenStable();
     expect(phone.getAttribute('aria-describedby')).toBe('phone-error');
+  });
+
+  it('keeps a projected action after validation messages', async () => {
+    const { ui, host, fixture } = await setup();
+    host.error.set('Revisa el número');
+    await fixture.whenStable();
+    const error = ui.getByText('Revisa el número');
+    const action = ui.getByRole('link', { name: 'Ayuda' });
+    expect(error.compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 
   it('puts «S/» before an amount, hidden from a screen reader', async () => {

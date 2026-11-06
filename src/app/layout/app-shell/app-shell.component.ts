@@ -1,20 +1,23 @@
 import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
-import { toSignal } from '@angular/core/rxjs-interop';
-import { MatDialog } from '@angular/material/dialog';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  ElementRef,
+  inject,
+  Injector,
+  signal,
+  viewChild,
+} from '@angular/core';
+import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink, RouterOutlet } from '@angular/router';
 import { filter, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
-import { openChangePasswordDialog } from '@layout/account/change-password-dialog.component';
+import { toBffError } from '@core/http/bff-error';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
 import { ToastService } from '@shared/ui/toast/toast.service';
-
-/**
- * Key of the route data that tells the shell its pages belong to no section (A0.7, a page that
- * does not exist): the menu marks none, even when the address starts like one.
- */
-export const NO_CURRENT_SECTION = 'noCurrentSection';
+import { NO_CURRENT_SECTION } from './app-shell-route-data';
 
 /** The toast (P-17) once the password changed in A0.6. */
 export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';
@@ -41,7 +44,9 @@ export class AppShellComponent {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
-  private readonly dialog = inject(MatDialog);
+  private readonly injector = inject(Injector);
+  private readonly destroyRef = inject(DestroyRef);
+  private openingPassword = false;
   private readonly sectionless = inject(ActivatedRoute).snapshot.data[NO_CURRENT_SECTION] === true;
 
   private readonly accountButton = viewChild<ElementRef<HTMLButtonElement>>('accountButton');
@@ -86,16 +91,26 @@ export class AppShellComponent {
    * A0.6: the menu closes and the dialog opens over the current page. When it closes the focus
    * goes back to the button of the menu it came from; a changed password is told with a toast.
    */
-  protected openChangePassword(): void {
+  protected async openChangePassword(): Promise<void> {
+    if (this.openingPassword) return;
+    this.openingPassword = true;
     const opener = this.panelOpen() ? this.menuButton() : this.accountButton();
     this.closeMenus();
-    openChangePasswordDialog(this.dialog, opener?.nativeElement ?? true)
-      .afterClosed()
-      .subscribe((changed) => {
-        if (changed === true) {
-          this.toasts.show(PASSWORD_CHANGED_TEXT, { tone: 'success' });
-        }
-      });
+    try {
+      const { openChangePasswordFromInjector } =
+        await import('@layout/account/change-password-dialog.component');
+      if (this.destroyRef.destroyed) return;
+      openChangePasswordFromInjector(this.injector, opener?.nativeElement ?? true)
+        .afterClosed()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe((changed) => {
+          if (changed === true) this.toasts.show(PASSWORD_CHANGED_TEXT, { tone: 'success' });
+        });
+    } catch (error: unknown) {
+      if (!this.destroyRef.destroyed) this.toasts.show(toBffError(error).message);
+    } finally {
+      this.openingPassword = false;
+    }
   }
 
   /** Escape closes the open menu and gives the focus back to the button that opened it. */

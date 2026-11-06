@@ -1,3 +1,11 @@
+import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
+import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
+import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -20,13 +28,14 @@ import type {
   GuestProof,
   OwnPaymentsApi,
   OwnPaymentSummary,
-  OwnProofEdit,
-  OwnProofInput,
 } from '../data/own-payments';
 import {
   StayPaymentStatus,
   TemporaryGuestPaymentsService,
 } from '../data/temporary-guest-payments.service';
+import { FieldErrors } from '@shared/forms/field-errors';
+import { ProofDrafts } from '@shared/payments/proof-drafts';
+import { proofField, serializeProofs } from '@shared/payments/proof-draft';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { coveredAmountText, creditAppliedText } from '@shared/payments/credit-texts';
 import {
@@ -35,30 +44,29 @@ import {
   formatPeriod,
   formatStay,
   hasRejectedPayment,
-  parseAmount,
   PERIOD_STATUS_LABELS,
   periodLabel,
   takesNewPayment,
 } from '@shared/payments/payment-format';
-import { PAYMENT_STATUS_LABELS } from '../model/own-payment-labels';
-import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
 import {
-  AMOUNT_TEXT,
-  INVALID_FILE_TEXT,
-  isValidVoucher,
-  MAX_PROOFS,
-  MISSING_FILE_TEXT,
-  PERIOD_TEXT,
-} from '@shared/payments/proof-rules';
-import { DIRECT_PAYMENT_STYLES } from '@shared/payments/direct-payment.styles';
-import { OWN_PAYMENT_STYLES } from './own-payment.styles';
+  PAYMENT_STATUS_LABELS,
+  PAYMENT_STATUS_TONES,
+  PERIOD_STATUS_TONES,
+} from '../model/own-payment-labels';
+import { MAX_PROOFS, PERIOD_TEXT } from '@shared/payments/proof-rules';
+import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
+import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
 
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
 export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;
 export const SENT_TEXT = 'Pago enviado. Queda pendiente de revisión.';
-const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 const GENERAL_ERROR_ID = 'own-payment-error';
 const HOME = '/home';
 
@@ -99,28 +107,6 @@ const NOTICES: Readonly<Record<GuestType, Readonly<Partial<Record<string, Notice
   },
 };
 
-interface ProofDraft {
-  /** Stable id of the row on this page, for the DOM ids and the `track`. */
-  readonly key: number;
-  /** The proof of the payment this row keeps, in a correction; null for a new one. */
-  readonly id: string | null;
-  readonly kind: GuestProof['kind'];
-  readonly amount: string;
-  readonly method: string;
-  /** A new file chosen on this page. */
-  readonly file: File | null;
-  /** The name of the file the kept proof already has; null for a new proof or cash. */
-  readonly keptFile: string | null;
-  readonly fileInvalid: boolean;
-}
-
-/** `proofs[2].amount` → { index: 2, part: 'amount' }; `fileIndex` points to the file. */
-function proofField(field: string): { index: number; part: 'amount' | 'file' } | null {
-  const match = /^proofs\[(\d+)\]\.(amount|file|fileIndex)$/.exec(field);
-  if (!match) return null;
-  return { index: Number(match[1]), part: match[2] === 'amount' ? 'amount' : 'file' };
-}
-
 type LoadState =
   | { readonly kind: 'loading' }
   | { readonly kind: 'ready' }
@@ -140,9 +126,26 @@ export type OwnPaymentMode = 'new' | 'correct' | 'read';
  */
 @Component({
   selector: 'app-own-payment',
-  imports: [RouterLink],
+  imports: [
+    ProofKindChoiceComponent,
+    ProofAmountFieldComponent,
+    ProofMethodFieldComponent,
+    SkeletonCardsComponent,
+    SkeletonBlockComponent,
+    SkeletonFieldsComponent,
+    SkeletonContentDirective,
+    SkeletonComponent,
+    RouterLink,
+    FileFieldComponent,
+    FieldControlDirective,
+    FormFieldComponent,
+    LoadErrorComponent,
+    PageHeaderComponent,
+    PageNoticeComponent,
+    StatusBadgeComponent,
+  ],
   templateUrl: './own-payment.component.html',
-  styles: [PAYMENT_PAGE_STYLES, DIRECT_PAYMENT_STYLES, OWN_PAYMENT_STYLES],
+  styleUrl: './own-payment.component.scss',
 })
 export class OwnPaymentComponent implements OnInit {
   private readonly router = inject(Router);
@@ -153,14 +156,13 @@ export class OwnPaymentComponent implements OnInit {
   private readonly guestPayments = inject(GuestPaymentsService);
   private readonly temporaryPayments = inject(TemporaryGuestPaymentsService);
 
-  // Before `proofs`, whose first row takes a key when the field is initialized.
-  private nextKey = 1;
+  private readonly proofDrafts = new ProofDrafts();
+  private readonly fieldErrors = new FieldErrors();
 
   protected readonly audience: GuestType;
   protected readonly paymentId: string | null;
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly proofLimitText = OWN_PROOF_LIMIT_TEXT;
-  protected readonly shortcuts = METHOD_SHORTCUTS;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly formatMoney = formatMoney;
   protected readonly creditAppliedText = creditAppliedText;
@@ -168,8 +170,13 @@ export class OwnPaymentComponent implements OnInit {
   protected readonly periodLabel = periodLabel;
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
   protected readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;
+  protected readonly paymentStatusTones = PAYMENT_STATUS_TONES;
+  protected readonly periodStatusTones = PERIOD_STATUS_TONES;
   protected readonly home = HOME;
 
+  protected readonly retrying = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
   protected readonly state = signal<LoadState>({ kind: 'loading' });
   /** The months of the guest with a contract (H3, first payment). */
   protected readonly periods = signal<readonly PeriodStatus[]>([]);
@@ -179,12 +186,18 @@ export class OwnPaymentComponent implements OnInit {
   protected readonly payment = signal<GuestPayment | null>(null);
 
   protected readonly periodChoice = signal('');
-  protected readonly proofs = signal<readonly ProofDraft[]>([this.draft()]);
+  protected readonly periodHelp = computed(() => {
+    const item = this.selected();
+    return item
+      ? `Cuota ${formatMoney(item.amount)} · Por pagar ${formatMoney(item.amountDue)}`
+      : 'Solo los meses sin pagar.';
+  });
+  protected readonly proofs = this.proofDrafts.drafts;
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
   /** Errors the BFF tied to a field (`field`), shown next to it until that field changes. */
-  protected readonly serverErrors = signal<Readonly<Record<string, string>>>({});
+  protected readonly serverErrors = this.fieldErrors.values;
 
   protected readonly loadErrorMessage = computed(() => {
     const state = this.state();
@@ -251,9 +264,7 @@ export class OwnPaymentComponent implements OnInit {
     if (this.audience === 'CONTRACT') return this.selected()?.amountDue ?? null;
     return this.stay()?.agreedAmount ?? null;
   });
-  protected readonly sum = computed(() =>
-    this.proofs().reduce((total, proof) => total + (parseAmount(proof.amount) ?? 0), 0),
-  );
+  protected readonly sum = this.proofDrafts.sum;
   protected readonly balanceText = computed(() => {
     const due = this.due();
     if (due === null) return '';
@@ -274,7 +285,7 @@ export class OwnPaymentComponent implements OnInit {
     return this.submitted() && this.selected() === null ? PERIOD_TEXT : null;
   });
   protected readonly proofsError = computed(() => this.serverErrors()['proofs'] ?? null);
-  protected readonly atProofLimit = computed(() => this.proofs().length >= MAX_PROOFS);
+  protected readonly atProofLimit = this.proofDrafts.atLimit;
 
   protected readonly title = computed(() => {
     switch (this.mode()) {
@@ -311,6 +322,7 @@ export class OwnPaymentComponent implements OnInit {
   }
 
   protected retry(): void {
+    if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
     void this.load();
   }
 
@@ -334,72 +346,52 @@ export class OwnPaymentComponent implements OnInit {
   }
 
   protected kindOf(index: number, kind: GuestProof['kind']): void {
-    this.updateProof(index, { kind });
+    this.proofDrafts.update(index, { kind });
     this.clearServer(`proofs[${String(index)}].file`, 'proofs');
   }
 
-  protected typedAmount(index: number, target: EventTarget | null): void {
-    this.updateProof(index, { amount: target instanceof HTMLInputElement ? target.value : '' });
+  protected typedAmount(index: number, amount: string): void {
+    this.proofDrafts.update(index, {
+      amount,
+    });
     this.clearServer(`proofs[${String(index)}].amount`, 'proofs');
   }
 
   protected typedMethod(index: number, value: string): void {
-    this.updateProof(index, { method: value });
+    this.proofDrafts.update(index, { method: value });
   }
 
-  protected methodFrom(target: EventTarget | null): string {
-    return target instanceof HTMLInputElement ? target.value : '';
-  }
-
-  protected picked(index: number, target: EventTarget | null): void {
-    const input = target instanceof HTMLInputElement ? target : null;
-    const chosen = input?.files?.[0] ?? null;
-    const valid = chosen !== null && isValidVoucher(chosen);
-    this.updateProof(index, {
-      file: valid ? chosen : null,
-      fileInvalid: chosen !== null && !valid,
-    });
+  protected picked(index: number, chosen: File | null): void {
+    this.proofDrafts.chooseFile(index, chosen);
     this.clearServer(`proofs[${String(index)}].file`);
-    if (input && !valid) {
-      input.value = '';
-    }
   }
 
   protected addProof(): void {
-    if (this.atProofLimit()) return;
-    this.proofs.update((proofs) => [...proofs, this.draft()]);
-    this.clearServer('proofs');
+    if (this.proofDrafts.add()) this.clearServer('proofs');
   }
 
   /** Server errors of a proof point to it by position, so they no longer hold once one is removed. */
   protected removeProof(index: number): void {
-    if (this.proofs().length <= 1) return;
-    this.proofs.update((proofs) => proofs.filter((_, i) => i !== index));
-    this.serverErrors.update((errors) =>
-      Object.fromEntries(Object.entries(errors).filter(([field]) => !field.startsWith('proofs'))),
-    );
+    if (this.proofDrafts.remove(index)) this.fieldErrors.clearPrefix('proofs');
   }
 
   protected amountError(index: number): string | null {
     const server = this.serverErrors()[`proofs[${String(index)}].amount`];
     if (server) return server;
-    const proof = this.proofs()[index];
-    const amount = proof ? parseAmount(proof.amount) : null;
-    return this.submitted() && (amount === null || amount <= 0) ? AMOUNT_TEXT : null;
+    return this.proofDrafts.amountError(index, this.submitted());
   }
 
   protected fileError(index: number): string | null {
     const server = this.serverErrors()[`proofs[${String(index)}].file`];
     if (server) return server;
-    const proof = this.proofs()[index];
-    if (proof?.kind !== 'VOUCHER') return null;
-    if (proof.fileInvalid) return INVALID_FILE_TEXT;
-    return this.submitted() && proof.file === null && proof.keptFile === null
-      ? MISSING_FILE_TEXT
-      : null;
+    return this.proofDrafts.fileError(index, this.submitted());
   }
 
   protected async submit(event: Event): Promise<void> {
+    if (this.refreshing() || this.refreshError() !== null) {
+      event.preventDefault();
+      return;
+    }
     event.preventDefault();
     if (this.busy() || !this.showForm()) return;
     this.submitted.set(true);
@@ -435,41 +427,16 @@ export class OwnPaymentComponent implements OnInit {
     if (fieldProblem || (needsPeriod && this.periodError() !== null)) {
       return null;
     }
-    const files: File[] = [];
-    const fileIndexOf = (proof: ProofDraft): number | undefined => {
-      if (proof.kind !== 'VOUCHER' || proof.file === null) return undefined;
-      files.push(proof.file);
-      return files.length - 1;
-    };
     const payment = this.payment();
+    const { proofs: inputs, files } = serializeProofs(proofs, mode === 'correct');
     if (mode === 'correct' && payment !== null) {
-      const edits: OwnProofEdit[] = proofs.map((proof) => {
-        const fileIndex = fileIndexOf(proof);
-        return {
-          ...(proof.id !== null ? { id: proof.id } : {}),
-          ...this.proofFields(proof),
-          ...(fileIndex !== undefined ? { fileIndex } : {}),
-        };
-      });
-      return this.api().correct(payment.id, edits, files);
+      return this.api().correct(payment.id, inputs, files);
     }
-    const inputs: OwnProofInput[] = proofs.map((proof) => {
-      const fileIndex = fileIndexOf(proof);
-      return { ...this.proofFields(proof), ...(fileIndex !== undefined ? { fileIndex } : {}) };
-    });
     if (this.audience === 'TEMPORARY') {
       return this.temporaryPayments.upload(inputs, files);
     }
     const period = this.selected()?.period;
     return period ? this.guestPayments.upload(period, inputs, files) : null;
-  }
-
-  /** Kind, amount and, for a voucher, the method when given; cash is recorded as cash. */
-  private proofFields(proof: ProofDraft): OwnProofInput {
-    const amount = parseAmount(proof.amount) ?? 0;
-    if (proof.kind === 'CASH') return { kind: 'CASH', amount };
-    const method = proof.method.trim();
-    return { kind: 'VOUCHER', amount, ...(method ? { method } : {}) };
   }
 
   private api(): OwnPaymentsApi {
@@ -511,7 +478,7 @@ export class OwnPaymentComponent implements OnInit {
       return this.mode() === 'new' && this.audience === 'CONTRACT' ? field : null;
     }
     if (field === 'proofs') return field;
-    const proof = proofField(field);
+    const proof = proofField(field, true);
     return proof !== null && proof.index < this.proofs().length
       ? `proofs[${String(proof.index)}].${proof.part}`
       : null;
@@ -519,9 +486,13 @@ export class OwnPaymentComponent implements OnInit {
 
   private async load(): Promise<void> {
     const request = ++this.loadRequest;
-    this.state.set({ kind: 'loading' });
+    const refreshing = this.state().kind === 'ready';
+    this.refreshing.set(refreshing);
+    const isRetry = this.state().kind === 'error';
+    this.retrying.set(isRetry);
+    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
     try {
-      const current = () => request === this.loadRequest;
+      const current = () => !this.destroyed && request === this.loadRequest;
       if (this.paymentId !== null) {
         await this.loadPayment(this.paymentId, current);
       } else if (this.audience === 'TEMPORARY') {
@@ -529,12 +500,21 @@ export class OwnPaymentComponent implements OnInit {
       } else {
         await this.loadPeriods(current);
       }
-      if (current()) this.state.set({ kind: 'ready' });
+      if (current()) {
+        this.refreshError.set(null);
+        this.state.set({ kind: 'ready' });
+      }
     } catch (error: unknown) {
-      if (request !== this.loadRequest) return;
+      if (this.destroyed || request !== this.loadRequest) return;
       const { message } = toBffErrorWithServerMessage(error);
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set({ kind: notFound ? 'not-found' : 'error', message });
+      if (refreshing && !notFound) this.refreshError.set(message);
+      else this.state.set({ kind: notFound ? 'not-found' : 'error', message });
+    } finally {
+      if (!this.destroyed && request === this.loadRequest) {
+        this.retrying.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
 
@@ -545,7 +525,7 @@ export class OwnPaymentComponent implements OnInit {
     this.payment.set(payment);
     this.submitted.set(false);
     const kept = payment.status === 'REJECTED' ? payment.proofs.slice(0, MAX_PROOFS) : [];
-    this.proofs.set(kept.length > 0 ? kept.map((proof) => this.keptDraft(proof)) : [this.draft()]);
+    this.proofDrafts.reset(kept);
   }
 
   private async loadStay(current: () => boolean): Promise<void> {
@@ -563,44 +543,7 @@ export class OwnPaymentComponent implements OnInit {
     }
   }
 
-  private draft(): ProofDraft {
-    return {
-      key: this.nextKey++,
-      id: null,
-      kind: 'VOUCHER',
-      amount: '',
-      method: '',
-      file: null,
-      keptFile: null,
-      fileInvalid: false,
-    };
-  }
-
-  private keptDraft(proof: GuestProof): ProofDraft {
-    return {
-      key: this.nextKey++,
-      id: proof.id,
-      kind: proof.kind,
-      amount: String(proof.declaredAmount),
-      method: proof.method ?? '',
-      file: null,
-      keptFile: proof.kind === 'VOUCHER' ? (proof.file?.name ?? null) : null,
-      fileInvalid: false,
-    };
-  }
-
-  private updateProof(index: number, changes: Partial<Omit<ProofDraft, 'key' | 'id'>>): void {
-    this.proofs.update((proofs) =>
-      proofs.map((proof, i) => (i === index ? { ...proof, ...changes } : proof)),
-    );
-  }
-
   private clearServer(...fields: string[]): void {
-    const errors = this.serverErrors();
-    if (fields.some((field) => field in errors)) {
-      this.serverErrors.set(
-        Object.fromEntries(Object.entries(errors).filter(([key]) => !fields.includes(key))),
-      );
-    }
+    this.fieldErrors.clear(...fields);
   }
 }

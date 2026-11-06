@@ -1,3 +1,7 @@
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
+import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
+import { TemplateRef } from '@angular/core';
 import { Component, input, output } from '@angular/core';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
@@ -12,9 +16,15 @@ const COLUMNS: readonly DataColumn[] = [
   { key: 'name', label: 'Nombre', rowHeader: true },
   { key: 'document', label: 'Documento' },
   { key: 'email', label: 'Correo de su cuenta' },
-  { key: 'state', label: 'Estado' },
+  { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado' },
   { key: 'since', label: 'Desde' },
-  { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action' },
+  {
+    skeleton: { width: '7rem' },
+    key: 'action',
+    label: 'Acción',
+    hiddenLabel: true,
+    align: 'action',
+  },
 ];
 
 /**
@@ -24,9 +34,37 @@ const COLUMNS: readonly DataColumn[] = [
  */
 @Component({
   selector: 'app-administrators-list',
-  imports: [DataCardDirective, DataCellDirective, DataTableComponent, StatusBadgeComponent],
+  imports: [
+    SkeletonBlockComponent,
+    DataSkeletonCardDirective,
+    DataSkeletonCellDirective,
+    DataCardDirective,
+    DataCellDirective,
+    DataTableComponent,
+    StatusBadgeComponent,
+  ],
   template: `
-    <app-data-table caption="Administradores" [columns]="columns" [rows]="rows()" [rowId]="rowId">
+    <app-data-table
+      [loading]="loading()"
+      [skeletonBefore]="skeletonBefore()"
+      caption="Administradores"
+      [columns]="columns"
+      [rows]="rows()"
+      [rowId]="rowId"
+    >
+      <ng-template appDataSkeletonCell="name"
+        ><app-skeleton-block width="85%" /><app-skeleton-block
+          class="skeleton-detail"
+          width="65%"
+          height="0.75rem"
+      /></ng-template>
+      <ng-template appDataSkeletonCard
+        ><app-skeleton-block width="80%" height="1.25rem" /><app-skeleton-block width="90%" />
+        <div class="card-state">
+          <app-skeleton-block shape="badge" /><app-skeleton-block width="6rem" />
+        </div>
+        <app-skeleton-block shape="rectangle"
+      /></ng-template>
       <ng-template appDataCell="name" [appDataCellRows]="rows()" let-row>
         @if (row.name; as fullName) {
           <span class="quipu-name">{{ fullName }}</span>
@@ -98,6 +136,12 @@ const COLUMNS: readonly DataColumn[] = [
       display: block;
       --quipu-tabla-ancho-minimo: 860px;
     }
+    .skeleton-detail {
+      margin-top: 0.375rem;
+    }
+    .skeleton-who {
+      width: 70%;
+    }
     .number {
       font-variant-numeric: tabular-nums;
       white-space: nowrap;
@@ -130,6 +174,8 @@ const COLUMNS: readonly DataColumn[] = [
   `,
 })
 export class AdministratorsListComponent {
+  readonly loading = input(false);
+  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
   readonly rows = input.required<readonly AdministratorRow[]>();
   /** The action of a row was chosen: «Desactivar» or «Reactivar», as `row.action` says. */
   readonly act = output<AdministratorRow>();

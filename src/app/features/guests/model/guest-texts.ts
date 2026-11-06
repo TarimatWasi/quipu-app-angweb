@@ -68,10 +68,6 @@ export const STAY_CREATED_TEXT = 'Estadía registrada.';
 export const STAY_UPDATED_TEXT = 'Estadía corregida.';
 export const DOCUMENT_UPDATED_TEXT = 'Documento corregido.';
 
-/** P-12: the notice when the BFF takes too long (Render waking up). */
-export const SLOW_TEXT =
-  'El servidor está despertando; la primera solicitud puede tardar hasta un minuto.';
-
 /** The local check of a document number (A3.1 and A3.5), or null when it is valid. */
 export function documentNumberError(type: DocumentType, number: string): string | null {
   const value = number.trim();
@@ -134,6 +130,3 @@ export function todayText(now: Date = new Date()): string {
 export function describedBy(error: string | null, prefix: string): string {
   return error ? `${prefix}-error ${prefix}-help` : `${prefix}-help`;
 }
-
-/** How many blocks each skeleton list draws (P-12). */
-export const SKELETON_ROWS: readonly number[] = [1, 2, 3, 4];

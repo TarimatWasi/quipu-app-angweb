@@ -25,6 +25,9 @@ const DEMO_CLAVE = 'Quipu2026';
 /** Hides the mock panel in the capture: it floats over the screen and is not part of the canvas. */
 export const CAPTURE_STYLE = 'app-mock-panel { display: none !important; }';
 
+/** Fix the demo's dates without pausing timers, requests, countdowns or skeleton delays. */
+export const CAPTURE_INSTANT = '2026-11-05T15:00:00-05:00';
+
 export async function signIn(page: Page, role: DemoUserKey): Promise<void> {
   const account = DEMO_ACCOUNTS[role];
   await page.goto('/login');
@@ -83,7 +86,10 @@ export async function waitUntilStable(page: Page, readiness: ScreenReadiness): P
     await document.fonts.ready;
   });
   if (readiness === 'skeleton') {
-    await page.locator('[aria-busy="true"] .sk').first().waitFor({ state: 'visible' });
+    await page
+      .locator('[aria-busy="true"] .sk, [aria-busy="true"] app-skeleton-block')
+      .first()
+      .waitFor({ state: 'visible' });
     return;
   }
   await waitForQuiet(page);

@@ -1,3 +1,6 @@
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { DataSkeletonCellDirective } from './data-skeleton-cell.directive';
+import { DataSkeletonCardDirective } from './data-skeleton-card.directive';
 import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { fireEvent, within } from '@testing-library/dom';
@@ -23,9 +26,19 @@ const COLUMNS: readonly DataColumn<Key>[] = [
 ];
 
 @Component({
-  imports: [DataCardDirective, DataCellDirective, DataFooterDirective, DataTableComponent],
+  imports: [
+    DataCardDirective,
+    DataCellDirective,
+    DataFooterDirective,
+    DataTableComponent,
+    SkeletonBlockComponent,
+    DataSkeletonCardDirective,
+    DataSkeletonCellDirective,
+  ],
   template: `
     <app-data-table
+      [loading]="loading()"
+      [skeletonRows]="2"
       caption="Pagos"
       [columns]="columns"
       [rows]="rows()"
@@ -33,6 +46,10 @@ const COLUMNS: readonly DataColumn<Key>[] = [
       [sort]="sort()"
       (sortBy)="pressed.set($event)"
     >
+      @if (customSkeleton()) {
+        <ng-template appDataSkeletonCell="name"><app-skeleton-block shape="circle" /></ng-template>
+        <ng-template appDataSkeletonCard><app-skeleton-block shape="badge" /></ng-template>
+      }
       <ng-template appDataCell="name" [appDataCellRows]="rows()" let-row>{{
         row.name
       }}</ng-template>
@@ -56,6 +73,8 @@ const COLUMNS: readonly DataColumn<Key>[] = [
   `,
 })
 class HostComponent {
+  readonly loading = signal(false);
+  readonly customSkeleton = signal(false);
   readonly columns = COLUMNS;
   readonly rows = signal<readonly Row[]>([
     { id: 'a', name: 'Ana', amount: 'S/ 10.00' },
@@ -112,5 +131,61 @@ describe('DataTableComponent (P-08)', () => {
     await fixture.whenStable();
     expect(ui.queryByRole('list')).toBeNull();
     expect(root.querySelector('.quipu-table-wrap')?.classList).not.toContain('quipu-only-wide');
+  });
+  it('delays decorative cells, disables sorting, then restores real data without timers', async () => {
+    const { host, fixture, root, ui } = await setup();
+    vi.useFakeTimers();
+    try {
+      host.loading.set(true);
+      fixture.detectChanges();
+      expect(ui.getByRole('region', { name: 'Cargando Pagos' }).getAttribute('aria-busy')).toBe(
+        'true',
+      );
+      expect(root.querySelector('app-skeleton-block')).toBeNull();
+      vi.advanceTimersByTime(299);
+      fixture.detectChanges();
+      expect(root.querySelector('tbody')).toBeNull();
+      vi.advanceTimersByTime(1);
+      fixture.detectChanges();
+      expect(root.querySelectorAll('tbody tr')).toHaveLength(2);
+      expect(root.querySelectorAll('tbody td')).toHaveLength(6);
+      expect(root.querySelector('tfoot')).toBeNull();
+      expect(root.querySelector('a')).toBeNull();
+      expect(root.querySelector('button')?.disabled).toBe(true);
+      expect(ui.queryByRole('table')).toBeNull();
+      expect(root.querySelector('app-skeleton-block')?.getAttribute('aria-hidden')).toBe('true');
+      expect(root.querySelectorAll('.quipu-card app-skeleton-block')).toHaveLength(6);
+      host.loading.set(false);
+      fixture.detectChanges();
+      expect(ui.getByRole('table', { name: 'Pagos' })).toBeTruthy();
+      expect(ui.getByRole('link', { name: 'Ver 1' })).toBeTruthy();
+      expect(root.querySelector('app-skeleton-block')).toBeNull();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('accepts custom cell and mobile layouts and restarts the delay for a new load', async () => {
+    const { host, fixture, root } = await setup();
+    vi.useFakeTimers();
+    try {
+      host.customSkeleton.set(true);
+      host.loading.set(true);
+      fixture.detectChanges();
+      vi.advanceTimersByTime(300);
+      fixture.detectChanges();
+      expect(root.querySelectorAll('tbody [data-shape="circle"]')).toHaveLength(2);
+      expect(root.querySelectorAll('.quipu-card [data-shape="badge"]')).toHaveLength(2);
+      host.loading.set(false);
+      fixture.detectChanges();
+      host.loading.set(true);
+      fixture.detectChanges();
+      expect(root.querySelector('tbody')).toBeNull();
+      fixture.destroy();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

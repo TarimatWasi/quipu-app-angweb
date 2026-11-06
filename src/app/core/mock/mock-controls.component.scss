@@ -1,0 +1,49 @@
+:host {
+  display: block;
+  margin-top: 0.75rem;
+}
+summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+p {
+  margin: 0.5rem 0;
+}
+label,
+select,
+small,
+code,
+output {
+  display: block;
+}
+label {
+  margin-top: 0.5rem;
+}
+select {
+  width: 100%;
+}
+code {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+ul {
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+}
+li {
+  margin-bottom: 0.75rem;
+}
+h3 {
+  font-size: 0.95rem;
+  margin-top: 0.75rem;
+}
+button {
+  min-height: 2rem;
+  margin: 0.25rem 0;
+  cursor: pointer;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}

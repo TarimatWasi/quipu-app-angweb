@@ -4,18 +4,7 @@
       <p class="lead">Queda como agregado por la administración, con el monto que verificaste.</p>
 
       <app-form-field fieldId="proof-kind" label="Tipo de comprobante" [group]="true">
-        <div class="quipu-segmented">
-          <button
-            type="button"
-            [attr.aria-pressed]="kind() === 'VOUCHER'"
-            (click)="choose('VOUCHER')"
-          >
-            Con voucher
-          </button>
-          <button type="button" [attr.aria-pressed]="kind() === 'CASH'" (click)="choose('CASH')">
-            Efectivo, sin voucher
-          </button>
-        </div>
+        <app-proof-kind-choice [kind]="kind()" (kindChange)="choose($event)" />
       </app-form-field>
 
       @if (kind() === 'VOUCHER') {
@@ -33,48 +22,23 @@
         </p>
       }
 
-      <app-form-field
+      <app-proof-amount-field
         class="amount"
         fieldId="proof-amount"
         label="Monto verificado"
-        [money]="true"
+        [value]="amount()"
         [help]="help"
         [error]="amountError()"
-      >
-        <input
-          appFieldControl
-          class="quipu-input"
-          type="text"
-          inputmode="decimal"
-          aria-required="true"
-          [value]="amount()"
-          (input)="typed($event.target, 'amount')"
-        />
-      </app-form-field>
+        (valueChange)="amount.set($event)"
+      />
 
       @if (kind() === 'VOUCHER') {
-        <app-form-field fieldId="proof-method" label="Medio de pago (opcional)">
-          <input
-            appFieldControl
-            class="quipu-input"
-            type="text"
-            maxlength="60"
-            placeholder="Por ejemplo, Yape"
-            [value]="method()"
-            (input)="typed($event.target, 'method')"
-          />
-          <div class="quipu-segmented" role="group" aria-label="Medios frecuentes">
-            @for (shortcut of shortcuts; track shortcut) {
-              <button
-                type="button"
-                [attr.aria-pressed]="method() === shortcut"
-                (click)="method.set(shortcut)"
-              >
-                {{ shortcut }}
-              </button>
-            }
-          </div>
-        </app-form-field>
+        <app-proof-method-field
+          fieldId="proof-method"
+          [value]="method()"
+          placeholder="Por ejemplo, Yape"
+          (valueChange)="method.set($event)"
+        />
       }
     </div>
     <ng-container dialogActions>

@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -72,13 +73,14 @@ const ERROR_ID = 'inactive-guest-error';
 export class InactiveGuestDialogComponent {
   private readonly ref =
     inject<MatDialogRef<InactiveGuestDialogComponent, InactiveGuestResult>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   protected readonly data = inject<InactiveGuestData>(MAT_DIALOG_DATA);
 
   protected readonly title = INACTIVE_TITLE;
   protected readonly text = INACTIVE_TEXT;
   protected readonly textId = TEXT_ID;
   protected readonly errorId = ERROR_ID;
-  protected readonly busy = signal(false);
+  protected readonly busy = this.submission.pending;
   protected readonly error = signal<string | null>(null);
 
   protected cancel(): void {
@@ -86,16 +88,15 @@ export class InactiveGuestDialogComponent {
   }
 
   protected async reactivate(): Promise<void> {
-    if (this.busy()) return;
-    this.busy.set(true);
-    this.error.set(null);
-    this.ref.disableClose = true;
-    try {
-      await firstValueFrom(this.data.reactivate());
-      this.finish({ kind: 'reactivated' });
-    } catch (error: unknown) {
-      this.failed(error);
-    }
+    return this.submission.run(async () => {
+      this.error.set(null);
+      try {
+        await firstValueFrom(this.data.reactivate());
+        this.finish({ kind: 'reactivated' });
+      } catch (error: unknown) {
+        this.failed(error);
+      }
+    });
   }
 
   private failed(error: unknown): void {
@@ -110,13 +111,10 @@ export class InactiveGuestDialogComponent {
       this.finish({ kind: 'debt', debt });
       return;
     }
-    this.ref.disableClose = false;
-    this.busy.set(false);
     this.error.set(reactivateProblem(failure));
   }
 
   private finish(result?: InactiveGuestResult): void {
-    this.ref.disableClose = false;
     this.ref.close(result);
   }
 }

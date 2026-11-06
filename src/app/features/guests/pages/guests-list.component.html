@@ -2,7 +2,48 @@
 
 @switch (phase()) {
   @case ('loading') {
-    <app-skeleton class="state" shape="table" subject="Huéspedes" />
+    <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+    <section class="all" aria-labelledby="guests-loading-title">
+      <div class="quipu-list-head">
+        <h2 id="guests-loading-title">Todos los huéspedes</h2>
+        <a class="quipu-button quipu-button--secondary" routerLink="/admin/guests/new"
+          >Nuevo huésped</a
+        >
+      </div>
+      <ng-template #filtersSkeleton>
+        <div class="quipu-segmented quipu-segmented--fill views">
+          @for (option of views; track option.view) {
+            <button type="button" disabled>{{ option.label }}</button>
+          }
+        </div>
+        <div class="quipu-filters">
+          <div class="quipu-field quipu-search">
+            <span class="quipu-label">Buscar</span><app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-field">
+            <span class="quipu-label">Tipo</span><app-skeleton-block shape="rectangle" />
+          </div>
+          @if (view() === 'CURRENT') {
+            <div class="quipu-field">
+              <span class="quipu-label">Estado</span><app-skeleton-block shape="rectangle" />
+            </div>
+          }
+          <div class="quipu-field quipu-only-narrow">
+            <span class="quipu-label">Ordenar por</span><app-skeleton-block shape="rectangle" />
+          </div>
+          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
+        </div>
+      </ng-template>
+      <app-guests-table
+        [loading]="true"
+        [rows]="[]"
+        [sort]="sort()"
+        [skeletonBefore]="filtersSkeleton"
+      />
+    </section>
   }
   @case ('error') {
     <app-load-error
@@ -83,15 +124,16 @@
       <div class="list" [attr.aria-busy]="loadingPage()">
         @if (listFailed()) {
           <app-load-error [message]="loadErrorText" [retrying]="retrying()" (retry)="retry()" />
-        } @else if (rows().length > 0) {
+        }
+        @if (rows().length > 0) {
           <app-guests-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
-        } @else if (filtered()) {
+        } @else if (filtered() && !listFailed()) {
           <app-empty-state
             [heading]="noMatchHeading"
             [filtered]="true"
             (clearFilters)="clearFilters()"
           />
-        } @else if (!loadingPage()) {
+        } @else if (!loadingPage() && !listFailed()) {
           <app-empty-state [heading]="emptyHeading()">{{ emptyText() }}</app-empty-state>
         }
       </div>

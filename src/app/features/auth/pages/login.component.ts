@@ -18,7 +18,7 @@ import {
   required,
   validate,
 } from '@angular/forms/signals';
-import { MatDialog, MatDialogRef } from '@angular/material/dialog';
+import type { MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
@@ -27,10 +27,7 @@ import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/auth/auth.service';
 import { AccountLock, BffError, toBffError } from '@core/http/bff-error';
-import {
-  ACCOUNT_LOCKED_TEXT_ID,
-  AccountLockedDialogComponent,
-} from '../components/account-locked-dialog.component';
+import type { AccountLockedDialogComponent } from '../components/account-locked-dialog.component';
 import { LockCountdown } from '../components/lock-countdown';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -144,8 +141,8 @@ export class LoginComponent {
   protected readonly countdown = new LockCountdown();
   /** Shown from the moment the lock ends until the next attempt. */
   protected readonly unlocked = signal(false);
-  private readonly dialog = inject(MatDialog);
   private lockDialog: MatDialogRef<AccountLockedDialogComponent> | undefined;
+  private lockRequest = 0;
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -231,28 +228,34 @@ export class LoginComponent {
 
   /** SRS 17, AUTH_ACCOUNT_LOCKED: a dialog the moment it happens, then a banner while it lasts. */
   private lockAccount(lock: AccountLock) {
+    if (this.destroyRef.destroyed) return;
+    const request = ++this.lockRequest;
     this.countdown.start(lock, () => {
       this.unlock();
     });
-    const dialog = this.dialog.open(AccountLockedDialogComponent, {
-      role: 'alertdialog',
-      ariaModal: true,
-      ariaDescribedBy: ACCOUNT_LOCKED_TEXT_ID,
-      data: { countdown: this.countdown },
-      restoreFocus: false,
-      maxWidth: 'calc(100vw - 2rem)',
-    });
-    this.lockDialog = dialog;
-    dialog
-      .afterClosed()
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => {
-        // Closed by the person: the banner explains what is left. Closed because the lock ended:
-        // there is no banner, and unlock() already moved the focus.
-        if (this.countdown.active()) {
-          this.focusOnNextRender('#lock-banner');
-        }
-      });
+    void this.showLockDialog(request);
+  }
+
+  private async showLockDialog(request: number): Promise<void> {
+    try {
+      const { openAccountLockedDialog } =
+        await import('../components/account-locked-dialog.component');
+      if (this.destroyRef.destroyed || request !== this.lockRequest || !this.countdown.active())
+        return;
+      const dialog = openAccountLockedDialog(this.injector, this.countdown);
+      this.lockDialog = dialog;
+      dialog
+        .afterClosed()
+        .pipe(takeUntilDestroyed(this.destroyRef))
+        .subscribe(() => {
+          if (this.countdown.active()) this.focusOnNextRender('#lock-banner');
+        });
+    } catch {
+      // If the chunk cannot load, the existing banner still explains the lock and offers recovery.
+      if (!this.destroyRef.destroyed && request === this.lockRequest && this.countdown.active()) {
+        this.focusOnNextRender('#lock-banner');
+      }
+    }
   }
 
   /**
@@ -260,6 +263,7 @@ export class LoginComponent {
    * it closes; and a stale password is not worth keeping, so the form starts clean.
    */
   private unlock() {
+    this.lockRequest++;
     this.lockDialog?.close();
     this.lockDialog = undefined;
     this.model.update((value) => ({ ...value, password: '' }));

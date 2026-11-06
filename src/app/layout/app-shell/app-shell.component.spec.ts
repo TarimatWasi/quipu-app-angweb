@@ -277,7 +277,7 @@ describe('AppShellComponent (P-01)', () => {
       await fixture.whenStable();
 
       expect(root.querySelector('#account-menu')).toBeNull();
-      expect(screen.getByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
+      expect(await screen.findByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
       expect(TestBed.inject(Router).url).toBe('/admin/payments');
     });
 
@@ -290,7 +290,7 @@ describe('AppShellComponent (P-01)', () => {
       await fixture.whenStable();
       expect(root.querySelector('output')?.textContent.trim()).toBe('');
 
-      const dialog = within(screen.getByRole('dialog', { name: 'Cambiar contraseña' }));
+      const dialog = within(await screen.findByRole('dialog', { name: 'Cambiar contraseña' }));
       fireEvent.input(dialog.getByLabelText('Contraseña actual'), {
         target: { value: 'Actual12345' },
       });
@@ -318,6 +318,7 @@ describe('AppShellComponent (P-01)', () => {
       );
       await fixture.whenStable();
 
+      await screen.findByRole('dialog', { name: 'Cambiar contraseña' });
       fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
       await vi.waitFor(() => {
         expect(screen.queryByRole('dialog')).toBeNull();
@@ -392,7 +393,7 @@ describe('AppShellComponent (P-01)', () => {
       await fixture.whenStable();
 
       expect(root.querySelector('#menu-panel')).toBeNull();
-      expect(screen.getByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
+      expect(await screen.findByRole('dialog', { name: 'Cambiar contraseña' })).toBeTruthy();
       expect(TestBed.inject(Router).url).toBe('/temporary-guest/payment');
     });
 

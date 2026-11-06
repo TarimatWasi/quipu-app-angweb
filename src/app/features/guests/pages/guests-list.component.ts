@@ -1,4 +1,8 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { PageLoadState } from '@shared/data/page-load-state';
+import type { PageRequest as CursorPageRequest } from '@shared/data/page-load-state';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
@@ -46,13 +50,8 @@ import { nextSort } from '@shared/ui/data-table/list-sort';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
-type Phase = 'loading' | 'error' | 'ready';
-
 /** One read of the BFF: the first page of a query (`after` null) or the one after a cursor. */
-interface PageRequest {
-  readonly query: GuestQuery;
-  readonly after: string | null;
-}
+type PageRequest = CursorPageRequest<GuestQuery>;
 
 const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
   { view: 'CURRENT', label: 'Actuales' },
@@ -80,6 +79,8 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
     RouterLink,
     ShowMoreComponent,
     SkeletonComponent,
+    SkeletonBlockComponent,
+    SkeletonContentDirective,
   ],
   templateUrl: './guests-list.component.html',
   styleUrl: './guests-list.component.scss',
@@ -100,33 +101,19 @@ export class GuestsListComponent {
   private readonly guests = signal<readonly GuestSummary[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
   private readonly counts = signal<PanelCounts | null>(null);
-  /** The read on its way, or null; the screen stays as it was meanwhile. */
-  private readonly pending = signal<PageRequest | null>(null);
-  /** The read that failed last, so «Reintentar» asks it again; null after an answer. */
-  private readonly failed = signal<PageRequest | null>(null);
-  private readonly answered = signal(false);
+  private readonly pageLoad = new PageLoadState<GuestQuery>();
 
   private readonly query = computed(() => guestQuery(this.view(), this.filters()), {
     equal: sameQuery,
   });
-  private readonly requests = new Subject<PageRequest>();
+  private readonly requests = new Subject<{ request: PageRequest; sequence: number }>();
 
-  protected readonly phase = computed<Phase>(() => {
-    if (this.answered()) return 'ready';
-    return this.failed() === null ? 'loading' : 'error';
-  });
-  protected readonly retrying = computed(() => this.failed() !== null && this.pending() !== null);
-  protected readonly loadingPage = computed(() => this.pending()?.after === null);
-  protected readonly loadingMore = computed(() => {
-    const after = this.pending()?.after;
-    return after !== undefined && after !== null;
-  });
-  /** Where a failed read is said: instead of the list (first page) or under it (next page). */
-  protected readonly listFailed = computed(() => this.failed()?.after === null);
-  protected readonly moreFailed = computed(() => {
-    const after = this.failed()?.after;
-    return after !== undefined && after !== null;
-  });
+  protected readonly phase = this.pageLoad.phase;
+  protected readonly retrying = this.pageLoad.retrying;
+  protected readonly loadingPage = this.pageLoad.loadingFirst;
+  protected readonly loadingMore = this.pageLoad.loadingMore;
+  protected readonly listFailed = this.pageLoad.firstFailed;
+  protected readonly moreFailed = this.pageLoad.moreFailed;
 
   protected readonly filtered = computed(() => hasFilters(this.filters()));
   protected readonly rows = computed(() => {
@@ -150,20 +137,23 @@ export class GuestsListComponent {
   );
 
   constructor() {
+    inject(DestroyRef).onDestroy(() => {
+      this.pageLoad.invalidate();
+    });
     // switchMap: a new view or filter drops the answer of the previous one.
     this.requests
       .pipe(
-        switchMap((request) =>
+        switchMap(({ request, sequence }) =>
           this.service.page(request.query, request.after).pipe(
             map((page): GuestPage | null => page),
             catchError(() => of(null)),
-            map((page) => ({ request, page })),
+            map((page) => ({ sequence, page })),
           ),
         ),
         takeUntilDestroyed(),
       )
-      .subscribe(({ request, page }) => {
-        this.receive(request, page);
+      .subscribe(({ sequence, page }) => {
+        this.receive(sequence, page);
       });
     toObservable(this.query)
       .pipe(takeUntilDestroyed())
@@ -174,6 +164,9 @@ export class GuestsListComponent {
 
   protected chooseView(view: GuestView): void {
     if (view === this.view()) return;
+    this.pageLoad.reset();
+    this.guests.set([]);
+    this.counts.set(null);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
   }
@@ -203,12 +196,13 @@ export class GuestsListComponent {
 
   protected more(): void {
     const after = this.nextCursor();
-    if (after !== null && !this.loadingPage()) this.read({ query: this.query(), after });
+    if (after !== null && !this.pageLoad.loading()) this.read({ query: this.query(), after });
   }
 
   /** Asks the failed read again, unless the view or a filter changed since: then their first page. */
   protected retry(): void {
-    const request = this.failed();
+    if (this.pageLoad.loading()) return;
+    const request = this.pageLoad.failed();
     if (request && sameQuery(request.query, this.query())) {
       this.read(request, true);
     } else {
@@ -221,19 +215,19 @@ export class GuestsListComponent {
    * previous query, so «Mostrar más» never mixes two lists.
    */
   private read(request: PageRequest, retrying = false): void {
-    if (!retrying) this.failed.set(null);
     if (request.after === null) this.nextCursor.set(null);
-    this.pending.set(request);
-    this.requests.next(request);
+    const sequence = this.pageLoad.begin(request, retrying);
+    this.requests.next({ request, sequence });
   }
 
-  private receive(request: PageRequest, page: GuestPage | null): void {
-    this.pending.set(null);
+  private receive(sequence: number, page: GuestPage | null): void {
+    const request = this.pageLoad.pending();
+    if (request === null) return;
     if (page === null) {
-      this.failed.set(request);
+      this.pageLoad.fail(sequence);
       return;
     }
-    this.failed.set(null);
+    if (!this.pageLoad.succeed(sequence)) return;
     this.guests.update((loaded) =>
       request.after === null ? page.content : [...loaded, ...page.content],
     );
@@ -242,6 +236,5 @@ export class GuestsListComponent {
       pendingActivationCount: page.pendingActivationCount,
       onboardingCount: page.onboardingCount,
     });
-    this.answered.set(true);
   }
 }

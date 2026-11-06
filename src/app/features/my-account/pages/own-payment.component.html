@@ -1,31 +1,49 @@
-<section class="page" aria-labelledby="own-payment-title">
-  <header class="head">
-    <div>
-      <a [routerLink]="home">Volver al inicio</a>
-      <h1 id="own-payment-title">{{ title() }}</h1>
-    </div>
-    @if (mode() === 'read' && payment(); as p) {
-      <p [class]="'badge status-' + p.status">{{ paymentStatusLabels[p.status] }}</p>
-    }
-  </header>
+<section class="page" [attr.aria-label]="title()">
+  <app-page-header [heading]="title()" [backLink]="home" backTo="inicio" />
+  @if (mode() === 'read' && payment(); as p) {
+    <app-status-badge
+      [tone]="paymentStatusTones[p.status]"
+      [label]="paymentStatusLabels[p.status]"
+    />
+  }
 
+  @if (refreshError(); as message) {
+    <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+  }
+  @if (refreshing() && refreshError() === null) {
+    <output>Actualizando…</output>
+  }
   @switch (state().kind) {
     @case ('loading') {
-      <output class="muted">Cargando…</output>
+      <app-skeleton subject="tu pago"
+        ><ng-template appSkeletonContent
+          ><div class="payment-skeleton">
+            @if (paymentId !== null) {
+              <app-skeleton-cards [count]="1" />
+            } @else {
+              @if (audience === 'CONTRACT') {
+                <app-skeleton-fields [labels]="['Mes']" />
+              }
+              <div class="proof">
+                <span class="strong">Comprobante</span
+                ><app-skeleton-fields
+                  [labels]="['Tipo de comprobante', 'Archivo', 'Medio de pago', 'Monto']"
+                />
+              </div>
+              <app-skeleton-block shape="rectangle" width="12rem" />
+            }</div></ng-template
+      ></app-skeleton>
     }
     @case ('not-found') {
-      <div class="quipu-alert" role="alert">
-        <p>{{ paymentId ? 'No encontramos el pago.' : notFoundMessage() }}</p>
-        <a [routerLink]="home">Volver al inicio</a>
-      </div>
+      <app-page-notice
+        tone="error"
+        [heading]="paymentId ? 'No encontramos el pago.' : notFoundMessage()"
+      >
+        <a noticeAction [routerLink]="home">Volver al inicio</a>
+      </app-page-notice>
     }
     @case ('error') {
-      <div class="quipu-alert" role="alert">
-        <p>{{ loadErrorMessage() }}</p>
-        <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
-          Reintentar
-        </button>
-      </div>
+      <app-load-error [message]="loadErrorMessage()" [retrying]="retrying()" (retry)="retry()" />
     }
   }
 
@@ -64,12 +82,11 @@
     }
 
     @if (mode() === 'correct' && payment(); as p) {
-      <div class="quipu-alert" role="note">
-        <p class="strong">Tu pago no se aprobó</p>
+      <app-page-notice role="note" heading="Tu pago no se aprobó">
         @if (p.rejectionReason; as reason) {
-          <p class="reason">{{ reason }}</p>
+          {{ reason }}
         }
-      </div>
+      </app-page-notice>
     }
 
     @if (mode() === 'new' && audience === 'CONTRACT') {
@@ -92,7 +109,7 @@
     @if (mode() === 'new' && audience === 'TEMPORARY' && stay(); as s) {
       <p>
         <span class="strong">Estadía {{ stayLabel() }}</span>
-        <span [class]="'badge status-' + s.status">{{ statusLabels[s.status] }}</span>
+        <app-status-badge [tone]="periodStatusTones[s.status]" [label]="statusLabels[s.status]" />
       </p>
       @if (!stayTakesPayment() && s.paymentId; as id) {
         <a
@@ -105,15 +122,23 @@
     }
 
     @if (showForm()) {
-      <form novalidate (submit)="submit($event)">
+      <form
+        [attr.aria-busy]="refreshing()"
+        [inert]="refreshing() || refreshError() !== null"
+        novalidate
+        (submit)="submit($event)"
+      >
         @if (mode() === 'new' && audience === 'CONTRACT') {
-          <div class="field">
-            <label for="op-period">Mes</label>
+          <app-form-field
+            fieldId="op-period"
+            label="Mes"
+            [error]="periodError()"
+            [help]="periodHelp()"
+          >
             <select
-              id="op-period"
+              appFieldControl
+              class="quipu-input"
               aria-required="true"
-              [attr.aria-invalid]="periodError() ? 'true' : null"
-              [attr.aria-describedby]="periodError() ? 'op-period-error' : 'op-period-help'"
               (change)="choosePeriod($event.target)"
             >
               <option value="" [selected]="periodChoice() === ''">Elige el período</option>
@@ -123,24 +148,14 @@
                 </option>
               }
             </select>
-            <p id="op-period-help" class="help">
-              @if (selected(); as item) {
-                Cuota {{ formatMoney(item.amount) }} · Por pagar {{ formatMoney(item.amountDue) }}
-              } @else {
-                Solo los meses sin pagar.
-              }
-            </p>
-            @if (selected(); as item) {
-              @if (item.creditApplied > 0) {
-                <p class="help" role="note" aria-label="Crédito a favor">
-                  {{ creditAppliedText(item.creditApplied) }}
-                </p>
-              }
+          </app-form-field>
+          @if (selected(); as item) {
+            @if (item.creditApplied > 0) {
+              <p class="help" role="note" aria-label="Crédito a favor">
+                {{ creditAppliedText(item.creditApplied) }}
+              </p>
             }
-            @if (periodError(); as message) {
-              <p id="op-period-error" class="error">{{ message }}</p>
-            }
-          </div>
+          }
         }
 
         @if (mode() === 'new' && audience === 'TEMPORARY' && stay(); as s) {
@@ -157,105 +172,42 @@
 
         <div class="proofs">
           @for (proof of proofs(); track proof.key; let i = $index) {
-            <fieldset>
+            <fieldset class="proof">
               <legend>Comprobante {{ i + 1 }}</legend>
-              <div class="kinds">
-                <label>
-                  <input
-                    type="radio"
-                    [name]="'op-kind-' + proof.key"
-                    value="VOUCHER"
-                    [checked]="proof.kind === 'VOUCHER'"
-                    (change)="kindOf(i, 'VOUCHER')"
-                  />
-                  Con voucher
-                </label>
-                <label>
-                  <input
-                    type="radio"
-                    [name]="'op-kind-' + proof.key"
-                    value="CASH"
-                    [checked]="proof.kind === 'CASH'"
-                    (change)="kindOf(i, 'CASH')"
-                  />
-                  Efectivo, sin voucher
-                </label>
-              </div>
+              <app-form-field
+                [fieldId]="'op-kind-' + proof.key"
+                label="Tipo de comprobante"
+                [group]="true"
+              >
+                <app-proof-kind-choice [kind]="proof.kind" (kindChange)="kindOf(i, $event)" />
+              </app-form-field>
 
               @if (proof.kind === 'VOUCHER') {
-                <div class="field">
-                  <label [for]="'op-proof-' + proof.key + '-file'">Archivo del voucher</label>
-                  <input
-                    type="file"
-                    accept=".jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf"
-                    [id]="'op-proof-' + proof.key + '-file'"
-                    [attr.aria-invalid]="fileError(i) ? 'true' : null"
-                    [attr.aria-describedby]="
-                      'op-proof-' + proof.key + (fileError(i) ? '-file-error' : '-file-help')
-                    "
-                    (change)="picked(i, $event.target)"
-                  />
-                  <p class="help" [id]="'op-proof-' + proof.key + '-file-help'">
-                    @if (proof.file) {
-                      {{ proof.file.name }}
-                    } @else if (proof.keptFile) {
-                      Archivo enviado: {{ proof.keptFile }}. Elige otro solo si quieres cambiarlo.
-                    } @else {
-                      JPG, PNG o PDF de hasta 5 MB.
-                    }
-                  </p>
-                  @if (fileError(i); as message) {
-                    <p class="error" [id]="'op-proof-' + proof.key + '-file-error'">
-                      {{ message }}
-                    </p>
-                  }
-                </div>
-                <div class="field">
-                  <label [for]="'op-proof-' + proof.key + '-method'"
-                    >Medio de pago (opcional)</label
-                  >
-                  <input
-                    type="text"
-                    maxlength="60"
-                    [id]="'op-proof-' + proof.key + '-method'"
-                    [value]="proof.method"
-                    (input)="typedMethod(i, methodFrom($event.target))"
-                  />
-                  <fieldset class="shortcuts">
-                    <legend class="cdk-visually-hidden">Medios frecuentes</legend>
-                    @for (shortcut of shortcuts; track shortcut) {
-                      <button
-                        class="quipu-button quipu-button--secondary"
-                        type="button"
-                        (click)="typedMethod(i, shortcut)"
-                      >
-                        {{ shortcut }}
-                      </button>
-                    }
-                  </fieldset>
-                </div>
+                <app-file-field
+                  [fieldId]="'op-proof-' + proof.key + '-file'"
+                  [fileName]="proof.file?.name ?? proof.keptFile"
+                  [help]="
+                    proof.keptFile && !proof.file
+                      ? 'Elige otro solo si quieres cambiar el archivo enviado. JPG, PNG o PDF de hasta 5 MB.'
+                      : 'JPG, PNG o PDF de hasta 5 MB.'
+                  "
+                  [error]="fileError(i)"
+                  (chosen)="picked(i, $event)"
+                />
+                <app-proof-method-field
+                  [fieldId]="'op-proof-' + proof.key + '-method'"
+                  [value]="proof.method"
+                  (valueChange)="typedMethod(i, $event)"
+                />
               }
 
-              <div class="field">
-                <label [for]="'op-proof-' + proof.key + '-amount'">Monto (S/)</label>
-                <input
-                  type="text"
-                  inputmode="decimal"
-                  aria-required="true"
-                  [id]="'op-proof-' + proof.key + '-amount'"
-                  [value]="proof.amount"
-                  [attr.aria-invalid]="amountError(i) ? 'true' : null"
-                  [attr.aria-describedby]="
-                    amountError(i) ? 'op-proof-' + proof.key + '-amount-error' : null
-                  "
-                  (input)="typedAmount(i, $event.target)"
-                />
-                @if (amountError(i); as message) {
-                  <p class="error" [id]="'op-proof-' + proof.key + '-amount-error'">
-                    {{ message }}
-                  </p>
-                }
-              </div>
+              <app-proof-amount-field
+                [fieldId]="'op-proof-' + proof.key + '-amount'"
+                label="Monto (S/)"
+                [value]="proof.amount"
+                [error]="amountError(i)"
+                (valueChange)="typedAmount(i, $event)"
+              />
 
               @if (proofs().length > 1) {
                 <button
@@ -292,9 +244,7 @@
         </div>
 
         @if (generalError(); as message) {
-          <div class="quipu-alert" role="alert" [id]="generalErrorId" tabindex="-1">
-            <p>{{ message }}</p>
-          </div>
+          <app-page-notice tone="error" [id]="generalErrorId" tabindex="-1" [heading]="message" />
         }
 
         <div class="actions">

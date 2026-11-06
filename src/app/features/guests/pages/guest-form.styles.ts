@@ -1,5 +1,6 @@
 /** What the forms of A3.5 need on top of the guest page layout (canvas "Estadía"). */
 export const GUEST_FORM_STYLES = `
+  .layout > * { min-width: 0; }
   .layout > form {
     order: 1;
     max-width: 680px;
@@ -107,22 +108,5 @@ export const GUEST_FORM_STYLES = `
   }
   .notice.first {
     margin: 0 0 24px;
-  }
-  .sk-title {
-    height: 24px;
-    width: 220px;
-  }
-  .sk-label {
-    height: 14px;
-    width: 140px;
-    margin-bottom: 6px;
-  }
-  .sk-field {
-    height: 48px;
-    background: var(--quipu-alpaca);
-    border: 1px solid var(--quipu-piedra-oscura);
-  }
-  .sk-fact {
-    height: 84px;
   }
 `;

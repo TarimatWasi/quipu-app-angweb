@@ -13,7 +13,7 @@
     "prestart:mock": "node scripts/set-env.mjs",
     "start:mock": "ng serve --configuration mock",
     "prebuild": "node scripts/set-env.mjs",
-    "build": "ng build --configuration production",
+    "build": "ng build --configuration production --stats-json",
     "build:mock": "ng build --configuration mock",
     "check:mock-bundle": "node scripts/mock-bundle.mjs",
     "format:check": "prettier --check .",
@@ -27,7 +27,8 @@
     "screenshots": "playwright test",
     "screenshots:typecheck": "tsc -p e2e/tsconfig.json",
     "pretest": "node scripts/set-env.mjs",
-    "verify": "npm run format:check && npm run contract:check && npm run lint && npm run test:scripts && npm run build && npm run build:mock && npm run check:mock-bundle && npm run test"
+    "verify": "npm run format:check && npm run contract:check && npm run lint && npm run test:scripts && npm run build && npm run check:bundle && npm run build:mock && npm run check:mock-bundle && npm run test",
+    "check:bundle": "node scripts/bundle-boundaries.mjs"
   },
   "private": true,
   "dependencies": {

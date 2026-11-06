@@ -1,3 +1,4 @@
+import { MockRequestControls } from './mock-request-controls';
 import {
   HttpErrorResponse,
   HttpHeaders,
@@ -5,7 +6,7 @@ import {
   HttpResponse,
 } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { defer, delay, mergeMap, of, throwError } from 'rxjs';
+import { mergeMap, of, throwError } from 'rxjs';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { MOCK_BUNDLE_MARKER, MOCK_HEADER, MockBff } from './mock-bff';
 
@@ -31,16 +32,19 @@ export const mockBffInterceptor: HttpInterceptorFn = (req, next) => {
   }
   const bff = inject(MockBff);
   const headers = new HttpHeaders({ [MOCK_HEADER]: MOCK_BUNDLE_MARKER });
-  return defer(() =>
-    bff.handle({ method: req.method, path, query: req.params, body: req.body }),
-  ).pipe(
-    delay(bff.latencyMs()),
-    mergeMap(({ status, body }) =>
-      status < 400
-        ? of(new HttpResponse({ status, body, headers, url: req.urlWithParams }))
-        : throwError(
-            () => new HttpErrorResponse({ status, error: body, headers, url: req.urlWithParams }),
-          ),
-    ),
-  );
+  return inject(MockRequestControls)
+    .dispatch(
+      { method: req.method, path, query: req.params, body: req.body },
+      () => bff.handle({ method: req.method, path, query: req.params, body: req.body }),
+      bff.latencyMs(),
+    )
+    .pipe(
+      mergeMap(({ status, body }) =>
+        status < 400
+          ? of(new HttpResponse({ status, body, headers, url: req.urlWithParams }))
+          : throwError(
+              () => new HttpErrorResponse({ status, error: body, headers, url: req.urlWithParams }),
+            ),
+      ),
+    );
 };

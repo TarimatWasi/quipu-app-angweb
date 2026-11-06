@@ -10,3 +10,8 @@
 table {
   min-width: var(--quipu-tabla-ancho-minimo, 0);
 }
+
+.align-end app-skeleton-block,
+.align-action app-skeleton-block {
+  margin-left: auto;
+}

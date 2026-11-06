@@ -1,4 +1,7 @@
-import { Component, input, output } from '@angular/core';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
+import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
+import { Component, input, output, TemplateRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
@@ -11,13 +14,25 @@ import type { QueueViewParam } from '../model/queue-views';
 type Column = SortKey | 'state' | 'action';
 
 const COLUMNS: readonly DataColumn<Column>[] = [
-  { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true },
+  {
+    skeleton: { width: '85%' },
+    key: 'guest',
+    label: 'Huésped',
+    sortable: true,
+    rowHeader: true,
+  },
   { key: 'environment', label: 'Ambiente', sortable: true },
   { key: 'period', label: 'Período', sortable: true },
   { key: 'submitted', label: 'Subido', sortable: true },
   { key: 'proofs', label: 'Comprobantes', sortable: true },
-  { key: 'state', label: 'Estado' },
-  { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action' },
+  { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado' },
+  {
+    skeleton: { shape: 'rectangle', width: '7rem', height: '2rem' },
+    key: 'action',
+    label: 'Acción',
+    hiddenLabel: true,
+    align: 'action',
+  },
 ];
 
 /**
@@ -27,6 +42,9 @@ const COLUMNS: readonly DataColumn<Column>[] = [
 @Component({
   selector: 'app-payments-table',
   imports: [
+    SkeletonBlockComponent,
+    DataSkeletonCardDirective,
+    DataSkeletonCellDirective,
     DataCardDirective,
     DataCellDirective,
     DataTableComponent,
@@ -35,6 +53,8 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   ],
   template: `
     <app-data-table
+      [loading]="loading()"
+      [skeletonBefore]="skeletonBefore()"
       [caption]="caption()"
       [columns]="columns"
       [rows]="rows()"
@@ -42,6 +62,22 @@ const COLUMNS: readonly DataColumn<Column>[] = [
       [sort]="sort()"
       (sortBy)="sorted($event)"
     >
+      <ng-template appDataSkeletonCell="guest">
+        <app-skeleton-block width="85%" />
+        <app-skeleton-block class="skeleton-detail" width="65%" height="0.75rem" />
+      </ng-template>
+      <ng-template appDataSkeletonCard>
+        <div class="card-head">
+          <div class="card-who skeleton-who">
+            <app-skeleton-block width="85%" height="1.25rem" />
+            <app-skeleton-block width="70%" height="0.75rem" />
+          </div>
+          <app-skeleton-block width="2rem" />
+        </div>
+        <app-skeleton-block width="100%" />
+        <app-skeleton-block shape="badge" />
+        <app-skeleton-block shape="rectangle" width="8rem" />
+      </ng-template>
       <ng-template appDataCell="guest" [appDataCellRows]="rows()" let-row>
         @if (row.name; as fullName) {
           <span class="quipu-name">{{ fullName }}</span>
@@ -135,6 +171,12 @@ const COLUMNS: readonly DataColumn<Column>[] = [
       display: block;
       --quipu-tabla-ancho-minimo: 900px;
     }
+    .skeleton-who {
+      width: 75%;
+    }
+    .skeleton-detail {
+      margin-top: 0.375rem;
+    }
     .detail {
       display: block;
       font: var(--mat-sys-body-small);
@@ -178,6 +220,8 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   `,
 })
 export class PaymentsTableComponent {
+  readonly loading = input(false);
+  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
   readonly rows = input.required<readonly QueueRow[]>();
   readonly sort = input.required<QueueSort>();
   /** The view the rows belong to, so A5.2 can come back to it. */

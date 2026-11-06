@@ -18,6 +18,7 @@ import { Component, computed, input } from '@angular/core';
   imports: [NgTemplateOutlet],
   template: `
     <ng-template #control><ng-content /></ng-template>
+    <ng-template #after><ng-content select="[fieldAfter]" /></ng-template>
     @if (group()) {
       <fieldset class="quipu-field">
         <legend [class]="hiddenLabel() ? 'cdk-visually-hidden' : 'quipu-label'">
@@ -28,6 +29,7 @@ import { Component, computed, input } from '@angular/core';
         </legend>
         <ng-container [ngTemplateOutlet]="control" />
         <ng-container [ngTemplateOutlet]="messages" />
+        <ng-container [ngTemplateOutlet]="after" />
       </fieldset>
     } @else {
       <div class="quipu-field">
@@ -46,6 +48,7 @@ import { Component, computed, input } from '@angular/core';
           <ng-container [ngTemplateOutlet]="control" />
         }
         <ng-container [ngTemplateOutlet]="messages" />
+        <ng-container [ngTemplateOutlet]="after" />
       </div>
     }
     <ng-template #messages>

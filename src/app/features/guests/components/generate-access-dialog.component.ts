@@ -1,3 +1,4 @@
+import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -133,6 +134,7 @@ const OPTION_STYLES = `
 export class GenerateAccessDialogComponent {
   private readonly ref =
     inject<MatDialogRef<GenerateAccessDialogComponent, AccessGrant>>(MatDialogRef);
+  private readonly submission = new DialogSubmission(this.ref);
   private readonly data = inject<GenerateAccessData>(MAT_DIALOG_DATA);
 
   protected readonly title = ACCESS_TITLE;
@@ -142,7 +144,7 @@ export class GenerateAccessDialogComponent {
   protected readonly leadId = LEAD_ID;
   protected readonly errorId = ERROR_ID;
   protected readonly mode = signal<AccessMode>('LINK');
-  protected readonly busy = signal(false);
+  protected readonly busy = this.submission.pending;
   protected readonly error = signal<string | null>(null);
 
   protected cancel(): void {
@@ -150,27 +152,23 @@ export class GenerateAccessDialogComponent {
   }
 
   protected async generate(): Promise<void> {
-    if (this.busy()) return;
-    this.busy.set(true);
-    this.error.set(null);
-    this.ref.disableClose = true;
-    try {
-      const grant = await firstValueFrom(this.data.generate(this.mode()));
-      this.finish(grant);
-    } catch (error: unknown) {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.finish();
-        return;
+    return this.submission.run(async () => {
+      this.error.set(null);
+      try {
+        const grant = await firstValueFrom(this.data.generate(this.mode()));
+        this.finish(grant);
+      } catch (error: unknown) {
+        if (error instanceof HttpErrorResponse && error.status === 401) {
+          // The session interceptor already forgot the session and goes to the login.
+          this.finish();
+          return;
+        }
+        this.error.set(accessProblem(callFailure(error)));
       }
-      this.ref.disableClose = false;
-      this.busy.set(false);
-      this.error.set(accessProblem(callFailure(error)));
-    }
+    });
   }
 
   private finish(grant?: AccessGrant): void {
-    this.ref.disableClose = false;
     this.ref.close(grant);
   }
 }

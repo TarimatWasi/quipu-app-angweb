@@ -88,10 +88,22 @@
           </p>
           @switch (guestsState().kind) {
             @case ('loading') {
-              <p class="quipu-field-help" role="status">Cargando huéspedes…</p>
+              @if (guestOptions().length === 0) {
+                <app-skeleton subject="huéspedes disponibles"
+                  ><ng-template appSkeletonContent><app-skeleton-cards [count]="3" /></ng-template
+                ></app-skeleton>
+              } @else {
+                <button class="quipu-button quipu-button--secondary" type="button" disabled>
+                  Cargando…
+                </button>
+              }
             }
             @case ('error') {
-              <app-load-error [message]="guestsLoadError()" (retry)="retryGuests()" />
+              <app-load-error
+                [message]="guestsLoadError()"
+                [retrying]="guestsRetrying()"
+                (retry)="retryGuests()"
+              />
             }
             @default {
               @if (guestsCursor()) {
@@ -121,6 +133,7 @@
             class="quipu-input"
             aria-required="true"
             [value]="periodChoice()"
+            [disabled]="periodsState().kind === 'loading' || periodsRetrying()"
             (change)="choosePeriod($event.target)"
           >
             <option value="">Elige el período</option>
@@ -135,7 +148,11 @@
               <p class="quipu-field-help" role="status">Cargando períodos…</p>
             }
             @case ('error') {
-              <app-load-error [message]="periodsLoadError()" (retry)="retryPeriods()" />
+              <app-load-error
+                [message]="periodsLoadError()"
+                [retrying]="periodsRetrying()"
+                (retry)="retryPeriods()"
+              />
             }
             @case ('ready') {
               @if (options().length === 0) {
@@ -173,26 +190,11 @@
               }
             </div>
 
-            <div
-              class="quipu-segmented"
-              role="group"
-              [attr.aria-label]="'Tipo del comprobante ' + (i + 1)"
-            >
-              <button
-                type="button"
-                [attr.aria-pressed]="proof.kind === 'VOUCHER'"
-                (click)="kindOf(i, 'VOUCHER')"
-              >
-                Con voucher
-              </button>
-              <button
-                type="button"
-                [attr.aria-pressed]="proof.kind === 'CASH'"
-                (click)="kindOf(i, 'CASH')"
-              >
-                Efectivo, sin voucher
-              </button>
-            </div>
+            <app-proof-kind-choice
+              [kind]="proof.kind"
+              (kindChange)="kindOf(i, $event)"
+              [label]="'Tipo del comprobante ' + (i + 1)"
+            />
 
             @if (proof.kind === 'VOUCHER') {
               <app-file-field
@@ -208,48 +210,20 @@
             }
 
             <div class="entry-fields">
-              <app-form-field
-                label="Monto recibido"
+              <app-proof-amount-field
                 [fieldId]="'dp-proof-' + proof.key + '-amount'"
-                [money]="true"
+                label="Monto recibido"
+                [value]="proof.amount"
                 [error]="amountError(i)"
-              >
-                <input
-                  appFieldControl
-                  class="quipu-input"
-                  type="text"
-                  inputmode="decimal"
-                  aria-required="true"
-                  [value]="proof.amount"
-                  (input)="typedAmount(i, $event.target)"
-                />
-              </app-form-field>
+                (valueChange)="typedAmount(i, $event)"
+              />
               @if (proof.kind === 'VOUCHER') {
-                <app-form-field
-                  label="Medio de pago (opcional)"
+                <app-proof-method-field
                   [fieldId]="'dp-proof-' + proof.key + '-method'"
-                >
-                  <input
-                    appFieldControl
-                    class="quipu-input"
-                    type="text"
-                    maxlength="60"
-                    placeholder="Por ejemplo, Yape"
-                    [value]="proof.method"
-                    (input)="typedMethod(i, methodFrom($event.target))"
-                  />
-                  <div class="quipu-segmented" role="group" aria-label="Medios frecuentes">
-                    @for (shortcut of shortcuts; track shortcut) {
-                      <button
-                        type="button"
-                        [attr.aria-pressed]="proof.method === shortcut"
-                        (click)="typedMethod(i, shortcut)"
-                      >
-                        {{ shortcut }}
-                      </button>
-                    }
-                  </div>
-                </app-form-field>
+                  [value]="proof.method"
+                  (valueChange)="typedMethod(i, $event)"
+                  placeholder="Por ejemplo, Yape"
+                />
               }
             </div>
           </li>

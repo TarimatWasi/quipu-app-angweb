@@ -51,7 +51,7 @@ async function settle(harness: RouterTestingHarness) {
   await harness.fixture.whenStable();
 }
 
-async function setup(guest: object = pending()) {
+async function setup(guest: object = pending(), status = 200) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -73,7 +73,7 @@ async function setup(guest: object = pending()) {
     req.flush(body, { status, statusText: 'x' });
     await settle(harness);
   };
-  await flush(await expect1(isGuest), guest);
+  await flush(await expect1(isGuest), guest, status);
   const page = () => within(present(harness.routeNativeElement));
   const click = async (element: HTMLElement) => {
     fireEvent.click(element);
@@ -100,6 +100,17 @@ describe('DocumentFormComponent (A3.5 document of a pending guest, approved canv
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('keeps the initial error visible while retrying without drawing another skeleton', async () => {
+    const ui = await setup({ code: 'UNEXPECTED_ERROR', message: 'No disponible' }, 500);
+    await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
+    const busy = ui.page().getByRole<HTMLButtonElement>('button', { name: 'Cargando\u2026' });
+    expect(busy.disabled).toBe(true);
+    expect(ui.page().getByRole('alert').textContent).toContain('No disponible');
+    expect(ui.page().queryByRole('region', { name: 'Cargando el documento' })).toBeNull();
+    await ui.flush(await ui.expect1(isGuest), pending());
+    expect(ui.page().getByLabelText(NUMBER)).toBeTruthy();
   });
 
   it('starts from the loaded document, says how it is today and waits for a change', async () => {
@@ -207,6 +218,17 @@ describe('DocumentFormComponent (A3.5 document of a pending guest, approved canv
 
     const alert = await screen.findByRole('alertdialog', { name: 'El registro cambió' });
     await ui.click(within(alert).getByRole('button', { name: 'Volver a cargar' }));
+    expect(ui.page().queryByRole('region', { name: 'Cargando el documento' })).toBeNull();
+    expect(ui.page().getByLabelText<HTMLInputElement>(NUMBER).value).toBe('70412238');
+    expect(ui.save().disabled).toBe(true);
+    await ui.flush(
+      await ui.expect1(isGuest),
+      { code: 'UNEXPECTED_ERROR', message: 'No disponible' },
+      500,
+    );
+    expect(ui.page().getByLabelText<HTMLInputElement>(NUMBER).value).toBe('70412238');
+    expect(ui.save().disabled).toBe(true);
+    await ui.click(ui.page().getByRole('button', { name: 'Reintentar' }));
     await ui.flush(await ui.expect1(isGuest), pending({ version: 4, documentNumber: '11112222' }));
 
     expect(ui.page().getByLabelText<HTMLInputElement>(NUMBER).value).toBe('11112222');

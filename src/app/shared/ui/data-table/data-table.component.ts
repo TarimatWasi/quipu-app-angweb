@@ -1,5 +1,18 @@
+import { SkeletonBlockComponent, SkeletonCell } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { DataSkeletonCardDirective } from './data-skeleton-card.directive';
+import { DataSkeletonCellDirective } from './data-skeleton-cell.directive';
 import { NgTemplateOutlet } from '@angular/common';
-import { Component, computed, contentChild, contentChildren, input, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  contentChild,
+  contentChildren,
+  input,
+  output,
+  TemplateRef,
+} from '@angular/core';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
 import { DataFooterDirective } from './data-footer.directive';
@@ -9,6 +22,7 @@ import type { ListSort } from './list-sort';
 /** One column of `app-data-table`. */
 export interface DataColumn<K extends string = string> {
   readonly key: K;
+  readonly skeleton?: SkeletonCell;
   /** The header; with `hiddenLabel` it is read by a screen reader only («Acción»). */
   readonly label: string;
   readonly hiddenLabel?: boolean;
@@ -28,11 +42,22 @@ export interface DataColumn<K extends string = string> {
  */
 @Component({
   selector: 'app-data-table',
-  imports: [NgTemplateOutlet],
+  imports: [NgTemplateOutlet, SkeletonComponent, SkeletonContentDirective, SkeletonBlockComponent],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
 export class DataTableComponent<T, K extends string = string> {
+  /** Initial loading only; refreshes and pagination retain the real content. */
+  readonly loading = input(false);
+  /** Optional decorative filters or toolbar, governed by the same loading timer. */
+  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
+  readonly skeletonRows = input(5);
+  protected readonly placeholders = computed(() =>
+    Array.from(
+      { length: Math.min(20, Math.max(1, Math.trunc(this.skeletonRows()) || 5)) },
+      (_, index) => index,
+    ),
+  );
   readonly columns = input.required<readonly DataColumn<K>[]>();
   readonly rows = input.required<readonly T[]>();
   /** A stable id of each row, for `track`. */
@@ -44,6 +69,8 @@ export class DataTableComponent<T, K extends string = string> {
   /** A sortable header was pressed; the screen orders the rows. */
   readonly sortBy = output<K>();
 
+  protected readonly skeletonCard = contentChild(DataSkeletonCardDirective);
+  private readonly skeletonCells = contentChildren(DataSkeletonCellDirective);
   private readonly cells = contentChildren(DataCellDirective);
   private readonly cardTemplate = contentChild(DataCardDirective);
   private readonly footerTemplate = contentChild(DataFooterDirective);
@@ -53,10 +80,14 @@ export class DataTableComponent<T, K extends string = string> {
   protected readonly headers = computed(() => {
     const sort = this.sort();
     const templates = new Map(this.cells().map((cell) => [cell.appDataCell(), cell.template]));
+    const skeletons = new Map(
+      this.skeletonCells().map((cell) => [cell.appDataSkeletonCell(), cell.template]),
+    );
     return this.columns().map((column) => {
       const active = sort?.key === column.key;
       return {
         ...column,
+        skeletonTemplate: skeletons.get(column.key) ?? null,
         active,
         down: active && sort.direction === 'desc',
         ariaSort: column.sortable ? ariaSort(sort, column.key) : null,

@@ -5,7 +5,12 @@
 // sessionStorage, not localStorage: it dies with the tab.
 
 /** The only keys the simulated BFF keeps. */
-export type MockSettingKey = 'quipu-mock:role' | 'quipu-mock:scenario' | 'quipu-mock:password';
+export type MockSettingKey =
+  | 'quipu-mock:role'
+  | 'quipu-mock:scenario'
+  | 'quipu-mock:password'
+  | 'quipu-mock:requests'
+  | 'quipu-mock:presentation';
 
 function storage(): Storage | null {
   try {

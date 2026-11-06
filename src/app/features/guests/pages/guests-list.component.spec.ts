@@ -173,7 +173,7 @@ describe('GuestsListComponent (A3)', () => {
     expect(root.querySelector('h1')?.textContent.trim()).toBe('Huéspedes');
     expect(root.querySelector('.today')?.textContent.trim()).toBe(formatLimaToday(new Date()));
     expect(view.getByLabelText('Cargando Huéspedes').getAttribute('aria-busy')).toBe('true');
-    expect(root.querySelector('table')).toBeNull();
+    expect(root.querySelector('table')?.closest('[aria-hidden="true"]')).toBeTruthy();
 
     expect(await answer(page([ROSA]))).toEqual({ status: 'CURRENT', limit: '20' });
     expect(view.queryByLabelText('Cargando Huéspedes')).toBeNull();
@@ -289,8 +289,12 @@ describe('GuestsListComponent (A3)', () => {
     await click(inactive);
 
     expect(await answer(page([]))).toEqual({ status: 'INACTIVE', limit: '20' });
-    expect(inactive.getAttribute('aria-pressed')).toBe('true');
-    expect(current.getAttribute('aria-pressed')).toBe('false');
+    expect(view.getByRole('button', { name: 'Inactivos' }).getAttribute('aria-pressed')).toBe(
+      'true',
+    );
+    expect(view.getByRole('button', { name: 'Actuales' }).getAttribute('aria-pressed')).toBe(
+      'false',
+    );
     expect(view.getByLabelText<HTMLInputElement>('Buscar').value).toBe('');
     expect(view.getByLabelText<HTMLSelectElement>('Tipo').value).toBe('ALL');
     expect(view.queryByLabelText('Estado')).toBeNull();

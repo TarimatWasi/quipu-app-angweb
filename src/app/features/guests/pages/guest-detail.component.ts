@@ -1,3 +1,7 @@
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -78,6 +82,10 @@ function chargesKind(guest: GuestDetail): 'periods' | 'stays' | null {
 @Component({
   selector: 'app-guest-detail',
   imports: [
+    SkeletonCardsComponent,
+    SkeletonFactsComponent,
+    SkeletonBlockComponent,
+    SkeletonContentDirective,
     DetailNowPanelComponent,
     EmptyStateComponent,
     GuestFactsComponent,
@@ -109,6 +117,9 @@ export class GuestDetailComponent implements OnInit {
   /** Reactivated from this page: an expired access then says it expired while inactive. */
   private readonly reactivated = signal(false);
   protected readonly busy = signal(false);
+  protected readonly retrying = signal(false);
+  protected readonly refreshing = signal(false);
+  protected readonly refreshError = signal<string | null>(null);
   private readonly toasts = inject(ToastService);
 
   protected readonly title = computed(() => {
@@ -169,6 +180,7 @@ export class GuestDetailComponent implements OnInit {
   constructor() {
     // The time left of an access follows the clock while the page is open.
     const clock = setInterval(() => {
+      this.refreshError.set(null);
       this.now.set(new Date());
     }, CLOCK_MS);
     this.destroyRef.onDestroy(() => {
@@ -190,15 +202,19 @@ export class GuestDetailComponent implements OnInit {
   }
 
   protected retry(): void {
-    void this.load(this.currentId);
+    if (this.retrying() || this.refreshing()) return;
+    this.retrying.set(true);
+    void this.load(this.currentId, true);
   }
 
   protected onPanelAction(action: PanelAction): void {
+    if (this.refreshing() || this.refreshError() !== null) return;
     if (action.kind === 'generate-access') this.openAccess();
     if (action.kind === 'reactivate') void this.reactivate();
   }
 
   protected onMoreAction(kind: DialogActionKind): void {
+    if (this.refreshing() || this.refreshError() !== null) return;
     switch (kind) {
       case 'generate-access':
         this.openAccess();
@@ -217,10 +233,16 @@ export class GuestDetailComponent implements OnInit {
   /** Loads the guest and what its panel needs; `quiet` keeps the page on screen meanwhile. */
   private async load(id: string, quiet = false): Promise<void> {
     const request = ++this.request;
+    const refreshing = quiet && this.state() === 'ready';
+    this.refreshing.set(refreshing);
+    if (!quiet) this.refreshError.set(null);
+    if (!quiet) this.retrying.set(false);
     this.currentId = id;
     if (!quiet) this.reset();
     try {
       const guest = await firstValueFrom(this.guests.get(id));
+      if (request !== this.request || this.destroyed) return;
+      this.guest.set(guest);
       const kind = chargesKind(guest);
       const [periods, stays] = await Promise.all([
         firstValueFrom(kind === 'periods' ? this.guests.accountStatus(id) : of([])),
@@ -231,8 +253,16 @@ export class GuestDetailComponent implements OnInit {
     } catch (error: unknown) {
       if (request !== this.request) return;
       const notFound = error instanceof HttpErrorResponse && error.status === 404;
-      this.state.set(notFound ? 'not-found' : 'error');
-      if (!notFound) this.guest.set(null);
+      if (refreshing && !notFound) this.refreshError.set(this.loadErrorText);
+      else {
+        this.state.set(notFound ? 'not-found' : 'error');
+        if (!notFound) this.guest.set(null);
+      }
+    } finally {
+      if (request === this.request) {
+        this.retrying.set(false);
+        this.refreshing.set(false);
+      }
     }
   }
 

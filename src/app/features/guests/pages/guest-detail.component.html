@@ -1,11 +1,53 @@
 <app-page-header [heading]="title()" backLink="/admin/guests" backTo="Huéspedes" />
 
+@if (refreshError(); as message) {
+  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
+}
+@if (refreshing() && refreshError() === null) {
+  <output>Actualizando…</output>
+}
 @switch (state()) {
   @case ('loading') {
-    <app-skeleton class="state" shape="detail" subject="el huésped" />
+    @if (guest(); as known) {
+      <div class="layout">
+        @if (known.type === 'TEMPORARY') {
+          <app-guest-stays
+            [loading]="true"
+            [rows]="[]"
+            [guestId]="known.id"
+            [canRegister]="false"
+          />
+        } @else {
+          <app-period-payments [loading]="true" [rows]="[]" />
+        }
+        <aside aria-label="Datos del huésped"><app-guest-facts [guest]="known" /></aside>
+      </div>
+    } @else {
+      <app-skeleton subject="el huésped"
+        ><ng-template appSkeletonContent>
+          <app-skeleton-block class="now" shape="rectangle" height="152px" />
+          <div class="layout">
+            <section>
+              <h2>Pagos y estadías</h2>
+              <app-skeleton-cards />
+            </section>
+            <aside>
+              <h2>Datos del huésped</h2>
+              <app-skeleton-facts
+                [labels]="['Nombre', 'Documento', 'Tipo', 'Estado', 'Contacto', 'Ambiente']"
+              />
+            </aside>
+          </div> </ng-template
+      ></app-skeleton>
+    }
   }
   @case ('error') {
-    <app-load-error class="state" [message]="loadErrorText" (retry)="retry()" />
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
   }
   @case ('not-found') {
     <app-empty-state class="state" heading="No encontramos a este huésped.">
@@ -19,7 +61,7 @@
       <app-detail-now-panel
         class="now"
         [panel]="v.panel"
-        [busy]="busy()"
+        [busy]="busy() || refreshing() || refreshError() !== null"
         (act)="onPanelAction($event)"
       />
       <div class="layout" [class.single]="v.left === 'none'">
@@ -45,7 +87,11 @@
         }
         <aside aria-label="Datos del huésped">
           <app-guest-facts [guest]="v.guest" />
-          <app-more-actions [actions]="actions()" [busy]="busy()" (act)="onMoreAction($event)" />
+          <app-more-actions
+            [actions]="actions()"
+            [busy]="busy() || refreshing() || refreshError() !== null"
+            (act)="onMoreAction($event)"
+          />
         </aside>
       </div>
     }

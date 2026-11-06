@@ -1,92 +1,143 @@
-<div class="quipu-table-wrap" [class.quipu-only-wide]="card() !== null">
-  <table class="quipu-table">
-    <caption class="cdk-visually-hidden">
-      {{
-        caption()
-      }}
-    </caption>
-    <thead>
-      <tr>
-        @for (header of headers(); track header.key) {
-          <th
-            scope="col"
-            [class]="'align-' + (header.align ?? 'start')"
-            [attr.aria-sort]="header.ariaSort"
-          >
-            @if (header.sortable) {
-              <button
-                class="quipu-sort"
-                type="button"
-                [class.active]="header.active"
-                (click)="sortBy.emit(header.key)"
-              >
-                {{ header.label }}
-                <svg
-                  class="quipu-sort-arrow"
-                  [class.down]="header.down"
-                  aria-hidden="true"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                >
-                  <path d="M12 19V5M6 11l6-6 6 6" />
-                </svg>
-              </button>
-            } @else if (header.hiddenLabel) {
-              <span class="cdk-visually-hidden">{{ header.label }}</span>
-            } @else {
-              {{ header.label }}
-            }
-          </th>
-        }
-      </tr>
-    </thead>
-    <tbody>
-      @for (row of rows(); track rowId()(row); let index = $index) {
+@if (loading()) {
+  <app-skeleton [subject]="caption()">
+    <ng-template appSkeletonContent><ng-container [ngTemplateOutlet]="content" /></ng-template>
+  </app-skeleton>
+} @else {
+  <ng-container [ngTemplateOutlet]="content" />
+}
+<ng-template #content>
+  @if (loading() && skeletonBefore(); as before) {
+    <ng-container [ngTemplateOutlet]="before" />
+  }
+  <div class="quipu-table-wrap" [class.quipu-only-wide]="card() !== null">
+    <table class="quipu-table">
+      <caption class="cdk-visually-hidden">
+        {{
+          caption()
+        }}
+      </caption>
+      <thead>
         <tr>
           @for (header of headers(); track header.key) {
-            @if (header.rowHeader) {
-              <th scope="row" [class]="'align-' + (header.align ?? 'start')">
-                <ng-container
-                  [ngTemplateOutlet]="header.template"
-                  [ngTemplateOutletContext]="{ $implicit: row, index }"
-                />
-              </th>
-            } @else {
-              <td [class]="'align-' + (header.align ?? 'start')">
-                <ng-container
-                  [ngTemplateOutlet]="header.template"
-                  [ngTemplateOutletContext]="{ $implicit: row, index }"
-                />
-              </td>
-            }
+            <th
+              scope="col"
+              [class]="'align-' + (header.align ?? 'start')"
+              [attr.aria-sort]="loading() ? null : header.ariaSort"
+            >
+              @if (header.sortable) {
+                <button
+                  class="quipu-sort"
+                  [disabled]="loading()"
+                  type="button"
+                  [class.active]="header.active"
+                  (click)="sortBy.emit(header.key)"
+                >
+                  {{ header.label }}
+                  <svg
+                    class="quipu-sort-arrow"
+                    [class.down]="header.down"
+                    aria-hidden="true"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  >
+                    <path d="M12 19V5M6 11l6-6 6 6" />
+                  </svg>
+                </button>
+              } @else if (header.hiddenLabel) {
+                <span class="cdk-visually-hidden">{{ header.label }}</span>
+              } @else {
+                {{ header.label }}
+              }
+            </th>
           }
         </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          @for (index of placeholders(); track index) {
+            <tr aria-hidden="true">
+              @for (header of headers(); track header.key) {
+                <td [class]="'align-' + (header.align ?? 'start')">
+                  @if (header.skeletonTemplate; as custom) {
+                    <ng-container [ngTemplateOutlet]="custom" />
+                  } @else {
+                    <app-skeleton-block
+                      [shape]="header.skeleton?.shape ?? 'text'"
+                      [width]="header.skeleton?.width"
+                      [height]="header.skeleton?.height"
+                    />
+                  }
+                </td>
+              }
+            </tr>
+          }
+        } @else {
+          @for (row of rows(); track rowId()(row); let index = $index) {
+            <tr>
+              @for (header of headers(); track header.key) {
+                @if (header.rowHeader) {
+                  <th scope="row" [class]="'align-' + (header.align ?? 'start')">
+                    <ng-container
+                      [ngTemplateOutlet]="header.template"
+                      [ngTemplateOutletContext]="{ $implicit: row, index }"
+                    />
+                  </th>
+                } @else {
+                  <td [class]="'align-' + (header.align ?? 'start')">
+                    <ng-container
+                      [ngTemplateOutlet]="header.template"
+                      [ngTemplateOutletContext]="{ $implicit: row, index }"
+                    />
+                  </td>
+                }
+              }
+            </tr>
+          }
+        }
+      </tbody>
+      @if (!loading() && footer(); as cells) {
+        <tfoot>
+          <tr>
+            <ng-container [ngTemplateOutlet]="cells" />
+          </tr>
+        </tfoot>
       }
-    </tbody>
-    @if (footer(); as cells) {
-      <tfoot>
-        <tr>
-          <ng-container [ngTemplateOutlet]="cells" />
-        </tr>
-      </tfoot>
-    }
-  </table>
-</div>
-@if (card(); as cardTemplate) {
-  <ul class="quipu-card-list quipu-only-narrow" [attr.aria-label]="caption()">
-    @for (row of rows(); track rowId()(row); let index = $index) {
-      <li class="quipu-card">
-        <ng-container
-          [ngTemplateOutlet]="cardTemplate"
-          [ngTemplateOutletContext]="{ $implicit: row, index }"
-        />
-      </li>
-    }
-  </ul>
-}
+    </table>
+  </div>
+  @if (card(); as cardTemplate) {
+    <ul class="quipu-card-list quipu-only-narrow" [attr.aria-label]="caption()">
+      @if (loading()) {
+        @for (index of placeholders(); track index) {
+          <li class="quipu-card" aria-hidden="true">
+            @if (skeletonCard(); as custom) {
+              <ng-container [ngTemplateOutlet]="custom.template" />
+            } @else {
+              @for (header of headers(); track header.key) {
+                <app-skeleton-block
+                  [shape]="header.skeleton?.shape ?? 'text'"
+                  [width]="header.skeleton?.width"
+                  [height]="header.skeleton?.height"
+                />
+              }
+            }
+          </li>
+        }
+      } @else {
+        @for (row of rows(); track rowId()(row); let index = $index) {
+          <li class="quipu-card">
+            <ng-container
+              [ngTemplateOutlet]="cardTemplate"
+              [ngTemplateOutletContext]="{ $implicit: row, index }"
+            />
+          </li>
+        }
+      }
+    </ul>
+  }
+</ng-template>

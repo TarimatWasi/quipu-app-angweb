@@ -32,6 +32,8 @@ export function resetMockSettings(): void {
   writeMockSetting('quipu-mock:role', null);
   writeMockSetting('quipu-mock:scenario', null);
   writeMockSetting('quipu-mock:password', null);
+  writeMockSetting('quipu-mock:requests', null);
+  writeMockSetting('quipu-mock:presentation', null);
 }
 
 export function setUpMockBff(scenario: MockScenario = 'normal'): MockHarness {

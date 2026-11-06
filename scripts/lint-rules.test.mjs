@@ -31,6 +31,17 @@ async function messagesFor(filePath, code) {
 }
 
 const violations = [
+  [
+    'src/app/features/f/pages/a.ts',
+    "import { LoadTiming as Timer } from '@shared/ui/skeleton/load-timing';\nexport const a = Timer;",
+    'QP-UI-16',
+  ],
+  [
+    'src/app/features/f/pages/a.ts',
+    "import { SKELETON_TIMING as timing } from '@shared/ui/skeleton/skeleton.component';\nexport const a = timing;",
+    'QP-UI-16',
+  ],
+
   // FE-ANG-ORG-02: dependency direction between folders.
   ['src/app/shared/a.ts', "import { x } from '@core/x';\nexport const a = x;", 'FE-ANG-ORG-02'],
   [
@@ -481,4 +492,24 @@ test(`no file under src/app/features is deeper than ${MAX_FEATURE_DEPTH} folders
     [],
     `Files below ${MAX_FEATURE_DEPTH} folders in a feature escape the relative-import rule of FE-ANG-ORG-02`,
   );
+});
+
+test('features compose skeletons while tests can inject timings and unrelated timers remain allowed', async () => {
+  const samples = [
+    [
+      'src/app/features/f/pages/a.ts',
+      "import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';\nexport const a = SkeletonComponent;",
+    ],
+    [
+      'src/app/features/f/pages/a.spec.ts',
+      "import { SKELETON_TIMING } from '@shared/ui/skeleton/skeleton.component';\nexport const a = SKELETON_TIMING;",
+    ],
+    ['src/app/features/f/pages/a.ts', 'export const a = setTimeout(() => undefined, 500);'],
+    [
+      'src/app/shared/ui/skeleton/a.ts',
+      "import { LoadTiming } from './load-timing';\nexport const a = LoadTiming;",
+    ],
+  ];
+  for (const [file, code] of samples)
+    assert.equal((await messagesFor(file, code)).includes('QP-UI-16'), false);
 });

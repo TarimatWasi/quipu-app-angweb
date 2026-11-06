@@ -1,3 +1,7 @@
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
+import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
+import { TemplateRef } from '@angular/core';
 import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
@@ -13,8 +17,14 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true },
   { key: 'type', label: 'Tipo', sortable: true },
   { key: 'environment', label: 'Ambiente', sortable: true },
-  { key: 'status', label: 'Estado', sortable: true },
-  { key: 'action', label: 'Acciones', hiddenLabel: true, align: 'action' },
+  { skeleton: { shape: 'badge' }, key: 'status', label: 'Estado', sortable: true },
+  {
+    skeleton: { width: '7rem' },
+    key: 'action',
+    label: 'Acciones',
+    hiddenLabel: true,
+    align: 'action',
+  },
 ];
 
 /**
@@ -24,6 +34,9 @@ const COLUMNS: readonly DataColumn<Column>[] = [
 @Component({
   selector: 'app-guests-table',
   imports: [
+    SkeletonBlockComponent,
+    DataSkeletonCardDirective,
+    DataSkeletonCellDirective,
     DataCardDirective,
     DataCellDirective,
     DataTableComponent,
@@ -32,6 +45,8 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   ],
   template: `
     <app-data-table
+      [loading]="loading()"
+      [skeletonBefore]="skeletonBefore()"
       caption="Huéspedes"
       [columns]="columns"
       [rows]="rows()"
@@ -39,6 +54,24 @@ const COLUMNS: readonly DataColumn<Column>[] = [
       [sort]="sort()"
       (sortBy)="sorted($event)"
     >
+      <ng-template appDataSkeletonCell="guest"
+        ><app-skeleton-block width="85%" /><app-skeleton-block
+          class="skeleton-detail"
+          width="65%"
+          height="0.75rem"
+      /></ng-template>
+      <ng-template appDataSkeletonCard
+        ><div class="card-head">
+          <div class="card-who skeleton-who">
+            <app-skeleton-block width="85%" height="1.25rem" /><app-skeleton-block
+              width="65%"
+              height="0.75rem"
+            />
+          </div>
+          <app-skeleton-block shape="badge" width="7rem" />
+        </div>
+        <app-skeleton-block width="45%" /><app-skeleton-block width="7rem"
+      /></ng-template>
       <ng-template appDataCell="guest" [appDataCellRows]="rows()" let-row>
         @if (row.name; as fullName) {
           <span class="quipu-name">{{ fullName }}</span>
@@ -113,6 +146,12 @@ const COLUMNS: readonly DataColumn<Column>[] = [
       font: var(--mat-sys-body-small);
       color: var(--quipu-tinta-secundaria);
     }
+    .skeleton-detail {
+      margin-top: 0.375rem;
+    }
+    .skeleton-who {
+      width: 70%;
+    }
     .number {
       font-variant-numeric: tabular-nums;
     }
@@ -141,6 +180,8 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   `,
 })
 export class GuestsTableComponent {
+  readonly loading = input(false);
+  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
   readonly rows = input.required<readonly GuestRow[]>();
   readonly sort = input.required<GuestSort>();
   /** A sortable header was pressed. */

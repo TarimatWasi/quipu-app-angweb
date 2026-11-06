@@ -1,0 +1,93 @@
+:host {
+  display: block;
+}
+
+.page,
+form,
+.proofs,
+.proof {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+form {
+  max-width: var(--quipu-columna-formulario);
+}
+
+.page > app-status-badge {
+  justify-self: start;
+}
+
+.proofs {
+  gap: var(--quipu-franja);
+}
+
+.proof {
+  margin: 0;
+  padding: var(--quipu-relleno-tarjeta);
+  border: 0;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+}
+
+.proof > legend {
+  padding: 0;
+  font: var(--mat-sys-title-medium);
+}
+
+.proof-list {
+  display: grid;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.strong {
+  display: block;
+  font-weight: var(--quipu-peso-enfasis);
+}
+
+.help,
+.muted {
+  display: block;
+  margin: 0;
+  color: var(--quipu-tinta-secundaria);
+  font: var(--mat-sys-body-small);
+}
+
+.error {
+  margin: 0;
+  color: var(--quipu-error);
+  font: var(--mat-sys-body-small);
+}
+
+.empty {
+  margin: 0;
+  font: var(--mat-sys-title-large);
+}
+
+.row,
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1rem;
+}
+
+.proofs > .row {
+  margin-top: 0.75rem;
+}
+
+@media (max-width: 599.98px) {
+  .actions .quipu-button--primary {
+    width: 100%;
+  }
+}
+
+.payment-skeleton {
+  display: grid;
+  gap: 1.5rem;
+  max-width: var(--quipu-columna-formulario);
+}

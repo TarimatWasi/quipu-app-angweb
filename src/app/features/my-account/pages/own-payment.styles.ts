@@ -50,10 +50,4 @@ export const OWN_PAYMENT_STYLES = `
   output {
     display: block;
   }
-  fieldset.shortcuts {
-    margin: 0;
-    padding: 0;
-    border: 0;
-    border-radius: 0;
-  }
 `;
