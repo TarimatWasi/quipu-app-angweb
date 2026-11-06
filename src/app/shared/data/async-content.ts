@@ -16,7 +16,11 @@ export type ActionState =
   | { readonly status: 'submitting' }
   | { readonly status: 'error'; readonly message: string };
 
-/** Local request state; transport, error translation and empty semantics belong to the caller. */
+/**
+ * State of ONE read that yields a single value (a summary, a detail): initial load, initial error
+ * and a refresh that keeps the data on screen. For a paged list with a cursor use `PageLoadState`.
+ * Transport, error translation and empty semantics belong to the caller.
+ */
 export class AsyncContentState<T> {
   private readonly value = signal<AsyncContent<T>>({ status: 'initial-loading' });
   private sequence = 0;

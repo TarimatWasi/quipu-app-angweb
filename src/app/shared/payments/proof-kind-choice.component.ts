@@ -1,5 +1,5 @@
 import { Component, input, output } from '@angular/core';
-import type { ProofDraft } from './proof-draft';
+import type { ProofDraft } from './proof-fields';
 
 /** Presentation only: the owner keeps validation and any draft when the kind changes. */
 @Component({

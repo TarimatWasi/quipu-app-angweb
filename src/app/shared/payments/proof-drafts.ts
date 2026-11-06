@@ -1,7 +1,7 @@
 import { computed, signal } from '@angular/core';
 import { parseAmount } from './payment-format';
-import { proofAmountError, proofFileError } from './proof-draft';
-import type { ProofDraft, SavedProof } from './proof-draft';
+import { proofAmountError, proofFileError } from './proof-fields';
+import type { ProofDraft, SavedProof } from './proof-fields';
 import { isValidVoucher, MAX_PROOFS } from './proof-rules';
 
 /** Local editor state. Requests, server errors and navigation belong to the owning page. */

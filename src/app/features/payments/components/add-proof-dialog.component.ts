@@ -1,7 +1,7 @@
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
 import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
 import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
-import { proofAmountError, proofFileError } from '@shared/payments/proof-draft';
+import { proofAmountError, proofFileError } from '@shared/payments/proof-fields';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';

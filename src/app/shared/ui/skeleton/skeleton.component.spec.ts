@@ -88,10 +88,11 @@ describe('Skeleton loading region and patterns', () => {
       'true',
     );
   });
-  it('centralizes the pulse and reduced motion on the decorative block', () => {
-    const styles = String(
-      (SkeletonBlockComponent as unknown as { ɵcmp: { styles: readonly string[] } }).ɵcmp.styles,
-    );
+  it('centralizes the pulse and reduced motion on the decorative block', async () => {
+    await render(SkeletonBlockComponent);
+    const styles = Array.from(document.head.querySelectorAll('style'))
+      .map((style) => style.textContent)
+      .join('\n');
     expect(styles).toContain('quipu-duracion-pulso');
     expect(styles).toContain('prefers-reduced-motion');
     expect(styles).toMatch(/animation:\s*none/);

@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from '@testing-library/angular';
 import { ProofAmountFieldComponent } from './proof-amount-field.component';
 import { ProofKindChoiceComponent } from './proof-kind-choice.component';
 import { ProofMethodFieldComponent } from './proof-method-field.component';
-import type { ProofDraft } from './proof-draft';
+import type { ProofDraft } from './proof-fields';
 
 @Component({
   imports: [ProofAmountFieldComponent, ProofKindChoiceComponent, ProofMethodFieldComponent],

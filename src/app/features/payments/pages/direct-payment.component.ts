@@ -27,7 +27,7 @@ import {
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { FieldErrors } from '@shared/forms/field-errors';
 import { ProofDrafts } from '@shared/payments/proof-drafts';
-import { proofField, serializeProofs } from '@shared/payments/proof-draft';
+import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { balanceOf, formatMoney, periodLabel } from '@shared/payments/payment-format';
 import { MAX_PROOFS, PERIOD_TEXT } from '@shared/payments/proof-rules';

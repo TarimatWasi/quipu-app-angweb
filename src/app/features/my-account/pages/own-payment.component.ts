@@ -35,7 +35,7 @@ import {
 } from '../data/temporary-guest-payments.service';
 import { FieldErrors } from '@shared/forms/field-errors';
 import { ProofDrafts } from '@shared/payments/proof-drafts';
-import { proofField, serializeProofs } from '@shared/payments/proof-draft';
+import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { coveredAmountText, creditAppliedText } from '@shared/payments/credit-texts';
 import {

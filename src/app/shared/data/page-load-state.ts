@@ -5,7 +5,11 @@ export interface PageRequest<Q> {
   readonly after: string | null;
 }
 
-/** Request bookkeeping only: pages retain their data, transport and filter semantics. */
+/**
+ * Bookkeeping of a PAGED list read with a cursor ("Mostrar más"): first page versus more, with a
+ * query that can change. For a single value (a summary, a detail) use `AsyncContentState`. Pages
+ * retain their data, transport and filter semantics.
+ */
 export class PageLoadState<Q> {
   private sequence = 0;
   private readonly pendingValue = signal<PageRequest<Q> | null>(null);

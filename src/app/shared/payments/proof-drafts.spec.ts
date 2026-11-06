@@ -1,5 +1,5 @@
 import { ProofDrafts } from './proof-drafts';
-import { proofField, serializeProofs } from './proof-draft';
+import { proofField, serializeProofs } from './proof-fields';
 import { AMOUNT_TEXT, INVALID_FILE_TEXT, MAX_PROOFS, MISSING_FILE_TEXT } from './proof-rules';
 
 const voucher = (name = 'voucher.pdf') => new File(['pdf'], name, { type: 'application/pdf' });
