@@ -192,7 +192,9 @@
         }
 
         <div class="submit">
-          <button mat-flat-button type="submit" [disabled]="!canSave()">{{ saveLabel() }}</button>
+          <button class="quipu-button quipu-button--primary" type="submit" [disabled]="!canSave()">
+            {{ saveLabel() }}
+          </button>
           <a [routerLink]="['/admin/guests', guestId]">Cancelar</a>
         </div>
       </form>

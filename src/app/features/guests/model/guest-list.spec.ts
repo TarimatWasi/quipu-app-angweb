@@ -4,7 +4,6 @@ import {
   guestQuery,
   hasFilters,
   matchesSearch,
-  nextSort,
   NO_FILTERS,
   sameQuery,
   toGuestRow,
@@ -12,6 +11,7 @@ import {
 } from './guest-list';
 import type { GuestSummary } from './guest-list';
 import { accessText, countText, environmentText, nowPanel } from './guest-list-texts';
+import { nextSort } from '@shared/ui/data-table/list-sort';
 
 // 2026-11-05 12:00 in Lima (UTC-5).
 const NOW = new Date('2026-11-05T17:00:00Z');
@@ -148,6 +148,7 @@ describe('guest list (A3) model', () => {
       environment: { main: 'Habitación 101', detail: 'contrato hasta 31 mar 2027' },
       badge: { label: 'Activo', tone: 'paid' },
       access: null,
+      seeLabel: 'Ver huésped Rosa Quispe',
     });
     expect(toGuestRow(EXPIRED, NOW)).toEqual(
       expect.objectContaining({

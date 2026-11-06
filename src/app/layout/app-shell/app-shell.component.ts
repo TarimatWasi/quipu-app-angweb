@@ -8,6 +8,7 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { openChangePasswordDialog } from '@layout/account/change-password-dialog.component';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 /**
  * Key of the route data that tells the shell its pages belong to no section (A0.7, a page that
@@ -61,7 +62,7 @@ export class AppShellComponent {
   protected readonly accountOpen = signal(false);
   protected readonly panelOpen = signal(false);
   protected readonly leaving = signal(false);
-  protected readonly toast = signal<string | null>(null);
+  protected readonly toasts = inject(ToastService);
 
   protected current(entry: NavEntry): boolean {
     return !this.sectionless && isCurrent(entry, this.url());
@@ -92,7 +93,7 @@ export class AppShellComponent {
       .afterClosed()
       .subscribe((changed) => {
         if (changed === true) {
-          this.toast.set(PASSWORD_CHANGED_TEXT);
+          this.toasts.show(PASSWORD_CHANGED_TEXT, { tone: 'success' });
         }
       });
   }

@@ -18,7 +18,6 @@ import {
   required,
   validate,
 } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -33,6 +32,8 @@ import {
   AccountLockedDialogComponent,
 } from '../components/account-locked-dialog.component';
 import { LockCountdown } from '../components/lock-countdown';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 interface LoginModel {
   documentType: DocumentType;
@@ -70,7 +71,15 @@ const DOCUMENT_TYPES: readonly { readonly value: DocumentType; readonly label: s
 
 @Component({
   selector: 'app-login',
-  imports: [AuthShellComponent, FormRoot, FormField, MatButton, PageNoticeComponent, RouterLink],
+  imports: [
+    FieldControlDirective,
+    FormFieldComponent,
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    PageNoticeComponent,
+    RouterLink,
+  ],
   templateUrl: './login.component.html',
   // The layout is the one of every access form; here only how the lock notice lays out its icon.
   styles: [

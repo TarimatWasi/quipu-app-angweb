@@ -30,6 +30,31 @@ const baseRestrictedImports = {
       name: '@angular/localize',
       ...restrict('QP-ANGWEB-LNG-01', 'no i18n framework; the UI is Spanish only'),
     },
+    // TAR-297: the kit replaces these Material pieces; Material stays for dialogs and the CDK.
+    {
+      name: '@angular/material/button',
+      ...restrict('QP-UI-01', 'use the kit buttons (.quipu-button, P-10)'),
+    },
+    {
+      name: '@angular/material/snack-bar',
+      ...restrict('QP-UI-01', 'use ToastService and the toast of the shell (P-17)'),
+    },
+    {
+      name: '@angular/material/form-field',
+      ...restrict('QP-UI-01', 'use app-form-field with appFieldControl (P-07)'),
+    },
+    {
+      name: '@angular/material/input',
+      ...restrict('QP-UI-01', 'use app-form-field with appFieldControl (P-07)'),
+    },
+    {
+      name: '@angular/material/select',
+      ...restrict('QP-UI-01', 'use a native select in app-form-field (P-07)'),
+    },
+    {
+      name: '@angular/material/table',
+      ...restrict('QP-UI-01', 'use app-data-table (P-08)'),
+    },
   ],
   patterns: [
     { group: ['zone.js/*'], ...restrict('FE-ANG-CMP-04', 'the app is zoneless') },

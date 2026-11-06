@@ -11,6 +11,9 @@ import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
 import { DocumentFormComponent } from './document-form.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
+/** The text of the toast the screen asked for, or '' when there is none. */
+const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
 
 const isGuest = (req: HttpRequest<unknown>) =>
   req.method === 'GET' && req.url.endsWith('/bff/admin/guests/g1');
@@ -96,9 +99,6 @@ async function setup(guest: object = pending()) {
 describe('DocumentFormComponent (A3.5 document of a pending guest, approved canvas)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
-    document.body.querySelectorAll('mat-snack-bar-container').forEach((el) => {
-      el.remove();
-    });
     TestBed.inject(HttpTestingController).verify();
   });
 
@@ -176,7 +176,7 @@ describe('DocumentFormComponent (A3.5 document of a pending guest, approved canv
     await ui.flush(patch, { id: 'g1' });
 
     expect(ui.router.url).toBe('/admin/guests/g1');
-    expect(screen.getByText('Documento corregido.')).toBeTruthy();
+    expect(toastText()).toBe('Documento corregido.');
   });
 
   it('sends the type too when it changed', async () => {

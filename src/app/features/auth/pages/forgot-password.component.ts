@@ -8,7 +8,6 @@ import {
   signal,
 } from '@angular/core';
 import { email, FieldTree, form, FormField, FormRoot, required } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -16,6 +15,8 @@ import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 interface ForgotPasswordModel {
   email: string;
@@ -24,7 +25,14 @@ interface ForgotPasswordModel {
 /** A0.2 (RF-16): asks for the email and, whatever the account, says the same thing afterwards. */
 @Component({
   selector: 'app-forgot-password',
-  imports: [AuthShellComponent, FormRoot, FormField, MatButton, RouterLink],
+  imports: [
+    FieldControlDirective,
+    FormFieldComponent,
+    AuthShellComponent,
+    FormRoot,
+    FormField,
+    RouterLink,
+  ],
   templateUrl: './forgot-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

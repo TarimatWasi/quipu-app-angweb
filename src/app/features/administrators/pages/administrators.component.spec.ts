@@ -9,6 +9,7 @@ import { SKELETON_TIMING } from '@shared/ui/skeleton/skeleton.component';
 import { TOAST_DURATION_MS } from '@shared/ui/toast/toast.component';
 import type { AdministratorSummary } from '../model/administrator';
 import { AdministratorsComponent } from './administrators.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 const LIST_URL = '/bff/admin/administrators';
 
@@ -99,7 +100,7 @@ async function setup() {
     });
     await stable();
   };
-  const toast = () => root.querySelector('app-toast output')?.textContent.trim() ?? '';
+  const toast = () => TestBed.inject(ToastService).current()?.text ?? '';
   return { fixture, root, backend, stable, answerList, failList, table, cards, click, type, toast };
 }
 

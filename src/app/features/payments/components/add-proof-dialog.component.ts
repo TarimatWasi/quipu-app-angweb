@@ -1,22 +1,16 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { MatButton } from '@angular/material/button';
-import {
-  MAT_DIALOG_DATA,
-  MatDialog,
-  MatDialogActions,
-  MatDialogClose,
-  MatDialogContent,
-  MatDialogRef,
-  MatDialogTitle,
-} from '@angular/material/dialog';
+import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
+import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import type { ProofKind } from '../model/proof-kind';
 import { formatMoney, parseAmount } from '@shared/payments/payment-format';
 import {
   AMOUNT_TEXT,
   INVALID_FILE_TEXT,
+  isValidVoucher,
   MISSING_FILE_TEXT,
-  VOUCHER_MAX_BYTES,
-  VOUCHER_TYPES,
 } from '@shared/payments/proof-rules';
 
 export interface AddProofDialogData {
@@ -40,48 +34,20 @@ const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
  */
 @Component({
   selector: 'app-add-proof-dialog',
-  imports: [MatButton, MatDialogTitle, MatDialogContent, MatDialogActions, MatDialogClose],
+  imports: [DialogFrameComponent, FieldControlDirective, FileFieldComponent, FormFieldComponent],
   templateUrl: './add-proof-dialog.component.html',
   styles: `
-    form {
-      display: contents;
-    }
-    fieldset {
-      display: flex;
-      gap: 1.5rem;
-      margin: 0 0 1rem;
-      padding: 0;
-      border: 0;
-    }
-    legend {
-      margin-bottom: 0.5rem;
-      font-weight: 700;
-    }
-    .field {
+    .body {
       display: grid;
-      gap: 0.25rem;
-      margin-bottom: 1rem;
+      gap: 1.25rem;
     }
-    .field input {
-      padding: 0.75rem;
-      border: 1px solid var(--mat-sys-outline);
-      border-radius: 4px;
-      font: inherit;
-      background: var(--mat-sys-surface);
-    }
-    .shortcuts {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .help {
+    .lead,
+    .note {
       margin: 0;
-      color: var(--mat-sys-on-surface-variant);
-      font: var(--mat-sys-body-small);
+      color: var(--quipu-tinta-secundaria);
     }
-    .error {
-      margin: 0;
-      color: var(--mat-sys-error);
-      font: var(--mat-sys-body-small);
+    .amount {
+      max-width: 15rem;
     }
   `,
 })
@@ -124,16 +90,14 @@ export class AddProofDialogComponent {
     this[into].set(value);
   }
 
-  protected picked(target: EventTarget | null): void {
-    const input = target instanceof HTMLInputElement ? target : null;
-    const chosen = input?.files?.[0] ?? null;
-    const valid =
-      chosen !== null && VOUCHER_TYPES.includes(chosen.type) && chosen.size <= VOUCHER_MAX_BYTES;
+  protected picked(chosen: File | null): void {
+    const valid = chosen !== null && isValidVoucher(chosen);
     this.fileInvalid.set(chosen !== null && !valid);
     this.file.set(valid ? chosen : null);
-    if (input && !valid) {
-      input.value = '';
-    }
+  }
+
+  protected cancel(): void {
+    this.ref.close();
   }
 
   protected submit(event: Event): void {

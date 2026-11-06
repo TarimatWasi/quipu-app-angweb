@@ -21,6 +21,8 @@ export interface ScreenCapture {
   readonly scenarios: readonly MockScenario[];
   /** Defaults to `content`: wait until no region is busy. */
   readonly readiness?: ScreenReadiness;
+  /** The name of a button to press before the capture, to show the dialog it opens. */
+  readonly open?: string;
 }
 
 // Ids of the seeded data (src/app/core/mock/data): mockId(kind, n) of mock-db.ts.
@@ -89,12 +91,32 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal', 'empty', 'load-error'],
   },
+  {
+    id: 'a5-cola-rechazados',
+    path: '/admin/payments?vista=rechazados',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
   { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a5-2-revision',
     path: `/admin/payments/${PENDING_PAYMENT_OF_LUIS}`,
     role: 'admin',
     scenarios: ['normal'],
+  },
+  {
+    id: 'a5-2-rechazar',
+    path: `/admin/payments/${PENDING_PAYMENT_OF_LUIS}`,
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Rechazar con motivo',
+  },
+  {
+    id: 'a5-2-agregar-comprobante',
+    path: `/admin/payments/${PENDING_PAYMENT_OF_LUIS}`,
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Agregar comprobante',
   },
   { id: 'h3-nuevo', path: '/guest/payments/new', role: 'contract-guest', scenarios: ['normal'] },
   { id: 'h4-historial', path: '/guest/payments', role: 'contract-guest', scenarios: ['normal'] },

@@ -3,12 +3,12 @@ import {
   countText,
   DEFAULT_SORT,
   hasFilters,
-  nextSort,
   NO_FILTERS,
   queueNowPanel,
   toQueueRow,
   visiblePayments,
 } from './payment-queue';
+import { nextSort } from '@shared/ui/data-table/list-sort';
 import type { QueueSummary } from './payment-queue';
 
 type PaymentQueueItem = components['schemas']['PaymentQueueItem'];
@@ -79,6 +79,7 @@ describe('A5 queue model', () => {
       period: '20 – 31 oct',
       submitted: '27 oct 2026, 18:02',
       ago: 'hace 2 días',
+      reason: null,
       proofs: '2 vouchers',
       badge: { label: 'Pendiente de revisión', tone: 'review' },
       resolvedBy: null,
@@ -86,6 +87,22 @@ describe('A5 queue model', () => {
       actionName: 'Revisar pago de Carmen Huamán',
       primary: true,
     });
+  });
+
+  it('says why a payment was rejected and how long ago (TAR-296)', () => {
+    const row = toQueueRow(
+      item({
+        status: 'REJECTED',
+        rejectionReason: 'No se lee el voucher.',
+        reviewedAt: '2026-10-21T18:31:00Z',
+      }),
+      NOW,
+    );
+    expect(row).toMatchObject({
+      reason: 'Motivo: No se lee el voucher.',
+      ago: 'rechazado hace 8 días',
+    });
+    expect(toQueueRow(item({ status: 'APPROVED', rejectionReason: 'x' }), NOW).reason).toBeNull();
   });
 
   it('says who resolved it, and offers «Corregir pago» or a «Ver pago» link', () => {

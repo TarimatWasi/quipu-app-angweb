@@ -22,7 +22,9 @@
     @case ('error') {
       <div class="quipu-alert" role="alert">
         <p>{{ loadErrorMessage() }}</p>
-        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+        <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
+          Reintentar
+        </button>
       </div>
     }
   }
@@ -93,7 +95,10 @@
         <span [class]="'badge status-' + s.status">{{ statusLabels[s.status] }}</span>
       </p>
       @if (!stayTakesPayment() && s.paymentId; as id) {
-        <a mat-stroked-button [routerLink]="['/temporary-guest/payment', id]">
+        <a
+          class="quipu-button quipu-button--secondary"
+          [routerLink]="['/temporary-guest/payment', id]"
+        >
           {{ s.status === 'UNDER_REVIEW' || s.status === 'PAID' ? 'Ver pago' : 'Corregir pago' }}
         </a>
       }
@@ -219,7 +224,11 @@
                   <fieldset class="shortcuts">
                     <legend class="cdk-visually-hidden">Medios frecuentes</legend>
                     @for (shortcut of shortcuts; track shortcut) {
-                      <button mat-stroked-button type="button" (click)="typedMethod(i, shortcut)">
+                      <button
+                        class="quipu-button quipu-button--secondary"
+                        type="button"
+                        (click)="typedMethod(i, shortcut)"
+                      >
                         {{ shortcut }}
                       </button>
                     }
@@ -249,7 +258,11 @@
               </div>
 
               @if (proofs().length > 1) {
-                <button mat-button type="button" (click)="removeProof(i)">
+                <button
+                  class="quipu-button quipu-button--tertiary"
+                  type="button"
+                  (click)="removeProof(i)"
+                >
                   Quitar<span class="cdk-visually-hidden"> comprobante {{ i + 1 }}</span>
                 </button>
               }
@@ -258,7 +271,7 @@
 
           <div class="row">
             <button
-              mat-stroked-button
+              class="quipu-button quipu-button--secondary"
               type="button"
               [disabled]="atProofLimit()"
               [attr.aria-describedby]="atProofLimit() ? 'op-proof-limit' : null"
@@ -285,10 +298,10 @@
         }
 
         <div class="actions">
-          <button mat-flat-button type="submit" [disabled]="busy()">
+          <button class="quipu-button quipu-button--primary" type="submit" [disabled]="busy()">
             {{ mode() === 'correct' ? 'Enviar de nuevo' : 'Enviar pago' }}
           </button>
-          <a mat-button [routerLink]="home">Cancelar</a>
+          <a class="quipu-button quipu-button--tertiary" [routerLink]="home">Cancelar</a>
         </div>
       </form>
     }

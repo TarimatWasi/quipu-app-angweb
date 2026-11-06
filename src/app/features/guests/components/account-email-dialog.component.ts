@@ -24,6 +24,8 @@ import {
 } from '../model/detail-actions';
 import { callFailure, MAX_EMAIL_LENGTH } from '../model/new-guest';
 import { NEW_GUEST_DIALOG_STYLES } from './new-guest-dialog.styles';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 export interface AccountEmailData {
   /** The account email it has now, to start from; null without one. */
@@ -44,31 +46,27 @@ const ERROR_ID = 'account-email-error';
  */
 @Component({
   selector: 'app-account-email-dialog',
-  imports: [DialogFrameComponent, FormField, FormRoot],
+  imports: [FieldControlDirective, FormFieldComponent, DialogFrameComponent, FormField, FormRoot],
   template: `
     <form novalidate [formRoot]="emailForm" [attr.aria-describedby]="error() ? errorId : null">
       <app-dialog-frame [heading]="title">
         <div class="body">
           <p [id]="leadId">{{ lead }}</p>
-          <div class="quipu-field">
-            <label class="quipu-label" for="account-email">Correo de cuenta</label>
+          <app-form-field
+            fieldId="account-email"
+            label="Correo de cuenta"
+            [help]="help"
+            [error]="emailError()"
+          >
             <input
+              appFieldControl
               class="quipu-input"
-              id="account-email"
               type="email"
               autocomplete="off"
               aria-required="true"
               [formField]="emailForm.email"
-              [attr.aria-invalid]="emailError() ? 'true' : null"
-              [attr.aria-describedby]="
-                emailError() ? 'account-email-error account-email-help' : 'account-email-help'
-              "
             />
-            @if (emailError(); as message) {
-              <p id="account-email-error" class="quipu-field-error">{{ message }}</p>
-            }
-            <p id="account-email-help" class="quipu-field-help">{{ help }}</p>
-          </div>
+          </app-form-field>
           @if (error(); as message) {
             <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
           }

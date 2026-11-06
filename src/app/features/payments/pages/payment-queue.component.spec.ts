@@ -142,7 +142,7 @@ describe('PaymentQueueComponent (A5)', () => {
       'Ana Quispe12345678 · Contrato',
       'C1',
       'Septiembre 2026',
-      expect.stringMatching(/^3 nov 2026, 14:05 (hoy|hace \d+ días?)$/),
+      expect.stringMatching(/^3 nov 2026, 14:05 ?(hoy|hace \d+ días?)$/),
       '1 voucher y efectivo',
       'Pendiente de revisión',
     ]);

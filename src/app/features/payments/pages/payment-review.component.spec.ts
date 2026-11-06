@@ -110,7 +110,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
   });
 
   it('shows what is paid and each proof, with its signed link opened safely', async () => {
-    const { page } = await setup(
+    const { page, harness } = await setup(
       payment({
         proofs: [
           proof(),
@@ -127,30 +127,30 @@ describe('PaymentReviewComponent (A5.2)', () => {
       }),
     );
 
-    const region = page().getByRole('region', { name: 'Lo que se paga' });
-    const facts = [...region.querySelectorAll('dl > div')].map((pair) => [
+    const region = page().getByRole('region', { name: 'Lo que se está pagando' });
+    const facts = [...region.querySelectorAll('dl')].map((pair) => [
       pair.querySelector('dt')?.textContent.trim(),
-      pair.querySelector('dd')?.textContent.trim(),
+      pair.querySelector('dd')?.textContent.replace(/\s+/g, ' ').trim(),
     ]);
     expect(facts).toEqual([
-      ['Huésped', 'Ana Quispe'],
-      ['Documento', '12345678'],
+      ['Huésped', 'Ana Quispe 12345678 · Contrato'],
       ['Ambiente', 'C1'],
-      ['Período', 'Septiembre 2026'],
-      ['Cuota del mes', 'S/ 350.00'],
-      ['Por cobrar', 'S/ 350.00'],
-      ['Subido', '3 nov 2026, 14:05'],
+      ['Mes', 'Septiembre 2026'],
+      ['Cuota', 'S/ 350.00'],
     ]);
     expect(within(region).getByRole('link', { name: 'Ana Quispe' }).getAttribute('href')).toBe(
       '/admin/guests/g1',
     );
-    const links = page().getAllByRole('link', { name: /Descargar voucher/ });
+    const links = page().getAllByRole('link', { name: 'Descargar' });
     expect(links).toHaveLength(1);
     expect(links[0]?.getAttribute('href')).toBe('https://r2.example.test/signed?sig=abc');
     expect(links[0]?.getAttribute('target')).toBe('_blank');
     expect(links[0]?.getAttribute('rel')).toBe('noopener noreferrer');
-    expect(page().getByText(/Agregado por la administración/)).toBeTruthy();
     expect(page().getByText(/Subido por el huésped/)).toBeTruthy();
+    fireEvent.click(page().getByRole('button', { name: /^Efectivo/ }));
+    await harness.fixture.whenStable();
+    expect(page().getByText(/Agregado por la administración/)).toBeTruthy();
+    expect(page().getByText('Efectivo, sin voucher')).toBeTruthy();
   });
 
   it('approves with the verified amount of every proof and then offers the next one', async () => {
@@ -166,7 +166,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await settle(harness);
     expect(page().getByRole('status').textContent).toContain('Completo');
 
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     const patch = await expect1(detailUrl(ID));
     expect(patch.request.method).toBe('PATCH');
     expect(patch.request.body).toEqual({
@@ -180,7 +180,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await flush(await expect1(detailUrl(ID)), payment({ status: 'APPROVED' }));
 
     expect(page().getByRole('heading', { name: 'Pago aprobado' })).toBeTruthy();
-    expect(page().queryByRole('button', { name: 'Aprobar' })).toBeNull();
+    expect(page().queryByRole('button', { name: 'Aprobar pago' })).toBeNull();
 
     await click(page().getByRole('button', { name: 'Revisar el siguiente' }));
     const next = await expect1(isQueue);
@@ -191,12 +191,12 @@ describe('PaymentReviewComponent (A5.2)', () => {
 
     expect(TestBed.inject(Router).url).toBe('/admin/payments/pay_2');
     expect(page().queryByRole('heading', { name: 'Pago aprobado' })).toBeNull();
-    expect(page().getByRole('button', { name: 'Aprobar' })).toBeTruthy();
+    expect(page().getByRole('button', { name: 'Aprobar pago' })).toBeTruthy();
   });
 
   it('says none is left when no payment waits after resolving', async () => {
     const { page, click, expect1, flush } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(await expect1(detailUrl(ID)), {});
     await flush(await expect1(detailUrl(ID)), payment({ status: 'APPROVED' }));
 
@@ -210,7 +210,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
   it('cannot approve while the verified sum is short, nor with an amount it cannot read', async () => {
     const { page, harness, http } = await setup(payment({ amountDue: 400 }));
 
-    const approve = page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' });
+    const approve = page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar pago' });
     expect(approve.disabled).toBe(true);
     expect(page().getByRole('status').textContent).toContain('Faltan S/ 50.00');
 
@@ -227,7 +227,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
   it('requires a reason to reject, without calling the BFF', async () => {
     const { page, click, dialog, http } = await setup();
 
-    await click(page().getByRole('button', { name: 'Rechazar' }));
+    await click(page().getByRole('button', { name: 'Rechazar con motivo' }));
     await click(dialog().getByRole('button', { name: 'Rechazar pago' }));
 
     expect(dialog().getByText('El motivo de rechazo es obligatorio')).toBeTruthy();
@@ -242,10 +242,16 @@ describe('PaymentReviewComponent (A5.2)', () => {
   it('fills the reason with a shortcut, lets it be edited and sends it', async () => {
     const { page, click, dialog, expect1, flush, harness } = await setup();
 
-    await click(page().getByRole('button', { name: 'Rechazar' }));
+    await click(page().getByRole('button', { name: 'Rechazar con motivo' }));
     await click(dialog().getByRole('button', { name: 'No se lee el voucher' }));
     const reason = dialog().getByLabelText<HTMLTextAreaElement>('Motivo');
     expect(reason.value).toBe('No se lee el voucher');
+    expect(
+      dialog().getByRole('button', { name: 'No se lee el voucher' }).getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(dialog().getByText(/verá el motivo en su inicio, solo en la app/)).toBeTruthy();
+    expect(dialog().getByText(/20 de 500 caracteres/).id).toBe('reject-reason-help');
+    expect(reason.getAttribute('maxlength')).toBe('500');
     fireEvent.input(reason, { target: { value: 'No se lee el voucher, está borroso ' } });
     await settle(harness);
     await click(dialog().getByRole('button', { name: 'Rechazar pago' }));
@@ -272,12 +278,16 @@ describe('PaymentReviewComponent (A5.2)', () => {
       }),
     );
 
-    const notice = present(page().getByText(/Motivo: El monto no coincide/).parentElement);
-    expect(notice.classList).toContain('quipu-alert');
-    expect(notice.textContent.replace(/\s+/g, ' ')).toContain(
-      'Rechazado por Rosa el 2 nov 2026, 10:00',
+    const notice = present(
+      page()
+        .getByText(/Motivo: El monto no coincide/)
+        .closest('app-page-notice'),
     );
-    expect(notice.textContent).toContain('Faltan S/ 50.00 para cubrir lo que corresponde.');
+    expect(notice.classList).toContain('quipu-notice--error');
+    expect(notice.textContent.replace(/\s+/g, ' ')).toContain(
+      'Rechazado el 2 nov 2026, 10:00 por Rosa.',
+    );
+    expect(page().getByRole('status').textContent).toContain('Faltan S/ 50.00.');
     expect(page().getByRole('button', { name: 'Rechazar de nuevo' })).toBeTruthy();
     expect(page().getByLabelText(/Monto verificado del comprobante 1/)).toBeTruthy();
   });
@@ -291,9 +301,11 @@ describe('PaymentReviewComponent (A5.2)', () => {
       }),
     );
 
-    expect(page().getByText(/Aprobado\s+por Rosa/)).toBeTruthy();
-    expect(page().getByText('Verificado: S/ 350.00')).toBeTruthy();
-    expect(page().queryByRole('button', { name: 'Aprobar' })).toBeNull();
+    expect(page().getByText(/Aprobado.*por Rosa/)).toBeTruthy();
+    expect(
+      within(page().getByRole('region', { name: 'Montos' })).getAllByText('S/ 350.00'),
+    ).toHaveLength(4);
+    expect(page().queryByRole('button', { name: 'Aprobar pago' })).toBeNull();
     expect(page().queryByRole('button', { name: 'Agregar comprobante' })).toBeNull();
     expect(page().queryByLabelText(/Monto verificado/)).toBeNull();
   });
@@ -318,13 +330,13 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await click(page().getByRole('button', { name: 'Agregar comprobante' }));
     expect(dialog().getByText('Faltan S/ 50.00 para cubrir lo que corresponde.')).toBeTruthy();
 
-    fireEvent.click(dialog().getByLabelText('Efectivo, sin voucher'));
+    fireEvent.click(dialog().getByRole('button', { name: 'Efectivo, sin voucher' }));
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
     expect(dialog().getByText('El monto debe ser mayor a 0')).toBeTruthy();
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '50' } });
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '50' } });
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
 
     const put = await expect1((req) => req.url.endsWith(`/bff/admin/payments/${ID}/proofs`));
     expect(put.request.method).toBe('PUT');
@@ -336,7 +348,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
     expect(body.getAll('files')).toEqual([]);
     await flush(put, {});
     // Until the new proofs arrive, nothing can be sent from the old list.
-    for (const name of ['Agregar comprobante', 'Aprobar', 'Rechazar']) {
+    for (const name of ['Agregar comprobante', 'Aprobar pago', 'Rechazar con motivo']) {
       expect(page().getByRole<HTMLButtonElement>('button', { name }).disabled).toBe(true);
     }
     await flush(
@@ -370,8 +382,8 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await settle(harness);
 
     expect(dialog().getByText('Archivo inválido — sube JPG, PNG o PDF de máx. 5MB')).toBeTruthy();
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '10' } });
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '10' } });
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
     http.expectNone((req) => req.method === 'PUT');
   });
 
@@ -393,10 +405,10 @@ describe('PaymentReviewComponent (A5.2)', () => {
   it('opens the shared dialog on 409 CONCURRENT_MODIFICATION and reloads on "Volver a cargar"', async () => {
     const { page, click, dialog, expect1, flush, harness } = await setup();
     await click(page().getByRole('button', { name: 'Agregar comprobante' }));
-    fireEvent.click(dialog().getByLabelText('Efectivo, sin voucher'));
-    fireEvent.input(dialog().getByLabelText('Monto verificado (S/)'), { target: { value: '5' } });
+    fireEvent.click(dialog().getByRole('button', { name: 'Efectivo, sin voucher' }));
+    fireEvent.input(dialog().getByLabelText('Monto verificado'), { target: { value: '5' } });
     await settle(harness);
-    await click(dialog().getByRole('button', { name: 'Agregar' }));
+    await click(dialog().getByRole('button', { name: 'Agregar comprobante' }));
 
     const put = await expect1((req) => req.url.endsWith('/proofs'));
     await flush(put, { code: 'CONCURRENT_MODIFICATION', message: 'x' }, 409);
@@ -411,12 +423,14 @@ describe('PaymentReviewComponent (A5.2)', () => {
       payment({ proofs: [proof({ declaredAmount: 999 })] }),
     );
 
-    expect(page().getByText('Declarado: S/ 999.00')).toBeTruthy();
+    expect(
+      within(page().getByRole('region', { name: 'Montos' })).getAllByText('S/ 999.00').length,
+    ).toBeGreaterThan(0);
   });
 
   it('shows the BFF message in a modal when the payment was already resolved', async () => {
     const { page, click, expect1, flush } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(
       await expect1(detailUrl(ID)),
       { code: 'PAYMENT_ALREADY_RESOLVED', message: 'Este pago ya fue resuelto por otro proceso' },
@@ -434,7 +448,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
 
   it('offers "Rechazar con motivo" when the month is no longer charged', async () => {
     const { page, click, dialog, expect1, flush } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(
       await expect1(detailUrl(ID)),
       { code: 'PAYMENT_PERIOD_NOT_PAYABLE', message: 'Este mes ya no se cobra.' },
@@ -451,7 +465,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
 
   it('shows any other error of a decision under the page, with the BFF text', async () => {
     const { page, click, expect1, flush } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(
       await expect1(detailUrl(ID)),
       {
@@ -465,7 +479,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
     expect(page().getByRole('alert').textContent).toContain(
       'Lo verificado no cubre lo que corresponde',
     );
-    expect(page().getByRole('button', { name: 'Aprobar' })).toBeTruthy();
+    expect(page().getByRole('button', { name: 'Aprobar pago' })).toBeTruthy();
   });
 
   it('says the payment does not exist when the BFF answers 404', async () => {
@@ -505,7 +519,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
     });
     await settle(harness);
 
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     const patch = await expect1(detailUrl(ID));
     expect(
       page().getByLabelText<HTMLInputElement>(/Monto verificado del comprobante 1/).disabled,
@@ -521,18 +535,23 @@ describe('PaymentReviewComponent (A5.2)', () => {
       }),
     );
 
-    expect(page().getByText('Verificado: S/ 310.00')).toBeTruthy();
+    expect(
+      within(page().getByRole('region', { name: 'Montos' })).getAllByText(/S\/ 310\.00/).length,
+    ).toBeGreaterThan(0);
     const amounts = present(page().getByRole('region', { name: 'Montos' }).textContent).replace(
       /\s+/g,
       ' ',
     );
-    expect(amounts).toMatch(/Verificado\s*S\/ 310\.00/);
-    expect(amounts).toContain('Sobran S/ 10.00: quedó como crédito del mes siguiente.');
+    expect(amounts).toContain('TotalS/ 350.00S/ 310.00');
+    expect(amounts).toContain('Corregido');
+    expect(page().getByRole('status').textContent).toContain(
+      'Quedó como crédito del mes siguiente.',
+    );
   });
 
   it('ignores the answer of a decision once another payment is open', async () => {
     const { page, click, expect1, flush, harness, http } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     const patch = await expect1((req) => req.method === 'PATCH');
 
     await harness.navigateByUrl('/admin/payments/pay_2');
@@ -540,13 +559,15 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await flush(patch, {});
 
     expect(page().queryByRole('heading', { name: 'Pago aprobado' })).toBeNull();
-    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' }).disabled).toBe(false);
+    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar pago' }).disabled).toBe(
+      false,
+    );
     http.expectNone((req) => req.method === 'GET');
   });
 
   it('does not pull the administrator back into a payment after leaving', async () => {
     const { page, click, expect1, flush, harness } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(await expect1(detailUrl(ID)), {});
     await flush(await expect1(detailUrl(ID)), payment({ status: 'APPROVED' }));
     await click(page().getByRole('button', { name: 'Revisar el siguiente' }));
@@ -560,17 +581,19 @@ describe('PaymentReviewComponent (A5.2)', () => {
 
   it('keeps the new payment locked while its write runs, whatever the previous refresh does', async () => {
     const { page, click, expect1, flush, harness } = await setup();
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     await flush(await expect1((req) => req.method === 'PATCH'), {});
     const oldRefresh = await expect1(detailUrl(ID));
 
     await harness.navigateByUrl('/admin/payments/pay_2');
     await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2' }));
-    await click(page().getByRole('button', { name: 'Aprobar' }));
+    await click(page().getByRole('button', { name: 'Aprobar pago' }));
     const secondPatch = await expect1((req) => req.method === 'PATCH');
     await flush(oldRefresh, payment({ status: 'APPROVED' }));
 
-    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar' }).disabled).toBe(true);
+    expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar pago' }).disabled).toBe(
+      true,
+    );
     expect(
       page().getByRole<HTMLButtonElement>('button', { name: 'Agregar comprobante' }).disabled,
     ).toBe(true);
@@ -579,9 +602,9 @@ describe('PaymentReviewComponent (A5.2)', () => {
   });
 
   it.each([
-    ['CREDIT', 'Sobran S/ 20.00: quedó como crédito del mes siguiente.'],
-    ['REFUND_PENDING', 'Sobran S/ 20.00: devolución pendiente; regístrala en Finanzas.'],
-    ['REFUNDED', 'Sobran S/ 20.00: ya se devolvió.'],
+    ['CREDIT', 'Sobraron S/ 20.00.Quedó como crédito del mes siguiente.'],
+    ['REFUND_PENDING', 'Sobraron S/ 20.00.Devolución pendiente: regístrala en Finanzas.'],
+    ['REFUNDED', 'Sobraron S/ 20.00.Ya se devolvió.'],
   ] as const)(
     'shows what the BFF recorded for the surplus of an approved payment (%s)',
     async (outcome, text) => {
@@ -594,7 +617,7 @@ describe('PaymentReviewComponent (A5.2)', () => {
         }),
       );
 
-      expect(present(page().getByRole('status').textContent).trim()).toBe(text);
+      expect(page().getByRole('status').textContent.replace(/\s+/g, ' ').trim()).toBe(text);
     },
   );
 
@@ -603,7 +626,21 @@ describe('PaymentReviewComponent (A5.2)', () => {
       payment({ status: 'APPROVED', surplus: null, proofs: [proof({ verifiedAmount: 350 })] }),
     );
 
-    expect(present(page().getByRole('status').textContent).trim()).toBe('Completo');
+    expect(page().getByRole('status').textContent.replace(/\s+/g, ' ').trim()).toBe(
+      'Completo.Lo verificado cubrió lo que correspondía.',
+    );
+  });
+
+  it('does not approve while a voucher cannot be shown, and says why', async () => {
+    const { page } = await setup(payment({ proofs: [proof({ fileUrl: null })] }));
+
+    expect(page().getByText('El voucher no se pudo mostrar.')).toBeTruthy();
+    const approve = page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar pago' });
+    expect(approve.disabled).toBe(true);
+    expect(approve.getAttribute('aria-describedby')).toBe('payment-decision-help');
+    expect(page().getAllByText('Para aprobar, primero tienes que ver los vouchers.')).toHaveLength(
+      2,
+    );
   });
 });
 

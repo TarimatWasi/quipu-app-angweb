@@ -72,9 +72,6 @@ export const DOCUMENT_UPDATED_TEXT = 'Documento corregido.';
 export const SLOW_TEXT =
   'El servidor está despertando; la primera solicitud puede tardar hasta un minuto.';
 
-/** How long an aviso stays on screen, as in the payment screens. */
-export const SNACK_MS = 6000;
-
 /** The local check of a document number (A3.1 and A3.5), or null when it is valid. */
 export function documentNumberError(type: DocumentType, number: string): string | null {
   const value = number.trim();

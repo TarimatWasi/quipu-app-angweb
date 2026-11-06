@@ -1,0 +1,35 @@
+// A5.2 «Montos»: the table, the money field and the errors are the kit's; here only what the
+// figures of this table need.
+:host {
+  display: block;
+}
+
+h2 {
+  margin: 0 0 0.375rem;
+}
+
+.help {
+  margin: 0 0 0.875rem;
+  color: var(--quipu-tinta-secundaria);
+}
+
+.detail {
+  display: block;
+  font: var(--mat-sys-body-small);
+  color: var(--quipu-tinta-secundaria);
+}
+
+.verified {
+  display: inline-block;
+  width: 9rem;
+}
+
+.strong {
+  font-weight: var(--quipu-peso-fuerte);
+}
+
+@media (max-width: 599.98px) {
+  .verified {
+    width: 7rem;
+  }
+}

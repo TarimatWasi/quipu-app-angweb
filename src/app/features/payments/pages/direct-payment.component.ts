@@ -8,9 +8,7 @@ import {
   Injector,
   signal,
 } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminGuestsService, GuestSummary } from '@core/api/clients/admin-guests.service';
@@ -24,18 +22,26 @@ import {
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { balanceOf, formatMoney, parseAmount, periodLabel } from '@shared/payments/payment-format';
-import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
 import {
   AMOUNT_TEXT,
   INVALID_FILE_TEXT,
   MAX_PROOFS,
   MISSING_FILE_TEXT,
   PERIOD_TEXT,
-  VOUCHER_MAX_BYTES,
-  VOUCHER_TYPES,
+  isValidVoucher,
 } from '@shared/payments/proof-rules';
-import { DIRECT_PAYMENT_STYLES } from '@shared/payments/direct-payment.styles';
+import { matchesAny } from '@shared/text/search';
+import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
+import { SearchFieldComponent } from '@shared/ui/search-field/search-field.component';
+import { payingNote, payingTiles, receivedNotice } from '../model/direct-payment';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 /** Texts of A5.1 in the SRS (Textos de validación). */
 export const GUEST_TEXT = 'Elige un huésped';
@@ -43,7 +49,8 @@ export const FUTURE_DATE_TEXT = 'La fecha no puede ser posterior a hoy';
 export const PROOF_LIMIT_TEXT = `Hasta ${String(MAX_PROOFS)} comprobantes por pago.`;
 const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 const GENERAL_ERROR_ID = 'direct-payment-error';
-const SNACK_MS = 6000;
+/** How many guests the picker lists at once, before narrowing them with «Huésped». */
+const GUESTS_SHOWN = 6;
 
 /** The 409 conflicts the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
 const NOTICE_TITLES: Readonly<Partial<Record<string, string>>> = {
@@ -141,16 +148,26 @@ type LoadState =
  */
 @Component({
   selector: 'app-direct-payment',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [
+    FileFieldComponent,
+    FieldControlDirective,
+    FormFieldComponent,
+    FactTileComponent,
+    LoadErrorComponent,
+    PageHeaderComponent,
+    PageNoticeComponent,
+    RouterLink,
+    SearchFieldComponent,
+  ],
   templateUrl: './direct-payment.component.html',
-  styles: [PAYMENT_PAGE_STYLES, DIRECT_PAYMENT_STYLES],
+  styleUrl: './direct-payment.component.scss',
 })
 export class DirectPaymentComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -167,8 +184,18 @@ export class DirectPaymentComponent {
   /** The guest that came in the address, or null when it is chosen on this page. */
   protected readonly preselected: string | null;
   protected readonly preselectedGuest = signal<GuestText | null>(null);
-  protected readonly guestOptions = signal<readonly { id: string; label: string; name: string }[]>(
-    [],
+  protected readonly guestOptions = signal<
+    readonly { id: string; label: string; name: string; detail: string }[]
+  >([]);
+  /** What is typed in «Huésped»: it filters the guests loaded so far. */
+  protected readonly guestSearch = signal('');
+  private readonly allMatches = computed(() =>
+    this.guestOptions().filter((option) => matchesAny([option.label], this.guestSearch())),
+  );
+  /** The first guests that match: the list is a help to pick, «Huésped» narrows it. */
+  protected readonly matchingGuests = computed(() => this.allMatches().slice(0, GUESTS_SHOWN));
+  protected readonly hiddenGuests = computed(
+    () => this.allMatches().length - this.matchingGuests().length,
   );
   /** The guest chosen in the picker, whose name links to its detail (A3.2). */
   protected readonly chosenGuest = computed(
@@ -221,21 +248,21 @@ export class DirectPaymentComponent {
     const item = this.selected();
     return item ? balanceOf(this.sum(), item.amountDue, item.lastPeriod) : null;
   });
-  protected readonly balanceText = computed(() => {
-    const balance = this.balance();
-    switch (balance?.kind) {
-      case undefined:
-        return '';
-      case 'complete':
-        return 'Completo';
-      case 'short':
-        return `Faltan ${formatMoney(balance.difference)}`;
-      case 'over':
-        return `Sobran ${formatMoney(balance.difference)}: ${
-          balance.refund ? 'se devuelve; regístralo en Finanzas.' : 'queda como crédito.'
-        }`;
-    }
-  });
+  protected readonly sumText = computed(() => formatMoney(this.sum()));
+  protected readonly received = computed(() => receivedNotice(this.balance(), this.selected()));
+  /** The guest whose payment is registered, by the address or by the picker. */
+  protected readonly guestName = computed(() =>
+    this.preselected ? (this.preselectedGuest()?.name ?? null) : (this.chosenGuest()?.name ?? null),
+  );
+  protected readonly tiles = computed(() => payingTiles(this.guestName() ?? '', this.selected()));
+  protected readonly note = computed(() => payingNote(this.selected()));
+  protected readonly periodTitle = computed(() =>
+    this.periods().some((item) => item.stayId !== null) ? 'Estadía que paga' : 'Mes que paga',
+  );
+  /** «Volver a Pagos», or to the guest the page was opened from. */
+  protected readonly backTo = computed(() =>
+    this.preselected ? (this.preselectedGuest()?.name ?? 'el huésped') : 'Pagos',
+  );
 
   protected readonly guestError = computed(() => {
     if (this.preselected !== null) return null;
@@ -308,8 +335,17 @@ export class DirectPaymentComponent {
     void this.loadPeriods(this.guestId());
   }
 
-  protected chooseGuest(target: EventTarget | null): void {
-    const id = target instanceof HTMLSelectElement ? target.value : '';
+  protected pickGuest(id: string): void {
+    this.guestSearch.set('');
+    this.selectGuest(id);
+  }
+
+  /** «Cambiar»: back to the picker, without the guest nor its periods. */
+  protected changeGuest(): void {
+    this.selectGuest('');
+  }
+
+  private selectGuest(id: string): void {
     this.guestId.set(id);
     this.periodChoice.set('');
     this.clearServer('guestId', 'period');
@@ -350,19 +386,13 @@ export class DirectPaymentComponent {
     return target instanceof HTMLInputElement ? target.value : '';
   }
 
-  protected picked(index: number, target: EventTarget | null): void {
-    const input = target instanceof HTMLInputElement ? target : null;
-    const chosen = input?.files?.[0] ?? null;
-    const valid =
-      chosen !== null && VOUCHER_TYPES.includes(chosen.type) && chosen.size <= VOUCHER_MAX_BYTES;
+  protected picked(index: number, chosen: File | null): void {
+    const valid = chosen !== null && isValidVoucher(chosen);
     this.updateProof(index, {
       file: valid ? chosen : null,
       fileInvalid: chosen !== null && !valid,
     });
     this.clearServer(`proofs[${String(index)}].file`);
-    if (input && !valid) {
-      input.value = '';
-    }
   }
 
   protected addProof(): void {
@@ -419,9 +449,7 @@ export class DirectPaymentComponent {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(`Pago de ${label} registrado y aprobado.`, 'Cerrar', {
-      duration: SNACK_MS,
-    });
+    this.toasts.show(`Pago de ${label} registrado y aprobado.`);
     await this.leave();
   }
 
@@ -486,7 +514,7 @@ export class DirectPaymentComponent {
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.toasts.show(message);
       if (notFound) await this.leave();
       return;
     }
@@ -522,6 +550,7 @@ export class DirectPaymentComponent {
         id: guest.id,
         label: guestLabel(guest),
         name: guestText(guest).name,
+        detail: guestText(guest).detail,
       }));
       this.guestOptions.update((current) =>
         after === undefined ? options : [...current, ...options],

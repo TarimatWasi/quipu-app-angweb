@@ -5,6 +5,20 @@ import type { MockDb, PaymentRecord, StayRecord } from './mock-db';
 type Schemas = components['schemas'];
 export type ChargeStatus = Schemas['PeriodStatus']['status'];
 
+/**
+ * The detail of a payment hands each voucher with a signed URL (15 minutes, R2). The simulated BFF
+ * has no storage: every voucher points to a sample of the mock build (src/mock-assets), an image
+ * or a PDF by the type of its file, so A5.2 can show it and approve.
+ */
+function withSampleFile(proof: Schemas['AdminProof']): Schemas['AdminProof'] {
+  if (proof.kind !== 'VOUCHER' || proof.fileUrl !== null) return proof;
+  const pdf = proof.file?.contentType === 'application/pdf';
+  return {
+    ...proof,
+    fileUrl: pdf ? '/mock-assets/voucher-muestra.pdf' : '/mock-assets/voucher-transferencia.svg',
+  };
+}
+
 /** What a payment pays for: its contract month or its stay, with the amounts of the contract. */
 export interface PaymentTarget {
   readonly expectedAmount: number;
@@ -103,7 +117,7 @@ export function paymentDetail(db: MockDb, payment: PaymentRecord): Schemas['Paym
     reviewedBy: payment.reviewedBy,
     submittedAt: payment.submittedAt,
     createdAt: payment.createdAt,
-    proofs: payment.proofs,
+    proofs: payment.proofs.map(withSampleFile),
     reviews: payment.reviews,
   };
 }
@@ -133,6 +147,9 @@ export function queueItem(db: MockDb, payment: PaymentRecord): Schemas['PaymentQ
     voucherCount: vouchers,
     hasCash: vouchers < payment.proofs.length,
     reviewedBy: payment.reviewedBy,
+    // TAR-296: the reason of the last rejection while it stays rejected, and when it was decided.
+    rejectionReason: payment.status === 'REJECTED' ? payment.rejectionReason : null,
+    reviewedAt: payment.status === 'PENDING' ? null : payment.reviewedAt,
     submittedAt: payment.submittedAt,
     createdAt: payment.createdAt,
   };

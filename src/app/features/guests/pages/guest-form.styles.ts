@@ -37,17 +37,17 @@ export const GUEST_FORM_STYLES = `
     max-width: 320px;
     height: 48px;
     padding: 0 14px;
-    border: 1px solid #6b766f;
+    border: 1px solid var(--quipu-borde);
     border-radius: 4px;
     /* Only the color: the shorthand would erase the P-07 arrow of the select (styles.scss). */
-    background-color: #f4f1ea;
-    color: #141c18;
+    background-color: var(--quipu-alpaca);
+    color: var(--quipu-tinta);
     font: inherit;
     font-size: 16px;
     font-variant-numeric: tabular-nums;
   }
   .control[aria-invalid='true'] {
-    border: 2px solid #ba1a1a;
+    border: 2px solid var(--quipu-error);
   }
   .money {
     position: relative;
@@ -66,7 +66,7 @@ export const GUEST_FORM_STYLES = `
   }
   .error {
     font-size: 15px;
-    color: #ba1a1a;
+    color: var(--quipu-error);
   }
   .help {
     font-size: 14px;
@@ -83,15 +83,15 @@ export const GUEST_FORM_STYLES = `
     padding: 0 20px;
     border: 0;
     border-radius: 4px;
-    background: #dfe4dc;
-    color: #141c18;
+    background: var(--quipu-piedra-oscura);
+    color: var(--quipu-tinta);
     font: inherit;
     font-weight: 800;
     cursor: pointer;
   }
   .chips button[aria-pressed='true'] {
-    background: #141c18;
-    color: #f4f1ea;
+    background: var(--quipu-obsidiana);
+    color: var(--quipu-alpaca);
   }
   .submit {
     display: flex;
@@ -119,8 +119,8 @@ export const GUEST_FORM_STYLES = `
   }
   .sk-field {
     height: 48px;
-    background: #f4f1ea;
-    border: 1px solid #dfe4dc;
+    background: var(--quipu-alpaca);
+    border: 1px solid var(--quipu-piedra-oscura);
   }
   .sk-fact {
     height: 84px;

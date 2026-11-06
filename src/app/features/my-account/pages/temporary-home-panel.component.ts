@@ -1,6 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -32,7 +31,7 @@ type LoadState =
  */
 @Component({
   selector: 'app-temporary-home-panel',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [RouterLink],
   template: `
     <section class="panel" aria-labelledby="stay-payment-title">
       <h2 id="stay-payment-title">Tu pago</h2>
@@ -46,7 +45,9 @@ type LoadState =
         @case ('error') {
           <div class="quipu-alert" role="alert">
             <p>{{ loadError() }}</p>
-            <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+            <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
+              Reintentar
+            </button>
           </div>
         }
       }
@@ -66,15 +67,25 @@ type LoadState =
             @if (s.rejectionReason; as reason) {
               <p>{{ reason }}</p>
             }
-            <a mat-stroked-button [routerLink]="['/temporary-guest/payment', id]">Corregir pago</a>
+            <a
+              class="quipu-button quipu-button--secondary"
+              [routerLink]="['/temporary-guest/payment', id]"
+              >Corregir pago</a
+            >
           </div>
         } @else if (takesPayment()) {
           <div class="actions">
-            <a mat-flat-button routerLink="/temporary-guest/payment">Subir pago</a>
+            <a class="quipu-button quipu-button--primary" routerLink="/temporary-guest/payment"
+              >Subir pago</a
+            >
           </div>
         } @else if (s.status === 'UNDER_REVIEW' && s.paymentId; as id) {
           <div class="actions">
-            <a mat-button [routerLink]="['/temporary-guest/payment', id]">Ver pago</a>
+            <a
+              class="quipu-button quipu-button--tertiary"
+              [routerLink]="['/temporary-guest/payment', id]"
+              >Ver pago</a
+            >
           </div>
         }
       }

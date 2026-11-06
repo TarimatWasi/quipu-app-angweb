@@ -4,7 +4,6 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
-import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import type { AccessHandoff } from '../data/access-handoff.service';
 import {
@@ -27,6 +26,7 @@ import { ACCESS_MODE_LABELS } from '../model/new-guest';
 import type { Fact } from '../model/new-guest';
 import { SUMMARY_LAYOUT_STYLES } from './summary-layout.styles';
 import { ACCESS_STYLES } from './access.styles';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 const TICK_MS = 1000;
 
@@ -39,13 +39,7 @@ const TICK_MS = 1000;
  */
 @Component({
   selector: 'app-access',
-  imports: [
-    FactTileComponent,
-    PageHeaderComponent,
-    PageNoticeComponent,
-    RouterLink,
-    ToastComponent,
-  ],
+  imports: [FactTileComponent, PageHeaderComponent, PageNoticeComponent, RouterLink],
   templateUrl: './access.component.html',
   styles: [SUMMARY_LAYOUT_STYLES, ACCESS_STYLES],
 })
@@ -60,8 +54,7 @@ export class AccessComponent {
 
   private readonly now = signal(Date.now());
   protected readonly revealed = signal(false);
-  protected readonly toast = signal<string | null>(null);
-  protected readonly toastTone = signal<'success' | null>('success');
+  private readonly toasts = inject(ToastService);
 
   protected readonly guestLink = ['/admin/guests', this.guestId];
   /** «Generar otro acceso» opens A3.4 on the guest's page, told by the navigation state only. */
@@ -131,8 +124,7 @@ export class AccessComponent {
   /** Copies with the browser's clipboard (CDK) and says so in the toast; the text is never logged. */
   private copy(text: string, done: string): void {
     const copied = this.clipboard.copy(text);
-    this.toastTone.set(copied ? 'success' : null);
-    this.toast.set(copied ? done : COPY_FAILED_TEXT);
+    this.toasts.show(copied ? done : COPY_FAILED_TEXT, { tone: copied ? 'success' : null });
   }
 
   private factsOf(handoff: AccessHandoff): readonly Fact[] {

@@ -4,6 +4,8 @@ import { form, FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { nextSort } from '@shared/ui/data-table/list-sort';
+import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
@@ -17,7 +19,6 @@ import {
   DEFAULT_SORT,
   hasFilters,
   LOAD_ERROR_TEXT,
-  nextSort,
   NO_FILTERS,
   NO_MATCH_HEADING,
   PHONE_SORTS,
@@ -27,6 +28,8 @@ import {
   visiblePayments,
 } from '../model/payment-queue';
 import type { QueueFilters, QueueSort, QueueView, SortKey } from '../model/payment-queue';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 type Phase = 'loading' | 'error' | 'ready';
 
@@ -39,8 +42,11 @@ type Phase = 'loading' | 'error' | 'ready';
 @Component({
   selector: 'app-payment-queue',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     EmptyStateComponent,
     FormField,
+    ListFiltersComponent,
     LoadErrorComponent,
     NowPanelComponent,
     PageHeaderComponent,
@@ -63,7 +69,7 @@ export class PaymentQueueComponent {
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
   protected readonly view = signal<QueueView>(QUEUE_VIEWS[0]);
-  private readonly filters = signal<QueueFilters>(NO_FILTERS);
+  protected readonly filters = signal<QueueFilters>(NO_FILTERS);
   protected readonly filterForm = form(this.filters);
   protected readonly sort = signal<QueueSort>(DEFAULT_SORT);
 
@@ -140,11 +146,13 @@ export class PaymentQueueComponent {
     this.sort.update((current) => nextSort(current, key));
   }
 
+  protected searchFor(search: string): void {
+    this.filters.update((filters) => ({ ...filters, search }));
+  }
+
   /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(event: Event): void {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement)) return;
-    const choice = PHONE_SORTS.find((option) => option.key === select.value);
+  protected sortOnPhone(key: string): void {
+    const choice = PHONE_SORTS.find((option) => option.key === key);
     if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
   }
 

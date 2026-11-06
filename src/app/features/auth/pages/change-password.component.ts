@@ -1,6 +1,5 @@
 import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormRoot } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -18,7 +17,7 @@ interface ChangePasswordModel {
 /** A0.1 (RF-12): the first login with a temporary password must end here before anything else. */
 @Component({
   selector: 'app-change-password',
-  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, MatButton],
+  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent],
   templateUrl: './change-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

@@ -1,6 +1,5 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -10,6 +9,8 @@ import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 interface ActivateAdminModel {
   name: string;
@@ -33,11 +34,12 @@ function codeOf(route: ActivatedRoute): string | null {
 @Component({
   selector: 'app-activate-admin',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     AuthShellComponent,
     FormRoot,
     FormField,
     NewPasswordFieldComponent,
-    MatButton,
     RouterLink,
   ],
   templateUrl: './activate-admin.component.html',

@@ -4,6 +4,7 @@ import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, Subject, switchMap } from 'rxjs';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { ShowMoreComponent } from '@shared/ui/show-more/show-more.component';
@@ -15,7 +16,6 @@ import {
   DEFAULT_SORT,
   guestQuery,
   hasFilters,
-  nextSort,
   NO_FILTERS,
   PHONE_SORTS,
   sameQuery,
@@ -42,6 +42,9 @@ import {
   nowPanel,
 } from '../model/guest-list-texts';
 import type { PanelCounts } from '../model/guest-list-texts';
+import { nextSort } from '@shared/ui/data-table/list-sort';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
 type Phase = 'loading' | 'error' | 'ready';
 
@@ -65,10 +68,13 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
 @Component({
   selector: 'app-guests-list',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     EmptyStateComponent,
     FormField,
     GuestsNowPanelComponent,
     GuestsTableComponent,
+    ListFiltersComponent,
     LoadErrorComponent,
     PageHeaderComponent,
     RouterLink,
@@ -87,7 +93,7 @@ export class GuestsListComponent {
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
   protected readonly view = signal<GuestView>('CURRENT');
-  private readonly filters = signal<GuestFilters>(NO_FILTERS);
+  protected readonly filters = signal<GuestFilters>(NO_FILTERS);
   protected readonly filterForm = form(this.filters);
   protected readonly sort = signal<GuestSort>(DEFAULT_SORT);
 
@@ -185,11 +191,13 @@ export class GuestsListComponent {
     this.sort.update((current) => nextSort(current, key));
   }
 
+  protected searchFor(search: string): void {
+    this.filters.update((filters) => ({ ...filters, search }));
+  }
+
   /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(event: Event): void {
-    const select = event.target;
-    if (!(select instanceof HTMLSelectElement)) return;
-    const choice = PHONE_SORTS.find((option) => option.key === select.value);
+  protected sortOnPhone(key: string): void {
+    const choice = PHONE_SORTS.find((option) => option.key === key);
     if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
   }
 

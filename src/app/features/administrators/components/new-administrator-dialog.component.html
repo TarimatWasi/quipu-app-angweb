@@ -9,8 +9,7 @@
       @if (topError(); as message) {
         <app-page-notice tone="error" [id]="topErrorId" tabindex="-1" [heading]="message" />
       }
-      <fieldset class="quipu-field">
-        <legend class="quipu-label">Tipo de documento</legend>
+      <app-form-field fieldId="new-admin-document-type" label="Tipo de documento" [group]="true">
         <div class="quipu-segmented">
           @for (option of documentTypes; track option.value) {
             <button
@@ -23,64 +22,52 @@
             </button>
           }
         </div>
-      </fieldset>
-      <div class="quipu-field">
-        <label class="quipu-label" for="new-admin-document">Número de documento</label>
+      </app-form-field>
+      <app-form-field
+        fieldId="new-admin-document"
+        label="Número de documento"
+        [error]="numberError()"
+      >
         <input
+          appFieldControl
           class="quipu-input"
-          id="new-admin-document"
           autocomplete="off"
           aria-required="true"
           [attr.inputmode]="documentType() === 'DNI' ? 'numeric' : 'text'"
           [formField]="adminForm.documentNumber"
-          [attr.aria-invalid]="numberError() ? 'true' : null"
-          [attr.aria-describedby]="numberError() ? 'new-admin-document-error' : null"
         />
-        @if (numberError(); as message) {
-          <p id="new-admin-document-error" class="quipu-field-error">{{ message }}</p>
-        }
-      </div>
-      <div class="quipu-field">
-        <label class="quipu-label" for="new-admin-email">Correo de su cuenta</label>
+      </app-form-field>
+      <app-form-field
+        fieldId="new-admin-email"
+        label="Correo de su cuenta"
+        [help]="emailHelp"
+        [error]="emailError()"
+      >
         <input
+          appFieldControl
           class="quipu-input"
-          id="new-admin-email"
           type="email"
           autocomplete="off"
           aria-required="true"
           [formField]="adminForm.email"
-          [attr.aria-invalid]="emailError() ? 'true' : null"
-          [attr.aria-describedby]="
-            emailError() ? 'new-admin-email-error new-admin-email-help' : 'new-admin-email-help'
-          "
         />
-        @if (emailError(); as message) {
-          <p id="new-admin-email-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="new-admin-email-help" class="quipu-field-help">{{ emailHelp }}</p>
-      </div>
+      </app-form-field>
       <hr />
-      <div class="quipu-field">
-        <label class="quipu-label" for="new-admin-password">Tu contraseña</label>
+      <app-form-field
+        fieldId="new-admin-password"
+        label="Tu contraseña"
+        [help]="passwordHelp"
+        [error]="passwordError()"
+      >
         <input
+          appFieldControl
           class="quipu-input"
-          id="new-admin-password"
           type="password"
           autocomplete="current-password"
           aria-required="true"
           [formField]="adminForm.currentPassword"
-          [attr.aria-invalid]="passwordError() ? 'true' : null"
-          [attr.aria-describedby]="
-            passwordError()
-              ? 'new-admin-password-error new-admin-password-help'
-              : 'new-admin-password-help'
-          "
         />
-        @if (passwordError(); as message) {
-          <p id="new-admin-password-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="new-admin-password-help" class="quipu-field-help">{{ passwordHelp }}</p>
-      </div>
+      </app-form-field>
       @if (bottomError(); as message) {
         <p [id]="bottomErrorId" class="quipu-alert" role="alert" tabindex="-1">{{ message }}</p>
       }

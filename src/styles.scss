@@ -460,7 +460,22 @@ a {
 // <div class="quipu-field"><label class="quipu-label">…</label><input class="quipu-input">…</div>
 .quipu-field {
   display: grid;
+  align-content: start;
   gap: var(--quipu-espacio-campo);
+}
+
+// A group of buttons named by its legend (app-form-field with group): without the frame of a fieldset.
+fieldset.quipu-field {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+// A legend does not take the gap of the grid: it keeps the same space under it as a label.
+fieldset.quipu-field > legend {
+  margin-bottom: var(--quipu-espacio-campo);
+  padding: 0;
 }
 
 .quipu-label {
@@ -480,6 +495,14 @@ a {
   font: var(--mat-sys-body-large);
 }
 
+// Un texto de varias líneas (el motivo de A5.2): crece con sus filas en vez de la altura del control.
+.quipu-input--multiline {
+  height: auto;
+  min-height: var(--quipu-alto-control);
+  padding-block: 0.75rem;
+  resize: vertical;
+}
+
 // Un filtro de lista (A3) va sobre la piedra de la página, no sobre papel: mismo borde y medida.
 .quipu-input--filter {
   background-color: var(--quipu-piedra);
@@ -496,6 +519,30 @@ a {
     var(--quipu-relleno-campo) - var(--quipu-borde-ancho-enfasis) + var(--quipu-borde-ancho)
   );
   border: var(--quipu-borde-ancho-enfasis) solid var(--quipu-error);
+}
+
+// Monto en soles (A5.1, A5.2): el campo con «S/» delante, que no se lee aparte. Uso:
+// <span class="quipu-money"><span aria-hidden="true">S/</span><input class="quipu-input" inputmode="decimal"></span>
+.quipu-money {
+  position: relative;
+  display: block;
+
+  > span {
+    position: absolute;
+    top: 50%;
+    left: var(--quipu-relleno-campo);
+    font-weight: var(--quipu-peso-enfasis);
+    color: var(--quipu-tinta-secundaria);
+    transform: translateY(-50%);
+    pointer-events: none;
+  }
+
+  > .quipu-input,
+  > .quipu-input[aria-invalid='true'] {
+    display: block;
+    padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.25rem);
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .quipu-field-error {
@@ -607,6 +654,11 @@ a {
   background: var(--quipu-rojo-texto);
 }
 
+// El botón principal grande del acceso (A0), de A3.1 y de A3.7: 52 px.
+.quipu-button--big {
+  min-height: var(--quipu-alto-boton-grande);
+}
+
 .quipu-button--row {
   min-height: var(--quipu-toque);
   padding-block: 2px;
@@ -691,7 +743,8 @@ a {
   gap: 1rem;
   margin: 1.25rem 0 1rem;
 
-  > .quipu-field {
+  > .quipu-field,
+  > app-form-field {
     min-width: 12rem;
   }
 }
@@ -737,7 +790,8 @@ a {
   .quipu-filters {
     display: grid;
 
-    > .quipu-field {
+    > .quipu-field,
+    > app-form-field {
       min-width: 0;
     }
   }
@@ -793,8 +847,32 @@ a {
     background: var(--quipu-hover-fila);
   }
 
-  tbody th {
+  tbody th,
+  tfoot th {
     font-weight: normal;
+  }
+
+  // Figures to the right and on one line; the action of a row to the right and on one line.
+  .align-end {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .align-action {
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  // A figure column sorts with its arrow before the label, so the label stays on the right edge.
+  .align-end .quipu-sort {
+    flex-direction: row-reverse;
+  }
+
+  // The last row, such as the totals of A5.2.
+  tfoot tr {
+    border-top: var(--quipu-franja) solid var(--quipu-piedra);
+    background: var(--quipu-piedra-oscura);
   }
 }
 

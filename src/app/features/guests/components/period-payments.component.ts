@@ -1,12 +1,15 @@
 import { Component, computed, input, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
+import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
+import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
+import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { StatusFilterComponent } from '@shared/ui/status-filter/status-filter.component';
 import type { StatusSegment } from '@shared/ui/status-filter/status-filter.component';
 import {
   DEFAULT_PERIOD_SORT,
-  nextPeriodSort,
   PERIOD_BADGES,
   REJECTED_TEXT,
   showingText,
@@ -14,12 +17,16 @@ import {
   stateCounts,
 } from '../model/period-rows';
 import type { PeriodRow, PeriodSort, PeriodSortKey, PeriodState } from '../model/period-rows';
+import { nextSort } from '@shared/ui/data-table/list-sort';
 
-const COLUMNS: readonly { readonly key: PeriodSortKey; readonly label: string }[] = [
-  { key: 'month', label: 'Mes' },
-  { key: 'due', label: 'Vence' },
-  { key: 'amount', label: 'Monto' },
-  { key: 'state', label: 'Estado' },
+type Column = PeriodSortKey | 'action';
+
+const COLUMNS: readonly DataColumn<Column>[] = [
+  { key: 'month', label: 'Mes', sortable: true, rowHeader: true },
+  { key: 'due', label: 'Vence', sortable: true },
+  { key: 'amount', label: 'Monto', sortable: true, align: 'end' },
+  { key: 'state', label: 'Estado', sortable: true },
+  { key: 'action', label: 'Acciones', hiddenLabel: true, align: 'action' },
 ];
 
 function isState(key: string | null): key is PeriodState {
@@ -33,7 +40,15 @@ function isState(key: string | null): key is PeriodState {
  */
 @Component({
   selector: 'app-period-payments',
-  imports: [EmptyStateComponent, RouterLink, StatusBadgeComponent, StatusFilterComponent],
+  imports: [
+    DataCardDirective,
+    DataCellDirective,
+    DataTableComponent,
+    EmptyStateComponent,
+    RouterLink,
+    StatusBadgeComponent,
+    StatusFilterComponent,
+  ],
   template: `
     <section class="section" aria-labelledby="periods-title">
       <h2 id="periods-title">Pagos por mes</h2>
@@ -51,94 +66,56 @@ function isState(key: string | null): key is PeriodState {
         <p class="count">
           <output aria-live="polite">{{ showing() }}</output>
         </p>
-        <div class="quipu-table-wrap quipu-only-wide">
-          <table class="quipu-table">
-            <caption class="cdk-visually-hidden">
-              Pagos por mes
-            </caption>
-            <thead>
-              <tr>
-                @for (column of columns; track column.key) {
-                  <th
-                    scope="col"
-                    [class.money]="column.key === 'amount'"
-                    [attr.aria-sort]="ariaSort(column.key)"
-                  >
-                    <button
-                      class="quipu-sort"
-                      type="button"
-                      [class.active]="sort().key === column.key"
-                      (click)="sortBy(column.key)"
-                    >
-                      {{ column.label }}
-                      <svg
-                        class="quipu-sort-arrow"
-                        [class.down]="sort().key === column.key && sort().direction === 'desc'"
-                        aria-hidden="true"
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2.5"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                      >
-                        <path d="M12 19V5M6 11l6-6 6 6" />
-                      </svg>
-                    </button>
-                  </th>
-                }
-                <th scope="col"><span class="cdk-visually-hidden">Acciones</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (row of shown(); track row.key) {
-                <tr>
-                  <th scope="row" class="quipu-name">{{ row.month }}</th>
-                  <td class="figures">{{ row.due }}</td>
-                  <td class="money figures">{{ row.amount }}</td>
-                  <td>
-                    <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
-                    @if (row.rejected) {
-                      <span class="rejected">{{ rejectedText }}</span>
-                    }
-                  </td>
-                  <td class="action">
-                    @if (row.action; as action) {
-                      <a [routerLink]="action.link" [queryParams]="action.query"
-                        >{{ action.label
-                        }}<span class="cdk-visually-hidden"> de {{ row.month }}</span></a
-                      >
-                    }
-                  </td>
-                </tr>
+        <app-data-table
+          caption="Pagos por mes"
+          [columns]="columns"
+          [rows]="shown()"
+          [rowId]="rowId"
+          [sort]="sort()"
+          (sortBy)="sortBy($event)"
+        >
+          <ng-template appDataCell="month" [appDataCellRows]="shown()" let-row>
+            {{ row.month }}
+          </ng-template>
+          <ng-template appDataCell="due" [appDataCellRows]="shown()" let-row>
+            <span class="figures">{{ row.due }}</span>
+          </ng-template>
+          <ng-template appDataCell="amount" [appDataCellRows]="shown()" let-row>{{
+            row.amount
+          }}</ng-template>
+          <ng-template appDataCell="state" [appDataCellRows]="shown()" let-row>
+            <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
+            @if (row.rejected) {
+              <span class="rejected">{{ rejectedText }}</span>
+            }
+          </ng-template>
+          <ng-template appDataCell="action" [appDataCellRows]="shown()" let-row>
+            @if (row.action; as action) {
+              <a [routerLink]="action.link" [queryParams]="action.query"
+                >{{ action.label }}<span class="cdk-visually-hidden"> de {{ row.month }}</span></a
+              >
+            }
+          </ng-template>
+
+          <ng-template appDataCard [appDataCardRows]="shown()" let-row>
+            <div class="card-head">
+              <p class="quipu-name">{{ row.month }}</p>
+              <p class="money figures">{{ row.amount }}</p>
+            </div>
+            <p class="detail">Vence el {{ row.due }}</p>
+            <div class="card-state">
+              <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
+              @if (row.rejected) {
+                <span class="rejected">{{ rejectedText }}</span>
               }
-            </tbody>
-          </table>
-        </div>
-        <ul class="quipu-card-list quipu-only-narrow" aria-label="Pagos por mes">
-          @for (row of shown(); track row.key) {
-            <li class="quipu-card">
-              <div class="card-head">
-                <p class="quipu-name">{{ row.month }}</p>
-                <p class="money figures">{{ row.amount }}</p>
-              </div>
-              <p class="detail">Vence el {{ row.due }}</p>
-              <div class="card-state">
-                <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
-                @if (row.rejected) {
-                  <span class="rejected">{{ rejectedText }}</span>
-                }
-              </div>
-              @if (row.action; as action) {
-                <a [routerLink]="action.link" [queryParams]="action.query"
-                  >{{ action.label }}<span class="cdk-visually-hidden"> de {{ row.month }}</span></a
-                >
-              }
-            </li>
-          }
-        </ul>
+            </div>
+            @if (row.action; as action) {
+              <a [routerLink]="action.link" [queryParams]="action.query"
+                >{{ action.label }}<span class="cdk-visually-hidden"> de {{ row.month }}</span></a
+              >
+            }
+          </ng-template>
+        </app-data-table>
       }
     </section>
   `,
@@ -167,19 +144,12 @@ function isState(key: string | null): key is PeriodState {
       text-align: right;
       white-space: nowrap;
     }
-    th.money .quipu-sort {
-      flex-direction: row-reverse;
-    }
     .rejected {
       display: block;
       margin-top: 0.375rem;
       font: var(--mat-sys-body-small);
       font-weight: var(--quipu-peso-enfasis);
       color: var(--quipu-error);
-    }
-    .action {
-      text-align: right;
-      white-space: nowrap;
     }
     .card-head {
       display: flex;
@@ -199,6 +169,7 @@ export class PeriodPaymentsComponent {
   readonly rows = input.required<readonly PeriodRow[]>();
 
   protected readonly columns = COLUMNS;
+  protected readonly rowId = (row: PeriodRow): string => row.key;
   protected readonly rejectedText = REJECTED_TEXT;
   protected readonly selected = signal<PeriodState | null>(null);
   protected readonly sort = signal<PeriodSort>(DEFAULT_PERIOD_SORT);
@@ -221,12 +192,7 @@ export class PeriodPaymentsComponent {
     this.selected.set(isState(key) ? key : null);
   }
 
-  protected sortBy(key: PeriodSortKey): void {
-    this.sort.update((current) => nextPeriodSort(current, key));
-  }
-
-  protected ariaSort(key: PeriodSortKey): 'ascending' | 'descending' | null {
-    if (this.sort().key !== key) return null;
-    return this.sort().direction === 'asc' ? 'ascending' : 'descending';
+  protected sortBy(key: Column): void {
+    if (key !== 'action') this.sort.update((current) => nextSort(current, key));
   }
 }

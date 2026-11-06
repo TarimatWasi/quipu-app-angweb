@@ -9,9 +9,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import type { GuestType } from '@core/auth/auth.service';
@@ -55,13 +53,13 @@ import {
 import { DIRECT_PAYMENT_STYLES } from '@shared/payments/direct-payment.styles';
 import { OWN_PAYMENT_STYLES } from './own-payment.styles';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
 export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;
 export const SENT_TEXT = 'Pago enviado. Queda pendiente de revisión.';
 const METHOD_SHORTCUTS = ['Yape', 'Transferencia'] as const;
 const GENERAL_ERROR_ID = 'own-payment-error';
-const SNACK_MS = 6000;
 const HOME = '/home';
 
 /** What a dialog asks the page to do once it is closed. */
@@ -142,14 +140,14 @@ export type OwnPaymentMode = 'new' | 'correct' | 'read';
  */
 @Component({
   selector: 'app-own-payment',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './own-payment.component.html',
   styles: [PAYMENT_PAGE_STYLES, DIRECT_PAYMENT_STYLES, OWN_PAYMENT_STYLES],
 })
 export class OwnPaymentComponent implements OnInit {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   private readonly guestPayments = inject(GuestPaymentsService);
@@ -422,7 +420,7 @@ export class OwnPaymentComponent implements OnInit {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(SENT_TEXT, 'Cerrar', { duration: SNACK_MS });
+    this.toasts.show(SENT_TEXT);
     await this.router.navigateByUrl(HOME);
   }
 
@@ -494,7 +492,7 @@ export class OwnPaymentComponent implements OnInit {
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
-      this.snackBar.open(message, 'Cerrar', { duration: SNACK_MS });
+      this.toasts.show(message);
       if (notFound) await this.router.navigateByUrl(HOME);
       return;
     }

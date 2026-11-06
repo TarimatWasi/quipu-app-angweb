@@ -10,9 +10,7 @@ import {
   OnInit,
   signal,
 } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminEnvironmentsService, Environment } from '../data/admin-environments.service';
@@ -40,7 +38,6 @@ import {
   nightsBetween,
   SKELETON_ROWS,
   SLOW_TEXT,
-  SNACK_MS,
   STAY_CREATED_TEXT,
   STAY_UPDATED_TEXT,
   todayText,
@@ -48,6 +45,7 @@ import {
 import { LoadTiming } from './load-timing';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { openGuestNoticeDialog } from '../components/guest-notice-dialog.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 type LoadState =
   | { readonly kind: 'idle' }
@@ -161,7 +159,7 @@ function nightsValue(start: string, end: string): string {
  */
 @Component({
   selector: 'app-stay-form',
-  imports: [MatButton, RouterLink],
+  imports: [RouterLink],
   templateUrl: './stay-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
@@ -171,7 +169,7 @@ export class StayFormComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
@@ -376,9 +374,7 @@ export class StayFormComponent implements OnInit {
       if (!this.destroyed) this.busy.set(false);
     }
     if (this.destroyed) return;
-    this.snackBar.open(loaded ? STAY_UPDATED_TEXT : STAY_CREATED_TEXT, undefined, {
-      duration: SNACK_MS,
-    });
+    this.toasts.show(loaded ? STAY_UPDATED_TEXT : STAY_CREATED_TEXT);
     await this.backToGuest();
   }
 
@@ -435,7 +431,7 @@ export class StayFormComponent implements OnInit {
       return this.notice(notice, message);
     }
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.snackBar.open(message, undefined, { duration: SNACK_MS });
+      this.toasts.show(message);
       return this.backToGuest();
     }
     const key = code === 'STAY_OVERLAP' ? 'dates' : FIELD_KEYS[field ?? ''];

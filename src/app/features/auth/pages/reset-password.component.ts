@@ -1,6 +1,5 @@
 import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormRoot } from '@angular/forms/signals';
-import { MatButton } from '@angular/material/button';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
@@ -24,7 +23,7 @@ function codeOf(route: ActivatedRoute): string | null {
 /** A0.2 (RF-16): the link of the email brings the code; here the person chooses a new password. */
 @Component({
   selector: 'app-reset-password',
-  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, MatButton, RouterLink],
+  imports: [AuthShellComponent, FormRoot, NewPasswordFieldComponent, RouterLink],
   templateUrl: './reset-password.component.html',
   styles: FORM_PAGE_STYLES,
 })

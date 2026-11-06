@@ -1,5 +1,4 @@
 import { Component, inject } from '@angular/core';
-import { MatButton } from '@angular/material/button';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
@@ -40,7 +39,7 @@ function nonBlank(text: string | undefined): string | undefined {
  */
 @Component({
   selector: 'app-concurrent-modification-dialog',
-  imports: [DialogFrameComponent, MatDialogClose, MatButton],
+  imports: [DialogFrameComponent, MatDialogClose],
   // Frame, icon, title and text are P-16 (app-dialog-frame): nothing of its own to style.
   template: `
     <app-dialog-frame [heading]="title">
@@ -61,11 +60,22 @@ function nonBlank(text: string | undefined): string | undefined {
       </span>
       <p class="message" [id]="textId">{{ text }}</p>
       <ng-container dialogActions>
-        <button mat-flat-button type="button" [mat-dialog-close]="reload" cdkFocusInitial>
+        <button
+          class="quipu-button quipu-button--primary"
+          type="button"
+          [mat-dialog-close]="reload"
+          cdkFocusInitial
+        >
           Volver a cargar
         </button>
         @if (backLabel; as label) {
-          <button mat-button type="button" [mat-dialog-close]="back">{{ label }}</button>
+          <button
+            class="quipu-button quipu-button--tertiary"
+            type="button"
+            [mat-dialog-close]="back"
+          >
+            {{ label }}
+          </button>
         }
       </ng-container>
     </app-dialog-frame>

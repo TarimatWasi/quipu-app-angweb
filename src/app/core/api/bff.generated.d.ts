@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.19.0 (TarimatWasi/quipu-lib-contracts), spec sha256 dfb1fcb03929ad21dfbc77229c1ea2217002900a875533311e83f43be395d7f5.
+ * Generated from the BFF contract v0.20.0 (TarimatWasi/quipu-lib-contracts), spec sha256 12d451699d4ec601ab6c35d613e5cacfba697c60bb9238690a73d271de915a66.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -2847,6 +2847,13 @@ export interface components {
             hasCash: boolean;
             /** @description Who resolved it (TAR-230); null while pending */
             reviewedBy?: components["schemas"]["ReviewerRef"] | (never | null);
+            /** @description Reason of the rejection, for the row of the Rechazados view («Motivo: …», TAR-296); null unless the status is REJECTED. It is not sent by mail (D-34d) */
+            rejectionReason: string | null;
+            /**
+             * Format: date-time
+             * @description When it was resolved («rechazado hace N días», TAR-296); null while pending
+             */
+            reviewedAt: string | null;
             /**
              * Format: date-time
              * @description Last time it was sent; orders the queue

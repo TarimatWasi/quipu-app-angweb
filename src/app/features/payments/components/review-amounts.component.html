@@ -1,0 +1,58 @@
+<section aria-labelledby="review-amounts-title">
+  <h2 id="review-amounts-title">Montos</h2>
+  <p class="help">
+    @if (editable()) {
+      Anota lo que verificaste de cada comprobante. Si un voucher dice otro monto, corrígelo.
+    } @else {
+      Lo que se declaró y lo que la administración verificó de cada comprobante.
+    }
+  </p>
+  <app-data-table
+    caption="Montos de los comprobantes"
+    [columns]="columns"
+    [rows]="entries()"
+    [rowId]="rowId"
+  >
+    <ng-template appDataCell="proof" [appDataCellRows]="entries()" let-entry>
+      <span class="quipu-name">{{ entry.title }}</span>
+      @if (entry.method; as method) {
+        <span class="detail">{{ method }}</span>
+      }
+    </ng-template>
+    <ng-template appDataCell="declared" [appDataCellRows]="entries()" let-entry>{{
+      entry.declared
+    }}</ng-template>
+    <ng-template appDataCell="verified" [appDataCellRows]="entries()" let-entry let-i="index">
+      @if (editable()) {
+        <span class="quipu-money verified">
+          <span aria-hidden="true">S/</span>
+          <input
+            class="quipu-input"
+            type="text"
+            inputmode="decimal"
+            [id]="'verified-' + i"
+            [attr.aria-label]="'Monto verificado del comprobante ' + (i + 1) + ', ' + entry.title"
+            [value]="texts()[entry.id] ?? ''"
+            [attr.aria-invalid]="invalidIds().has(entry.id) ? 'true' : null"
+            [attr.aria-describedby]="invalidIds().has(entry.id) ? 'verified-error-' + i : null"
+            [disabled]="busy()"
+            (input)="type(entry.id, $event.target)"
+          />
+        </span>
+        @if (invalidIds().has(entry.id)) {
+          <span class="quipu-field-error" [id]="'verified-error-' + i">Revisa el monto</span>
+        }
+      } @else {
+        {{ entry.verified ?? '—' }}
+        @if (entry.corrected) {
+          <span class="detail">Corregido</span>
+        }
+      }
+    </ng-template>
+    <ng-template appDataFooter>
+      <th scope="row">Total</th>
+      <td class="align-end">{{ declaredTotal() }}</td>
+      <td class="align-end strong">{{ verifiedTotal() }}</td>
+    </ng-template>
+  </app-data-table>
+</section>

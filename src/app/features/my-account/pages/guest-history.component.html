@@ -43,9 +43,17 @@
               @if (p.rejectionReason; as reason) {
                 <p class="reason"><span class="strong">Motivo del rechazo</span> {{ reason }}</p>
               }
-              <a mat-stroked-button [routerLink]="['/guest/payments', p.id]">Corregir pago</a>
+              <a
+                class="quipu-button quipu-button--secondary"
+                [routerLink]="['/guest/payments', p.id]"
+                >Corregir pago</a
+              >
             } @else if (p.status === 'PENDING') {
-              <a mat-button [routerLink]="['/guest/payments', p.id]">Ver pago</a>
+              <a
+                class="quipu-button quipu-button--tertiary"
+                [routerLink]="['/guest/payments', p.id]"
+                >Ver pago</a
+              >
             }
           </li>
         } @else if (item.kind === 'REFUND' && item.refund; as r) {
@@ -68,7 +76,9 @@
     @case ('error') {
       <div class="quipu-alert" role="alert">
         <p>{{ loadError() }}</p>
-        <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+        <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
+          Reintentar
+        </button>
       </div>
     }
     @case ('ready') {
@@ -76,7 +86,9 @@
         <p class="empty">Aún no tienes pagos.</p>
       }
       @if (cursor()) {
-        <button mat-stroked-button type="button" class="more" (click)="more()">Mostrar más</button>
+        <button type="button" class="quipu-button quipu-button--secondary more" (click)="more()">
+          Mostrar más
+        </button>
       }
     }
   }

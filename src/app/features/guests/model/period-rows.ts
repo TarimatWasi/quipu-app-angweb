@@ -1,6 +1,8 @@
 import type { PeriodStatus } from '@core/api/clients/admin-guests.service';
 import { formatDate, formatMoney, formatPeriod } from '@shared/payments/payment-format';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
+import { compareBy } from '@shared/ui/data-table/list-sort';
+import type { ListSort } from '@shared/ui/data-table/list-sort';
 
 /** A3.2 «Pagos por mes» (RF-06, RF-10) as the canvas «HuespedDetalle» words it. */
 
@@ -96,12 +98,7 @@ export function toPeriodRow(item: PeriodStatus, guestId: string): PeriodRow {
 }
 
 export type PeriodSortKey = 'month' | 'due' | 'amount' | 'state';
-export type SortDirection = 'asc' | 'desc';
-
-export interface PeriodSort {
-  readonly key: PeriodSortKey;
-  readonly direction: SortDirection;
-}
+export type PeriodSort = ListSort<PeriodSortKey>;
 
 /** By state (overdue first) and, within a state, the latest month first. */
 export const DEFAULT_PERIOD_SORT: PeriodSort = { key: 'state', direction: 'asc' };
@@ -115,15 +112,7 @@ const COMPARE: Readonly<Record<PeriodSortKey, (a: PeriodRow, b: PeriodRow) => nu
 
 /** The rows in the order asked; ties always go latest month first. */
 export function sortPeriods(rows: readonly PeriodRow[], sort: PeriodSort): PeriodRow[] {
-  const sign = sort.direction === 'asc' ? 1 : -1;
-  const compare = COMPARE[sort.key];
-  return [...rows].sort((a, b) => sign * compare(a, b) || b.period.localeCompare(a.period));
-}
-
-/** A header pressed: the same column turns around; another one starts ascending. */
-export function nextPeriodSort(current: PeriodSort, key: PeriodSortKey): PeriodSort {
-  if (current.key !== key) return { key, direction: 'asc' };
-  return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
+  return [...rows].sort(compareBy(COMPARE, sort, (a, b) => b.period.localeCompare(a.period)));
 }
 
 /** How many months there are of each state present, in the order of the states. */

@@ -8,6 +8,8 @@ import {
   proofsSummary,
 } from '@shared/payments/payment-format';
 import { COLLATOR, matchesAny } from '@shared/text/search';
+import { compareBy } from '@shared/ui/data-table/list-sort';
+import type { ListSort, PhoneSort } from '@shared/ui/data-table/list-sort';
 import type { components } from '@core/api/bff.generated';
 import type { QueueViewParam } from './queue-views';
 
@@ -77,26 +79,13 @@ export function hasFilters(filters: QueueFilters): boolean {
 }
 
 export type SortKey = 'guest' | 'environment' | 'period' | 'submitted' | 'proofs';
-export type SortDirection = 'asc' | 'desc';
-
-export interface QueueSort {
-  readonly key: SortKey;
-  readonly direction: SortDirection;
-}
+export type QueueSort = ListSort<SortKey>;
 
 /** As the BFF sends it: the one sent longest ago first. */
 export const DEFAULT_SORT: QueueSort = { key: 'submitted', direction: 'asc' };
 
-export const COLUMNS: readonly { readonly key: SortKey; readonly label: string }[] = [
-  { key: 'guest', label: 'Huésped' },
-  { key: 'environment', label: 'Ambiente' },
-  { key: 'period', label: 'Período' },
-  { key: 'submitted', label: 'Subido' },
-  { key: 'proofs', label: 'Comprobantes' },
-];
-
 /** The orders a phone offers in «Ordenar por», where the table has its sortable headers. */
-export const PHONE_SORTS: readonly { readonly key: SortKey; readonly label: string }[] = [
+export const PHONE_SORTS: readonly PhoneSort<SortKey>[] = [
   { key: 'submitted', label: 'Subido, más antiguo primero' },
   { key: 'guest', label: 'Huésped' },
   { key: 'environment', label: 'Ambiente' },
@@ -149,8 +138,7 @@ const COMPARE: Readonly<Record<SortKey, (a: PaymentQueueItem, b: PaymentQueueIte
 export function compareQueue(
   sort: QueueSort,
 ): (a: PaymentQueueItem, b: PaymentQueueItem) => number {
-  const sign = sort.direction === 'asc' ? 1 : -1;
-  return (a, b) => sign * COMPARE[sort.key](a, b) || COMPARE.submitted(a, b);
+  return compareBy(COMPARE, sort, COMPARE.submitted);
 }
 
 /** The payments on screen: the loaded ones that match the filters, in the chosen order. */
@@ -166,12 +154,6 @@ export function visiblePayments(
         matchesQueueSearch(item, filters.search),
     )
     .sort(compareQueue(sort));
-}
-
-/** A header pressed: the same column turns around; another one starts ascending. */
-export function nextSort(current: QueueSort, key: SortKey): QueueSort {
-  if (current.key !== key) return { key, direction: 'asc' };
-  return { key, direction: current.direction === 'asc' ? 'desc' : 'asc' };
 }
 
 const BADGES: Readonly<
@@ -204,8 +186,10 @@ export interface QueueRow {
   readonly environment: string;
   readonly period: string;
   readonly submitted: string;
-  /** «hace 3 días»; null without a valid instant. */
+  /** «hace 3 días», or «rechazado hace 24 días» in «Rechazados»; null without a valid instant. */
   readonly ago: string | null;
+  /** «Motivo: No se lee el voucher.» of a rejected payment (TAR-296); null otherwise. */
+  readonly reason: string | null;
   readonly proofs: string;
   readonly badge: { readonly label: string; readonly tone: StatusTone };
   /** «Aprobado por Rosa Quispe» once resolved (TAR-230); null while pending. */
@@ -215,6 +199,15 @@ export interface QueueRow {
   readonly actionName: string;
   /** «Revisar pago» and «Corregir pago» are the primary action of the row; «Ver pago» a link. */
   readonly primary: boolean;
+}
+
+/** How long ago it was sent or, once rejected, how long ago it was rejected (tablero Cola). */
+function agoText(item: PaymentQueueItem, now: Date): string | null {
+  if (item.status === 'REJECTED' && item.reviewedAt) {
+    const ago = daysAgo(item.reviewedAt, now);
+    return ago === null ? null : `rechazado ${ago}`;
+  }
+  return daysAgo(item.submittedAt, now);
 }
 
 export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
@@ -227,7 +220,9 @@ export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
     environment: item.environmentCode ?? '—',
     period: periodLabel(item),
     submitted: formatDateTime(item.submittedAt),
-    ago: daysAgo(item.submittedAt, now),
+    ago: agoText(item, now),
+    reason:
+      item.status === 'REJECTED' && item.rejectionReason ? `Motivo: ${item.rejectionReason}` : null,
     proofs: proofsSummary(item.voucherCount, item.hasCash),
     badge: BADGES[item.status],
     resolvedBy: reviewer ? `${RESOLVED_BY[item.status]} ${reviewer}` : null,

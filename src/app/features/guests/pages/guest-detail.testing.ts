@@ -15,6 +15,7 @@ import type {
   Stay,
 } from '@core/api/clients/admin-guests.service';
 import { GuestDetailComponent } from './guest-detail.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 export const squash = (text: string | null | undefined) => (text ?? '').replace(/\s+/g, ' ').trim();
 
@@ -193,7 +194,7 @@ export async function setup(answers: Answers = {}) {
     await settle(harness);
   };
   const panel = () => page().getByRole('region', { name: 'Lo que toca ahora' });
-  const toast = () => squash(root().querySelector('app-toast output')?.textContent);
+  const toast = () => TestBed.inject(ToastService).current()?.text ?? '';
   const facts = (title: string) =>
     [...page().getByRole('region', { name: title }).querySelectorAll('app-fact-tile')].map(
       (tile) => [

@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
-import { MatSnackBar } from '@angular/material/snack-bar';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
@@ -21,6 +20,8 @@ import type {
   GuestInput,
 } from '@core/api/clients/admin-guests.service';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
@@ -30,7 +31,7 @@ import type { InactiveGuestResult } from '../components/inactive-guest-dialog.co
 import { openPendingDebtDialog } from '../components/pending-debt-dialog.component';
 import { AccessHandoffService } from '../data/access-handoff.service';
 import { SUMMARY_LAYOUT_STYLES } from './summary-layout.styles';
-import { documentNumberError, documentText, SNACK_MS } from '../model/guest-texts';
+import { documentNumberError, documentText } from '../model/guest-texts';
 import {
   ACCESS_MODE_HELP,
   ACCESS_MODE_OPTIONS,
@@ -51,21 +52,12 @@ import {
   toGuestInput,
 } from '../model/new-guest';
 import type { AccessMode, GuestType, NewGuestField, NewGuestModel } from '../model/new-guest';
+import { ToastService } from '@shared/ui/toast/toast.service';
 
 const GENERAL_ERROR_ID = 'new-guest-error';
 
 /** What A3.1 adds to the shared layout: the fieldsets, the short fields and «(opcional)». */
 const NEW_GUEST_STYLES = `
-  fieldset {
-    min-width: 0;
-    margin: 0;
-    padding: 0;
-    border: 0;
-  }
-  legend {
-    padding: 0;
-    margin-bottom: var(--quipu-espacio-campo);
-  }
   .narrow .quipu-input {
     max-width: var(--quipu-campo-corto);
   }
@@ -93,6 +85,8 @@ type FieldErrors = { fieldTree: FieldTree<string>; kind: 'server'; message: stri
 @Component({
   selector: 'app-new-guest',
   imports: [
+    FieldControlDirective,
+    FormFieldComponent,
     FactTileComponent,
     FormField,
     FormRoot,
@@ -108,7 +102,7 @@ export class NewGuestComponent {
   private readonly handoff = inject(AccessHandoffService);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
-  private readonly snackBar = inject(MatSnackBar);
+  private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   /** Set when the page goes away: a late answer then neither navigates nor opens a dialog. */
@@ -255,7 +249,7 @@ export class NewGuestComponent {
 
   private afterInactive(guestId: string, document: string, result: InactiveGuestResult): void {
     if (result.kind === 'reactivated') {
-      this.snackBar.open(REACTIVATED_TEXT, undefined, { duration: SNACK_MS });
+      this.toasts.show(REACTIVATED_TEXT);
       void this.router.navigate(['/admin/guests', guestId]);
       return;
     }

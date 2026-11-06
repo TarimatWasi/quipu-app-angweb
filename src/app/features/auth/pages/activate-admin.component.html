@@ -22,24 +22,20 @@
         con tu documento.
       </p>
 
-      <div class="quipu-field">
-        <label class="quipu-label" for="name">Nombre completo</label>
+      <app-form-field
+        fieldId="name"
+        label="Nombre completo"
+        help="Así te verán los demás administradores y quedará en lo que revises."
+        [error]="nameError()"
+      >
         <input
+          appFieldControl
           class="quipu-input"
-          id="name"
           autocomplete="name"
           aria-required="true"
           [formField]="activateForm.name"
-          [attr.aria-invalid]="nameError() ? 'true' : null"
-          [attr.aria-describedby]="nameError() ? 'name-error name-help' : 'name-help'"
         />
-        @if (nameError(); as message) {
-          <p id="name-error" class="quipu-field-error">{{ message }}</p>
-        }
-        <p id="name-help" class="quipu-field-help">
-          Así te verán los demás administradores y quedará en lo que revises.
-        </p>
-      </div>
+      </app-form-field>
 
       <app-new-password-field [field]="activateForm.newPassword" label="Contraseña" />
 
@@ -47,7 +43,11 @@
         <p id="activate-admin-error" class="quipu-alert" tabindex="-1">{{ message }}</p>
       }
 
-      <button mat-flat-button type="submit" [disabled]="activateForm().submitting()">
+      <button
+        class="quipu-button quipu-button--primary quipu-button--big"
+        type="submit"
+        [disabled]="activateForm().submitting()"
+      >
         {{ activateForm().submitting() ? 'Activando…' : 'Activar mi cuenta' }}
       </button>
     </form>

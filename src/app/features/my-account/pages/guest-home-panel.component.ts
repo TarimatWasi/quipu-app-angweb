@@ -1,5 +1,4 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
-import { MatAnchor, MatButton } from '@angular/material/button';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -55,7 +54,7 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
  */
 @Component({
   selector: 'app-guest-home-panel',
-  imports: [MatAnchor, MatButton, RouterLink],
+  imports: [RouterLink],
   template: `
     <section class="panel" aria-labelledby="guest-payments-title">
       <h2 id="guest-payments-title">Tus pagos</h2>
@@ -73,7 +72,9 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
         @case ('error') {
           <div class="quipu-alert" role="alert">
             <p>{{ loadError() }}</p>
-            <button mat-stroked-button type="button" (click)="retry()">Reintentar</button>
+            <button class="quipu-button quipu-button--secondary" type="button" (click)="retry()">
+              Reintentar
+            </button>
           </div>
         }
       }
@@ -100,7 +101,9 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
           @if (rejected.rejectionReason; as reason) {
             <p>{{ reason }}</p>
           }
-          <a mat-stroked-button [routerLink]="['/guest/payments', rejected.paymentId]"
+          <a
+            class="quipu-button quipu-button--secondary"
+            [routerLink]="['/guest/payments', rejected.paymentId]"
             >Corregir pago de {{ monthOf(rejected) }}</a
           >
         </div>
@@ -109,10 +112,15 @@ const isUnpaid = ({ status }: PeriodStatus) => status === 'UNPAID' || status ===
         <p>{{ unpaidMessage() }}</p>
       }
       <div class="actions">
-        <a mat-flat-button routerLink="/guest/payments/new" [queryParams]="uploadQuery()"
+        <a
+          class="quipu-button quipu-button--primary"
+          routerLink="/guest/payments/new"
+          [queryParams]="uploadQuery()"
           >Subir voucher</a
         >
-        <a mat-button routerLink="/guest/payments">Historial de pagos</a>
+        <a class="quipu-button quipu-button--tertiary" routerLink="/guest/payments"
+          >Historial de pagos</a
+        >
       </div>
     </section>
   `,
