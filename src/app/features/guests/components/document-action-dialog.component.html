@@ -10,6 +10,7 @@
           [prompt]="filePrompt"
           [fileName]="draft().file?.name ?? null"
           [error]="shown().file ?? null"
+          [removable]="true"
           (chosen)="pickFile($event)"
         />
       }

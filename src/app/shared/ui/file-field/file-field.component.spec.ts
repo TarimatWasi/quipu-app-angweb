@@ -10,6 +10,8 @@ import { FileFieldComponent } from './file-field.component';
       fieldId="proof-file"
       [fileName]="name()"
       [error]="error()"
+      [camera]="camera()"
+      [removable]="removable()"
       (chosen)="chosen.set($event)"
     />
   `,
@@ -17,6 +19,8 @@ import { FileFieldComponent } from './file-field.component';
 class HostComponent {
   readonly name = signal<string | null>(null);
   readonly error = signal<string | null>(null);
+  readonly camera = signal(true);
+  readonly removable = signal(false);
   readonly chosen = signal<File | null | undefined>(undefined);
 }
 
@@ -56,5 +60,41 @@ describe('FileFieldComponent (P-12)', () => {
     expect(input.getAttribute('aria-invalid')).toBe('true');
     expect(input.getAttribute('aria-describedby')).toBe('proof-file-error');
     expect(ui.getByText('Archivo inválido').id).toBe('proof-file-error');
+  });
+
+  it('offers «Tomar foto» with the camera of the device, which reports the photo like a file', async () => {
+    const { ui, host } = await setup();
+
+    expect(ui.getByText('Tomar foto')).toBeTruthy();
+    const camera = ui.getByLabelText<HTMLInputElement>('Archivo del voucher con la cámara');
+    expect(camera.getAttribute('capture')).toBe('environment');
+    expect(camera.getAttribute('accept')).toBe('image/*');
+    const photo = new File(['x'], 'foto.jpg', { type: 'image/jpeg' });
+    Object.defineProperty(camera, 'files', { value: [photo], configurable: true });
+    fireEvent.change(camera);
+
+    expect(host.chosen()).toBe(photo);
+  });
+
+  it('leaves out the camera when the screen does not want it', async () => {
+    const { ui, host, fixture } = await setup();
+    host.camera.set(false);
+    await fixture.whenStable();
+
+    expect(ui.queryByText('Tomar foto')).toBeNull();
+    expect(ui.queryByLabelText('Archivo del voucher con la cámara')).toBeNull();
+  });
+
+  it('offers «Quitar» only when the screen allows it, and reports no file', async () => {
+    const { ui, host, fixture } = await setup();
+    host.name.set('yape.jpg');
+    await fixture.whenStable();
+    expect(ui.queryByText('Quitar')).toBeNull();
+
+    host.removable.set(true);
+    await fixture.whenStable();
+    ui.getByText('Quitar').closest('button')?.click();
+
+    expect(host.chosen()).toBeNull();
   });
 });
