@@ -51,7 +51,12 @@ async function setup() {
 
 describe('routes', () => {
   afterEach(() => {
-    TestBed.inject(HttpTestingController).verify();
+    const http = TestBed.inject(HttpTestingController);
+    // The home of the administrator (A1) asks its summary; these tests are about the routes.
+    for (const request of http.match((req) => req.url.endsWith('/bff/admin/dashboard'))) {
+      request.error(new ProgressEvent('error'));
+    }
+    http.verify();
   });
 
   it('opens the login page at the root', async () => {

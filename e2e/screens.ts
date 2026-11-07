@@ -93,7 +93,14 @@ export const SCREENS: readonly ScreenCapture[] = [
     accountMenu: true,
     open: 'Cambiar contraseña',
   },
-  { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['normal'] },
+  // A1: «normal» is the month with something of everything; «empty» is the first use.
+  {
+    id: 'inicio-admin',
+    path: '/home',
+    role: 'admin',
+    scenarios: ['normal', 'empty', 'load-error'],
+  },
+  { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['slow'], readiness: 'skeleton' },
   { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest', scenarios: ['normal'] },
   { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest', scenarios: ['normal'] },
   {
