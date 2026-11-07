@@ -5,7 +5,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -13,7 +12,7 @@ import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/s
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin, map, Observable } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { toBffError } from '@core/http/bff-error';
 import { AsyncContentState } from '@shared/data/async-content';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
@@ -35,6 +34,7 @@ import { ContractOptionsService } from '../data/contract-options.service';
 import { CREATED_TEXT } from '../model/contract';
 import {
   conflictOf,
+  END_BEFORE_START_TEXT,
   dayProblem,
   draftFacts,
   EMPTY_FIELDS,
@@ -42,6 +42,7 @@ import {
   environmentOptions,
   environmentProblem,
   FILE_ACCEPT,
+  FILE_FORMAT_TEXT,
   FILE_HELP,
   FILE_LABEL,
   FILE_PROMPT,
@@ -52,11 +53,19 @@ import {
   guestProblem,
   LOAD_ERROR_TEXT,
   sideNote,
+  SERVER_FIELD_TEXTS,
   SERVER_FIELDS,
+  STORAGE_TEXT,
   startProblem,
   toNewContract,
 } from '../model/contract-form';
-import type { ContractFields, Environment, GuestSummary } from '../model/contract-form';
+import type {
+  ContractConflict,
+  ContractFields,
+  Debt,
+  Environment,
+  GuestSummary,
+} from '../model/contract-form';
 import { CONTRACT_FORM_STYLES } from './contract-form.styles';
 
 const GENERAL_ERROR_ID = 'contract-form-error';
@@ -96,7 +105,7 @@ interface Choices {
   templateUrl: './contract-form.component.html',
   styles: CONTRACT_FORM_STYLES,
 })
-export class ContractFormComponent implements OnInit {
+export class ContractFormComponent {
   private readonly contracts = inject(AdminContractsService);
   private readonly options = inject(ContractOptionsService);
   private readonly route = inject(ActivatedRoute);
@@ -197,9 +206,6 @@ export class ContractFormComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.loaded.dispose();
     });
-  }
-
-  ngOnInit(): void {
     this.guestId = this.route.snapshot.queryParamMap.get('guestId');
     void this.load();
   }
@@ -272,43 +278,76 @@ export class ContractFormComponent implements OnInit {
     return undefined;
   }
 
+  /**
+   * What the BFF refused, said with the texts of the catalog (QP-UI-17, SRS 17): a 409 as a dialog,
+   * the dates and the file under their field, a field of the form under it and the rest above the
+   * form. The text of the BFF itself is never shown.
+   */
   private async failed(error: unknown) {
-    const failure = toBffErrorWithServerMessage(error);
+    const failure = toBffError(error);
+    const code = this.codeOf(error) ?? failure.code;
     const conflict = conflictOf(
-      failure.code,
-      { guest: this.guestLabel(), environment: this.environmentLabel() },
-      failure.message,
+      code,
+      { environment: this.environmentLabel() },
+      this.debtsOf(error),
     );
     if (conflict !== null) {
       await this.conflict(conflict);
       return undefined;
     }
-    if (failure.code === 'CONTRACT_INVALID_FILE') {
-      this.fileRefused.set(failure.message);
-      focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
+    focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
+    if (code === 'CONTRACT_INVALID_FILE') {
+      this.fileRefused.set(FILE_FORMAT_TEXT);
       return undefined;
     }
-    const target = failure.field === undefined ? undefined : SERVER_FIELDS[failure.field];
-    if (target !== undefined && target !== 'file') {
-      focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
-      return [{ fieldTree: this.field(target), kind: 'server', message: failure.message }];
+    if (code === 'CONTRACT_INVALID_DATES') {
+      return [this.refusal('end', END_BEFORE_START_TEXT)];
     }
-    this.generalError.set(failure.message);
-    focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
+    const target = failure.field === undefined ? undefined : SERVER_FIELDS[failure.field];
+    if (target !== undefined) return [this.refusal(target, SERVER_FIELD_TEXTS[target])];
+    this.generalError.set(code === 'FILE_STORAGE_UNAVAILABLE' ? STORAGE_TEXT : failure.message);
     return undefined;
   }
 
-  /** «Elegir otro ambiente» or «Entendido»: the dialog says what the BFF refused. */
-  private async conflict(conflict: ReturnType<typeof conflictOf>): Promise<void> {
-    if (conflict === null) return;
+  /** The `code` of the BFF's own answer: the catalog only knows some of them. */
+  private codeOf(error: unknown): string | null {
+    if (!(error instanceof HttpErrorResponse)) return null;
+    const body = error.error as { code?: unknown } | null;
+    return typeof body?.code === 'string' ? body.code : null;
+  }
+
+  /** What the 409 GUEST_HAS_PENDING_DEBT says the guest owes (RN-25), oldest first. */
+  private debtsOf(error: unknown): readonly Debt[] {
+    if (!(error instanceof HttpErrorResponse)) return [];
+    const body = error.error as { debts?: readonly Debt[] } | null;
+    return body?.debts ?? [];
+  }
+
+  private refusal(name: keyof ContractFields, message: string) {
+    return { fieldTree: this.field(name), kind: 'server', message };
+  }
+
+  /**
+   * «Elegir otro ambiente», «Registrar pago» or «Entendido»: the dialog says what was refused. The
+   * payment goes to A5.1 with the guest chosen (RN-23); the environment is cleared to choose again.
+   */
+  private async conflict(conflict: ContractConflict): Promise<void> {
+    const actions: { label: string; value: string }[] = [
+      { label: conflict.buttonLabel, value: conflict.next },
+    ];
+    if (conflict.closeLabel !== null) actions.push({ label: conflict.closeLabel, value: 'close' });
     const ref = openPaymentNoticeDialog(this.dialog, {
       title: conflict.title,
       message: conflict.message,
-      actions: [{ label: conflict.buttonLabel, value: conflict.next }],
+      actions,
     });
-    await firstValueFrom(ref.afterClosed(), { defaultValue: undefined });
+    const choice = await firstValueFrom(ref.afterClosed(), { defaultValue: undefined });
     if (conflict.next === 'environment') {
       this.fields.update((fields) => ({ ...fields, environmentId: '' }));
+    } else if (conflict.next === 'pay' && choice === 'pay') {
+      await this.router.navigate(['/admin/payments/new'], {
+        queryParams: { guestId: this.fields().guestId },
+      });
     }
   }
 

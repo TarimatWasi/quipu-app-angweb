@@ -150,7 +150,8 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal'],
   },
-  // A4: «normal» has the four contracts in force; A4.2 is the one of Luis, which owes months.
+  // A4: «normal» has the contracts of every state; A4.2 is the one of Luis, which owes months, and then
+  // one about to end, one with no end, an expired one, a finalized one with debt and one about to begin.
   {
     id: 'a4-contratos',
     path: '/admin/contracts',
@@ -170,6 +171,36 @@ export const SCREENS: readonly ScreenCapture[] = [
     path: '/admin/contracts/00000003-0000-4000-8000-000000000001',
     role: 'admin',
     scenarios: ['normal', 'conflict'],
+  },
+  {
+    id: 'a4-2-detalle-por-vencer',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000006',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a4-2-detalle-sin-fin',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000005',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a4-2-detalle-vencido',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000007',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a4-2-detalle-finalizado-con-deuda',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000008',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a4-2-detalle-empieza-pronto',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000009',
+    role: 'admin',
+    scenarios: ['normal'],
   },
   {
     id: 'a4-3-finalizar',

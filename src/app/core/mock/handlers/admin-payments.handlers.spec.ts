@@ -73,9 +73,9 @@ describe('admin payments in the simulated BFF', () => {
     expect(
       ids(await mock.get<QueuePage>('/bff/admin/payments', { status: 'PENDING' })),
     ).not.toContain(id);
-    expect(ids(await mock.get<QueuePage>('/bff/admin/payments', { status: 'APPROVED' }))).toContain(
-      id,
-    );
+    expect(
+      ids(await mock.get<QueuePage>('/bff/admin/payments', { status: 'APPROVED', limit: 100 })),
+    ).toContain(id);
     const approved = await mock.get<Payment>(`/bff/admin/payments/${id}`);
     expect(approved.verifiedAmount).toBe(detail.amount);
     expect(approved.reviewedBy?.name).toBe('Rosa Elvira Quispe Mamani');

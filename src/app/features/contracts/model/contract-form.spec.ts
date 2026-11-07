@@ -1,5 +1,6 @@
 import {
   conflictOf,
+  debtsText,
   dayProblem,
   draftFacts,
   EMPTY_FIELDS,
@@ -34,18 +35,18 @@ const READY: ContractDraft = {
 
 describe('the form of A4.1 «Cargar contrato»', () => {
   it('says what is wrong with each field, or nothing when it is right', () => {
-    expect(guestProblem('')).toBe('Elige al huésped.');
+    expect(guestProblem('')).toBe('Elige al huésped del contrato.');
     expect(guestProblem('g1')).toBeNull();
-    expect(feeProblem('')).toBe('Escribe la cuota mensual.');
-    expect(feeProblem('0')).toContain('mayor que 0');
+    expect(feeProblem('')).toBe('Escribe una cuota mayor que 0.');
+    expect(feeProblem('0')).toBe('Escribe una cuota mayor que 0.');
     expect(feeProblem('650.555')).toContain('mayor que 0');
     expect(feeProblem('650,50')).toBeNull();
-    expect(dayProblem('')).toBe('Escribe el día de pago.');
-    expect(dayProblem('35')).toBe('El día de pago va del 1 al 31.');
-    expect(dayProblem('0')).toBe('El día de pago va del 1 al 31.');
+    expect(dayProblem('')).toBe('Escribe un día del 1 al 31.');
+    expect(dayProblem('35')).toBe('Escribe un día del 1 al 31.');
+    expect(dayProblem('0')).toBe('Escribe un día del 1 al 31.');
     expect(dayProblem('31')).toBeNull();
     expect(graceProblem('')).toContain('0');
-    expect(graceProblem('32')).toBe('Los días de gracia van de 0 a 31.');
+    expect(graceProblem('32')).toBe('Escribe de 0 a 31 días.');
     expect(graceProblem('0')).toBeNull();
     expect(startProblem('')).toBe('Elige la fecha de inicio.');
     expect(startProblem('2026-11-01')).toBeNull();
@@ -66,7 +67,7 @@ describe('the form of A4.1 «Cargar contrato»', () => {
     expect(fileProblem(pdf())).toBeNull();
     expect(fileProblem(pdf('contrato.PDF', ''))).toBeNull();
     expect(fileProblem(pdf('foto.jpg', 'image/jpeg'))).toBe(
-      'El archivo debe ser un PDF de 10 MB como máximo.',
+      'El contrato debe ser un PDF de hasta 10 MB',
     );
     const heavy = pdf();
     Object.defineProperty(heavy, 'size', { value: MAX_FILE_BYTES + 1 });
@@ -217,22 +218,58 @@ describe('the form of A4.1 «Cargar contrato»', () => {
     );
   });
 
-  it('turns each 409 into a notice with what to do next, and leaves any other alone', () => {
-    const names = { guest: 'Julia Mendoza', environment: 'Habitación 109' };
-    expect(conflictOf('ENVIRONMENT_OCCUPIED', names, 'x')).toEqual(
+  it('turns each 409 into a notice with the text of the catalog and what to do next', () => {
+    const names = { environment: 'Habitación 109' };
+    expect(conflictOf('ENVIRONMENT_OCCUPIED', names, [])).toEqual(
       expect.objectContaining({
         title: 'Habitación 109 ya tiene un contrato vigente',
         buttonLabel: 'Elegir otro ambiente',
         next: 'environment',
       }),
     );
-    expect(conflictOf('ENVIRONMENT_INACTIVE', names, 'x')?.next).toBe('environment');
-    expect(conflictOf('GUEST_NOT_ACTIVE', names, 'x')?.title).toBe('Julia Mendoza no está activo');
-    expect(conflictOf('GUEST_NOT_CONTRACT', names, 'x')?.next).toBe('guest');
-    expect(conflictOf('GUEST_HAS_PENDING_DEBT', names, 'Tiene deuda')?.message).toBe('Tiene deuda');
-    expect(conflictOf('GUEST_NOT_ACTIVE', { guest: null, environment: null }, 'x')?.title).toBe(
-      'El huésped no está activo',
+    expect(conflictOf('ENVIRONMENT_INACTIVE', names, [])).toEqual(
+      expect.objectContaining({
+        message: 'El ambiente está inactivo; reactívalo antes de registrar un contrato',
+        next: 'environment',
+      }),
     );
-    expect(conflictOf('VALIDATION_ERROR', names, 'x')).toBeNull();
+    expect(conflictOf('GUEST_NOT_ACTIVE', names, [])?.message).toBe(
+      'Este huésped aún no está activo: no admite contratos ni pagos',
+    );
+    expect(conflictOf('GUEST_NOT_CONTRACT', names, [])).toEqual(
+      expect.objectContaining({
+        message: 'Solo los huéspedes con contrato pueden tener un contrato',
+        next: 'guest',
+      }),
+    );
+    expect(conflictOf('VALIDATION_ERROR', names, [])).toBeNull();
+    expect(conflictOf('ENVIRONMENT_OCCUPIED', { environment: null }, [])?.title).toBe(
+      'El ambiente ya tiene un contrato vigente',
+    );
+  });
+
+  it('lists what is owed in the notice of the debt and offers the direct payment', () => {
+    const debts = [
+      { period: '2026-10', stayStartDate: null, amountDue: 800 },
+      { period: null, stayStartDate: '2026-09-02', amountDue: 300 },
+    ];
+    const notice = conflictOf('GUEST_HAS_PENDING_DEBT', { environment: null }, debts);
+    expect(notice).toEqual(
+      expect.objectContaining({
+        title: 'El huésped tiene deuda pendiente',
+        buttonLabel: 'Registrar pago',
+        closeLabel: 'Cerrar',
+        next: 'pay',
+      }),
+    );
+    expect(notice?.message).toBe(
+      'El huésped tiene deuda pendiente: salda sus períodos impagos antes de crear un contrato nuevo o reactivarlo. Debe octubre 2026 (S/ 800.00) y la estadía del 2 sep 2026 (S/ 300.00).',
+    );
+    expect(conflictOf('GUEST_HAS_PENDING_DEBT', { environment: null }, [])?.message).toBe(
+      'El huésped tiene deuda pendiente: salda sus períodos impagos antes de crear un contrato nuevo o reactivarlo',
+    );
+    expect(debtsText([{ period: '2026-10', stayStartDate: null, amountDue: 800 }])).toBe(
+      'octubre 2026 (S/ 800.00)',
+    );
   });
 });

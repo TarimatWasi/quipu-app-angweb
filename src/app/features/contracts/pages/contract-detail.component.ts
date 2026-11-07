@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, switchMap } from 'rxjs';
@@ -73,7 +73,7 @@ interface Loaded {
   templateUrl: './contract-detail.component.html',
   styles: CONTRACT_DETAIL_STYLES,
 })
-export class ContractDetailComponent implements OnInit {
+export class ContractDetailComponent {
   private readonly contracts = inject(AdminContractsService);
   private readonly guests = inject(AdminGuestsService);
   private readonly route = inject(ActivatedRoute);
@@ -137,9 +137,6 @@ export class ContractDetailComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.loaded.dispose();
     });
-  }
-
-  ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id') ?? '';
     void this.load(true);
   }

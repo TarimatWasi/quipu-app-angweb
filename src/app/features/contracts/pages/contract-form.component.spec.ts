@@ -67,6 +67,7 @@ async function setup(path = '/admin/contracts/new', options: Options = {}) {
         { path: 'admin/contracts', component: ListStubComponent },
         { path: 'admin/contracts/new', component: ContractFormComponent },
         { path: 'admin/guests/:id', component: ListStubComponent },
+        { path: 'admin/payments/new', component: ListStubComponent },
       ]),
       { provide: AdminContractsService, useValue: api },
       { provide: ContractOptionsService, useValue: choices },
@@ -203,11 +204,11 @@ describe('A4.1 «Cargar contrato»', () => {
     await click(send());
     expect(api.create).not.toHaveBeenCalled();
     for (const message of [
-      'Elige al huésped.',
-      'Elige el ambiente.',
-      'Escribe la cuota mensual.',
-      'Escribe el día de pago.',
-      'Escribe los días de gracia; si no hay, 0.',
+      'Elige al huésped del contrato.',
+      'Elige el ambiente del contrato.',
+      'Escribe una cuota mayor que 0.',
+      'Escribe un día del 1 al 31.',
+      'Escribe de 0 a 31 días.',
       'Elige la fecha de inicio.',
       'Elige el PDF del contrato.',
     ]) {
@@ -218,8 +219,8 @@ describe('A4.1 «Cargar contrato»', () => {
     await type('Día de pago', '35');
     await type('Inicio', '2026-11-01');
     await type('Fin (opcional)', '2026-10-31');
-    expect(page().getByText(/La cuota debe ser mayor que 0/)).toBeTruthy();
-    expect(page().getByText('El día de pago va del 1 al 31.')).toBeTruthy();
+    expect(page().getAllByText('Escribe una cuota mayor que 0.').length).toBeGreaterThan(0);
+    expect(page().getAllByText('Escribe un día del 1 al 31.').length).toBeGreaterThan(0);
     expect(page().getByText('La fecha de fin debe ser posterior a la de inicio.')).toBeTruthy();
   });
 
@@ -228,18 +229,18 @@ describe('A4.1 «Cargar contrato»', () => {
 
     await attach(new File(['x'], 'foto.jpg', { type: 'image/jpeg' }));
     await click(send());
-    expect(page().getByText('El archivo debe ser un PDF de 10 MB como máximo.')).toBeTruthy();
+    expect(page().getByText('El contrato debe ser un PDF de hasta 10 MB')).toBeTruthy();
 
     await click(page().getByRole('button', { name: /Quitar/ }));
     expect(page().queryByText('foto.jpg')).toBeNull();
   });
 
-  it('puts the refusal of the BFF under the field it names', async () => {
+  it('puts the refusal of the BFF under the field it names, in the words of the catalog', async () => {
     const { api, page, send, click, fillAll } = await setup();
     api.create.mockReturnValue(
       fail(400, {
         code: 'CONTRACT_INVALID_DATES',
-        message: 'Fin antes que inicio',
+        message: 'texto crudo del servidor',
         field: 'endDate',
       }),
     );
@@ -247,7 +248,8 @@ describe('A4.1 «Cargar contrato»', () => {
     await fillAll();
     await click(send());
 
-    expect(page().getByText('Fin antes que inicio')).toBeTruthy();
+    expect(page().getByText('La fecha de fin debe ser posterior a la de inicio.')).toBeTruthy();
+    expect(page().queryByText('texto crudo del servidor')).toBeNull();
     expect(page().getByLabelText('Fin (opcional)').getAttribute('aria-invalid')).toBe('true');
   });
 
@@ -256,17 +258,18 @@ describe('A4.1 «Cargar contrato»', () => {
     api.create.mockReturnValue(
       fail(400, {
         code: 'CONTRACT_INVALID_FILE',
-        message: 'No es un PDF válido',
+        message: 'texto crudo del servidor',
         field: 'file',
       }),
     );
 
     await fillAll();
     await click(send());
-    expect(page().getByText('No es un PDF válido')).toBeTruthy();
+    expect(page().getByText('El contrato debe ser un PDF de hasta 10 MB')).toBeTruthy();
+    expect(page().queryByText('texto crudo del servidor')).toBeNull();
 
     await attach(new File(['otro'], 'otro.pdf', { type: 'application/pdf' }));
-    expect(page().queryByText('No es un PDF válido')).toBeNull();
+    expect(page().queryByText('El contrato debe ser un PDF de hasta 10 MB')).toBeNull();
   });
 
   it('turns an occupied environment into a notice and clears the choice', async () => {
@@ -288,31 +291,80 @@ describe('A4.1 «Cargar contrato»', () => {
     });
   });
 
-  it('says what a guest that cannot take a contract needs, with the message of the BFF for the debt', async () => {
-    const { api, send, click, fillAll } = await setup();
+  it('lists what the guest owes in the dialog and leads to the direct payment', async () => {
+    const { api, router, send, click, fillAll } = await setup('/admin/contracts/new');
     api.create.mockReturnValue(
-      fail(409, { code: 'GUEST_HAS_PENDING_DEBT', message: 'Debe octubre', periods: ['2026-10'] }),
+      fail(409, {
+        code: 'GUEST_HAS_PENDING_DEBT',
+        message: 'texto crudo del servidor',
+        periods: ['2026-10'],
+        debts: [
+          { period: '2026-10', stayStartDate: null, amountDue: 800 },
+          { period: '2026-11', stayStartDate: null, amountDue: 650.5 },
+        ],
+      }),
     );
 
     await fillAll();
     await click(send());
 
     const dialog = within(
-      await screen.findByRole('alertdialog', { name: 'Julia Mendoza tiene deuda pendiente' }),
+      await screen.findByRole('alertdialog', { name: 'El huésped tiene deuda pendiente' }),
     );
-    expect(dialog.getByText('Debe octubre')).toBeTruthy();
+    expect(text(dialog.getByText(/salda sus períodos impagos/))).toContain(
+      'Debe octubre 2026 (S/ 800.00) y noviembre 2026 (S/ 650.50).',
+    );
+    expect(dialog.queryByText(/texto crudo del servidor/)).toBeNull();
+    await click(dialog.getByRole('button', { name: 'Registrar pago' }));
+
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/admin/payments/new?guestId=g1');
+    });
   });
 
-  it('shows any other failure above the buttons', async () => {
+  it('closes the debt dialog without leaving the form', async () => {
+    const { api, router, send, click, fillAll } = await setup();
+    api.create.mockReturnValue(fail(409, { code: 'GUEST_HAS_PENDING_DEBT', message: 'x' }));
+
+    await fillAll();
+    await click(send());
+    const dialog = within(await screen.findByRole('alertdialog'));
+    await click(dialog.getByRole('button', { name: 'Cerrar' }));
+
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('alertdialog')).toBeNull();
+    });
+    expect(router.url).toBe('/admin/contracts/new');
+  });
+
+  it('says in the words of the catalog why a guest cannot take a contract', async () => {
+    const { api, send, click, fillAll } = await setup();
+    api.create.mockReturnValue(fail(409, { code: 'GUEST_NOT_ACTIVE', message: 'crudo' }));
+
+    await fillAll();
+    await click(send());
+
+    const dialog = within(
+      await screen.findByRole('alertdialog', { name: 'El huésped no está activo' }),
+    );
+    expect(
+      dialog.getByText('Este huésped aún no está activo: no admite contratos ni pagos'),
+    ).toBeTruthy();
+    expect(dialog.queryByText('crudo')).toBeNull();
+  });
+
+  it('shows the storage failure above the buttons, in the words of the catalog', async () => {
     const { api, page, send, click, fillAll } = await setup();
     api.create.mockReturnValue(
-      fail(503, { code: 'FILE_STORAGE_UNAVAILABLE', message: 'El almacenamiento no responde' }),
+      fail(503, { code: 'FILE_STORAGE_UNAVAILABLE', message: 'texto crudo del servidor' }),
     );
 
     await fillAll();
     await click(send());
 
-    expect(text(page().getByRole('alert'))).toContain('El almacenamiento no responde');
+    const alert = text(page().getByRole('alert'));
+    expect(alert).toContain('No se pudo acceder al archivo; inténtalo de nuevo más tarde');
+    expect(alert).not.toContain('texto crudo del servidor');
   });
 
   it('keeps the button busy while the file goes up', async () => {

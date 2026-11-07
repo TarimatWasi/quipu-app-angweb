@@ -194,7 +194,7 @@ describe('A4.2 «Detalle del contrato»', () => {
     const dialog = within(await screen.findByRole('dialog'));
     await click(dialog.getByRole('button', { name: 'Finalizar contrato' }));
 
-    expect(dialog.getByRole('alert').textContent).toContain('No se pudo finalizar');
+    expect(dialog.getByRole('alert').textContent).toContain('Ocurrió un error inesperado');
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 

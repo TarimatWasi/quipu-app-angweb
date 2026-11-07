@@ -2,7 +2,7 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { toBffError } from '@core/http/bff-error';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 
@@ -101,7 +101,7 @@ export class TerminateContractDialogComponent {
           this.ref.close();
           return;
         }
-        this.error.set(toBffErrorWithServerMessage(error).message);
+        this.error.set(toBffError(error).message);
       }
     });
   }

@@ -7,7 +7,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
@@ -79,7 +78,7 @@ const GENERAL_ERROR_ID = 'environment-form-error';
   templateUrl: './environment-form.component.html',
   styles: ENVIRONMENT_FORM_STYLES,
 })
-export class EnvironmentFormComponent implements OnInit {
+export class EnvironmentFormComponent {
   private readonly service = inject(AdminEnvironmentsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -162,9 +161,6 @@ export class EnvironmentFormComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       this.loaded.dispose();
     });
-  }
-
-  ngOnInit(): void {
     this.id = this.route.snapshot.paramMap.get('id');
     if (this.id === null) return;
     this.editing.set(true);
