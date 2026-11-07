@@ -141,6 +141,11 @@ export function guestDetail(db: MockDb, guest: GuestRecord): Schemas['GuestDetai
 /** The sample file the simulated storage «signs» for a contract or a document (public/mock-assets). */
 const SAMPLE_FILE = '/mock-assets/voucher-muestra.pdf';
 
+/** A contract with the signed link the simulated storage gives it (A4.2, H2). */
+export function signedContract(contract: Schemas['Contract']): Schemas['Contract'] {
+  return { ...contract, fileUrl: SAMPLE_FILE };
+}
+
 /**
  * H2: the contract in force (or the latest) of the guest with its sample file, and the next one
  * if a renewal is already loaded, that is, a contract that starts after it (RN-20).
@@ -154,11 +159,10 @@ export function ownContracts(
   const next = db.data.contracts
     .filter((item) => item.guestId === guestId && item.startDate > current.startDate)
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
-  const signed = (contract: Schemas['Contract']) => ({
-    ...contract,
-    fileUrl: SAMPLE_FILE,
-  });
-  return { current: signed(current), next: next === undefined ? null : signed(next) };
+  return {
+    current: signedContract(current),
+    next: next === undefined ? null : signedContract(next),
+  };
 }
 
 /** The signed links last 15 minutes (RN-37). */
