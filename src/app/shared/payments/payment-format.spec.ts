@@ -1,6 +1,8 @@
 import {
   balanceOf,
   daysAgo,
+  daysFromToday,
+  limaDayOf,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -119,5 +121,21 @@ describe('payment-format', () => {
     expect(daysAgo('2026-11-05T01:00:00Z', now)).toBe('hace 1 día');
     expect(daysAgo('2026-10-07T14:00:00Z', now)).toBe('hace 29 días');
     expect(daysAgo('no', now)).toBeNull();
+  });
+
+  it('counts whole days from today in Lima to a day, negative when it passed', () => {
+    // 02:00 UTC of the 6th is still the 5th in Lima.
+    const now = new Date('2026-11-06T02:00:00Z');
+    expect(daysFromToday('2026-11-05', now)).toBe(0);
+    expect(daysFromToday('2026-11-08', now)).toBe(3);
+    expect(daysFromToday('2026-11-04', now)).toBe(-1);
+    expect(daysFromToday('2027-02-28', now)).toBe(115);
+    expect(daysFromToday('no', now)).toBeNull();
+  });
+
+  it('gives the day of an instant as it is in Lima', () => {
+    expect(limaDayOf('2026-11-06T02:00:00Z')).toBe('2026-11-05');
+    expect(limaDayOf('2026-11-06T15:00:00Z')).toBe('2026-11-06');
+    expect(limaDayOf('no')).toBeNull();
   });
 });

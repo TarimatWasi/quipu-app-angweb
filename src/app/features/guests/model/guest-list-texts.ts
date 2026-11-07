@@ -1,6 +1,7 @@
 import type { components } from '@core/api/bff.generated';
 import { formatDate, formatStay } from '@shared/payments/payment-format';
-import { documentText, ENVIRONMENT_TYPE_LABELS, NO_ENVIRONMENT } from './guest-texts';
+import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
+import { documentText, NO_ENVIRONMENT } from './guest-texts';
 
 /** Texts of A3 «Huéspedes» as the canvas words them, Spanish only (QP-ANGWEB-LNG-01). */
 
