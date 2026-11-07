@@ -7,7 +7,7 @@ import { provideRouter, Router } from '@angular/router';
 import { fireEvent, screen, within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
+import { sessionExpiredInterceptor } from '@core/http/session-expired.interceptor';
 import {
   CHANGE_PASSWORD_TEXT_ID,
   openChangePasswordDialog,

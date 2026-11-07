@@ -4,8 +4,8 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
-import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
+import { sessionExpiredInterceptor } from '@core/http/session-expired.interceptor';
 import { AuthService } from '@core/auth/auth.service';
 import { BFF_BASE_URL } from './bff-base-url';
 

@@ -16,6 +16,7 @@ import { fileMeta } from '@shared/text/file-text';
 type PaymentDetail = components['schemas']['Payment'];
 type AdminProof = components['schemas']['AdminProof'];
 type PaymentSurplus = components['schemas']['PaymentSurplus'];
+type ProofEdit = components['schemas']['ProofEdit'];
 
 export const LOAD_ERROR_TEXT = 'No se pudo cargar este pago.';
 
@@ -202,4 +203,81 @@ export function decisionHelp(balance: Balance | null, unseenVoucher: boolean): s
     return 'Un pago que no cubre lo que corresponde no se aprueba: recházalo con el motivo y el huésped lo corrige.';
   }
   return 'Al aprobar, el pago queda registrado con los montos verificados.';
+}
+
+/** A button of a conflict notice (the shape the shared notice dialog takes). */
+interface NoticeAction {
+  readonly label: string;
+  readonly value: string;
+}
+
+/** What the page needs of a proof added in the dialog. */
+export interface AddedProofLike {
+  readonly kind: ProofEdit['kind'];
+  readonly amount: number;
+  readonly method?: string;
+  readonly file?: unknown;
+}
+
+export type LoadState =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready' }
+  | { readonly kind: 'not-found' }
+  | { readonly kind: 'error'; readonly message: string };
+
+export type Outcome = 'APPROVED' | 'REJECTED';
+
+export interface Notice {
+  readonly title: string;
+  readonly actions: readonly NoticeAction[];
+}
+
+const BACK: NoticeAction = { label: 'Volver a Pagos', value: 'back' };
+const OK: NoticeAction = { label: 'Entendido', value: 'ok' };
+
+/** The conflicts the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
+export const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
+  PAYMENT_ALREADY_RESOLVED: { title: 'Este pago ya se resolvió', actions: [BACK] },
+  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', actions: [OK] },
+  PAYMENT_PERIOD_NOT_PAYABLE: {
+    title: 'Este mes ya no se cobra',
+    actions: [
+      { label: 'Rechazar con motivo', value: 'reject' },
+      { label: 'Cancelar', value: 'cancel' },
+    ],
+  },
+  PAYMENT_NOT_CORRECTABLE: { title: 'Este pago ya no se puede corregir', actions: [OK] },
+};
+
+/** The text of each verified amount, kept while the page reloads after adding a proof. */
+export function amountTexts(
+  proofs: readonly AdminProof[],
+  current: Readonly<Record<string, string>>,
+): Record<string, string> {
+  return Object.fromEntries(
+    proofs.map((proof) => [
+      proof.id,
+      current[proof.id] ?? String(proof.verifiedAmount ?? proof.declaredAmount),
+    ]),
+  );
+}
+
+/** A proof that stays as it is in a correction (the contract replaces the whole set). */
+export function kept(proof: AdminProof): ProofEdit {
+  const method = proof.method?.trim();
+  return {
+    id: proof.id,
+    kind: proof.kind,
+    amount: proof.declaredAmount,
+    ...(method ? { method } : {}),
+  };
+}
+
+export function added(proof: AddedProofLike): ProofEdit {
+  const base: ProofEdit = { kind: proof.kind, amount: proof.amount };
+  return {
+    ...base,
+    ...(proof.method ? { method: proof.method } : {}),
+    ...(proof.file ? { fileIndex: 0 } : {}),
+  };
 }

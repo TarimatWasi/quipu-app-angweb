@@ -2,7 +2,7 @@ import { HttpErrorResponse, provideHttpClient, withInterceptors } from '@angular
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { firstValueFrom, TimeoutError } from 'rxjs';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
 import { environment } from '../../../environments/environment';
 import { AuthService, LOGIN_TIMING, LoginRequest } from './auth.service';
 

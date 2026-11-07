@@ -9,8 +9,8 @@ import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { csrfErrorInterceptor } from '@core/interceptors/csrf-error.interceptor';
-import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
+import { csrfErrorInterceptor } from '@core/http/csrf-error.interceptor';
+import { sessionExpiredInterceptor } from '@core/http/session-expired.interceptor';
 import { CsrfBootstrapService } from './csrf-bootstrap.service';
 import { CSRF_INVALID_TEXT, CSRF_PREPARATION_TEXT } from './csrf-failure';
 

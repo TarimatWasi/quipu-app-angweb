@@ -14,7 +14,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -63,58 +62,20 @@ import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.componen
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
+import {
+  LoadState,
+  NOTICES,
+  OWN_PROOF_LIMIT_TEXT,
+  OwnPaymentMode,
+  SENT_TEXT,
+} from '../model/own-payment';
 
-/** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
-export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;
-export const SENT_TEXT = 'Pago enviado. Queda pendiente de revisión.';
 const GENERAL_ERROR_ID = 'own-payment-error';
 const HOME = '/home';
 
-/** What a dialog asks the page to do once it is closed. */
-type AfterNotice = 'stay' | 'reload';
-
-interface Notice {
-  readonly title: string;
-  readonly afterClose: AfterNotice;
+function idOf(id: string | null): string | null {
+  return id !== null && id !== '' ? id : null;
 }
-
-const CHANGED: Notice = { title: 'Tu pago ya cambió', afterClose: 'reload' };
-const NOT_ACTIVE: Notice = { title: 'Tu cuenta no está activa', afterClose: 'stay' };
-
-/**
- * The conflicts the SRS shows as a modal for each kind of guest (H3, T2), with the BFF's own
- * message (QP-UI-17). A payment that can no longer be corrected comes back in read mode.
- */
-const NOTICES: Readonly<Record<GuestType, Readonly<Partial<Record<string, Notice>>>>> = {
-  CONTRACT: {
-    VOUCHER_NO_ACTIVE_CONTRACT: { title: 'No tienes un contrato vigente', afterClose: 'stay' },
-    GUEST_NOT_ACTIVE: NOT_ACTIVE,
-    VOUCHER_ALREADY_EXISTS: { title: 'Este período ya tiene un pago', afterClose: 'reload' },
-    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', afterClose: 'reload' },
-    PAYMENT_NOT_CORRECTABLE: CHANGED,
-    PAYMENT_ALREADY_RESOLVED: CHANGED,
-  },
-  TEMPORARY: {
-    VOUCHER_NO_ACTIVE_STAY: { title: 'No tienes una estadía vigente', afterClose: 'stay' },
-    GUEST_NOT_ACTIVE: NOT_ACTIVE,
-    VOUCHER_ALREADY_EXISTS: {
-      title: 'Ya subiste un voucher para esta estadía',
-      afterClose: 'reload',
-    },
-    PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'La estadía ya está pagada', afterClose: 'reload' },
-    PAYMENT_NOT_CORRECTABLE: CHANGED,
-    PAYMENT_ALREADY_RESOLVED: CHANGED,
-  },
-};
-
-type LoadState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'not-found'; readonly message: string }
-  | { readonly kind: 'error'; readonly message: string };
-
-/** What the page is for: a first payment, the correction of a rejected one or reading one. */
-export type OwnPaymentMode = 'new' | 'correct' | 'read';
 
 /**
  * H3 (guest with a contract, CU-17) and T2 (temporary guest, CU-22): a payment with one to five
@@ -147,7 +108,7 @@ export type OwnPaymentMode = 'new' | 'correct' | 'read';
   templateUrl: './own-payment.component.html',
   styleUrl: './own-payment.component.scss',
 })
-export class OwnPaymentComponent implements OnInit {
+export class OwnPaymentComponent {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly toasts = inject(ToastService);
@@ -159,8 +120,10 @@ export class OwnPaymentComponent implements OnInit {
   private readonly proofDrafts = new ProofDrafts();
   private readonly fieldErrors = new FieldErrors();
 
-  protected readonly audience: GuestType;
-  protected readonly paymentId: string | null;
+  private readonly route = inject(ActivatedRoute);
+  protected readonly audience: GuestType =
+    this.route.snapshot.data['audience'] === 'TEMPORARY' ? 'TEMPORARY' : 'CONTRACT';
+  protected readonly paymentId: string | null = idOf(this.route.snapshot.paramMap.get('id'));
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly proofLimitText = OWN_PROOF_LIMIT_TEXT;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
@@ -185,7 +148,7 @@ export class OwnPaymentComponent implements OnInit {
   /** The own payment opened by id (correction or read mode). */
   protected readonly payment = signal<GuestPayment | null>(null);
 
-  protected readonly periodChoice = signal('');
+  protected readonly periodChoice = signal(this.route.snapshot.queryParamMap.get('period') ?? '');
   protected readonly periodHelp = computed(() => {
     const item = this.selected();
     return item
@@ -302,24 +265,15 @@ export class OwnPaymentComponent implements OnInit {
   });
 
   private destroyed = false;
+  private readonly destroyRef = inject(DestroyRef);
+  protected readonly watchDestroy = this.destroyRef.onDestroy(() => {
+    this.destroyed = true;
+  });
   // Moves with every load, so a late answer of a previous load is ignored.
   private loadRequest = 0;
 
-  constructor() {
-    const route = inject(ActivatedRoute);
-    this.audience = route.snapshot.data['audience'] === 'TEMPORARY' ? 'TEMPORARY' : 'CONTRACT';
-    const id = route.snapshot.paramMap.get('id');
-    this.paymentId = id !== null && id !== '' ? id : null;
-    const period = route.snapshot.queryParamMap.get('period');
-    if (period !== null) this.periodChoice.set(period);
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
-
-  ngOnInit(): void {
-    void this.load();
-  }
+  // The page loads when it is created, not from a lifecycle hook or the constructor.
+  protected readonly started = this.load();
 
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;

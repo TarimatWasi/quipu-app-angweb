@@ -13,7 +13,8 @@ import { fireEvent, within } from '@testing-library/dom';
 import type { PeriodStatus } from '../data/guest-payments.service';
 import type { GuestPayment } from '../data/own-payments';
 import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
-import { OWN_PROOF_LIMIT_TEXT, OwnPaymentComponent, SENT_TEXT } from './own-payment.component';
+import { OwnPaymentComponent } from './own-payment.component';
+import { OWN_PROOF_LIMIT_TEXT, SENT_TEXT } from '../model/own-payment';
 import { ToastService } from '@shared/ui/toast/toast.service';
 /** The text of the toast the screen asked for, or '' when there is none. */
 const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
