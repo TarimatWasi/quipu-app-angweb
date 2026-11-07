@@ -105,6 +105,10 @@ describe('ActivateAdminComponent (A0.5, RF-22)', () => {
     await submit();
     expect(ui.getByText('Máximo 100 caracteres')).toBeTruthy();
 
+    await fill('Rosa	Quispe', VALID);
+    await submit();
+    expect(ui.getByText('El nombre no admite saltos de línea ni tabulaciones')).toBeTruthy();
+
     controller.expectNone(isReset);
   });
 

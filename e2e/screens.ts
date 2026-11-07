@@ -93,7 +93,14 @@ export const SCREENS: readonly ScreenCapture[] = [
     accountMenu: true,
     open: 'Cambiar contraseña',
   },
-  { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['normal'] },
+  // A1: «normal» is the month with something of everything; «empty» is the first use.
+  {
+    id: 'inicio-admin',
+    path: '/home',
+    role: 'admin',
+    scenarios: ['normal', 'empty', 'load-error'],
+  },
+  { id: 'inicio-admin', path: '/home', role: 'admin', scenarios: ['slow'], readiness: 'skeleton' },
   { id: 'h1-inicio-huesped', path: '/home', role: 'contract-guest', scenarios: ['normal'] },
   { id: 't1-inicio-temporal', path: '/home', role: 'temporary-guest', scenarios: ['normal'] },
   {
@@ -237,6 +244,74 @@ export const SCREENS: readonly ScreenCapture[] = [
     id: 'a3-2-sin-contrato',
     path: guestPage(GUEST_WITHOUT_CONTRACT),
     role: 'admin',
+    scenarios: ['normal'],
+  },
+  // A3.8: Luis has two documents and one replacement in its history; the guest without a contract has none.
+  {
+    id: 'a3-8-documentos',
+    path: guestPage(GUEST_LUIS_OWING) + '/documents',
+    role: 'admin',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'a3-8-documentos',
+    path: guestPage(GUEST_LUIS_OWING) + '/documents',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 'a3-8-sin-documentos',
+    path: guestPage(GUEST_WITHOUT_CONTRACT) + '/documents',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
+  {
+    id: 'a3-8-borrar',
+    path: guestPage(GUEST_LUIS_OWING) + '/documents',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Borrar documento-de-identidad.jpg',
+  },
+  {
+    id: 'a3-8-reemplazar',
+    path: guestPage(GUEST_LUIS_OWING) + '/documents',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Reemplazar documento-de-identidad.jpg',
+  },
+  // H2: the contract of Luis, the guest with a contract of the demo.
+  {
+    id: 'h2-mi-contrato',
+    path: '/guest/contract',
+    role: 'contract-guest',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'h2-mi-contrato',
+    path: '/guest/contract',
+    role: 'contract-guest',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  // H5 and T3: Luis has two documents and a contract; Ana, the temporary guest, one document and a stay.
+  {
+    id: 'h5-mis-datos',
+    path: '/guest/profile',
+    role: 'contract-guest',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'h5-mis-datos',
+    path: '/guest/profile',
+    role: 'contract-guest',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 't3-mis-datos',
+    path: '/temporary-guest/profile',
+    role: 'temporary-guest',
     scenarios: ['normal'],
   },
   {

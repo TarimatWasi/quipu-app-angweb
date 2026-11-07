@@ -4,8 +4,7 @@ import type { DialogActionKind, MoreAction } from '../model/more-actions';
 
 /**
  * A3.2 «Más acciones»: a list of links and buttons, each with its hint in secondary ink. A link
- * goes where it says; a button asks the page for its dialog (`act`); an action without a screen
- * yet is only text.
+ * goes where it says; a button asks the page for its dialog (`act`).
  */
 @Component({
   selector: 'app-more-actions',
@@ -19,9 +18,6 @@ import type { DialogActionKind, MoreAction } from '../model/more-actions';
             @switch (action.kind) {
               @case ('link') {
                 <a [routerLink]="linkOf(action)">{{ action.label }}</a>
-              }
-              @case ('text') {
-                <span class="label">{{ action.label }}</span>
               }
               @default {
                 <button
@@ -61,8 +57,7 @@ import type { DialogActionKind, MoreAction } from '../model/more-actions';
       align-items: center;
       gap: 0 0.625rem;
     }
-    a,
-    .label {
+    a {
       display: inline-flex;
       align-items: center;
       min-height: var(--quipu-toque);
@@ -85,6 +80,6 @@ export class MoreActionsComponent {
   }
 
   protected emit(action: MoreAction): void {
-    if (action.kind !== 'link' && action.kind !== 'text') this.act.emit(action.kind);
+    if (action.kind !== 'link') this.act.emit(action.kind);
   }
 }

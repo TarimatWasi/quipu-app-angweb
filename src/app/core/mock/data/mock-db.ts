@@ -11,6 +11,8 @@ export type PaymentSurplus = Schemas['PaymentSurplus'];
 export type GuestRefund = Schemas['GuestRefund'];
 export type GuestCredit = Schemas['GuestCredit'];
 export type PaymentStatus = Schemas['Payment']['status'];
+export type DocumentContentType = Schemas['GuestDocumentRef']['contentType'];
+export type DocumentActionReason = Schemas['DocumentActionReason'];
 
 /** A guest as the simulated BFF keeps it; the detail and the summary are derived from it. */
 export interface GuestRecord {
@@ -18,11 +20,11 @@ export interface GuestRecord {
   version: number;
   documentType: DocumentType;
   documentNumber: string;
-  readonly name: string | null;
+  name: string | null;
   readonly type: 'CONTRACT' | 'TEMPORARY';
   status: Schemas['GuestStatus'];
-  readonly phone: string | null;
-  readonly contactEmail: string | null;
+  phone: string | null;
+  contactEmail: string | null;
   accountEmail: string | null;
   readonly hasLoginAccess: boolean;
   accessExpiresAt: string | null;
@@ -30,7 +32,7 @@ export interface GuestRecord {
   readonly documentCount: number;
   /** Where the onboarding goes (RN-33); by default none for a guest without a name, else all. */
   readonly onboardingProgress?: Schemas['OnboardingProgress'];
-  readonly emergencyContact?: Schemas['EmergencyContact'];
+  emergencyContact?: Schemas['EmergencyContact'];
 }
 
 /** A stay without what is derived from its payment (`paymentStatus`, `paymentId`). */
@@ -74,6 +76,19 @@ export interface AdministratorRecord {
   readonly createdAt: string;
 }
 
+/** A document a guest uploaded, without the signed link the BFF adds on every read (RN-37). */
+export interface DocumentRecord {
+  readonly id: string;
+  readonly guestId: string;
+  readonly originalName: string;
+  readonly contentType: DocumentContentType;
+  readonly sizeBytes: number;
+  readonly uploadedAt: string;
+}
+
+/** The evidence of a deletion or a replacement of a document: never the name or the content. */
+export type DocumentActionRecord = Schemas['GuestDocumentAction'] & { readonly guestId: string };
+
 export type RefundRecord = GuestRefund & { readonly guestId: string };
 
 export interface CreditRecord {
@@ -91,6 +106,8 @@ export interface MockDbData {
   readonly refunds: RefundRecord[];
   readonly credits: Map<string, CreditRecord>;
   readonly administrators: AdministratorRecord[];
+  readonly documents: DocumentRecord[];
+  readonly documentActions: DocumentActionRecord[];
 }
 
 /** The kinds of record, used in the opaque ids so a mixed-up id never finds the wrong record. */
@@ -103,6 +120,8 @@ export const ID_KIND = {
   proof: 6,
   refund: 7,
   admin: 8,
+  document: 9,
+  documentAction: 10,
 } as const;
 
 /** An opaque id shaped like the uuids of the BFF, stable for the seeded data. */
@@ -152,6 +171,20 @@ export class MockDb {
     return this.data.stays
       .filter((stay) => stay.guestId === guestId)
       .sort((a, b) => b.startDate.localeCompare(a.startDate));
+  }
+
+  /** The documents of a guest, in the order they were uploaded. */
+  documentsOf(guestId: string): DocumentRecord[] {
+    return this.data.documents
+      .filter((document) => document.guestId === guestId)
+      .sort((a, b) => a.uploadedAt.localeCompare(b.uploadedAt));
+  }
+
+  /** The evidence of a guest's documents, newest first. */
+  documentActionsOf(guestId: string): DocumentActionRecord[] {
+    return this.data.documentActions
+      .filter((action) => action.guestId === guestId)
+      .sort((a, b) => b.performedAt.localeCompare(a.performedAt));
   }
 
   payment(id: string): PaymentRecord | undefined {

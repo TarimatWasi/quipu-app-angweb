@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.21.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d558b4035ca02e5557890b3c94be98533e2d1bfd71acf2498db7459b33109669.
+ * Generated from the BFF contract v0.23.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d59b3c8db79197ab1f9bf697c0556a64f2d0eb234cd4cbdfab59a5f4d1c597f5.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -2980,6 +2980,13 @@ export interface components {
             startDate: string;
             /** Format: date */
             endDate: string;
+            /** @description «C1»; with environmentType, «Cabaña C1» (T3). null for an old stay without environment (TAR-237) */
+            environmentCode: string | null;
+            /**
+             * @description null together with environmentCode
+             * @enum {string|null}
+             */
+            environmentType: "ROOM" | "CABIN" | null;
             /**
              * @description OVERDUE once the exit date has passed without an approved payment
              * @enum {string}
@@ -3739,7 +3746,7 @@ export interface operations {
                     code: string;
                     /** @description At most 72 bytes in UTF-8 (bcrypt limit) */
                     newPassword: string;
-                    /** @description Full name of an administrator that activates the account created by another one (RF-22, A0.5, decided 2026-11-01): required while the account has no name, and ignored once it has one. The email of an account without name links to the administrator activation screen instead of the recovery one. */
+                    /** @description Full name of an administrator that activates the account (RF-22, A0.5, decided 2026-11-01): required while the account has no name, and ignored once it has one. It applies to any administrator without a name: the first one (ADR-F2) and the ones created by another. It has at least one character that is not whitespace and no control characters (line break, tab, NUL). The email of an account without name links to the administrator activation screen instead of the recovery one. */
                     name?: string;
                 };
             };

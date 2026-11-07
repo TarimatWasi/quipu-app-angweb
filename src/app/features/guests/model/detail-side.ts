@@ -1,14 +1,9 @@
 import type { components } from '@core/api/bff.generated';
 import type { GuestDetail } from '@core/api/clients/admin-guests.service';
 import { formatDate, formatMoney } from '@shared/payments/payment-format';
+import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
-import {
-  documentText,
-  ENVIRONMENT_TYPE_LABELS,
-  GUEST_STATUS_BADGES,
-  GUEST_TYPE_LABELS,
-  STATUS_TONES,
-} from './guest-texts';
+import { documentText, GUEST_STATUS_BADGES, GUEST_TYPE_LABELS, STATUS_TONES } from './guest-texts';
 
 export type { GuestDetail };
 

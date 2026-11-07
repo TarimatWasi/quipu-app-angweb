@@ -11,7 +11,7 @@ import { Component, input } from '@angular/core';
       <h2 class="cdk-visually-hidden" [id]="headingId()">Lo que toca ahora</h2>
       <div class="what">
         <p class="headline">
-          <span class="figure">{{ figure() }}</span>
+          <span class="figure" [class.urgent]="urgent()">{{ figure() }}</span>
           <span class="label">{{ label() }}</span>
         </p>
         <p class="text">{{ text() }}</p>
@@ -42,6 +42,9 @@ import { Component, input } from '@angular/core';
       font: var(--mat-sys-display-medium);
       font-variant-numeric: tabular-nums;
     }
+    .figure.urgent {
+      color: var(--quipu-estado-atrasado-texto);
+    }
     .label {
       font: var(--mat-sys-title-medium);
     }
@@ -59,7 +62,10 @@ import { Component, input } from '@angular/core';
   `,
 })
 export class NowPanelComponent {
-  readonly figure = input.required<number>();
+  /** A count or an amount; A1 also says «Al día» or «Bienvenida». */
+  readonly figure = input.required<number | string>();
+  /** The figure in red ink: what waits is late or was rejected. */
+  readonly urgent = input(false);
   readonly label = input.required<string>();
   readonly text = input.required<string>();
   /** Id of its hidden heading, unique in the page. */

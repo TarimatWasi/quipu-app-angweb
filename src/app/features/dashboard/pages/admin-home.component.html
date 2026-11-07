@@ -1,0 +1,89 @@
+<app-page-header [heading]="title" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton class="skeleton" subject="el inicio"
+      ><ng-template appSkeletonContent>
+        <app-skeleton-block shape="rectangle" height="9.375rem" />
+        <div class="skeleton-rows">
+          <app-skeleton-block shape="rectangle" height="7.5rem" />
+          <app-skeleton-block shape="rectangle" height="4rem" />
+          <app-skeleton-block shape="rectangle" height="4rem" />
+          <app-skeleton-block shape="rectangle" height="4rem" />
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
+    }
+    @if (content(); as c) {
+      <app-dashboard-now class="now" [now]="c.now" [also]="c.also" (showOverdue)="showOverdue()" />
+
+      @if (c.firstUse) {
+        <section class="steps" aria-labelledby="steps-title">
+          <h2 id="steps-title">Para empezar</h2>
+          <app-first-steps [steps]="firstSteps" />
+        </section>
+      }
+
+      @if (c.rows.length > 0) {
+        <section class="month" aria-labelledby="charges-title">
+          <h2 id="charges-title" #chargesTitle tabindex="-1">Cobros del mes</h2>
+          <app-status-filter
+            noun="cobros"
+            [segments]="segments()"
+            [selected]="filters().state"
+            (chosen)="chooseState($event)"
+          />
+
+          <app-list-filters
+            class="filters"
+            idPrefix="charges"
+            placeholder="Huésped, documento o ambiente"
+            [search]="filters().search"
+            [count]="count()"
+            [filtered]="filtered()"
+            [phoneSorts]="phoneSorts"
+            [sortKey]="sort().key"
+            (searchChange)="searchFor($event)"
+            (clear)="clearFilters()"
+            (phoneSort)="sortOnPhone($event)"
+          >
+            <app-form-field fieldId="charges-type" label="Tipo de huésped">
+              <select
+                appFieldControl
+                class="quipu-input quipu-input--filter"
+                [formField]="filterForm.type"
+              >
+                <option value="ALL">Todos</option>
+                <option value="CONTRACT">Con contrato</option>
+                <option value="TEMPORARY">Temporal</option>
+              </select>
+            </app-form-field>
+          </app-list-filters>
+
+          <div class="list">
+            @if (rows().length > 0) {
+              <app-charges-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
+            } @else {
+              <app-empty-state
+                [heading]="noMatchHeading"
+                [filtered]="true"
+                (clearFilters)="clearFilters()"
+              />
+            }
+          </div>
+        </section>
+      }
+    }
+  }
+}

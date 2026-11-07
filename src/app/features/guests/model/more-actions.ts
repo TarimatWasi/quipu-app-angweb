@@ -11,8 +11,7 @@ export type MoreAction =
       readonly label: string;
       readonly hint: string | null;
       readonly link: readonly string[];
-    }
-  | { readonly kind: 'text'; readonly label: string; readonly hint: string | null };
+    };
 
 export interface MoreActionsInput {
   readonly guest: GuestDetail;
@@ -44,11 +43,11 @@ function accessActions(guest: GuestDetail, panelGenerates: boolean): MoreAction[
 export function moreActions({ guest, panelGenerates, owes }: MoreActionsInput): MoreAction[] {
   const inactive = guest.status === 'INACTIVE';
   const actions = inactive ? [] : accessActions(guest, panelGenerates);
-  // TODO(TAR-288): «Ver documentos» links to A3.8/A3.9 once piece 4 adds that screen.
   actions.push({
-    kind: 'text',
+    kind: 'link',
     label: 'Ver documentos',
     hint: documentsHint(guest.documentCount),
+    link: ['/admin/guests', guest.id, 'documents'],
   });
   if (guest.status === 'PENDING_ACTIVATION') {
     actions.push({
