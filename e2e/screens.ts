@@ -259,6 +259,26 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['slow'],
     readiness: 'skeleton',
   },
+  // H5 and T3: Luis has two documents and a contract; Ana, the temporary guest, one document and a stay.
+  {
+    id: 'h5-mis-datos',
+    path: '/guest/profile',
+    role: 'contract-guest',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'h5-mis-datos',
+    path: '/guest/profile',
+    role: 'contract-guest',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 't3-mis-datos',
+    path: '/temporary-guest/profile',
+    role: 'temporary-guest',
+    scenarios: ['normal'],
+  },
   {
     id: 'a7-administradores',
     path: '/admin/administrators',

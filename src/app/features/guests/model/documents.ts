@@ -7,8 +7,9 @@ import type {
 } from '@core/api/clients/admin-guest-documents.service';
 import { formatDate, formatDateTime } from '@shared/payments/payment-format';
 import { INVALID_FILE_TEXT, isValidVoucher } from '@shared/payments/proof-rules';
-import { fileMeta, fileSize } from '@shared/text/file-text';
-import { limaDay, whenText } from './guest-list-texts';
+import { STORAGE_UNAVAILABLE_TEXT } from '@shared/text/error-text';
+import { fileMeta, fileSize, uploadedText } from '@shared/text/file-text';
+import { whenText } from './guest-list-texts';
 import { NETWORK_TEXT, RATE_LIMITED_TEXT } from './new-guest';
 import type { CallFailure } from './new-guest';
 
@@ -75,7 +76,6 @@ const GONE_TEXT =
   'Este documento ya no está: lo borraron o lo reemplazaron. Cierra y revisa la lista.';
 const UNEXPECTED_TEXT = 'No se pudo completar la acción. Inténtalo de nuevo.';
 const FORM_TEXT = 'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.';
-export const STORAGE_TEXT = 'No se pudo acceder al archivo; inténtalo de nuevo más tarde.';
 
 /** What the administrator filled in; the file is only asked for when replacing. */
 export interface ActionDraft {
@@ -158,7 +158,7 @@ export function actionProblem({ status, code, field }: CallFailure): ActionProbl
   if (status === 404) return { place: 'general', message: GONE_TEXT };
   if (status === 415) return { place: 'general', message: FORM_TEXT };
   if (status === 503 && code === 'FILE_STORAGE_UNAVAILABLE') {
-    return { place: 'general', message: STORAGE_TEXT };
+    return { place: 'general', message: STORAGE_UNAVAILABLE_TEXT };
   }
   if (code === 'DOCUMENT_INVALID_FILE') {
     return { place: 'field', field: 'file', message: INVALID_FILE_TEXT };
@@ -177,12 +177,6 @@ export interface DocumentRow {
   readonly meta: string;
   readonly url: string;
   readonly urlExpiresAt: string;
-}
-
-function uploadedText(uploadedAt: string, now: Date): string {
-  const day = limaDay(uploadedAt);
-  if (day === null) return 'subido';
-  return day === limaDay(now.toISOString()) ? 'subido hoy' : `subido el ${formatDate(day)}`;
 }
 
 export function toDocumentRow(document: GuestDocument, now: Date): DocumentRow {

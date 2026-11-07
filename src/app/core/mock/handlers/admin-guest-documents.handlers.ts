@@ -1,9 +1,11 @@
 import type { components } from '@core/api/bff.generated';
 import { ADMIN_REVIEWER } from '../data/demo-users';
+import { signedDocument } from '../data/guest-views';
 import { nowInstant, today } from '../data/mock-dates';
 import { ID_KIND } from '../data/mock-db';
 import type { DocumentActionRecord, DocumentRecord, GuestRecord, MockDb } from '../data/mock-db';
-import { invalid, noContent, notFound, ok, paginate, raise } from '../mock-reply';
+import { invalid, noContent, notFound, ok, paginate } from '../mock-reply';
+import { readDocumentFile } from '../mock-multipart';
 import type { MockRequest, MockRoute } from '../mock-types';
 
 type Schemas = components['schemas'];
@@ -14,10 +16,6 @@ const REASONS = new Set<unknown>(['ARCO_REQUEST', 'UPLOAD_ERROR']);
 const CHANNELS = new Set<unknown>(['WHATSAPP', 'EMAIL', 'IN_PERSON', 'OTHER']);
 const DAY_SHAPE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_NOTE_LENGTH = 500;
-const MAX_FILE_BYTES = 5 * 1024 * 1024;
-const FILE_TYPES = new Set<string>(['image/jpeg', 'image/png', 'application/pdf']);
-/** The signed links last 15 minutes (RN-37). */
-const LINK_MS = 15 * 60 * 1000;
 
 /** What the reason, the date, the channel and the note of a deletion or a replacement say. */
 interface ActionFields {
@@ -34,20 +32,6 @@ function guestOf(db: MockDb, req: MockRequest): GuestRecord {
 function documentOf(db: MockDb, req: MockRequest, guest: GuestRecord): DocumentRecord {
   const id = req.params['documentId'];
   return db.documentsOf(guest.id).find((document) => document.id === id) ?? notFound();
-}
-
-/** A signed link as the BFF would give: it only identifies the document and when it ends. */
-function guestDocument(document: DocumentRecord): Schemas['GuestDocument'] {
-  const expires = Date.now() + LINK_MS;
-  return {
-    id: document.id,
-    originalName: document.originalName,
-    contentType: document.contentType,
-    sizeBytes: document.sizeBytes,
-    uploadedAt: document.uploadedAt,
-    url: `/mock/documents/${document.id}?expira=${String(expires)}`,
-    urlExpiresAt: new Date(expires).toISOString(),
-  };
 }
 
 /** The evidence as the contract has it: the record without the guest it is kept under. */
@@ -128,29 +112,8 @@ function evidence(
   };
 }
 
-/** A file that is not JPG, PNG or PDF, or over 5 MB, is a 400 DOCUMENT_INVALID_FILE (RF-15). */
-function uploadedFile(body: unknown): File {
-  if (!(body instanceof FormData)) {
-    return raise(
-      415,
-      'UNSUPPORTED_MEDIA_TYPE',
-      'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
-    );
-  }
-  const file = body.get('file');
-  if (!(file instanceof File) || !FILE_TYPES.has(file.type) || file.size > MAX_FILE_BYTES) {
-    return raise(
-      400,
-      'DOCUMENT_INVALID_FILE',
-      'El archivo debe ser JPG, PNG o PDF y pesar 5 MB como máximo.',
-      'file',
-    );
-  }
-  return file;
-}
-
 function replace(db: MockDb, guest: GuestRecord, document: DocumentRecord, body: unknown) {
-  const file = uploadedFile(body);
+  const file = readDocumentFile(body);
   const fields = actionFields(body as FormData);
   const replacement: DocumentRecord = {
     id: db.newId(ID_KIND.document),
@@ -180,7 +143,7 @@ export const ADMIN_GUEST_DOCUMENT_ROUTES: readonly MockRoute[] = [
     key: 'GET /bff/admin/guests/{id}/documents',
     handler: (req, ctx) => {
       ctx.requireAdmin();
-      return ok(ctx.db.documentsOf(guestOf(ctx.db, req).id).map(guestDocument));
+      return ok(ctx.db.documentsOf(guestOf(ctx.db, req).id).map(signedDocument));
     },
   },
   {
@@ -197,7 +160,7 @@ export const ADMIN_GUEST_DOCUMENT_ROUTES: readonly MockRoute[] = [
       ctx.requireAdmin();
       const guest = guestOf(ctx.db, req);
       const document = documentOf(ctx.db, req, guest);
-      return ok(guestDocument(replace(ctx.db, guest, document, req.body)));
+      return ok(signedDocument(replace(ctx.db, guest, document, req.body)));
     },
   },
   {

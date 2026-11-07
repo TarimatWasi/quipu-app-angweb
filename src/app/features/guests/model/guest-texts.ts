@@ -1,5 +1,6 @@
 import type { DocumentType, GuestDetail } from '@core/api/clients/admin-guests.service';
 import { formatStay } from '@shared/payments/payment-format';
+import { documentLabel } from '@shared/text/document-text';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 
 /** Texts of A3.2 and A3.5 as the approved canvas words them, Spanish only (QP-ANGWEB-LNG-01). */
@@ -30,13 +31,6 @@ export const GUEST_STATUS_BADGES: Readonly<Record<GuestDetail['status'], Badge>>
 export const GUEST_TYPE_LABELS: Readonly<Record<GuestDetail['type'], string>> = {
   CONTRACT: 'Con contrato',
   TEMPORARY: 'Temporal',
-};
-
-/** As the header and the facts write a document: "DNI 70412233". */
-export const DOCUMENT_TYPE_LABELS: Readonly<Record<DocumentType, string>> = {
-  DNI: 'DNI',
-  CE: 'CE',
-  PASSPORT: 'Pasaporte',
 };
 
 /** As the document chips of A3.5 name each type. */
@@ -78,7 +72,7 @@ interface Named {
 
 /** The document in text, "DNI 70412233". */
 export function documentText(guest: Named): string {
-  return `${DOCUMENT_TYPE_LABELS[guest.documentType]} ${guest.documentNumber}`;
+  return documentLabel(guest.documentType, guest.documentNumber);
 }
 
 /** How the screens name a guest: its name, or its document while it has none yet. */

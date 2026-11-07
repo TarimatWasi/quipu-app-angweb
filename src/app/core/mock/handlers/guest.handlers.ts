@@ -102,8 +102,11 @@ function stayPaymentStatus(db: MockDb, guestId: string): Schemas['StayPaymentSta
   const stay = currentStay(db, guestId) ?? notFound();
   const view = stayView(db, stay);
   const payment = view.paymentId === null ? undefined : db.payment(view.paymentId);
+  const environment = db.environment(stay.environmentId);
   return {
     stayId: stay.id,
+    environmentCode: environment?.code ?? null,
+    environmentType: environment?.type ?? null,
     startDate: stay.startDate,
     endDate: stay.endDate,
     status: view.paymentStatus,
