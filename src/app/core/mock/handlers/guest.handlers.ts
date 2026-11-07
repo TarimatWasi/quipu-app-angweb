@@ -10,6 +10,7 @@ import {
 } from '../data/account-views';
 import { nowInstant, today } from '../data/mock-dates';
 import type { MockDb, PaymentRecord } from '../data/mock-db';
+import { ownContracts } from '../data/guest-views';
 import { guestPayment, paymentSummary } from '../data/payment-views';
 import { readProofsUpload } from '../mock-multipart';
 import { invalid, notFound, ok, paginate, raise } from '../mock-reply';
@@ -122,6 +123,13 @@ export const GUEST_ROUTES: readonly MockRoute[] = [
     handler: (_req, ctx) => {
       const { guestId } = ctx.requireGuest('CONTRACT');
       return ok(guestPeriods(ctx.db, guestId).map(periodStatus));
+    },
+  },
+  {
+    key: 'GET /bff/guest/contract',
+    handler: (_req, ctx) => {
+      const { guestId } = ctx.requireGuest('CONTRACT');
+      return ok(ownContracts(ctx.db, guestId) ?? notFound());
     },
   },
   {

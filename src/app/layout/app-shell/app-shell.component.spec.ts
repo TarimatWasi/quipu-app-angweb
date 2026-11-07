@@ -149,7 +149,7 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(sectionTexts(root)).toEqual([
         'Estado de cuenta',
-        'Mi contrato (pronto)',
+        'Mi contrato',
         'Historial de pagos',
         'Mis datos (pronto)',
       ]);

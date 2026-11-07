@@ -1,0 +1,60 @@
+<app-page-header [heading]="title" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton subject="tu contrato"
+      ><ng-template appSkeletonContent>
+        <div class="page">
+          <app-skeleton-block shape="rectangle" height="3.25rem" width="32.5rem" />
+          <app-skeleton-facts
+            class="facts"
+            [wideFirst]="false"
+            [labels]="[
+              'Ambiente',
+              'Cuota mensual',
+              'Día de pago',
+              'Días de gracia',
+              'Desde',
+              'Hasta',
+            ]"
+          />
+          <app-skeleton-block shape="rectangle" height="7.5rem" />
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    @if (none()) {
+      <app-empty-state class="state" [heading]="noContractTitle">{{
+        noContractText
+      }}</app-empty-state>
+    } @else {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="reload()"
+      />
+    }
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
+    }
+    @if (content(); as c) {
+      <div class="page">
+        <app-contract-detail [block]="c.current" (open)="open($event, c.current)" />
+        @if (c.next; as next) {
+          <section aria-labelledby="next-title" class="next">
+            <h2 id="next-title">Tu próximo contrato</h2>
+            <app-contract-detail
+              [block]="next"
+              [headings]="false"
+              openLabel="Ver próximo contrato"
+              (open)="open($event, next)"
+            />
+          </section>
+        }
+      </div>
+    }
+  }
+}

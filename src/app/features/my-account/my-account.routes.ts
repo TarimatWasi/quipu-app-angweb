@@ -29,3 +29,12 @@ export const TEMPORARY_PAYMENT_ROUTES: Routes = [
   { path: '', loadComponent: loadOwnPayment, data: { audience: 'TEMPORARY' } },
   { path: ':id', loadComponent: loadOwnPayment, data: { audience: 'TEMPORARY' } },
 ];
+
+/** H2 (own contract) of the guest with a contract; the parent route keeps it for it. */
+export const OWN_CONTRACT_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./pages/own-contract.component').then((m) => m.OwnContractComponent),
+  },
+];
