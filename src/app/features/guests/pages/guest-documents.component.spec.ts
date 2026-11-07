@@ -386,6 +386,17 @@ describe('GuestDocumentsComponent: replace (A3.8, CU-29)', () => {
     expect(ui.dialog().getByText('nuevo.png')).toBeTruthy();
   });
 
+  it('goes back to asking for the file when the chosen one is removed', async () => {
+    const ui = await setup();
+    await openReplace(ui);
+    await ui.pick(png());
+
+    await ui.click(ui.dialog().getByRole('button', { name: /^Quitar/ }));
+
+    expect(ui.dialog().queryByText('nuevo.png')).toBeNull();
+    expect(ui.dialog().getByText('Elige el archivo que lo reemplaza.')).toBeTruthy();
+  });
+
   it('replaces with the new file and the reason, tells it and reloads', async () => {
     const ui = await setup();
     await openReplace(ui);
