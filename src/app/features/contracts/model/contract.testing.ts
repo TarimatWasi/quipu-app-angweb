@@ -26,7 +26,7 @@ export function contractOf(fields: Partial<Contract> = {}): Contract {
   return {
     ...summaryOf(),
     file: { name: 'contrato-101.pdf', sizeBytes: 860_000, uploadedAt: '2026-03-30T14:00:00Z' },
-    fileUrl: 'https://files.example.com/contrato-101.pdf',
+    fileUrl: '/files/contrato-101.pdf',
     ...fields,
   };
 }

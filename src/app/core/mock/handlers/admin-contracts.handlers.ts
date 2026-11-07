@@ -36,8 +36,24 @@ function expiringSoon(contract: Contract): boolean {
 }
 
 function summaryOf(contract: Contract): Schemas['ContractSummary'] {
-  const { file: _file, fileUrl: _fileUrl, ...summary } = contract;
-  return { ...summary, expiringSoon: expiringSoon(contract) };
+  return {
+    id: contract.id,
+    environmentId: contract.environmentId,
+    guestId: contract.guestId,
+    guestName: contract.guestName,
+    documentType: contract.documentType,
+    documentNumber: contract.documentNumber,
+    environmentCode: contract.environmentCode,
+    environmentType: contract.environmentType,
+    monthlyAmount: contract.monthlyAmount,
+    paymentDay: contract.paymentDay,
+    graceDays: contract.graceDays,
+    startDate: contract.startDate,
+    endDate: contract.endDate,
+    status: contract.status,
+    expiringSoon: expiringSoon(contract),
+    terminatedAt: contract.terminatedAt,
+  };
 }
 
 function detailOf(contract: Contract): Schemas['Contract'] {

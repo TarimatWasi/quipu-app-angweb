@@ -170,7 +170,7 @@ describe('what waits for the administrator (A1 «Lo que toca ahora»)', () => {
     );
   });
 
-  it('names the contract that ends first, with no link while Contratos does not exist', () => {
+  it('names the contract that ends first, and leads to Contratos', () => {
     const first = {
       contractId: 'c5',
       guestName: 'Rocío Apaza',
@@ -187,7 +187,11 @@ describe('what waits for the administrator (A1 «Lo que toca ahora»)', () => {
     );
     expect(two?.label).toBe('contratos vencen en 30 días o menos');
     expect(two?.meta).toContain('El primero en vencer es el de Rocío Apaza (202), el 25 nov 2026.');
-    expect(one?.cta).toBeNull();
+    expect(one?.cta).toEqual({
+      label: 'Ver contratos por vencer',
+      to: { kind: 'route', link: ['/admin/contracts'], query: null },
+    });
+    expect(one?.link?.label).toBe('Ver contratos');
   });
 
   it('says who has an expired access first, and leads to their page', () => {

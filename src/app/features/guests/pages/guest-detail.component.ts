@@ -378,6 +378,7 @@ export class GuestDetailComponent implements OnInit {
       openDeactivateGuestDialog(this.dialog, {
         who: guestName(guest),
         blocked: guest.contract?.status === 'ACTIVE',
+        contractId: guest.contract?.status === 'ACTIVE' ? guest.contract.id : null,
         deactivate: () => this.guests.deactivate(guest.id),
       }),
     )

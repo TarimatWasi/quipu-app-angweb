@@ -78,103 +78,121 @@ function owedMonths(owed: readonly PeriodRow[]): string {
 
 const REGISTER_PAYMENT = 'Registrar pago';
 
+/** What a panel has when nothing waits on the contract: no badge and no action. */
+const CALM = { urgent: false, badge: null, action: null } as const;
+
+function isOwed(row: PeriodRow): boolean {
+  return row.state === 'OVERDUE' || row.state === 'UNPAID';
+}
+
+/** The debt: its figure in red and the way to register the payment in person. */
+function owedPanel(contract: Contract, owed: readonly PeriodRow[], first: PeriodRow): DetailPanel {
+  const total = owed.reduce((sum, row) => sum + row.amountDue, 0);
+  const ending =
+    contract.status === 'ACTIVE'
+      ? 'Si te pagó en persona, regístralo como pago directo.'
+      : 'Finalizar el contrato no borra la deuda: sigue hasta que la pague.';
+  return {
+    figure: formatMoney(total),
+    label: 'por pagar',
+    text: `${owedMonths(owed)}: venció el ${shortDate(first.dueDate)}. ${ending}`,
+    urgent: true,
+    badge: first.badge,
+    action: {
+      label: REGISTER_PAYMENT,
+      link: ['/admin/payments/new'],
+      query: { guestId: contract.guestId },
+    },
+  };
+}
+
+function reviewPanel(contract: Contract, review: PeriodRow): DetailPanel {
+  return {
+    figure: formatMoney(review.amountDue),
+    label: 'por revisar',
+    text: `${review.month}: ${firstName(contract.guestName)} subió su voucher.`,
+    urgent: false,
+    badge: review.badge,
+    action: review.action,
+  };
+}
+
+/** A contract that is over, finalized or expired: its environment is free and its payments stay. */
+function endedPanel(contract: Contract, environment: string): DetailPanel {
+  if (contract.status === 'TERMINATED') {
+    const day = contract.terminatedAt ? formatDate(contract.terminatedAt) : '';
+    return {
+      ...CALM,
+      figure: 'Finalizado',
+      label: '',
+      text: `Lo finalizaste el ${day}. La ${environment} quedó libre y sus pagos se conservan.`,
+    };
+  }
+  return {
+    ...CALM,
+    figure: 'Vencido',
+    label: '',
+    text: `Venció el ${formatDate(contract.endDate ?? '')} y la ${environment} quedó libre. Pagó todos sus meses; sus pagos se conservan.`,
+  };
+}
+
+/** A contract about to end: talk to the guest and, to renew it, load the new one from the next day. */
+function soonPanel(contract: Contract, endDate: string, days: number, environment: string) {
+  const renew = shortDate(nextDay(endDate));
+  return {
+    figure: `${String(days)} días`,
+    label: 'para que venza',
+    text: `Vence el ${shortDate(endDate)}. Conversa con ${firstName(contract.guestName)}: para renovarlo, carga el contrato nuevo desde el ${renew}; si no, la ${environment} queda libre al día siguiente.`,
+    urgent: false,
+    badge: STATE_BADGES.SOON,
+    action: {
+      label: 'Renovar contrato',
+      link: ['/admin/contracts/new'],
+      query: { guestId: contract.guestId },
+    },
+  } satisfies DetailPanel;
+}
+
+function upToDatePanel(contract: Contract, rows: readonly PeriodRow[]): DetailPanel {
+  const last = rows.at(-1);
+  const paid = last === undefined ? 'todo' : lower(formatPeriod(last.period));
+  const ending = contract.endDate
+    ? `Vence el ${formatDate(contract.endDate)}.`
+    : 'No tiene fecha de fin: sigue hasta que lo finalices.';
+  return {
+    ...CALM,
+    figure: '0',
+    label: 'meses por pagar',
+    text: `Está al día: pagó ${paid}. ${ending}`,
+  };
+}
+
 export function detailPanel(
   contract: Contract,
   rows: readonly PeriodRow[],
   now: Date,
 ): DetailPanel {
   const environment = lower(environmentLabel(contract.environmentType, contract.environmentCode));
-  const name = firstName(contract.guestName);
-  const owed = rows.filter((row) => row.state === 'OVERDUE' || row.state === 'UNPAID');
-  const review = rows.find((row) => row.state === 'UNDER_REVIEW');
+  const owed = rows.filter(isOwed);
   const [firstOwed] = owed;
-  const state = stateOf(contract);
-  const days = contract.endDate ? daysFromToday(contract.endDate, now) : null;
+  if (firstOwed !== undefined) return owedPanel(contract, owed, firstOwed);
+  const review = rows.find((row) => row.state === 'UNDER_REVIEW');
+  if (review !== undefined) return reviewPanel(contract, review);
+  if (contract.status !== 'ACTIVE') return endedPanel(contract, environment);
   const toStart = daysFromToday(contract.startDate, now);
-  const none = { urgent: false, badge: null, action: null } as const;
-
-  if (firstOwed !== undefined) {
-    const total = owed.reduce((sum, row) => sum + row.amountDue, 0);
-    const paying = contract.status === 'ACTIVE';
-    return {
-      figure: formatMoney(total),
-      label: 'por pagar',
-      text: `${owedMonths(owed)}: venció el ${shortDate(firstOwed.dueDate)}. ${
-        paying
-          ? 'Si te pagó en persona, regístralo como pago directo.'
-          : 'Finalizar el contrato no borra la deuda: sigue hasta que la pague.'
-      }`,
-      urgent: true,
-      badge: firstOwed.badge,
-      action: {
-        label: REGISTER_PAYMENT,
-        link: ['/admin/payments/new'],
-        query: { guestId: contract.guestId },
-      },
-    };
-  }
-  if (review !== undefined) {
-    return {
-      figure: formatMoney(review.amountDue),
-      label: 'por revisar',
-      text: `${review.month}: ${name} subió su voucher.`,
-      urgent: false,
-      badge: review.badge,
-      action: review.action,
-    };
-  }
-  if (contract.status === 'TERMINATED') {
-    const day = contract.terminatedAt ? formatDate(contract.terminatedAt) : '';
-    return {
-      ...none,
-      figure: 'Finalizado',
-      label: '',
-      text: `Lo finalizaste el ${day}. La ${environment} quedó libre y sus pagos se conservan.`,
-    };
-  }
-  if (contract.status === 'EXPIRED') {
-    return {
-      ...none,
-      figure: 'Vencido',
-      label: '',
-      text: `Venció el ${formatDate(contract.endDate ?? '')} y la ${environment} quedó libre. Pagó todos sus meses; sus pagos se conservan.`,
-    };
-  }
   if (toStart !== null && toStart > 0) {
     return {
-      ...none,
+      ...CALM,
       figure: `${String(toStart)} días`,
       label: 'para que empiece',
       text: `Empieza el ${formatDate(contract.startDate)}. La ${environment} ya está ocupada.`,
     };
   }
-  if (state === 'SOON' && days !== null && contract.endDate) {
-    const renew = shortDate(nextDay(contract.endDate));
-    return {
-      figure: `${String(days)} días`,
-      label: 'para que venza',
-      text: `Vence el ${shortDate(contract.endDate)}. Conversa con ${name}: para renovarlo, carga el contrato nuevo desde el ${renew}; si no, la ${environment} queda libre al día siguiente.`,
-      urgent: false,
-      badge: STATE_BADGES.SOON,
-      action: {
-        label: 'Renovar contrato',
-        link: ['/admin/contracts/new'],
-        query: { guestId: contract.guestId },
-      },
-    };
+  const days = contract.endDate ? daysFromToday(contract.endDate, now) : null;
+  if (stateOf(contract) === 'SOON' && days !== null && contract.endDate) {
+    return soonPanel(contract, contract.endDate, days, environment);
   }
-  const last = rows.at(-1);
-  const paid = last === undefined ? 'todo' : lower(formatPeriod(last.period));
-  return {
-    ...none,
-    figure: '0',
-    label: 'meses por pagar',
-    text: `Está al día: pagó ${paid}. ${
-      contract.endDate
-        ? `Vence el ${formatDate(contract.endDate)}.`
-        : 'No tiene fecha de fin: sigue hasta que lo finalices.'
-    }`,
-  };
+  return upToDatePanel(contract, rows);
 }
 
 /** What the contract says about its dates today. */

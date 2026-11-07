@@ -266,7 +266,7 @@ describe('A3.2 «Lo que toca ahora»', () => {
     );
   });
 
-  it('9. active with a contract type but no contract: «Sin contrato», without an action yet', () => {
+  it('9. active with a contract type but no contract: «Sin contrato», with the way to load one', () => {
     const guest = guestOf({ contract: undefined });
 
     expect(panel({ guest })).toEqual({
@@ -275,7 +275,12 @@ describe('A3.2 «Lo que toca ahora»', () => {
       label: '',
       badge: null,
       text: 'Su cuenta está activa, pero aún no tiene contrato: cárgalo para empezar a cobrarle.',
-      action: null,
+      action: {
+        kind: 'link',
+        label: 'Cargar contrato',
+        link: ['/admin/contracts/new'],
+        query: { guestId: guest.id },
+      },
     });
   });
 

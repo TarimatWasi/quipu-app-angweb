@@ -267,14 +267,18 @@ export const NO_CONTRACT_TEXT =
 /** 9 and 10: nothing owed nor waiting. */
 function quietPanel(guest: GuestDetail, charges: readonly Charge[]): DetailPanel {
   if (guest.type === 'CONTRACT' && guest.contract?.status !== 'ACTIVE') {
-    // TODO(TAR-211): «Cargar contrato» once the contracts screen exists.
     return {
       figure: 'Sin contrato',
       alarm: false,
       label: '',
       badge: null,
       text: NO_CONTRACT_TEXT,
-      action: null,
+      action: {
+        kind: 'link',
+        label: 'Cargar contrato',
+        link: ['/admin/contracts/new'],
+        query: { guestId: guest.id },
+      },
     };
   }
   const paid = charges.filter((charge) => charge.state === 'PAID').at(-1);

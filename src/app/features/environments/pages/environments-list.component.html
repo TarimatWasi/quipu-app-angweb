@@ -47,14 +47,17 @@
   }
   @case ('ready') {
     @if (panel(); as free) {
-      <!-- TODO(TAR-211): «Cargar contrato» as the action of the panel once A4 exists. -->
       <app-now-panel
         class="now"
         headingId="environments-now-title"
         [figure]="free.figure"
         [label]="free.label"
         [text]="free.text"
-      />
+      >
+        <a class="quipu-button quipu-button--primary" routerLink="/admin/contracts/new"
+          >Cargar contrato</a
+        >
+      </app-now-panel>
     }
 
     <section class="all" aria-labelledby="all-environments-title">

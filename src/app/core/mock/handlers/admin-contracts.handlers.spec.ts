@@ -51,7 +51,7 @@ describe('admin contracts in the simulated BFF', () => {
     const active = await list(mock, { status: 'ACTIVE' });
     expect(active.content).toHaveLength(4);
     expect(active.content[0]).toEqual(
-      expect.objectContaining({ environmentCode: expect.any(String), status: 'ACTIVE' }),
+      expect.objectContaining({ environmentCode: expect.any(String) as unknown, status: 'ACTIVE' }),
     );
     expect(active.content[0]).not.toHaveProperty('fileUrl');
     const ends = active.content.map((contract) => contract.endDate ?? '9999-12-31');
@@ -88,7 +88,7 @@ describe('admin contracts in the simulated BFF', () => {
         paymentDay: 5,
         graceDays: 3,
         status: 'ACTIVE',
-        file: expect.objectContaining({ name: 'contrato.pdf' }),
+        file: expect.objectContaining({ name: 'contrato.pdf' }) as unknown,
       }),
     );
     expect((await list(mock, { status: 'ACTIVE' })).content.map((item) => item.id)).toContain(
@@ -96,7 +96,10 @@ describe('admin contracts in the simulated BFF', () => {
     );
     const again = await mock.fail(mock.send('POST', '/bff/admin/contracts', form()));
     expect(again.error).toEqual(
-      expect.objectContaining({ code: 'ENVIRONMENT_OCCUPIED', occupant: expect.anything() }),
+      expect.objectContaining({
+        code: 'ENVIRONMENT_OCCUPIED',
+        occupant: expect.anything() as unknown,
+      }),
     );
   });
 
@@ -159,7 +162,11 @@ describe('admin contracts in the simulated BFF', () => {
   it('answers 409 in the order of the guest and then the environment', async () => {
     const mock = await admin();
     const code = async (overrides: Parameters<typeof form>[0]) =>
-      (await mock.fail(mock.send('POST', '/bff/admin/contracts', form(overrides)))).error.code;
+      (
+        (await mock.fail(mock.send('POST', '/bff/admin/contracts', form(overrides)))).error as {
+          code: string;
+        }
+      ).code;
 
     expect(await code({ guestId: GUEST_IDS.pedro })).toBe('GUEST_NOT_ACTIVE');
     expect(await code({ guestId: GUEST_IDS.ana })).toBe('GUEST_NOT_CONTRACT');
@@ -174,7 +181,10 @@ describe('admin contracts in the simulated BFF', () => {
     );
     expect(owing.status).toBe(409);
     expect(owing.error).toEqual(
-      expect.objectContaining({ code: 'GUEST_HAS_PENDING_DEBT', periods: expect.any(Array) }),
+      expect.objectContaining({
+        code: 'GUEST_HAS_PENDING_DEBT',
+        periods: expect.any(Array) as unknown,
+      }),
     );
   });
 

@@ -63,7 +63,11 @@ function occupiedBy(error: unknown): { readonly occupant: Occupant | undefined }
               >Ver huésped</a
             >
           }
-          <!-- TODO(TAR-211): «Ver contrato vigente» for a contract once A4 exists. -->
+          @if (contractLink(); as link) {
+            <a class="quipu-button quipu-button--primary" [routerLink]="link" (click)="close()"
+              >Ver contrato vigente</a
+            >
+          }
         } @else {
           <button
             class="quipu-button quipu-button--tertiary"
@@ -117,10 +121,16 @@ export class DeactivateEnvironmentDialogComponent {
   protected readonly text = computed(() =>
     this.isBusy() ? busyText(this.occupied()?.occupant, this.data.today) : CONFIRM_TEXT,
   );
-  /** A stay has its guest to open; a contract waits for A4. */
+  /** The contract in it, or the guest of a stay, to open from the notice. */
   protected readonly guestLink = computed(() => {
     const occupant = this.occupied()?.occupant;
     return occupant?.kind === 'STAY' ? ['/admin/guests', occupant.guestId] : null;
+  });
+  protected readonly contractLink = computed(() => {
+    const occupant = this.occupied()?.occupant;
+    return occupant?.kind === 'CONTRACT' && occupant.contractId !== null
+      ? ['/admin/contracts', occupant.contractId]
+      : null;
   });
 
   protected close(): void {

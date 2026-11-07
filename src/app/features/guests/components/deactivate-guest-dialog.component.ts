@@ -2,6 +2,7 @@ import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
+import { RouterLink } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import {
@@ -20,6 +21,8 @@ export interface DeactivateGuestData {
   readonly who: string;
   /** It is already known to have a contract in force: the dialog says so without calling. */
   readonly blocked: boolean;
+  /** The contract in force, to open it from the notice; null when it is not known. */
+  readonly contractId: string | null;
   /** The call to the BFF; the page owns the data, the dialog only the action. */
   readonly deactivate: () => Observable<unknown>;
 }
@@ -34,7 +37,7 @@ const ERROR_ID = 'deactivate-guest-error';
  */
 @Component({
   selector: 'app-deactivate-guest-dialog',
-  imports: [DialogFrameComponent],
+  imports: [DialogFrameComponent, RouterLink],
   template: `
     <app-dialog-frame [heading]="heading()">
       <div class="body">
@@ -45,7 +48,6 @@ const ERROR_ID = 'deactivate-guest-error';
       </div>
       <ng-container dialogActions>
         @if (blocked()) {
-          <!-- TODO(TAR-211): «Ver contrato vigente» as the primary action once contracts exist. -->
           <button
             class="quipu-button quipu-button--tertiary"
             type="button"
@@ -54,6 +56,14 @@ const ERROR_ID = 'deactivate-guest-error';
           >
             Cerrar
           </button>
+          @if (data.contractId; as id) {
+            <a
+              class="quipu-button quipu-button--primary"
+              [routerLink]="['/admin/contracts', id]"
+              (click)="close()"
+              >Ver contrato vigente</a
+            >
+          }
         } @else {
           <button
             class="quipu-button quipu-button--tertiary"

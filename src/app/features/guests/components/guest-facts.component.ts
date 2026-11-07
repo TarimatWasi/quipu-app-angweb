@@ -1,4 +1,5 @@
 import { Component, computed, input } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { StepListComponent } from '@shared/ui/step-list/step-list.component';
@@ -20,7 +21,7 @@ import type { GuestDetail } from '../model/detail-side';
  */
 @Component({
   selector: 'app-guest-facts',
-  imports: [FactTileComponent, StatusBadgeComponent, StepListComponent],
+  imports: [FactTileComponent, RouterLink, StatusBadgeComponent, StepListComponent],
   template: `
     <section class="block" aria-labelledby="data-title">
       <h2 id="data-title">Sus datos</h2>
@@ -79,7 +80,7 @@ import type { GuestDetail } from '../model/detail-side';
             />
           }
         </div>
-        <!-- TODO(TAR-211): «Ver contrato» links to the contract once the contracts screen exists. -->
+        <a class="contract-link" [routerLink]="['/admin/contracts', contract.id]">Ver contrato</a>
       </section>
     }
 
@@ -95,6 +96,9 @@ import type { GuestDetail } from '../model/detail-side';
     :host {
       display: grid;
       gap: 2rem;
+    }
+    .contract-link {
+      justify-self: start;
     }
     .block {
       display: grid;
