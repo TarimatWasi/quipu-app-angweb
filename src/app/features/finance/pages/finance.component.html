@@ -1,0 +1,150 @@
+<app-page-header heading="Finanzas" />
+
+@switch (phase()) {
+  @case ('initial-loading') {
+    <app-skeleton class="now" subject="Finanzas" [announceSlow]="false"
+      ><ng-template appSkeletonContent>
+        <app-skeleton-block shape="rectangle" height="8.25rem" />
+        <app-skeleton-facts
+          class="balance-skeleton"
+          [labels]="['Ingresos', 'Egresos', 'Neto del mes']"
+        />
+      </ng-template>
+    </app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error
+        class="state"
+        [message]="message"
+        [retrying]="refreshing()"
+        (retry)="reload()"
+      />
+    }
+    @if (panel(); as credit) {
+      <app-now-panel
+        class="now"
+        headingId="finance-now-title"
+        [figure]="credit.figure"
+        [label]="credit.label"
+        [text]="credit.text"
+      >
+        <button
+          class="quipu-button quipu-button--primary"
+          type="button"
+          (click)="registerRefund(credit.firstGuestId)"
+        >
+          Registrar devolución
+        </button>
+      </app-now-panel>
+    }
+
+    <section class="balance" aria-labelledby="finance-balance-title">
+      <div class="quipu-list-head">
+        <h2 id="finance-balance-title">Balance de {{ phrase() }}</h2>
+        <app-form-field class="month" fieldId="finance-month" label="Mes">
+          <select
+            appFieldControl
+            class="quipu-input quipu-input--filter"
+            [value]="month()"
+            (change)="chooseMonth(valueOf($event))"
+          >
+            @for (option of months(); track option) {
+              <option [value]="option" [selected]="option === month()">
+                {{ monthLabel(option) }}
+              </option>
+            }
+          </select>
+        </app-form-field>
+      </div>
+      <dl class="facts">
+        @for (fact of facts(); track fact.label) {
+          <app-fact-tile
+            [surface]="fact.label === 'Neto del mes' ? 'stone' : 'paper'"
+            [class.wide]="fact.wide"
+            [class.negative]="fact.negative"
+            [label]="fact.label"
+            [value]="fact.value"
+            [hint]="fact.hint"
+          />
+        }
+      </dl>
+    </section>
+
+    <section class="all" aria-labelledby="finance-movements-title">
+      <div class="quipu-list-head">
+        <h2 id="finance-movements-title">Movimientos de {{ phrase() }}</h2>
+        <button class="quipu-button quipu-button--secondary" type="button" (click)="register()">
+          {{ tabAction() }}
+        </button>
+      </div>
+
+      <div
+        class="quipu-segmented quipu-segmented--fill views"
+        role="group"
+        aria-label="Tipo de movimiento"
+      >
+        @for (option of tabs; track option) {
+          <button type="button" [attr.aria-pressed]="option === tab()" (click)="chooseTab(option)">
+            {{ tabLabels[option] }}
+          </button>
+        }
+      </div>
+
+      <div class="quipu-filters">
+        <div class="quipu-field quipu-only-narrow">
+          <label class="quipu-label" for="finance-sort">Ordenar por</label>
+          <select
+            class="quipu-input quipu-input--filter"
+            id="finance-sort"
+            (change)="sortOnPhone(valueOf($event))"
+          >
+            <option value="amount" [selected]="sort().key === 'amount'">
+              Monto, mayor primero
+            </option>
+            <option value="title" [selected]="sort().key === 'title'">{{ firstColumn() }}</option>
+          </select>
+        </div>
+        <p class="quipu-list-count">
+          <output aria-live="polite">{{ count() }}</output>
+        </p>
+      </div>
+
+      @if (listLoading()) {
+        <app-movements-table [tab]="tab()" [loading]="true" [rows]="[]" [sort]="sort()" />
+      } @else {
+        <app-list-results
+          [shown]="rows().length"
+          [loaded]="rows().length"
+          [noMatchHeading]="empty().heading"
+          [empty]="empty()"
+          [errorText]="loadErrorText"
+          [listFailed]="listFailed()"
+          [moreFailed]="moreFailed()"
+          [retrying]="listRetrying()"
+          [hasMore]="nextCursor() !== null"
+          [loadingMore]="loadingMore()"
+          (retry)="retry()"
+          (more)="more()"
+        >
+          <app-movements-table
+            [tab]="tab()"
+            [rows]="rows()"
+            [sort]="sort()"
+            (sortBy)="sortBy($event)"
+            (edit)="edit($event)"
+            (remove)="remove($event)"
+          />
+        </app-list-results>
+      }
+    </section>
+  }
+}

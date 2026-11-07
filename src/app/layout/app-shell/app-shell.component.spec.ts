@@ -113,7 +113,7 @@ describe('AppShellComponent (P-01)', () => {
         'Huéspedes',
         'Contratos',
         'Pagos',
-        'Finanzas (pronto)',
+        'Finanzas',
       ]);
       const nav = barNav(root);
       expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
@@ -122,8 +122,11 @@ describe('AppShellComponent (P-01)', () => {
         '/admin/guests',
         '/admin/contracts',
         '/admin/payments',
+        '/admin/finance',
       ]);
-      expect(nav.queryByRole('link', { name: /Finanzas/ })).toBeNull();
+      expect(nav.getByRole('link', { name: 'Finanzas' }).getAttribute('href')).toBe(
+        '/admin/finance',
+      );
     });
 
     it('marks the current section with aria-current="page" and only that one', async () => {
