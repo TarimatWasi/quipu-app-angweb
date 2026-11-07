@@ -315,7 +315,7 @@ export class PaymentReviewComponent {
     const { code, message } = toBffErrorWithServerMessage(error);
     const notice = NOTICES[code];
     if (notice) {
-      return this.notice(code, notice, message);
+      return this.notice(code, notice);
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
     if (notFound || code === 'FILE_STORAGE_UNAVAILABLE') {
@@ -343,9 +343,13 @@ export class PaymentReviewComponent {
     }
   }
 
-  private async notice(code: string, notice: Notice, message: string): Promise<void> {
+  private async notice(code: string, notice: Notice): Promise<void> {
     const visit = this.visit;
-    const ref = openPaymentNoticeDialog(this.dialog, { ...notice, message });
+    const ref = openPaymentNoticeDialog(this.dialog, {
+      title: notice.title,
+      message: notice.text,
+      actions: notice.actions,
+    });
     const choice = await firstValueFrom(ref.afterClosed());
     if (visit !== this.visit) return;
     if (choice === 'back') {

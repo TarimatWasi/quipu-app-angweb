@@ -366,11 +366,21 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     });
 
     it.each([
-      ['VOUCHER_NO_ACTIVE_CONTRACT', 403, 'No tienes un contrato vigente'],
-      ['GUEST_NOT_ACTIVE', 409, 'Tu cuenta no está activa'],
+      [
+        'VOUCHER_NO_ACTIVE_CONTRACT',
+        403,
+        'No tienes un contrato vigente',
+        'No tienes un contrato vigente activo',
+      ],
+      [
+        'GUEST_NOT_ACTIVE',
+        409,
+        'Tu cuenta no está activa',
+        'No puedes enviar pagos mientras tu cuenta no esté activa. Consulta con la administración.',
+      ],
     ])(
-      'shows %s in a dialog with the BFF text and stays on the page',
-      async (code, status, title) => {
+      'shows %s in a dialog with the text of the catalog and stays on the page',
+      async (code, status, title, text) => {
         const ui = await newContractPayment('/guest/payments/new?period=2026-10');
         await cash(ui, 1, '350');
         await send(ui);
@@ -381,7 +391,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         );
 
         expect(ui.dialog().getByRole('heading', { name: title })).toBeTruthy();
-        expect(ui.dialog().getByText(`Texto del BFF ${code}`)).toBeTruthy();
+        expect(ui.dialog().getByText(text)).toBeTruthy();
         await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
 
         ui.http.expectNone(isStatus);
@@ -402,7 +412,13 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(
         ui.dialog().getByRole('heading', { name: 'Este período ya tiene un pago' }),
       ).toBeTruthy();
-      expect(ui.dialog().getByText('Ya enviaste un pago para este período.')).toBeTruthy();
+      expect(
+        ui
+          .dialog()
+          .getByText(
+            'Ya enviaste un pago para este período y la administración lo está revisando.',
+          ),
+      ).toBeTruthy();
       await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
 
       await ui.flush(await ui.expect1(isStatus), PERIODS);
@@ -568,7 +584,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       );
 
       expect(ui.dialog().getByRole('heading', { name: 'Tu pago ya cambió' })).toBeTruthy();
-      expect(ui.dialog().getByText('Este pago ya no se puede corregir.')).toBeTruthy();
+      expect(
+        ui.dialog().getByText('Este pago ya no se puede corregir: está en revisión o ya se aprobó'),
+      ).toBeTruthy();
       await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
 
       await ui.flush(
@@ -666,7 +684,13 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(
         ui.dialog().getByRole('heading', { name: 'Ya subiste un voucher para esta estadía' }),
       ).toBeTruthy();
-      expect(ui.dialog().getByText('Ya enviaste un pago para esta estadía.')).toBeTruthy();
+      expect(
+        ui
+          .dialog()
+          .getByText(
+            'Ya enviaste un pago para esta estadía y la administración lo está revisando.',
+          ),
+      ).toBeTruthy();
       await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
 
       await ui.flush(
@@ -693,7 +717,11 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(
         ui.dialog().getByRole('heading', { name: 'No tienes una estadía vigente' }),
       ).toBeTruthy();
-      expect(ui.dialog().getByText('No tienes una estadía vigente ni próxima.')).toBeTruthy();
+      expect(
+        ui
+          .dialog()
+          .getByText('No tienes una estadía vigente ni próxima; consulta con la administración'),
+      ).toBeTruthy();
     });
 
     it('sends a stay whose payment was rejected to its correction instead of a new payment', async () => {
