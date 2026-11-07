@@ -24,7 +24,8 @@ export function environmentCodeOf(db: MockDb, guestId: string): string | null {
       code: db.environment(stay.environmentId)?.code ?? null,
     })),
   ].filter((item) => item.code !== null);
-  return own.sort((a, b) => a.at.localeCompare(b.at)).at(-1)?.code ?? null;
+  own.sort((a, b) => a.at.localeCompare(b.at));
+  return own.at(-1)?.code ?? null;
 }
 
 export function fineView(db: MockDb, fine: FineRecord): Schemas['Fine'] {

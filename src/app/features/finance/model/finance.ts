@@ -72,7 +72,7 @@ export function monthOptions(current: string, chosen: string): readonly string[]
     const date = new Date(Date.UTC(year, month - 1 - index, 1));
     return date.toISOString().slice(0, 7);
   });
-  return months.includes(chosen) ? months : [chosen, ...months].sort().reverse();
+  return months.includes(chosen) ? months : [chosen, ...months].sort((a, b) => b.localeCompare(a));
 }
 
 // The balance (P-11).
@@ -130,10 +130,10 @@ export function creditPanel(credits: readonly PendingCredit[]): CreditPanel | nu
   const [first] = credits;
   if (first === undefined) return null;
   const total = credits.reduce((sum, credit) => sum + credit.amount, 0);
-  const who = credits.map(
-    (credit) =>
-      `${guestName(credit.guestName)}${credit.environmentCode === null ? '' : ` (${credit.environmentCode})`}`,
-  );
+  const who = credits.map((credit) => {
+    const place = credit.environmentCode === null ? '' : ` (${credit.environmentCode})`;
+    return `${guestName(credit.guestName)}${place}`;
+  });
   return {
     figure: credits.length,
     label: credits.length === 1 ? 'devolución por registrar' : 'devoluciones por registrar',
@@ -312,8 +312,8 @@ export function fineDetail(fine: Fine): string {
 }
 
 export function fineWho(fine: Fine): string {
-  const code = fine.environmentCode;
-  return `${guestName(fine.guestName)}${code === null ? '' : ` · ${code}`}`;
+  const place = fine.environmentCode === null ? '' : ` · ${fine.environmentCode}`;
+  return `${guestName(fine.guestName)}${place}`;
 }
 
 /** What the dialog of deleting says (RN-24): what leaves the balance of the month and that it does not come back. */

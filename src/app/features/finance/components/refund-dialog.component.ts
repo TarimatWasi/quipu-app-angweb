@@ -3,7 +3,7 @@ import { Component, computed, ElementRef, inject, Injector, signal } from '@angu
 import { FieldTree, form, FormField, FormRoot, maxLength, validate } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
-import { toBffError } from '@core/http/bff-error';
+import { bodyCodeOf, toBffError } from '@core/http/bff-error';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
@@ -28,7 +28,6 @@ import {
   toRefundInput,
 } from '../model/finance-forms';
 import type { RefundDraft, RefundInput } from '../model/finance-forms';
-import { bodyCodeOf } from '@core/http/bff-error';
 import { FINANCE_DIALOG_STYLES } from './finance-dialog.styles';
 
 export interface RefundDialogData {

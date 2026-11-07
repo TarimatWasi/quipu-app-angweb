@@ -222,10 +222,13 @@ export function refundDateHelp(date: string): string {
 
 /** The options of the guest of a refund: the ones with credit, «Diego Huanca · 204 · S/ 50.00». */
 export function creditOptions(credits: readonly PendingCredit[]): Option[] {
-  return credits.map((credit) => ({
-    value: credit.guestId,
-    label: `${guestName(credit.guestName)}${credit.environmentCode === null ? '' : ` · ${credit.environmentCode}`} · ${formatMoney(credit.amount)}`,
-  }));
+  return credits.map((credit) => {
+    const place = credit.environmentCode === null ? '' : ` · ${credit.environmentCode}`;
+    return {
+      value: credit.guestId,
+      label: `${guestName(credit.guestName)}${place} · ${formatMoney(credit.amount)}`,
+    };
+  });
 }
 
 // What the BFF refuses about a field, in the words of the catalog (QP-UI-17): never its own text.

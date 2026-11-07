@@ -172,7 +172,10 @@ export class FinanceComponent {
   protected readonly listRetrying = this.list.retrying;
   protected readonly loadingMore = this.list.loadingMore;
 
-  constructor() {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     inject(DestroyRef).onDestroy(() => {
       this.summary.dispose();
       this.list.dispose();
@@ -180,6 +183,7 @@ export class FinanceComponent {
     void this.loadSummary(true);
     void this.loadCredits();
     this.list.reload(this.key());
+    return true;
   }
 
   private key(): Key {
