@@ -233,12 +233,8 @@ export function draftFacts(
   const day =
     dayProblem(draft.day) === null ? `${String(wholeNumber(draft.day))} de cada mes` : null;
   const hint = termsHint(draft);
-  const feeValue =
-    amount !== null && amount > 0
-      ? formatMoney(amount)
-      : draft.fee.trim() === ''
-        ? 'Falta la cuota'
-        : 'Revisa la cuota';
+  const missingFee = draft.fee.trim() === '' ? 'Falta la cuota' : 'Revisa la cuota';
+  const feeValue = amount !== null && amount > 0 ? formatMoney(amount) : missingFee;
   const dayValue = day ?? (draft.day.trim() === '' ? 'Falta el día' : 'Revisa el día');
   return [
     { label: 'Huésped', value: guest ?? 'Falta elegirlo', wide: true },
@@ -271,7 +267,7 @@ export interface ContractConflict {
   readonly message: string;
   readonly buttonLabel: string;
   /** What the form does once the dialog is closed. */
-  readonly then: 'environment' | 'guest';
+  readonly next: 'environment' | 'guest';
 }
 
 export function conflictOf(
@@ -288,7 +284,7 @@ export function conflictOf(
         message:
           'Alguien cargó otro contrato o una estadía en ese ambiente en esas fechas. Elige otro ambiente libre.',
         buttonLabel: 'Elegir otro ambiente',
-        then: 'environment',
+        next: 'environment',
       };
     case 'ENVIRONMENT_INACTIVE':
       return {
@@ -296,14 +292,14 @@ export function conflictOf(
         message:
           'Un ambiente inactivo no recibe contratos. Elige otro ambiente o reactívalo primero.',
         buttonLabel: 'Elegir otro ambiente',
-        then: 'environment',
+        next: 'environment',
       };
     case 'GUEST_NOT_ACTIVE':
       return {
         title: `${who} no está activo`,
         message: 'Un contrato se carga a un huésped activo. Reactívalo primero o elige a otro.',
         buttonLabel: 'Entendido',
-        then: 'guest',
+        next: 'guest',
       };
     case 'GUEST_NOT_CONTRACT':
       return {
@@ -311,14 +307,14 @@ export function conflictOf(
         message:
           'Un huésped temporal tiene estadías, no contratos. Elige a un huésped de contrato.',
         buttonLabel: 'Entendido',
-        then: 'guest',
+        next: 'guest',
       };
     case 'GUEST_HAS_PENDING_DEBT':
       return {
         title: `${who} tiene deuda pendiente`,
         message: fallback,
         buttonLabel: 'Entendido',
-        then: 'guest',
+        next: 'guest',
       };
     default:
       return null;

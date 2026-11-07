@@ -304,10 +304,10 @@ export class ContractFormComponent implements OnInit {
     const ref = openPaymentNoticeDialog(this.dialog, {
       title: conflict.title,
       message: conflict.message,
-      actions: [{ label: conflict.buttonLabel, value: conflict.then }],
+      actions: [{ label: conflict.buttonLabel, value: conflict.next }],
     });
     await firstValueFrom(ref.afterClosed(), { defaultValue: undefined });
-    if (conflict.then === 'environment') {
+    if (conflict.next === 'environment') {
       this.fields.update((fields) => ({ ...fields, environmentId: '' }));
     }
   }

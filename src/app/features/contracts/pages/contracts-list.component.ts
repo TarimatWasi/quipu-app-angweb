@@ -2,17 +2,15 @@ import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { PageLoadState } from '@shared/data/page-load-state';
-import type { PageRequest } from '@shared/data/page-load-state';
+import { PagedList } from '@shared/data/paged-list';
 import { nextSort } from '@shared/ui/data-table/list-sort';
-import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
+import { ListResultsComponent } from '@shared/ui/list-results/list-results.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ShowMoreComponent } from '@shared/ui/show-more/show-more.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
@@ -42,8 +40,6 @@ import type {
   SortKey,
 } from '../model/contract';
 
-type Request = PageRequest<ContractStatus>;
-
 /**
  * A4 «Contratos» (RF-09) on the canvas «Contratos»: the Vigentes, the Vencidos or the Finalizados,
  * page by page with the cursor of the BFF. The state is asked to the BFF; the search, «Próximo a
@@ -54,16 +50,15 @@ type Request = PageRequest<ContractStatus>;
   selector: 'app-contracts-list',
   imports: [
     ContractsTableComponent,
-    EmptyStateComponent,
     FieldControlDirective,
     FormField,
     FormFieldComponent,
     ListFiltersComponent,
+    ListResultsComponent,
     LoadErrorComponent,
     NowPanelComponent,
     PageHeaderComponent,
     RouterLink,
-    ShowMoreComponent,
     SkeletonBlockComponent,
     SkeletonComponent,
     SkeletonContentDirective,
@@ -85,23 +80,27 @@ export class ContractsListComponent {
   protected readonly filterForm = form(this.filters);
   protected readonly sort = signal<ContractSort>(DEFAULT_SORT);
 
-  private readonly contracts = signal<readonly ContractSummary[]>([]);
   private readonly soon = signal<readonly ContractSummary[]>([]);
-  protected readonly nextCursor = signal<string | null>(null);
-  private readonly pageLoad = new PageLoadState<ContractStatus>();
+  private readonly list = new PagedList<ContractStatus, ContractSummary, ContractPage>(
+    (status, after) => this.service.list(status, after ?? undefined),
+    (_page, request) => {
+      if (request.query === 'ACTIVE' && request.after === null) this.readSoon();
+    },
+  );
   private readonly now = new Date();
 
-  protected readonly phase = this.pageLoad.phase;
-  protected readonly retrying = this.pageLoad.retrying;
-  protected readonly loadingMore = this.pageLoad.loadingMore;
-  protected readonly listFailed = this.pageLoad.firstFailed;
-  protected readonly moreFailed = this.pageLoad.moreFailed;
+  protected readonly phase = this.list.phase;
+  protected readonly retrying = this.list.retrying;
+  protected readonly loadingMore = this.list.loadingMore;
+  protected readonly listFailed = this.list.firstFailed;
+  protected readonly moreFailed = this.list.moreFailed;
+  protected readonly nextCursor = this.list.nextCursor;
 
   protected readonly filtered = computed(() => hasFilters(this.filters()));
-  protected readonly loadedCount = computed(() => this.contracts().length);
+  protected readonly loadedCount = computed(() => this.list.items().length);
   protected readonly rows = computed(() =>
     visibleContracts(
-      this.contracts().map((contract) => toRow(contract, this.now)),
+      this.list.items().map((contract) => toRow(contract, this.now)),
       this.filters(),
       this.sort(),
     ),
@@ -114,20 +113,18 @@ export class ContractsListComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
-      this.pageLoad.invalidate();
+      this.list.dispose();
     });
-    this.read({ query: 'ACTIVE', after: null });
+    this.list.reload('ACTIVE');
   }
 
   protected chooseView(view: ContractStatus): void {
     if (view === this.view()) return;
-    this.pageLoad.reset();
-    this.contracts.set([]);
     this.soon.set([]);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
     this.sort.set(DEFAULT_SORT);
-    this.read({ query: view, after: null });
+    this.list.switchTo(view);
   }
 
   protected clearFilters(): void {
@@ -155,51 +152,21 @@ export class ContractsListComponent {
   }
 
   protected more(): void {
-    const after = this.nextCursor();
-    if (after !== null && !this.pageLoad.loading()) this.read({ query: this.view(), after });
+    this.list.more(this.view());
   }
 
-  /** Asks the failed read again, unless the view changed since: then its first page. */
   protected retry(): void {
-    if (this.pageLoad.loading()) return;
-    const request = this.pageLoad.failed();
-    if (request?.query === this.view()) this.read(request, true);
-    else this.read({ query: this.view(), after: null });
+    this.list.retry(this.view());
   }
 
-  /**
-   * A new read forgets the failure of another one; a first page also forgets the cursor of the
-   * previous one, so «Mostrar más» never mixes two lists. The Vigentes also ask for the ones that
-   * end soon: a panel that fails to load is left out, the list does not wait for it.
-   */
-  private read(request: Request, retrying = false): void {
-    if (request.after === null) this.nextCursor.set(null);
-    const sequence = this.pageLoad.begin(request, retrying);
-    firstValueFrom(this.service.list(request.query, request.after ?? undefined))
-      .then((page) => {
-        this.receive(sequence, request, page);
-      })
-      .catch(() => {
-        this.pageLoad.fail(sequence);
-      });
-    if (request.query === 'ACTIVE' && request.after === null) this.readSoon(request);
-  }
-
-  private readSoon(request: Request): void {
+  /** The Vigentes also ask for the ones that end soon: a panel that fails to load is left out. */
+  private readSoon(): void {
     firstValueFrom(this.service.expiringSoon())
       .then((page) => {
-        if (this.view() === request.query) this.soon.set(page.content);
+        if (this.view() === 'ACTIVE') this.soon.set(page.content);
       })
       .catch(() => {
         this.soon.set([]);
       });
-  }
-
-  private receive(sequence: number, request: Request, page: ContractPage): void {
-    if (!this.pageLoad.succeed(sequence)) return;
-    this.contracts.update((loaded) =>
-      request.after === null ? page.content : [...loaded, ...page.content],
-    );
-    this.nextCursor.set(page.nextCursor);
   }
 }

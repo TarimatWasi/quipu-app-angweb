@@ -9,9 +9,8 @@ import { documentLabel } from '@shared/text/document-text';
 import { fileMeta, uploadedText } from '@shared/text/file-text';
 import { environmentLabel } from '@shared/text/environment-text';
 import { guestName } from '@shared/text/guest-text';
-import { STATE_BADGES, stateOf } from './contract';
+import { rangeText, STATE_BADGES, stateOf } from './contract';
 import type { Contract, ContractState } from './contract';
-import { rangeText } from './contract';
 import { graceText } from './contract-form';
 import type { FormFact } from './contract-form';
 

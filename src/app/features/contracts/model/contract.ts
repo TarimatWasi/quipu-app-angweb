@@ -59,7 +59,8 @@ export function rangeNote(contract: ContractSummary, now: Date): string {
   if (contract.status === 'EXPIRED') return `venció el ${formatDate(contract.endDate)}`;
   const days = daysFromToday(contract.endDate, now);
   if (!contract.expiringSoon || days === null) return '';
-  return days === 1 ? 'vence mañana' : days === 0 ? 'vence hoy' : `vence en ${String(days)} días`;
+  if (days === 0) return 'vence hoy';
+  return days === 1 ? 'vence mañana' : `vence en ${String(days)} días`;
 }
 
 export interface ContractRow {

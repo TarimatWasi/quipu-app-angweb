@@ -4,17 +4,15 @@ import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { PageLoadState } from '@shared/data/page-load-state';
-import type { PageRequest } from '@shared/data/page-load-state';
+import { PagedList } from '@shared/data/paged-list';
 import { nextSort } from '@shared/ui/data-table/list-sort';
-import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
+import { ListResultsComponent } from '@shared/ui/list-results/list-results.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { ShowMoreComponent } from '@shared/ui/show-more/show-more.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
@@ -48,8 +46,6 @@ import type {
   SortKey,
 } from '../model/environment';
 
-type Request = PageRequest<EnvironmentStatus>;
-
 const VIEWS: readonly EnvironmentStatus[] = ['ACTIVE', 'INACTIVE'];
 
 /**
@@ -61,17 +57,16 @@ const VIEWS: readonly EnvironmentStatus[] = ['ACTIVE', 'INACTIVE'];
 @Component({
   selector: 'app-environments-list',
   imports: [
-    EmptyStateComponent,
     EnvironmentsTableComponent,
     FieldControlDirective,
     FormField,
     FormFieldComponent,
     ListFiltersComponent,
+    ListResultsComponent,
     LoadErrorComponent,
     NowPanelComponent,
     PageHeaderComponent,
     RouterLink,
-    ShowMoreComponent,
     SkeletonBlockComponent,
     SkeletonComponent,
     SkeletonContentDirective,
@@ -95,28 +90,30 @@ export class EnvironmentsListComponent {
   protected readonly filterForm = form(this.filters);
   protected readonly sort = signal<EnvironmentSort>(DEFAULT_SORT);
 
-  private readonly environments = signal<readonly Environment[]>([]);
-  protected readonly nextCursor = signal<string | null>(null);
   private readonly freeCount = signal<number | null>(null);
-  private readonly pageLoad = new PageLoadState<EnvironmentStatus>();
+  private readonly list = new PagedList<EnvironmentStatus, Environment, EnvironmentPage>(
+    (status, after) => this.service.list(status, after ?? undefined),
+    (page) => {
+      this.freeCount.set(page.freeCount);
+    },
+  );
 
-  protected readonly phase = this.pageLoad.phase;
-  protected readonly retrying = this.pageLoad.retrying;
-  protected readonly loadingMore = this.pageLoad.loadingMore;
-  protected readonly listFailed = this.pageLoad.firstFailed;
-  protected readonly moreFailed = this.pageLoad.moreFailed;
+  protected readonly phase = this.list.phase;
+  protected readonly retrying = this.list.retrying;
+  protected readonly loadingMore = this.list.loadingMore;
+  protected readonly listFailed = this.list.firstFailed;
+  protected readonly moreFailed = this.list.moreFailed;
+  protected readonly nextCursor = this.list.nextCursor;
 
   protected readonly filtered = computed(() => hasFilters(this.filters()));
-  protected readonly loadedCount = computed(() => this.environments().length);
+  protected readonly loadedCount = computed(() => this.list.items().length);
   protected readonly rows = computed(() =>
-    visibleEnvironments(this.environments().map(toRow), this.filters(), this.sort()),
+    visibleEnvironments(this.list.items().map(toRow), this.filters(), this.sort()),
   );
   protected readonly count = computed(() => countText(this.rows().length, this.loadedCount()));
   protected readonly panel = computed(() => {
     const count = this.freeCount();
-    return this.view() !== 'ACTIVE' || count === null
-      ? null
-      : freePanel(count, this.environments());
+    return this.view() !== 'ACTIVE' || count === null ? null : freePanel(count, this.list.items());
   });
   protected readonly empty = computed(() => emptyText(this.view()));
   protected readonly searchHint = computed(() =>
@@ -125,20 +122,18 @@ export class EnvironmentsListComponent {
 
   constructor() {
     inject(DestroyRef).onDestroy(() => {
-      this.pageLoad.invalidate();
+      this.list.dispose();
     });
-    this.read({ query: 'ACTIVE', after: null });
+    this.list.reload('ACTIVE');
   }
 
   protected chooseView(view: EnvironmentStatus): void {
     if (view === this.view()) return;
-    this.pageLoad.reset();
-    this.environments.set([]);
     this.freeCount.set(null);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
     this.sort.set(DEFAULT_SORT);
-    this.read({ query: view, after: null });
+    this.list.switchTo(view);
   }
 
   protected clearFilters(): void {
@@ -160,16 +155,11 @@ export class EnvironmentsListComponent {
   }
 
   protected more(): void {
-    const after = this.nextCursor();
-    if (after !== null && !this.pageLoad.loading()) this.read({ query: this.view(), after });
+    this.list.more(this.view());
   }
 
-  /** Asks the failed read again, unless the view changed since: then its first page. */
   protected retry(): void {
-    if (this.pageLoad.loading()) return;
-    const request = this.pageLoad.failed();
-    if (request?.query === this.view()) this.read(request, true);
-    else this.read({ query: this.view(), after: null });
+    this.list.retry(this.view());
   }
 
   /** «Desactivar» opens its dialog; «Reactivar» changes the state at once. */
@@ -178,7 +168,7 @@ export class EnvironmentsListComponent {
       void this.reactivate(row);
       return;
     }
-    const environment = this.environments().find((item) => item.id === row.id);
+    const environment = this.list.items().find((item) => item.id === row.id);
     openDeactivateEnvironmentDialog(this.dialog, {
       code: row.code,
       occupant: environment?.occupant ?? environment?.nextOccupant ?? null,
@@ -189,7 +179,7 @@ export class EnvironmentsListComponent {
       .subscribe((done) => {
         if (done !== true) return;
         this.toasts.show(doneText(row.code, 'deactivate'), { tone: 'success' });
-        this.read({ query: this.view(), after: null });
+        this.list.reload(this.view());
       });
   }
 
@@ -200,31 +190,6 @@ export class EnvironmentsListComponent {
     } catch (error: unknown) {
       this.toasts.show(toBffErrorWithServerMessage(error).message);
     }
-    this.read({ query: this.view(), after: null });
-  }
-
-  /**
-   * A new read forgets the failure of another one; a first page also forgets the cursor of the
-   * previous one, so «Mostrar más» never mixes two lists.
-   */
-  private read(request: Request, retrying = false): void {
-    if (request.after === null) this.nextCursor.set(null);
-    const sequence = this.pageLoad.begin(request, retrying);
-    firstValueFrom(this.service.list(request.query, request.after ?? undefined))
-      .then((page) => {
-        this.receive(sequence, request, page);
-      })
-      .catch(() => {
-        this.pageLoad.fail(sequence);
-      });
-  }
-
-  private receive(sequence: number, request: Request, page: EnvironmentPage): void {
-    if (!this.pageLoad.succeed(sequence)) return;
-    this.environments.update((loaded) =>
-      request.after === null ? page.content : [...loaded, ...page.content],
-    );
-    this.nextCursor.set(page.nextCursor);
-    this.freeCount.set(page.freeCount);
+    this.list.reload(this.view());
   }
 }

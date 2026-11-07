@@ -223,12 +223,12 @@ describe('the form of A4.1 «Cargar contrato»', () => {
       expect.objectContaining({
         title: 'Habitación 109 ya tiene un contrato vigente',
         buttonLabel: 'Elegir otro ambiente',
-        then: 'environment',
+        next: 'environment',
       }),
     );
-    expect(conflictOf('ENVIRONMENT_INACTIVE', names, 'x')?.then).toBe('environment');
+    expect(conflictOf('ENVIRONMENT_INACTIVE', names, 'x')?.next).toBe('environment');
     expect(conflictOf('GUEST_NOT_ACTIVE', names, 'x')?.title).toBe('Julia Mendoza no está activo');
-    expect(conflictOf('GUEST_NOT_CONTRACT', names, 'x')?.then).toBe('guest');
+    expect(conflictOf('GUEST_NOT_CONTRACT', names, 'x')?.next).toBe('guest');
     expect(conflictOf('GUEST_HAS_PENDING_DEBT', names, 'Tiene deuda')?.message).toBe('Tiene deuda');
     expect(conflictOf('GUEST_NOT_ACTIVE', { guest: null, environment: null }, 'x')?.title).toBe(
       'El huésped no está activo',

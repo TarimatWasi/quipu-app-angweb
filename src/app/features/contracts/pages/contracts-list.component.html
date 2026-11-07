@@ -113,40 +113,24 @@
         }
       </app-list-filters>
 
-      <div class="list">
-        @if (listFailed()) {
-          <app-load-error [message]="loadErrorText" [retrying]="retrying()" (retry)="retry()" />
-        }
-        @if (rows().length > 0) {
-          <app-contracts-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
-        } @else if (filtered() && !listFailed()) {
-          <app-empty-state
-            [heading]="noMatchHeading"
-            [filtered]="true"
-            (clearFilters)="clearFilters()"
-          />
-        } @else if (!listFailed()) {
-          <app-empty-state [heading]="empty().heading">{{ empty().text }}</app-empty-state>
-        }
-      </div>
-
-      @if (moreFailed()) {
-        <app-load-error
-          class="more-error"
-          [message]="loadErrorText"
-          [retrying]="retrying()"
-          (retry)="retry()"
-        />
-      } @else if (nextCursor() !== null && !listFailed()) {
-        <app-show-more
-          [summary]="false"
-          [shown]="rows().length"
-          [loaded]="loadedCount()"
-          [hasMore]="true"
-          [loading]="loadingMore()"
-          (more)="more()"
-        />
-      }
+      <app-list-results
+        [shown]="rows().length"
+        [loaded]="loadedCount()"
+        [filtered]="filtered()"
+        [noMatchHeading]="noMatchHeading"
+        [empty]="empty()"
+        [errorText]="loadErrorText"
+        [listFailed]="listFailed()"
+        [moreFailed]="moreFailed()"
+        [retrying]="retrying()"
+        [hasMore]="nextCursor() !== null"
+        [loadingMore]="loadingMore()"
+        (retry)="retry()"
+        (clearFilters)="clearFilters()"
+        (more)="more()"
+      >
+        <app-contracts-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
+      </app-list-results>
     </section>
   }
 }
