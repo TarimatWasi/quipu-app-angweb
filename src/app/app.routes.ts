@@ -67,10 +67,28 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'guest/contract',
+        canActivate: [contractGuestGuard],
+        loadChildren: () =>
+          import('@features/my-account/my-account.routes').then((m) => m.OWN_CONTRACT_ROUTES),
+      },
+      {
         path: 'guest/payments',
         canActivate: [contractGuestGuard],
         loadChildren: () =>
           import('@features/my-account/my-account.routes').then((m) => m.GUEST_PAYMENTS_ROUTES),
+      },
+      {
+        path: 'guest/profile',
+        canActivate: [contractGuestGuard],
+        loadChildren: () =>
+          import('@features/my-account/my-account.routes').then((m) => m.GUEST_PROFILE_ROUTES),
+      },
+      {
+        path: 'temporary-guest/profile',
+        canActivate: [temporaryGuestGuard],
+        loadChildren: () =>
+          import('@features/my-account/my-account.routes').then((m) => m.TEMPORARY_PROFILE_ROUTES),
       },
       {
         path: 'temporary-guest/payment',

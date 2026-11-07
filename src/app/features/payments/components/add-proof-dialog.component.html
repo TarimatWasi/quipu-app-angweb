@@ -13,6 +13,7 @@
           help="JPG, PNG o PDF, hasta 5 MB. Puede ser la foto del recibo que entregaste."
           [fileName]="file()?.name ?? null"
           [error]="fileError()"
+          [removable]="true"
           (chosen)="picked($event)"
         />
       } @else {

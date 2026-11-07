@@ -41,7 +41,8 @@ function checkNewPassword(newPassword: string): void {
 /** The name an administrator writes when activating the account (A0.5), checked like the BFF does. */
 function checkAdminName(name: unknown): void {
   const trimmed = typeof name === 'string' ? name.trim() : '';
-  if (trimmed === '' || trimmed.length > MAX_NAME_LENGTH) {
+  // Same pattern as the contract (v0.23.0): no control characters, one that is not whitespace.
+  if (trimmed === '' || trimmed.length > MAX_NAME_LENGTH || /\p{Cc}/u.test(trimmed)) {
     raise(400, 'VALIDATION_ERROR', 'Escribe tu nombre completo', 'name');
   }
 }

@@ -1,0 +1,160 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
+import { AsyncContentState } from '@shared/data/async-content';
+import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
+import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
+import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { STORAGE_UNAVAILABLE_TEXT } from '@shared/text/error-text';
+import { ToastService } from '@shared/ui/toast/toast.service';
+import { ContractDetailComponent } from '../components/contract-detail.component';
+import { GuestPaymentsService } from '../data/guest-payments.service';
+import type { PeriodStatus } from '../data/guest-payments.service';
+import { OwnContractService } from '../data/own-contract.service';
+import type { OwnContracts } from '../data/own-contract.service';
+import {
+  CONTRACT_TITLE,
+  currentBlock,
+  isLinkStale,
+  LINK_EXPIRED_TEXT,
+  LOAD_CONTRACT_TEXT,
+  nextBlock,
+  NO_CONTRACT_TEXT,
+  NO_CONTRACT_TITLE,
+} from '../model/own-contract';
+import type { ContractBlock } from '../model/own-contract';
+import { OWN_CONTRACT_STYLES } from './own-contract.styles';
+
+interface ContractData {
+  readonly contracts: OwnContracts;
+  readonly periods: readonly PeriodStatus[];
+  /** When the answer came: the signed links in it last 15 minutes from then. */
+  readonly loadedAt: number;
+}
+
+interface ContractView {
+  readonly current: ContractBlock;
+  readonly next: ContractBlock | null;
+}
+
+/**
+ * H2 «Mi contrato» (CU-18, RN-26) on the canvas «MiContrato»: the contract in force or the latest,
+ * with its state, what was agreed and its file, and the next one if a renewal is already loaded.
+ * It reads the same whether the contract ended: the account only becomes read-only (RN-26).
+ */
+@Component({
+  selector: 'app-own-contract',
+  imports: [
+    ContractDetailComponent,
+    EmptyStateComponent,
+    LoadErrorComponent,
+    PageHeaderComponent,
+    SkeletonBlockComponent,
+    SkeletonComponent,
+    SkeletonContentDirective,
+    SkeletonFactsComponent,
+  ],
+  templateUrl: './own-contract.component.html',
+  styles: OWN_CONTRACT_STYLES,
+})
+export class OwnContractComponent implements OnInit {
+  private readonly contracts = inject(OwnContractService);
+  private readonly payments = inject(GuestPaymentsService);
+  private readonly toasts = inject(ToastService);
+  private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly title = CONTRACT_TITLE;
+  protected readonly loadErrorText = LOAD_CONTRACT_TEXT;
+  protected readonly noContractTitle = NO_CONTRACT_TITLE;
+  protected readonly noContractText = NO_CONTRACT_TEXT;
+
+  private readonly loaded = new AsyncContentState<ContractData>();
+  protected readonly view = this.loaded.state;
+  /** The guest never had a contract (404): an empty state, not an error. */
+  protected readonly none = signal(false);
+  protected readonly retrying = computed(() => {
+    const state = this.view();
+    return state.status === 'initial-error' && state.retrying;
+  });
+  protected readonly refreshing = computed(() => {
+    const state = this.view();
+    return state.status === 'ready' && state.refresh.status === 'loading';
+  });
+  protected readonly refreshError = computed(() => {
+    const state = this.view();
+    return state.status === 'ready' && state.refresh.status === 'error'
+      ? state.refresh.message
+      : null;
+  });
+  protected readonly content = computed<ContractView | null>(() => {
+    const data = this.loaded.data();
+    if (data === null) return null;
+    const { current, next } = data.contracts;
+    const context = { now: new Date(data.loadedAt), periods: data.periods };
+    return {
+      current: currentBlock(current, next, context),
+      next: next === null ? null : nextBlock(next, current, context),
+    };
+  });
+
+  constructor() {
+    // Leaving the screen: no late answer may load any more.
+    this.destroyRef.onDestroy(() => {
+      this.loaded.dispose();
+    });
+  }
+
+  ngOnInit(): void {
+    void this.load();
+  }
+
+  protected reload(): void {
+    void this.load();
+  }
+
+  /**
+   * A press on «Ver contrato». The link opens as it is while it is fresh; one that never came (the
+   * storage could not sign it) or may have expired is not followed: the notice says so and the
+   * contracts are asked again, with new links.
+   */
+  protected open(event: Event, block: ContractBlock): void {
+    const loadedAt = this.loaded.data()?.loadedAt ?? 0;
+    if (block.file.url !== null && !isLinkStale(loadedAt, Date.now())) return;
+    event.preventDefault();
+    if (block.file.url === null) {
+      this.toasts.show(STORAGE_UNAVAILABLE_TEXT, {
+        actionLabel: 'Reintentar',
+        action: () => {
+          this.reload();
+        },
+      });
+      return;
+    }
+    this.toasts.show(LINK_EXPIRED_TEXT);
+    this.reload();
+  }
+
+  private async load(): Promise<void> {
+    const request = this.loaded.begin();
+    if (request === null) return;
+    try {
+      const { contracts, periods } = await firstValueFrom(
+        forkJoin({
+          contracts: this.contracts.get(),
+          // The account only adds what is still owed and when the first payment is due: without
+          // it the contract still reads, so its failure does not fail the page.
+          periods: this.payments.accountStatus().pipe(catchError(() => of<PeriodStatus[]>([]))),
+        }),
+      );
+      this.none.set(false);
+      this.loaded.succeed(request, { contracts, periods, loadedAt: Date.now() });
+    } catch (error: unknown) {
+      const missing = error instanceof HttpErrorResponse && error.status === 404;
+      if (this.loaded.fail(request, LOAD_CONTRACT_TEXT)) this.none.set(missing);
+    }
+  }
+}

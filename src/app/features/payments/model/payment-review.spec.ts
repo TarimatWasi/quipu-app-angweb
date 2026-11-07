@@ -3,7 +3,6 @@ import {
   approvedNotice,
   balanceNotice,
   decisionHelp,
-  fileSize,
   payingFacts,
   proofEntries,
   resolvedText,
@@ -99,7 +98,6 @@ describe('A5.2 review model', () => {
   it('marks a verified amount that differs from the declared one as corrected', () => {
     const [entry] = proofEntries([proof({ verifiedAmount: 350 })]);
     expect(entry).toMatchObject({ verified: 'S/ 350.00', corrected: true });
-    expect(fileSize(500)).toBe('1 KB');
   });
 
   it('adds the verified amounts typed, ignoring what is not an amount', () => {

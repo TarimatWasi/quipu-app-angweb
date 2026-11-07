@@ -1,3 +1,4 @@
+import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -41,7 +42,6 @@ import {
   DATES_TEXT,
   describedBy,
   ENVIRONMENT_TEXT,
-  ENVIRONMENT_TYPE_LABELS,
   guestName,
   NO_ENVIRONMENT,
   nightsBetween,

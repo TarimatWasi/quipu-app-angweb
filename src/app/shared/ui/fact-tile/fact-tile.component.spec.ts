@@ -31,4 +31,24 @@ describe('FactTileComponent (P-11)', () => {
     expect(value.textContent).toBe('Activo');
     expect(value.querySelector('b')?.textContent).toBe('Activo');
   });
+
+  it('puts a hint under the value, as a second description, only when there is one', async () => {
+    const { container } = await render(FactTileComponent, {
+      inputs: { label: 'Día de pago', value: '5 de cada mes', hint: 'Sin atraso hasta el 8.' },
+    });
+
+    expect(screen.getAllByRole('definition').map((each) => each.textContent.trim())).toEqual([
+      '5 de cada mes',
+      'Sin atraso hasta el 8.',
+    ]);
+    expect(container.querySelector('.hint')?.textContent.trim()).toBe('Sin atraso hasta el 8.');
+  });
+
+  it('has no hint line by default', async () => {
+    const { container } = await render(FactTileComponent, {
+      inputs: { label: 'Cuota', value: 'S/ 800.00' },
+    });
+
+    expect(container.querySelector('.hint')).toBeNull();
+  });
 });

@@ -19,6 +19,7 @@ import type {
   GuestCreated,
   GuestInput,
 } from '@core/api/clients/admin-guests.service';
+import { contactEmailError, phoneError } from '@shared/forms/contact-rules';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -36,7 +37,6 @@ import {
   ACCESS_MODE_HELP,
   ACCESS_MODE_OPTIONS,
   callFailure,
-  contactEmailError,
   createProblem,
   DOCUMENT_HELP,
   DOCUMENT_TYPE_OPTIONS,
@@ -47,7 +47,6 @@ import {
   inactiveGuestId,
   newGuestFacts,
   PHONE_HELP,
-  phoneError,
   REACTIVATED_TEXT,
   toGuestInput,
 } from '../model/new-guest';

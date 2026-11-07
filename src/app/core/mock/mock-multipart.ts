@@ -87,3 +87,27 @@ export async function readProofsUpload(body: unknown): Promise<ProofsUpload> {
     },
   };
 }
+
+/**
+ * The file of a document upload (a replacement of A3.8, an own upload of H5 and T3): not JPG, PNG
+ * or PDF, or over 5 MB, is a 400 DOCUMENT_INVALID_FILE (RF-15); a body that is not multipart, a 415.
+ */
+export function readDocumentFile(body: unknown): File {
+  if (!(body instanceof FormData)) {
+    return raise(
+      415,
+      'UNSUPPORTED_MEDIA_TYPE',
+      'No se pudo enviar el formulario. Recarga la página e inténtalo de nuevo.',
+    );
+  }
+  const file = body.get('file');
+  if (!(file instanceof File) || !FILE_TYPES.has(file.type) || file.size > MAX_FILE_BYTES) {
+    return raise(
+      400,
+      'DOCUMENT_INVALID_FILE',
+      'El archivo debe ser JPG, PNG o PDF y pesar 5 MB como máximo.',
+      'file',
+    );
+  }
+  return file;
+}

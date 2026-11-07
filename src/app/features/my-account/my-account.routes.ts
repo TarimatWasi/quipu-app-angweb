@@ -29,3 +29,25 @@ export const TEMPORARY_PAYMENT_ROUTES: Routes = [
   { path: '', loadComponent: loadOwnPayment, data: { audience: 'TEMPORARY' } },
   { path: ':id', loadComponent: loadOwnPayment, data: { audience: 'TEMPORARY' } },
 ];
+
+/** H2 (own contract) of the guest with a contract; the parent route keeps it for it. */
+export const OWN_CONTRACT_ROUTES: Routes = [
+  {
+    path: '',
+    loadComponent: () =>
+      import('./pages/own-contract.component').then((m) => m.OwnContractComponent),
+  },
+];
+
+const loadOwnProfile = () =>
+  import('./pages/own-profile.component').then((m) => m.OwnProfileComponent);
+
+/** H5 (own data) of the guest with a contract; the parent route keeps it for it. */
+export const GUEST_PROFILE_ROUTES: Routes = [
+  { path: '', loadComponent: loadOwnProfile, data: { audience: 'CONTRACT' } },
+];
+
+/** T3 (own data) of the temporary guest; the parent route keeps it for it. */
+export const TEMPORARY_PROFILE_ROUTES: Routes = [
+  { path: '', loadComponent: loadOwnProfile, data: { audience: 'TEMPORARY' } },
+];

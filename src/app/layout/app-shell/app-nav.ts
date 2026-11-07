@@ -26,13 +26,13 @@ const SECTIONS: Readonly<Record<Audience, readonly NavEntry[]>> = {
   ],
   CONTRACT: [
     { label: 'Estado de cuenta', link: '/home' },
-    { label: 'Mi contrato', link: null },
+    { label: 'Mi contrato', link: '/guest/contract' },
     { label: 'Historial de pagos', link: '/guest/payments' },
-    { label: 'Mis datos', link: null },
+    { label: 'Mis datos', link: '/guest/profile' },
   ],
   TEMPORARY: [
     { label: 'Estado de pago', link: '/home', matches: ['/temporary-guest/payment'] },
-    { label: 'Mis datos', link: null },
+    { label: 'Mis datos', link: '/temporary-guest/profile' },
   ],
 };
 

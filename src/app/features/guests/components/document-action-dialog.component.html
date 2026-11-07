@@ -1,0 +1,100 @@
+<form novalidate [attr.aria-describedby]="error() ? errorId : null" (submit)="submit($event)">
+  <app-dialog-frame [heading]="title">
+    <div class="body">
+      <p [id]="leadId">{{ lead }}</p>
+
+      @if (kind === 'replace') {
+        <app-file-field
+          fieldId="document-file"
+          label="Archivo nuevo"
+          [prompt]="filePrompt"
+          [fileName]="draft().file?.name ?? null"
+          [error]="shown().file ?? null"
+          [removable]="true"
+          (chosen)="pickFile($event)"
+        />
+      }
+
+      <app-form-field
+        fieldId="document-reason"
+        label="Motivo"
+        [group]="true"
+        [error]="shown().reason ?? null"
+      >
+        <app-choice-group
+          [options]="reasons"
+          [value]="draft().reason"
+          [disabled]="sending()"
+          (valueChange)="set('reason', $event)"
+        />
+      </app-form-field>
+
+      @if (draft().reason === 'ARCO_REQUEST') {
+        <app-form-field
+          fieldId="document-requested-at"
+          label="Fecha en que lo pidió"
+          [error]="shown().requestedAt ?? null"
+        >
+          <input
+            appFieldControl
+            class="quipu-input date"
+            type="date"
+            [max]="today"
+            [value]="draft().requestedAt"
+            [disabled]="sending()"
+            (input)="set('requestedAt', valueOf($event))"
+          />
+        </app-form-field>
+        <app-form-field
+          fieldId="document-channel"
+          label="Por dónde lo pidió"
+          [group]="true"
+          [error]="shown().requestChannel ?? null"
+        >
+          <app-choice-group
+            [options]="channels"
+            [value]="draft().channel"
+            [disabled]="sending()"
+            (valueChange)="set('channel', $event)"
+          />
+        </app-form-field>
+      }
+
+      <app-form-field
+        fieldId="document-note"
+        label="Nota"
+        [optional]="true"
+        [help]="noteHelp"
+        [error]="shown().note ?? null"
+      >
+        <input
+          appFieldControl
+          class="quipu-input"
+          type="text"
+          autocomplete="off"
+          [maxLength]="maxNote"
+          [value]="draft().note"
+          [disabled]="sending()"
+          (input)="set('note', valueOf($event))"
+        />
+      </app-form-field>
+
+      @if (error(); as message) {
+        <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
+      }
+    </div>
+    <ng-container dialogActions>
+      <button
+        class="quipu-button quipu-button--tertiary"
+        type="button"
+        [disabled]="sending()"
+        (click)="cancel()"
+      >
+        Cancelar
+      </button>
+      <button class="quipu-button quipu-button--primary" type="submit" [disabled]="sending()">
+        {{ submitLabel() }}
+      </button>
+    </ng-container>
+  </app-dialog-frame>
+</form>

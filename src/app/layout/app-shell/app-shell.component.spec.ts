@@ -149,9 +149,9 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(sectionTexts(root)).toEqual([
         'Estado de cuenta',
-        'Mi contrato (pronto)',
+        'Mi contrato',
         'Historial de pagos',
-        'Mis datos (pronto)',
+        'Mis datos',
       ]);
       const nav = barNav(root);
       expect(
@@ -165,7 +165,7 @@ describe('AppShellComponent (P-01)', () => {
     it('the temporary guest has Estado de pago and Mis datos; sending the payment is part of Estado de pago', async () => {
       const { root } = await setup(TEMPORARY, '/temporary-guest/payment');
 
-      expect(sectionTexts(root)).toEqual(['Estado de pago', 'Mis datos (pronto)']);
+      expect(sectionTexts(root)).toEqual(['Estado de pago', 'Mis datos']);
       expect(
         barNav(root).getByRole('link', { name: 'Estado de pago' }).getAttribute('aria-current'),
       ).toBe('page');
