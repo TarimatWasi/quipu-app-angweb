@@ -2,7 +2,7 @@
 // (vercel.json) o por la imagen con nginx (nginx.conf). Las dos capas declaran las mismas cabeceras
 // y la misma política CSP: si una cambia sin la otra, esta prueba falla.
 interface VercelConfig {
-  headers: { source: string; headers: { key: string; value: string }[] }[];
+  routes: { src?: string; headers?: Record<string, string>; continue?: boolean }[];
 }
 
 async function readText(path: string): Promise<string> {
@@ -14,9 +14,11 @@ async function readText(path: string): Promise<string> {
 
 async function vercelHeaders(): Promise<Map<string, string>> {
   const config = JSON.parse(await readText('vercel.json')) as VercelConfig;
-  const all = config.headers.filter((rule) => rule.source === '/(.*)');
+  // «routes» is the low-level form of Vercel: the headers are the first route and go on (TAR-144).
+  const all = config.routes.filter((rule) => rule.src === '/(.*)' && rule.headers !== undefined);
   expect(all.length).toBe(1);
-  return new Map((all[0]?.headers ?? []).map((h) => [h.key, h.value]));
+  expect(all[0]?.continue).toBe(true);
+  return new Map(Object.entries(all[0]?.headers ?? {}));
 }
 
 async function nginxHeaders(): Promise<Map<string, string>> {

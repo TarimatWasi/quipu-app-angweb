@@ -5,16 +5,17 @@ import { readFileSync } from 'node:fs';
 const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'));
 const DEV_API = 'https://quipu-api-dev.onrender.com';
 
+/** The proxy rules of the dev backend: the routes that send /bff to an external destination. */
+const proxies = config.routes.filter((rule) => rule.dest?.startsWith('https://'));
+
 /**
- * Emulates Vercel for a rewrite: first rule whose source matches, whose `has` host conditions all match
- * and none of whose `missing` host conditions match. `/bff/:path*` follows path-to-regexp: it matches
- * /bff, /bff/ and /bff/a/b. The host patterns are used AS WRITTEN in vercel.json (the anchors live in
- * the JSON, not in this test).
+ * Emulates Vercel for a proxy route: first rule whose `src` matches the whole path, whose `has`
+ * host conditions all match and none of whose `missing` host conditions match. The host patterns
+ * are used AS WRITTEN in vercel.json (the anchors live in the JSON, not in this test).
  */
-function route(host, path) {
-  for (const rule of config.rewrites) {
-    const source = new RegExp(`^${rule.source.replace('/:path*', '(?:/(.*))?')}$`);
-    const match = source.exec(path);
+function ruleFor(host, path) {
+  for (const rule of proxies) {
+    const match = new RegExp(`^${rule.src}$`).exec(path);
     if (!match) continue;
     const hostOk = (rule.has ?? []).every(
       (c) => c.type === 'host' && new RegExp(c.value).test(host),
@@ -22,9 +23,13 @@ function route(host, path) {
     const excluded = (rule.missing ?? []).some(
       (c) => c.type === 'host' && new RegExp(c.value).test(host),
     );
-    if (hostOk && !excluded) return rule.destination.replace(':path*', match[1] ?? '');
+    if (hostOk && !excluded) return { rule, dest: rule.dest.replace('$1', match[1] ?? '') };
   }
   return undefined;
+}
+
+function route(host, path) {
+  return ruleFor(host, path)?.dest;
 }
 
 // TAR-303: the rules do not depend on the team slug or on the project name (both were renamed on
@@ -102,7 +107,7 @@ test('only /bff/* is rewritten: Angular routes and assets are untouched', () => 
 });
 
 test('every host pattern is anchored, uses literal dots and has no capture groups', () => {
-  for (const rule of config.rewrites) {
+  for (const rule of proxies) {
     for (const c of [...rule.has, ...(rule.missing ?? [])]) {
       assert.ok(c.value.startsWith('^') && c.value.endsWith('$'), `anchors: ${c.value}`);
       assert.ok(!c.value.includes('.*'), `no wildcard: ${c.value}`);
@@ -113,16 +118,14 @@ test('every host pattern is anchored, uses literal dots and has no capture group
 });
 
 test('every destination is https and every rule is host-conditional', () => {
-  for (const rule of config.rewrites) {
-    assert.ok(rule.destination.startsWith('https://'), rule.destination);
-    assert.ok(rule.has?.length, rule.source);
+  for (const rule of proxies) {
+    assert.ok(rule.dest.startsWith('https://'), rule.dest);
+    assert.ok(rule.has?.length, rule.src);
   }
 });
 
 test('no rule depends on the team slug or on a project name that was renamed', () => {
-  const patterns = config.rewrites
-    .flatMap((r) => [...r.has, ...(r.missing ?? [])])
-    .map((c) => c.value);
+  const patterns = proxies.flatMap((r) => [...r.has, ...(r.missing ?? [])]).map((c) => c.value);
   for (const pattern of patterns) {
     assert.ok(!/shizukajikus|tarimatwasi-projects|angweb/.test(pattern), pattern);
   }
@@ -137,4 +140,74 @@ test('the Vercel Git integration deploys development and only the isolated CSRF 
   // TAR-300: no preview deploy while backend/contract enforcement is being reviewed in parallel.
   assert.deepEqual(Object.keys(enabled), ['feat/TAR-300-csrf']);
   assert.equal(enabled['feat/TAR-300-csrf'], false);
+});
+
+// TAR-144, TAR-9: the backend only takes /bff/** with the secret of the edge, and then takes the IP
+// of the browser from X-Vercel-Forwarded-For. `set` replaces whatever the visitor sent. The value
+// comes from the EDGE_SHARED_SECRET variable of Vercel, never from the repository.
+const SECRET_HEADER = 'x-quipu-edge-secret';
+const secretTransforms = (rule) =>
+  (rule.transforms ?? []).filter(
+    (t) => t.type === 'request.headers' && t.target?.key?.toLowerCase() === SECRET_HEADER,
+  );
+
+test('both /bff rules set the secret of the edge from EDGE_SHARED_SECRET and replace the visitor value', () => {
+  assert.equal(proxies.length, 2);
+  for (const rule of proxies) {
+    const [transform, ...others] = secretTransforms(rule);
+    assert.equal(others.length, 0, 'one transform per rule');
+    assert.equal(transform?.op, 'set', 'set replaces what the visitor sends');
+    assert.equal(transform?.args, '$EDGE_SHARED_SECRET');
+    assert.deepEqual(transform?.env, ['EDGE_SHARED_SECRET']);
+  }
+});
+
+test('the secret never travels in the repository: no literal value anywhere in vercel.json', () => {
+  const text = readFileSync(new URL('../vercel.json', import.meta.url), 'utf8');
+  assert.equal(text.match(/EDGE_SHARED_SECRET/g)?.length, 4, 'only the name of the variable');
+  for (const rule of proxies) {
+    for (const transform of secretTransforms(rule)) {
+      assert.match(String(transform.args), /^\$[A-Z_]+$/, 'args is a variable reference');
+    }
+  }
+});
+
+test('no other route carries the secret: not the headers, not the static files, not the fallback', () => {
+  for (const rule of config.routes) {
+    if (proxies.includes(rule)) continue;
+    assert.equal(secretTransforms(rule).length, 0, JSON.stringify(rule));
+    const headers = Object.keys(rule.headers ?? {}).map((key) => key.toLowerCase());
+    assert.ok(!headers.includes(SECRET_HEADER), 'a response header is not the secret');
+  }
+});
+
+test('the hosts that reach the dev backend send the secret and the others do not reach it', () => {
+  for (const host of DEV_HOSTS) {
+    assert.equal(secretTransforms(ruleFor(host, '/bff/auth/login').rule).length, 1, host);
+  }
+  for (const host of [
+    'quipu.tarimatwasi.com',
+    'quipu-git-main-tarimatwasi.vercel.app',
+    'evil.example',
+  ]) {
+    assert.equal(ruleFor(host, '/bff/auth/login'), undefined, host);
+  }
+});
+
+// `routes` is the low-level form: it cannot live with `rewrites` or `headers`, so the security
+// headers, the proxy and the fallback of the Angular preset are all routes, in this order.
+test('the routes keep the order: security headers, proxies, static files and the fallback', () => {
+  assert.equal(config.rewrites, undefined, 'routes cannot be mixed with rewrites');
+  assert.equal(config.headers, undefined, 'routes cannot be mixed with headers');
+  const [headers, ...rest] = config.routes;
+  assert.equal(headers.src, '/(.*)');
+  assert.equal(headers.continue, true, 'the headers go on to the next route');
+  assert.ok(headers.dest === undefined, 'the headers route sends nowhere');
+  const filesystem = rest.findIndex((rule) => rule.handle === 'filesystem');
+  assert.ok(filesystem > 0, 'static files are served before the fallback');
+  assert.ok(
+    rest.slice(0, filesystem).every((rule) => proxies.includes(rule)),
+    'proxies first',
+  );
+  assert.deepEqual(rest.slice(filesystem + 1), [{ src: '/(.*)', dest: '/index.html' }]);
 });
