@@ -6,9 +6,11 @@ import { provideRouter } from '@angular/router';
 import { within } from '@testing-library/dom';
 import { firstValueFrom } from 'rxjs';
 import { AuthService, Role } from '@core/auth/auth.service';
+import { dashboardOf } from '../model/dashboard.testing';
 import { HomeComponent } from './home.component';
 
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
+const isDashboard = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/admin/dashboard');
 
 @Component({ selector: 'app-login-stub', template: '' })
 class LoginStubComponent {}
@@ -26,15 +28,16 @@ async function setup(session: {
       provideHttpClientTesting(),
     ],
   });
+  const http = TestBed.inject(HttpTestingController);
   const auth = TestBed.inject(AuthService);
   const login = firstValueFrom(
     auth.login({ documentType: 'DNI', documentNumber: '12345678', password: 'secret-1' }),
   );
-  TestBed.inject(HttpTestingController).expectOne(isLogin).flush(session);
+  http.expectOne(isLogin).flush(session);
   await login;
   const fixture = TestBed.createComponent(HomeComponent);
   await fixture.whenStable();
-  return { auth, fixture, ui: within(fixture.nativeElement as HTMLElement) };
+  return { auth, fixture, http, ui: within(fixture.nativeElement as HTMLElement) };
 }
 
 describe('HomeComponent', () => {
@@ -42,33 +45,15 @@ describe('HomeComponent', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('greets the logged user by name and shows the role in Spanish', async () => {
+  it('greets a guest by name and shows the role in Spanish', async () => {
     const { ui } = await setup({
-      role: 'ADMIN',
-      name: 'admin@example.test',
+      role: 'GUEST',
+      name: 'guest@example.test',
       mustChangePassword: false,
     });
 
-    expect(ui.getByText('admin@example.test')).toBeTruthy();
-    expect(ui.getByText('Administrador')).toBeTruthy();
-  });
-
-  it('shows the Spanish label for a guest', async () => {
-    const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
-
+    expect(ui.getByText('guest@example.test')).toBeTruthy();
     expect(ui.getByText('Huésped')).toBeTruthy();
-  });
-
-  it('offers the administrator the way to Pagos (A5)', async () => {
-    const { ui } = await setup({ role: 'ADMIN', name: 'admin', mustChangePassword: false });
-
-    expect(ui.getByRole('link', { name: /Pagos/ }).getAttribute('href')).toBe('/admin/payments');
-  });
-
-  it('does not offer Pagos to a guest', async () => {
-    const { ui } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
-
-    expect(ui.queryByRole('link', { name: /Pagos/ })).toBeNull();
   });
 
   it('leaves the place of the guest panels to the router (they come from my-account)', async () => {
@@ -83,10 +68,24 @@ describe('HomeComponent', () => {
     expect(root.querySelector('router-outlet')).not.toBeNull();
   });
 
-  it('gives the administrator its shortcuts instead of the outlet of the guest panels', async () => {
-    const { fixture } = await setup({ role: 'ADMIN', name: 'admin', mustChangePassword: false });
+  it('does not ask a guest for the summary of the administrator', async () => {
+    const { fixture } = await setup({ role: 'GUEST', name: 'guest', mustChangePassword: false });
+
+    expect((fixture.nativeElement as HTMLElement).querySelector('app-admin-home')).toBeNull();
+  });
+
+  it('gives the administrator A1 (its summary is asked) instead of the outlet of the guest panels', async () => {
+    const { fixture, http } = await setup({
+      role: 'ADMIN',
+      name: 'admin',
+      mustChangePassword: false,
+    });
+
+    http.expectOne(isDashboard).flush(dashboardOf());
+    await fixture.whenStable();
 
     const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('app-admin-home')).not.toBeNull();
     expect(root.querySelector('router-outlet')).toBeNull();
   });
 });
