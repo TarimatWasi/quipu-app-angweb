@@ -1,7 +1,6 @@
 import type { DocumentType, GuestDetail } from '@core/api/clients/admin-guests.service';
 import { formatStay } from '@shared/payments/payment-format';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
-import type { Environment } from './environment';
 
 /** Texts of A3.2 and A3.5 as the approved canvas words them, Spanish only (QP-ANGWEB-LNG-01). */
 
@@ -45,11 +44,6 @@ export const DOCUMENT_TYPE_CHIPS: Readonly<Record<DocumentType, string>> = {
   DNI: 'DNI',
   CE: 'Carné de extranjería',
   PASSPORT: 'Pasaporte',
-};
-
-export const ENVIRONMENT_TYPE_LABELS: Readonly<Record<Environment['type'], string>> = {
-  ROOM: 'Habitación',
-  CABIN: 'Cabaña',
 };
 
 export const NO_ENVIRONMENT = 'Sin ambiente';

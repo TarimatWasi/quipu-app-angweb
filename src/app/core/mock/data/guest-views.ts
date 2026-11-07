@@ -137,3 +137,26 @@ export function guestDetail(db: MockDb, guest: GuestRecord): Schemas['GuestDetai
       };
   }
 }
+
+/** The sample file the simulated storage «signs» for a contract (public/mock-assets). */
+const SAMPLE_CONTRACT_FILE = '/mock-assets/voucher-muestra.pdf';
+
+/**
+ * H2: the contract in force (or the latest) of the guest with its sample file, and the next one
+ * if a renewal is already loaded, that is, a contract that starts after it (RN-20).
+ */
+export function ownContracts(
+  db: MockDb,
+  guestId: string,
+): { current: Schemas['Contract']; next: Schemas['Contract'] | null } | undefined {
+  const current = db.contractOf(guestId);
+  if (current === undefined) return undefined;
+  const next = db.data.contracts
+    .filter((item) => item.guestId === guestId && item.startDate > current.startDate)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+  const signed = (contract: Schemas['Contract']) => ({
+    ...contract,
+    fileUrl: SAMPLE_CONTRACT_FILE,
+  });
+  return { current: signed(current), next: next === undefined ? null : signed(next) };
+}

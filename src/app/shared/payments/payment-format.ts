@@ -154,6 +154,24 @@ function limaDayNumber(instant: Date): number | null {
   return Number.isNaN(day) ? null : day / 86_400_000;
 }
 
+/** The day of an instant in Lima as yyyy-mm-dd; null when the instant is not valid. */
+export function limaDayOf(instant: string): string | null {
+  const date = new Date(instant);
+  if (Number.isNaN(date.getTime())) return null;
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    LIMA_PARTS.formatToParts(date).find((part) => part.type === type)?.value ?? '';
+  const pad = (value: string) => value.padStart(2, '0');
+  return `${get('year')}-${pad(get('month'))}-${pad(get('day'))}`;
+}
+
+/** Whole days from today (Lima) to a yyyy-mm-dd day: 0 is today, negative is past; null if not a day. */
+export function daysFromToday(isoDate: string, now: Date): number | null {
+  const parts = dateParts(isoDate);
+  const today = limaDayNumber(now);
+  if (parts === null || today === null) return null;
+  return Date.UTC(parts.year, parts.month - 1, parts.day) / 86_400_000 - today;
+}
+
 /** «hoy», «hace 1 día», «hace 4 días»: how long ago a payment was sent, by days in Lima (A3.2, A5). */
 export function daysAgo(sentAt: string, now: Date): string | null {
   const sent = limaDayNumber(new Date(sentAt));

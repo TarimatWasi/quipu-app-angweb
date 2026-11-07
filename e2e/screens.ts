@@ -245,6 +245,20 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['normal'],
     open: 'Reemplazar documento-de-identidad.jpg',
   },
+  // H2: the contract of Luis, the guest with a contract of the demo.
+  {
+    id: 'h2-mi-contrato',
+    path: '/guest/contract',
+    role: 'contract-guest',
+    scenarios: ['normal', 'load-error'],
+  },
+  {
+    id: 'h2-mi-contrato',
+    path: '/guest/contract',
+    role: 'contract-guest',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
   {
     id: 'a7-administradores',
     path: '/admin/administrators',
