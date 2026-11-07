@@ -49,7 +49,7 @@ describe('the documents of A3.8 in the simulated BFF', () => {
     const luis = await documents(mock, GUEST_IDS.luis);
     expect(luis).toHaveLength(2);
     const first = await documentAt(mock, GUEST_IDS.luis, 0);
-    expect(first.url).toMatch(/^\/mock\/documents\//);
+    expect(first.url).toMatch(/^\/mock-assets\//);
     const minutes = (Date.parse(first.urlExpiresAt) - Date.now()) / 60_000;
     expect(minutes).toBeGreaterThan(14);
     expect(minutes).toBeLessThanOrEqual(15);

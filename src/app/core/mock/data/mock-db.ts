@@ -20,11 +20,11 @@ export interface GuestRecord {
   version: number;
   documentType: DocumentType;
   documentNumber: string;
-  readonly name: string | null;
+  name: string | null;
   readonly type: 'CONTRACT' | 'TEMPORARY';
   status: Schemas['GuestStatus'];
-  readonly phone: string | null;
-  readonly contactEmail: string | null;
+  phone: string | null;
+  contactEmail: string | null;
   accountEmail: string | null;
   readonly hasLoginAccess: boolean;
   accessExpiresAt: string | null;
@@ -32,7 +32,7 @@ export interface GuestRecord {
   readonly documentCount: number;
   /** Where the onboarding goes (RN-33); by default none for a guest without a name, else all. */
   readonly onboardingProgress?: Schemas['OnboardingProgress'];
-  readonly emergencyContact?: Schemas['EmergencyContact'];
+  emergencyContact?: Schemas['EmergencyContact'];
 }
 
 /** A stay without what is derived from its payment (`paymentStatus`, `paymentId`). */

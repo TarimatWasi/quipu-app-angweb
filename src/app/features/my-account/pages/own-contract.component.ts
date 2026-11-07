@@ -9,6 +9,7 @@ import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.compo
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
+import { STORAGE_UNAVAILABLE_TEXT } from '@shared/text/error-text';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import { ContractDetailComponent } from '../components/contract-detail.component';
 import { GuestPaymentsService } from '../data/guest-payments.service';
@@ -24,7 +25,6 @@ import {
   nextBlock,
   NO_CONTRACT_TEXT,
   NO_CONTRACT_TITLE,
-  STORAGE_TEXT,
 } from '../model/own-contract';
 import type { ContractBlock } from '../model/own-contract';
 import { OWN_CONTRACT_STYLES } from './own-contract.styles';
@@ -126,7 +126,7 @@ export class OwnContractComponent implements OnInit {
     if (block.file.url !== null && !isLinkStale(loadedAt, Date.now())) return;
     event.preventDefault();
     if (block.file.url === null) {
-      this.toasts.show(STORAGE_TEXT, {
+      this.toasts.show(STORAGE_UNAVAILABLE_TEXT, {
         actionLabel: 'Reintentar',
         action: () => {
           this.reload();
