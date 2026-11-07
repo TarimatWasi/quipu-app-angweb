@@ -1,12 +1,24 @@
-import type { PeriodStatus } from '@core/api/clients/admin-guests.service';
-import { formatDate, formatMoney, formatPeriod } from '@shared/payments/payment-format';
+import { formatDate, formatMoney, formatPeriod } from './payment-format';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import { compareBy } from '@shared/ui/data-table/list-sort';
 import type { ListSort } from '@shared/ui/data-table/list-sort';
 
-/** A3.2 «Pagos por mes» (RF-06, RF-10) as the canvas «HuespedDetalle» words it. */
+/**
+ * «Pagos por mes» (RF-06, RF-10) of A3.2 and of A4.2, as the canvases «HuespedDetalle» and
+ * «ContratoDetalle» word it.
+ */
 
-export type PeriodState = PeriodStatus['status'];
+export type PeriodState = 'PAID' | 'UNDER_REVIEW' | 'UNPAID' | 'OVERDUE';
+
+/** The month of a contract as the BFF answers it (PeriodStatus): only what the rows read. */
+export interface PeriodItem {
+  readonly period: string;
+  readonly status: PeriodState;
+  readonly dueDate: string;
+  readonly amountDue: number;
+  readonly contractId: string;
+  readonly paymentId?: string | null;
+}
 
 export interface StateBadge {
   readonly label: string;
@@ -79,7 +91,7 @@ export interface PeriodRow {
   readonly action: PaymentAction | null;
 }
 
-export function toPeriodRow(item: PeriodStatus, guestId: string): PeriodRow {
+export function toPeriodRow(item: PeriodItem, guestId: string): PeriodRow {
   const rejected =
     (item.status === 'UNPAID' || item.status === 'OVERDUE') && Boolean(item.paymentId);
   return {

@@ -1,4 +1,3 @@
-import type { PeriodStatus } from '@core/api/clients/admin-guests.service';
 import {
   DEFAULT_PERIOD_SORT,
   paymentAction,
@@ -7,20 +6,18 @@ import {
   stateCounts,
   toPeriodRow,
 } from './period-rows';
+import type { PeriodItem } from './period-rows';
 import { nextSort } from '@shared/ui/data-table/list-sort';
 
-function month(period: string, status: PeriodStatus['status'], extra: Partial<PeriodStatus> = {}) {
+function month(period: string, status: PeriodItem['status'], extra: Partial<PeriodItem> = {}) {
   return toPeriodRow(
     {
       period,
       status,
       dueDate: `${period}-05`,
-      amount: 800,
-      creditApplied: 0,
       amountDue: 800,
       contractId: 'c1',
       paymentId: null,
-      rejectionReason: null,
       ...extra,
     },
     'g1',
@@ -134,16 +131,13 @@ describe('A3.2 «Pagos por mes» rows', () => {
   });
 });
 
-function month2(period: string): PeriodStatus {
+function month2(period: string): PeriodItem {
   return {
     period,
     status: 'UNPAID',
     dueDate: `${period}-05`,
-    amount: 800,
-    creditApplied: 0,
     amountDue: 800,
     contractId: 'c1',
     paymentId: null,
-    rejectionReason: null,
   };
 }

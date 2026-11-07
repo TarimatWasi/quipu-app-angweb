@@ -17,8 +17,8 @@ import {
   showingText,
   sortPeriods,
   stateCounts,
-} from '../model/period-rows';
-import type { PeriodRow, PeriodSort, PeriodSortKey, PeriodState } from '../model/period-rows';
+} from './period-rows';
+import type { PeriodRow, PeriodSort, PeriodSortKey, PeriodState } from './period-rows';
 import { nextSort } from '@shared/ui/data-table/list-sort';
 
 type Column = PeriodSortKey | 'action';
@@ -57,9 +57,7 @@ function isState(key: string | null): key is PeriodState {
     <section class="section" aria-labelledby="periods-title">
       <h2 id="periods-title">Pagos por mes</h2>
       @if (!loading() && rows().length === 0) {
-        <app-empty-state heading="Aún no tiene meses por cobrar.">
-          Aparecen cuando le cargues un contrato.
-        </app-empty-state>
+        <app-empty-state [heading]="emptyHeading()">{{ emptyText() }}</app-empty-state>
       } @else {
         @if (!loading()) {
           <app-status-filter
@@ -179,6 +177,9 @@ function isState(key: string | null): key is PeriodState {
 export class PeriodPaymentsComponent {
   readonly loading = input(false);
   readonly rows = input.required<readonly PeriodRow[]>();
+  /** What it says while there is no month: A3.2 waits for a contract, A4.2 for its first month. */
+  readonly emptyHeading = input('Aún no tiene meses por cobrar.');
+  readonly emptyText = input('Aparecen cuando le cargues un contrato.');
 
   protected readonly columns = COLUMNS;
   protected readonly rowId = (row: PeriodRow): string => row.key;

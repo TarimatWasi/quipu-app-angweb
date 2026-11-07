@@ -9,8 +9,8 @@ import {
 import { joinWords, onboardingSteps } from './detail-side';
 import { isAccessExpired, limaDay, whenText } from './guest-list-texts';
 import { stayDatesWithYear } from './guest-texts';
-import { openPayment, PERIOD_BADGES, registerPayment } from './period-rows';
-import type { PaymentAction, PeriodState, StateBadge } from './period-rows';
+import { openPayment, PERIOD_BADGES, registerPayment } from '@shared/payments/period-rows';
+import type { PaymentAction, PeriodState, StateBadge } from '@shared/payments/period-rows';
 
 /** A3.2 «Lo que toca ahora»: one figure, its context and at most one primary action. */
 
