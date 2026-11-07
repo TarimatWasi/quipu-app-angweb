@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.21.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d558b4035ca02e5557890b3c94be98533e2d1bfd71acf2498db7459b33109669.
+ * Generated from the BFF contract v0.22.0 (TarimatWasi/quipu-lib-contracts), spec sha256 fd7231aac85b1934393a73a341a8a723065f7a18d8262875c6ec52d4f3126565.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -2980,6 +2980,13 @@ export interface components {
             startDate: string;
             /** Format: date */
             endDate: string;
+            /** @description «C1»; with environmentType, «Cabaña C1» (T3). null for an old stay without environment (TAR-237) */
+            environmentCode: string | null;
+            /**
+             * @description null together with environmentCode
+             * @enum {string|null}
+             */
+            environmentType: "ROOM" | "CABIN" | null;
             /**
              * @description OVERDUE once the exit date has passed without an approved payment
              * @enum {string}

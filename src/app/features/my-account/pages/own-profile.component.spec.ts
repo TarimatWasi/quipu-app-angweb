@@ -55,6 +55,7 @@ const httpError = (status: number, body: object | null = null) =>
 const text = (element: Element) => element.textContent.replace(/\s+/g, ' ').trim();
 
 interface Answers {
+  stay?: Observable<object>;
   profile?: Observable<OwnProfile>;
   contract?: Observable<OwnContracts>;
 }
@@ -74,8 +75,16 @@ async function setup(audience: Audience = 'CONTRACT', answers: Answers = {}) {
     ),
   };
   const stays = {
-    paymentStatus: vi.fn(() =>
-      of({ startDate: '2026-10-20', endDate: '2026-10-31', agreedAmount: 380 }),
+    paymentStatus: vi.fn(
+      () =>
+        answers.stay ??
+        of({
+          startDate: '2026-10-20',
+          endDate: '2026-10-31',
+          agreedAmount: 380,
+          environmentCode: 'C1',
+          environmentType: 'CABIN',
+        }),
     ),
   };
   const changePassword = vi.fn<(restoreFocus?: HTMLElement) => Promise<void>>(() =>
@@ -271,12 +280,29 @@ describe('OwnProfileComponent (T3, temporary guest)', () => {
 
     const deal = ui.page().getByRole('region', { name: 'Tu estadía' });
     expect([...deal.querySelectorAll('app-fact-tile')].map((tile) => text(tile))).toEqual([
+      'AmbienteCabaña C1',
       'AcordadoS/ 380.00',
       'Estadía20 – 31 oct',
       'DocumentoDNI 12345678',
       'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)ana.quispe@correo.pe',
     ]);
     expect(ui.page().queryByRole('link', { name: 'Ver mi contrato' })).toBeNull();
+  });
+
+  it('leaves the environment out for an old stay that has none', async () => {
+    const ui = await setup('TEMPORARY', {
+      stay: of({
+        startDate: '2026-10-20',
+        endDate: '2026-10-31',
+        agreedAmount: 380,
+        environmentCode: null,
+        environmentType: null,
+      }),
+    });
+
+    const deal = ui.page().getByRole('region', { name: 'Tu estadía' });
+    expect(text(deal)).not.toContain('Ambiente');
+    expect(text(deal)).toContain('AcordadoS/ 380.00');
   });
 
   it('says there is no account email and how to get an access', async () => {
