@@ -22,7 +22,7 @@ export interface MockHarness {
   readonly http: HttpClient;
   readonly backend: HttpTestingController;
   get<T>(url: string, params?: Record<string, string | number>): Promise<T>;
-  send<T>(method: 'POST' | 'PUT' | 'PATCH', url: string, body: unknown): Promise<T>;
+  send<T>(method: 'POST' | 'PUT' | 'PATCH' | 'DELETE', url: string, body: unknown): Promise<T>;
   /** The error of a call that must fail. */
   fail(call: Promise<unknown>): Promise<HttpErrorResponse>;
   signIn(key: DemoUserKey): Promise<unknown>;
