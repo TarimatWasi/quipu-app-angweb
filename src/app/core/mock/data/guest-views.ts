@@ -56,7 +56,7 @@ function detailBase(db: MockDb, guest: GuestRecord) {
     hasLoginAccess: guest.hasLoginAccess,
     contactEmail: guest.contactEmail,
     accountEmail: guest.accountEmail,
-    documentCount: guest.documentCount,
+    documentCount: db.documentsOf(guest.id).length,
     accessExpiresAt: guest.accessExpiresAt,
     ...(guest.emergencyContact && { emergencyContact: guest.emergencyContact }),
     paymentHistory: paymentHistory(db, guest.id),

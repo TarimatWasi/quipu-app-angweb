@@ -8,6 +8,7 @@ import {
   parseAmount,
 } from '@shared/payments/payment-format';
 import type { Balance } from '@shared/payments/payment-format';
+import { fileMeta } from '@shared/text/file-text';
 
 /** A5.2 «Revisar pago», as the canvas words it (Revision), Spanish only (QP-ANGWEB-LNG-01). */
 
@@ -47,18 +48,6 @@ export interface ProofEntry {
   readonly corrected: boolean;
 }
 
-const FILE_KINDS: Readonly<Record<string, string>> = {
-  'image/jpeg': 'Imagen JPG',
-  'image/png': 'Imagen PNG',
-  'application/pdf': 'PDF',
-};
-
-/** «1.4 MB», «240 KB». */
-export function fileSize(bytes: number): string {
-  if (bytes >= 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${String(Math.max(1, Math.round(bytes / 1024)))} KB`;
-}
-
 function viewOf(proof: AdminProof): ProofView {
   if (proof.kind === 'CASH') return 'cash';
   if (proof.fileUrl === null) return 'missing';
@@ -82,9 +71,7 @@ export function proofEntries(proofs: readonly AdminProof[]): ProofEntry[] {
       view: viewOf(proof),
       url: proof.fileUrl,
       fileName: file?.name ?? null,
-      fileMeta: file
-        ? `${FILE_KINDS[file.contentType] ?? 'Archivo'} · ${fileSize(file.sizeBytes)}`
-        : null,
+      fileMeta: file ? fileMeta(file.contentType, file.sizeBytes) : null,
       by: proof.uploadedBy === 'ADMIN' ? 'Agregado por la administración' : 'Subido por el huésped',
       byAdmin: proof.uploadedBy === 'ADMIN',
       added: `el ${formatDateTime(proof.addedAt)}`,

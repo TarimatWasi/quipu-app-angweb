@@ -1,0 +1,66 @@
+<app-page-header [heading]="title" [backLink]="backLink()" [backTo]="backTo()" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton subject="los documentos"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <div class="main">
+            <app-skeleton-cards />
+          </div>
+          <aside aria-label="De quién son">
+            <app-skeleton-facts [labels]="['Huésped', 'Documento', 'Archivos']" />
+          </aside>
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    @if (notFound()) {
+      <app-empty-state class="state" heading="No encontramos a este huésped.">
+        <a emptyAction class="quipu-button quipu-button--secondary" routerLink="/admin/guests"
+          >Volver a Huéspedes</a
+        >
+      </app-empty-state>
+    } @else {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="reload()"
+      />
+    }
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
+    }
+    @if (content(); as c) {
+      <div class="layout">
+        <div class="main">
+          <app-guest-documents-list
+            [rows]="c.documents"
+            [busy]="refreshing()"
+            (open)="open($event)"
+            (replace)="act('replace', $event)"
+            (remove)="act('delete', $event)"
+          />
+          <app-document-actions-list [rows]="c.actions" />
+        </div>
+        <aside class="who" aria-labelledby="who-title">
+          <h2 id="who-title">De quién son</h2>
+          <dl class="facts">
+            @for (fact of c.facts; track fact.label) {
+              <app-fact-tile
+                surface="stone"
+                [class.wide]="fact.wide"
+                [label]="fact.label"
+                [value]="fact.value"
+              />
+            }
+          </dl>
+          <p class="note">{{ whoNote }}</p>
+        </aside>
+      </div>
+    }
+  }
+}
