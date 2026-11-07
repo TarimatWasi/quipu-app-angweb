@@ -16,6 +16,8 @@ import { AuthService } from '@core/auth/auth.service';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { toBffError } from '@core/http/bff-error';
 import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
+import { CHANGE_PASSWORD_ACTION } from '@shared/ui/account-actions/change-password-action';
+import type { ChangePasswordAction } from '@shared/ui/account-actions/change-password-action';
 import { ToastService } from '@shared/ui/toast/toast.service';
 
 /**
@@ -35,11 +37,27 @@ export const PASSWORD_CHANGED_TEXT = 'Contraseña cambiada.';
  * panel behind «Menú». A session without sections (onboarding) only has «Salir»; without a session
  * (A0.7, a page that does not exist) the bar has only the emblem and «Quipu».
  */
+/** The action the pages of the shell use to open A0.6; a changed password is told with a toast. */
+function changePasswordAction(): ChangePasswordAction {
+  const injector = inject(Injector);
+  const toasts = inject(ToastService);
+  return async (restoreFocus) => {
+    const { openChangePasswordFromInjector } =
+      await import('@layout/account/change-password-dialog.component');
+    openChangePasswordFromInjector(injector, restoreFocus ?? true)
+      .afterClosed()
+      .subscribe((changed) => {
+        if (changed === true) toasts.show(PASSWORD_CHANGED_TEXT, { tone: 'success' });
+      });
+  };
+}
+
 @Component({
   selector: 'app-shell',
   imports: [NgOptimizedImage, NgTemplateOutlet, RouterLink, RouterOutlet, ToastComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
+  providers: [{ provide: CHANGE_PASSWORD_ACTION, useFactory: changePasswordAction }],
   host: {
     '(document:keydown.escape)': 'closeWithEscape()',
     '(document:click)': 'closeWhenOutside($event)',

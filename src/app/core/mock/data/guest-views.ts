@@ -1,6 +1,6 @@
 import type { components } from '@core/api/bff.generated';
 import { currentStay, paymentHistory } from './account-views';
-import type { GuestRecord, MockDb } from './mock-db';
+import type { DocumentRecord, GuestRecord, MockDb } from './mock-db';
 
 type Schemas = components['schemas'];
 
@@ -138,8 +138,8 @@ export function guestDetail(db: MockDb, guest: GuestRecord): Schemas['GuestDetai
   }
 }
 
-/** The sample file the simulated storage «signs» for a contract (public/mock-assets). */
-const SAMPLE_CONTRACT_FILE = '/mock-assets/voucher-muestra.pdf';
+/** The sample file the simulated storage «signs» for a contract or a document (public/mock-assets). */
+const SAMPLE_FILE = '/mock-assets/voucher-muestra.pdf';
 
 /**
  * H2: the contract in force (or the latest) of the guest with its sample file, and the next one
@@ -156,7 +156,27 @@ export function ownContracts(
     .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
   const signed = (contract: Schemas['Contract']) => ({
     ...contract,
-    fileUrl: SAMPLE_CONTRACT_FILE,
+    fileUrl: SAMPLE_FILE,
   });
   return { current: signed(current), next: next === undefined ? null : signed(next) };
+}
+
+/** The signed links last 15 minutes (RN-37). */
+const LINK_MS = 15 * 60 * 1000;
+
+/**
+ * A document with the signed link the BFF would give: here it points at the sample file that the
+ * simulated storage «signs» (public/mock-assets), and ends 15 minutes from now.
+ */
+export function signedDocument(document: DocumentRecord): Schemas['GuestDocument'] {
+  const expires = Date.now() + LINK_MS;
+  return {
+    id: document.id,
+    originalName: document.originalName,
+    contentType: document.contentType,
+    sizeBytes: document.sizeBytes,
+    uploadedAt: document.uploadedAt,
+    url: `${SAMPLE_FILE}?expira=${String(expires)}`,
+    urlExpiresAt: new Date(expires).toISOString(),
+  };
 }

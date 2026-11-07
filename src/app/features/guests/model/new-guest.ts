@@ -1,3 +1,7 @@
+import { callFailure } from '@shared/forms/call-failure';
+import type { CallFailure } from '@shared/forms/call-failure';
+import { EMAIL_TEXT, PHONE_TEXT } from '@shared/forms/contact-rules';
+import { NETWORK_TEXT, RATE_LIMITED_TEXT } from '@shared/text/error-text';
 import type {
   AccessGrant,
   DocumentType,
@@ -6,7 +10,8 @@ import type {
   PendingDebtError,
 } from '@core/api/clients/admin-guests.service';
 import { formatMoney, formatPeriod, periodLabel } from '@shared/payments/payment-format';
-import { DOCUMENT_TYPE_CHIPS, DOCUMENT_TYPE_LABELS, GUEST_TYPE_LABELS } from './guest-texts';
+import { DOCUMENT_TYPE_LABELS } from '@shared/text/document-text';
+import { DOCUMENT_TYPE_CHIPS, GUEST_TYPE_LABELS } from './guest-texts';
 
 /** A3.1 «Nuevo huésped» (CU-02, CU-09, CU-28) as the canvas «HuespedNuevo» words it. */
 
@@ -82,29 +87,6 @@ export const PHONE_HELP =
   'Para abrir WhatsApp con el acceso ya escrito. Si es de otro país, empieza con su prefijo, por ejemplo +34.';
 export const EMAIL_HELP = 'Si lo escribes, también le enviamos el acceso por correo.';
 
-// Client checks, the same as GuestInput (FE-ANG-FRM-03).
-export const PHONE_TEXT = 'Revisa el teléfono.';
-export const EMAIL_TEXT = 'Escribe un correo válido.';
-export const MAX_PHONE_LENGTH = 30;
-export const MAX_EMAIL_LENGTH = 200;
-const PHONE_SHAPE = /^\+?[0-9][0-9 -]{5,28}$/;
-// The shape the BFF accepts as `format: email`, without spaces and with a dot in the domain.
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-/** The phone is optional: empty is fine, anything else follows the pattern of GuestInput. */
-export function phoneError(phone: string): string | null {
-  const value = phone.trim();
-  if (value === '') return null;
-  return value.length <= MAX_PHONE_LENGTH && PHONE_SHAPE.test(value) ? null : PHONE_TEXT;
-}
-
-/** The email is optional too: empty is fine, otherwise a whole address of up to 200 characters. */
-export function contactEmailError(email: string): string | null {
-  const value = email.trim();
-  if (value === '') return null;
-  return value.length <= MAX_EMAIL_LENGTH && EMAIL_SHAPE.test(value) ? null : EMAIL_TEXT;
-}
-
 /** The body of createGuest: trimmed, and without the optional fields left empty. */
 export function toGuestInput(model: NewGuestModel): GuestInput {
   const phone = model.phone.trim();
@@ -165,38 +147,7 @@ export const DOCUMENT_TAKEN_TEXT =
 export const GUEST_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otro huésped';
 export const ACCOUNT_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otra cuenta';
 export const DOCUMENT_INVALID_TEXT = 'Revisa el número de documento.';
-export const RATE_LIMITED_TEXT =
-  'Demasiados intentos, espera un momento antes de volver a intentar.';
-export const NETWORK_TEXT = 'No se pudo conectar con el servidor. Inténtalo de nuevo.';
 export const UNEXPECTED_TEXT = 'No se pudo crear el huésped. Inténtalo de nuevo.';
-
-/** What a failed call answered: its status and, when the body is the BFF's, its code and field. */
-export interface CallFailure {
-  readonly status: number;
-  readonly code: string | null;
-  readonly field: string | null;
-  readonly body: Readonly<Record<string, unknown>>;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
-}
-
-/**
- * Reads the code and the field of a failed call (an HttpErrorResponse: its `status` and its body in
- * `error`); the server's `message` is never kept. Anything else is a failure without status (-1).
- */
-export function callFailure(error: unknown): CallFailure {
-  if (!isRecord(error) || typeof error['status'] !== 'number') {
-    return { status: -1, code: null, field: null, body: {} };
-  }
-  const status = error['status'];
-  const body: unknown = error['error'];
-  if (!isRecord(body)) return { status, code: null, field: null, body: {} };
-  const code = typeof body['code'] === 'string' ? body['code'] : null;
-  const field = typeof body['field'] === 'string' ? body['field'] : null;
-  return { status, code, field, body };
-}
 
 /** The fields of A3.1 a server error can point at. */
 export type NewGuestField = 'documentNumber' | 'phone' | 'contactEmail';
@@ -262,7 +213,11 @@ export interface PendingDebt {
 type Debt = NonNullable<PendingDebtError['debts']>[number];
 
 function isDebt(value: unknown): value is Debt {
-  return isRecord(value) && typeof value['amountDue'] === 'number';
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    typeof (value as Record<string, unknown>)['amountDue'] === 'number'
+  );
 }
 
 function nullableText(value: unknown): string | null {
@@ -321,3 +276,6 @@ export function reactivateProblem({ status, code }: CallFailure): string {
   if (code === 'CONCURRENT_MODIFICATION') return REACTIVATE_CONFLICT_TEXT;
   return REACTIVATE_FAILED_TEXT;
 }
+
+export { callFailure, NETWORK_TEXT, RATE_LIMITED_TEXT };
+export type { CallFailure };
