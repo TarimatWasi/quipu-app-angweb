@@ -3,7 +3,7 @@ import { HttpTestingController, provideHttpClientTesting } from '@angular/common
 import { TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
 import { ForgotPasswordComponent } from './forgot-password.component';
 
 const isForgot = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/forgot-password');

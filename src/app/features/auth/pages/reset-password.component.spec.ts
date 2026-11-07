@@ -4,7 +4,7 @@ import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap, provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
 import { ResetPasswordComponent } from './reset-password.component';
 
 const isReset = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/reset-password');

@@ -7,9 +7,9 @@ import {
   provideZonelessChangeDetection,
 } from '@angular/core';
 import { provideRouter } from '@angular/router';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
-import { sessionExpiredInterceptor } from '@core/interceptors/session-expired.interceptor';
-import { csrfErrorInterceptor } from '@core/interceptors/csrf-error.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
+import { sessionExpiredInterceptor } from '@core/http/session-expired.interceptor';
+import { csrfErrorInterceptor } from '@core/http/csrf-error.interceptor';
 import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { firstValueFrom } from 'rxjs';
 import { routes } from './app.routes';

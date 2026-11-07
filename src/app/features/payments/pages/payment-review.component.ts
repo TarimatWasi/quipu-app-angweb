@@ -18,7 +18,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, Observable } from 'rxjs';
 import { AdminPaymentsService } from '../data/admin-payments.service';
-import type { AdminProof, PaymentDetail, ProofEdit } from '../data/admin-payments.service';
+import type { PaymentDetail } from '../data/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { isConcurrentModification } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
@@ -31,91 +31,30 @@ import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { MAX_PROOFS } from '@shared/payments/proof-rules';
 import { isQueueView } from '../model/queue-views';
-import { AddedProof, openAddProofDialog } from '../components/add-proof-dialog.component';
-import {
-  openPaymentNoticeDialog,
-  PaymentNoticeAction,
-} from '@shared/payments/payment-notice-dialog.component';
+import { openAddProofDialog } from '../components/add-proof-dialog.component';
+import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { openRejectDialog } from '../components/reject-dialog.component';
 import { ReviewAmountsComponent } from '../components/review-amounts.component';
 import type { TypedAmount } from '../components/review-amounts.component';
 import { ReviewProofsComponent } from '../components/review-proofs.component';
 import {
+  added,
+  amountTexts,
   approvedNotice,
   balanceNotice,
   decisionHelp,
+  kept,
+  LoadState,
   LOAD_ERROR_TEXT,
+  Notice,
+  NOTICES,
+  Outcome,
   payingFacts,
   proofEntries,
   resolvedText,
   verifiedTotal,
 } from '../model/payment-review';
 import { ToastService } from '@shared/ui/toast/toast.service';
-
-/** A payment gathers at most 5 proofs (RN-22, decided 2026-10-31). */
-
-type LoadState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'not-found' }
-  | { readonly kind: 'error'; readonly message: string };
-
-type Outcome = 'APPROVED' | 'REJECTED';
-
-interface Notice {
-  readonly title: string;
-  readonly actions: readonly PaymentNoticeAction[];
-}
-
-const BACK: PaymentNoticeAction = { label: 'Volver a Pagos', value: 'back' };
-const OK: PaymentNoticeAction = { label: 'Entendido', value: 'ok' };
-
-/** The conflicts the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
-const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
-  PAYMENT_ALREADY_RESOLVED: { title: 'Este pago ya se resolvió', actions: [BACK] },
-  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', actions: [OK] },
-  PAYMENT_PERIOD_NOT_PAYABLE: {
-    title: 'Este mes ya no se cobra',
-    actions: [
-      { label: 'Rechazar con motivo', value: 'reject' },
-      { label: 'Cancelar', value: 'cancel' },
-    ],
-  },
-  PAYMENT_NOT_CORRECTABLE: { title: 'Este pago ya no se puede corregir', actions: [OK] },
-};
-
-/** The text of each verified amount, kept while the page reloads after adding a proof. */
-function amountTexts(
-  proofs: readonly AdminProof[],
-  current: Readonly<Record<string, string>>,
-): Record<string, string> {
-  return Object.fromEntries(
-    proofs.map((proof) => [
-      proof.id,
-      current[proof.id] ?? String(proof.verifiedAmount ?? proof.declaredAmount),
-    ]),
-  );
-}
-
-/** A proof that stays as it is in a correction (the contract replaces the whole set). */
-function kept(proof: AdminProof): ProofEdit {
-  const method = proof.method?.trim();
-  return {
-    id: proof.id,
-    kind: proof.kind,
-    amount: proof.declaredAmount,
-    ...(method ? { method } : {}),
-  };
-}
-
-function added(proof: AddedProof): ProofEdit {
-  const base: ProofEdit = { kind: proof.kind, amount: proof.amount };
-  return {
-    ...base,
-    ...(proof.method ? { method: proof.method } : {}),
-    ...(proof.file ? { fileIndex: 0 } : {}),
-  };
-}
 
 /**
  * A5.2 (CU-05, RN-16): the proofs of a payment with their declared and verified amounts, what is

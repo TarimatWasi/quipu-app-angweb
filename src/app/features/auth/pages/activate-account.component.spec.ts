@@ -5,7 +5,7 @@ import { TestBed } from '@angular/core/testing';
 import { ActivatedRoute, provideRouter, Router } from '@angular/router';
 import { fireEvent, within } from '@testing-library/dom';
 import { AuthService } from '@core/auth/auth.service';
-import { credentialsInterceptor } from '@core/interceptors/credentials.interceptor';
+import { credentialsInterceptor } from '@core/http/credentials.interceptor';
 import { ActivateAccountComponent } from './activate-account.component';
 
 const isActivate = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/activate');
