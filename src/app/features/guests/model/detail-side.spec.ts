@@ -159,7 +159,7 @@ describe('A3.2 «Más acciones»', () => {
     expect(labels(moreActions({ guest: guestOf(), panelGenerates: false, owes: false }))).toEqual([
       ['generate-access', 'Generar otro acceso', 'si olvidó su contraseña'],
       ['account-email', 'Cambiar correo de cuenta', 'al que llega la recuperación de contraseña'],
-      ['text', 'Ver documentos', '2 documentos'],
+      ['link', 'Ver documentos', '2 documentos'],
       ['deactivate', 'Desactivar huésped', null],
     ]);
   });
@@ -170,10 +170,13 @@ describe('A3.2 «Más acciones»', () => {
 
     expect(labels(actions)).toEqual([
       ['account-email', 'Cambiar correo de cuenta', 'al que llega la recuperación de contraseña'],
-      ['text', 'Ver documentos', 'no subió documentos'],
+      ['link', 'Ver documentos', 'no subió documentos'],
       ['link', 'Corregir documento', 'solo hasta que active su acceso'],
       ['deactivate', 'Desactivar huésped', null],
     ]);
+    expect(actions[1]).toEqual(
+      expect.objectContaining({ link: ['/admin/guests', 'g1', 'documents'] }),
+    );
     expect(actions[2]).toEqual(
       expect.objectContaining({ link: ['/admin/guests', 'g1', 'document'] }),
     );
@@ -183,7 +186,7 @@ describe('A3.2 «Más acciones»', () => {
     const guest = guestOf({ status: 'INACTIVE', documentCount: 1 });
 
     expect(labels(moreActions({ guest, panelGenerates: false, owes: true }))).toEqual([
-      ['text', 'Ver documentos', '1 documento'],
+      ['link', 'Ver documentos', '1 documento'],
       ['reactivate', 'Reactivar huésped', 'después de saldar su deuda'],
     ]);
     expect(moreActions({ guest, panelGenerates: false, owes: false }).at(-1)?.hint).toBeNull();
