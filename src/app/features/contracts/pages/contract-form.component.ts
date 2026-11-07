@@ -12,7 +12,7 @@ import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/s
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin, map, Observable } from 'rxjs';
-import { toBffError } from '@core/http/bff-error';
+import { bodyCodeOf, toBffError } from '@core/http/bff-error';
 import { AsyncContentState } from '@shared/data/async-content';
 import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
@@ -285,7 +285,7 @@ export class ContractFormComponent {
    */
   private async failed(error: unknown) {
     const failure = toBffError(error);
-    const code = this.codeOf(error) ?? failure.code;
+    const code = bodyCodeOf(error) ?? failure.code;
     const conflict = conflictOf(
       code,
       { environment: this.environmentLabel() },
@@ -307,13 +307,6 @@ export class ContractFormComponent {
     if (target !== undefined) return [this.refusal(target, SERVER_FIELD_TEXTS[target])];
     this.generalError.set(code === 'FILE_STORAGE_UNAVAILABLE' ? STORAGE_TEXT : failure.message);
     return undefined;
-  }
-
-  /** The `code` of the BFF's own answer: the catalog only knows some of them. */
-  private codeOf(error: unknown): string | null {
-    if (!(error instanceof HttpErrorResponse)) return null;
-    const body = error.error as { code?: unknown } | null;
-    return typeof body?.code === 'string' ? body.code : null;
   }
 
   /** What the 409 GUEST_HAS_PENDING_DEBT says the guest owes (RN-25), oldest first. */

@@ -63,6 +63,7 @@ const route = (
 
 const PAYMENTS: Destination = route(['/admin/payments']);
 const CONTRACTS: Destination = route(['/admin/contracts']);
+const FINANCE: Destination = route(['/admin/finance']);
 const REJECTED: Destination = route(['/admin/payments'], { vista: 'rechazados' });
 
 const plural = (count: number, one: string, many: string): string => (count === 1 ? one : many);
@@ -209,8 +210,6 @@ function rejected(d: AdminDashboard, now: Date): Pending | null {
   };
 }
 
-// Refunds go to Finanzas (A6, TAR-244): until that screen exists their link is left out, so
-// nothing leads to a page that is not there.
 function refunds(d: AdminDashboard): Pending | null {
   const { count, total } = d.refunds;
   if (count <= 0) return null;
@@ -224,10 +223,10 @@ function refunds(d: AdminDashboard): Pending | null {
       'Pagó de más y ya no tiene un mes donde usarlo.',
       'Pagaron de más y ya no tienen un mes donde usarlo.',
     ),
-    cta: null,
+    cta: { label: 'Ir a Finanzas', to: FINANCE },
     head: `${String(count)} ${plural(count, 'devolución por registrar', 'devoluciones por registrar')}:`,
     text: `${formatMoney(total)} que ${plural(count, 'pagó', 'pagaron')} de más.`,
-    link: null,
+    link: { label: 'Ir a Finanzas', to: FINANCE },
   };
 }
 

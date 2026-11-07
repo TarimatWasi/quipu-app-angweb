@@ -60,6 +60,12 @@ export const routes: Routes = [
           import('@features/environments/environments.routes').then((m) => m.ENVIRONMENTS_ROUTES),
       },
       {
+        path: 'admin/finance',
+        canActivate: [adminGuard],
+        loadChildren: () =>
+          import('@features/finance/finance.routes').then((m) => m.FINANCE_ROUTES),
+      },
+      {
         path: 'admin/payments',
         canActivate: [adminGuard],
         loadChildren: () =>

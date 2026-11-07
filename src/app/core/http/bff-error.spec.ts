@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, NEVER, timeout } from 'rxjs';
-import { toBffError, toBffErrorWithServerMessage } from './bff-error';
+import { bodyCodeOf, toBffError, toBffErrorWithServerMessage } from './bff-error';
 
 const bff = (status: number, code: string, message = 'texto del servidor', field?: unknown) =>
   new HttpErrorResponse({ status, error: { code, message, field } });
@@ -275,5 +275,22 @@ describe('toBffErrorWithServerMessage', () => {
     expect(toBffErrorWithServerMessage(bff(409, 'X_CODE', 'a'.repeat(501))).message).toBe(
       'Ocurrió un error inesperado. Inténtalo de nuevo.',
     );
+  });
+});
+
+describe('bodyCodeOf', () => {
+  it('gives the code of the answer even when the catalog does not know it', () => {
+    const error = new HttpErrorResponse({
+      status: 400,
+      error: { code: 'EXPENSE_INVALID_AMOUNT', message: 'x' },
+    });
+
+    expect(bodyCodeOf(error)).toBe('EXPENSE_INVALID_AMOUNT');
+  });
+
+  it('gives null when the answer has no code or is not an answer of the BFF', () => {
+    expect(bodyCodeOf(new HttpErrorResponse({ status: 500, error: '<html>' }))).toBeNull();
+    expect(bodyCodeOf(new HttpErrorResponse({ status: 400, error: { code: 7 } }))).toBeNull();
+    expect(bodyCodeOf(new Error('x'))).toBeNull();
   });
 });

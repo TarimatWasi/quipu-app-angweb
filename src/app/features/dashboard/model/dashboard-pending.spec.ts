@@ -153,7 +153,7 @@ describe('what waits for the administrator (A1 «Lo que toca ahora»)', () => {
     );
   });
 
-  it('says what is owed back in soles, and has no link while Finanzas does not exist', () => {
+  it('says what is owed back in soles, and leads to Finanzas', () => {
     const [refunds] = pendingOf(dashboardOf({ refunds: { count: 2, total: 85 } }), NOW);
 
     expect(refunds).toEqual(
@@ -164,8 +164,14 @@ describe('what waits for the administrator (A1 «Lo que toca ahora»)', () => {
         meta: 'Pagaron de más y ya no tienen un mes donde usarlo.',
         head: '2 devoluciones por registrar:',
         text: 'S/ 85.00 que pagaron de más.',
-        cta: null,
-        link: null,
+        cta: {
+          label: 'Ir a Finanzas',
+          to: { kind: 'route', link: ['/admin/finance'], query: null },
+        },
+        link: {
+          label: 'Ir a Finanzas',
+          to: { kind: 'route', link: ['/admin/finance'], query: null },
+        },
       }),
     );
   });
