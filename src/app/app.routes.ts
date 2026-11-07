@@ -67,6 +67,12 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'guest/contract',
+        canActivate: [contractGuestGuard],
+        loadChildren: () =>
+          import('@features/my-account/my-account.routes').then((m) => m.OWN_CONTRACT_ROUTES),
+      },
+      {
         path: 'guest/payments',
         canActivate: [contractGuestGuard],
         loadChildren: () =>
