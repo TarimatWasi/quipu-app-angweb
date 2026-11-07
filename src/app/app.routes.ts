@@ -48,6 +48,12 @@ export const routes: Routes = [
         loadChildren: () => import('./home.routes').then((m) => m.HOME_ROUTES),
       },
       {
+        path: 'admin/environments',
+        canActivate: [adminGuard],
+        loadChildren: () =>
+          import('@features/environments/environments.routes').then((m) => m.ENVIRONMENTS_ROUTES),
+      },
+      {
         path: 'admin/payments',
         canActivate: [adminGuard],
         loadChildren: () =>

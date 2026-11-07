@@ -115,6 +115,34 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal'],
   },
+  // A2: «normal» has free, occupied and inactive environments; A2.2 shows the notice of an occupied one.
+  {
+    id: 'a2-ambientes',
+    path: '/admin/environments',
+    role: 'admin',
+    scenarios: ['normal', 'empty', 'load-error'],
+  },
+  {
+    id: 'a2-ambientes',
+    path: '/admin/environments',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 'a2-2-ocupado',
+    path: '/admin/environments',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Desactivar Habitación 201',
+  },
+  { id: 'a2-1-nuevo', path: '/admin/environments/new', role: 'admin', scenarios: ['normal'] },
+  {
+    id: 'a2-4-editar',
+    path: '/admin/environments/00000002-0000-4000-8000-000000000001/edit',
+    role: 'admin',
+    scenarios: ['normal'],
+  },
   { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a5-2-revision',
