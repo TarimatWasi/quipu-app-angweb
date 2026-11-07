@@ -209,6 +209,35 @@ export const SCREENS: readonly ScreenCapture[] = [
     scenarios: ['normal'],
     open: 'Finalizar contrato',
   },
+  // A6: «normal» has two credits waiting for a refund, the expenses and fines of the month and one
+  // refund of the month before; the dialogs of A6.1 to A6.5 open over the page.
+  {
+    id: 'a6-finanzas',
+    path: '/admin/finance',
+    role: 'admin',
+    scenarios: ['normal', 'empty', 'load-error'],
+  },
+  {
+    id: 'a6-finanzas',
+    path: '/admin/finance',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  {
+    id: 'a6-5-devolucion',
+    path: '/admin/finance',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Registrar devolución',
+  },
+  {
+    id: 'a6-1-egreso',
+    path: '/admin/finance',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Nuevo egreso',
+  },
   { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a5-2-revision',

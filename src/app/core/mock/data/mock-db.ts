@@ -89,7 +89,22 @@ export interface DocumentRecord {
 /** The evidence of a deletion or a replacement of a document: never the name or the content. */
 export type DocumentActionRecord = Schemas['GuestDocumentAction'] & { readonly guestId: string };
 
-export type RefundRecord = GuestRefund & { readonly guestId: string };
+export type RefundRecord = GuestRefund & {
+  readonly guestId: string;
+  readonly note?: string | null;
+};
+
+/** An expense of A6, with the version that A6.1 sends back when it edits it (BE-SPR-DAT-13). */
+export type ExpenseRecord = Omit<Schemas['Expense'], 'version'> & { version: number };
+
+/** A fine of A6 without what the BFF derives from its guest (its name and environment). */
+export interface FineRecord {
+  readonly id: string;
+  readonly guestId: string;
+  readonly amount: number;
+  readonly month: string;
+  readonly description?: string;
+}
 
 export interface CreditRecord {
   balance: number;
@@ -108,6 +123,8 @@ export interface MockDbData {
   readonly administrators: AdministratorRecord[];
   readonly documents: DocumentRecord[];
   readonly documentActions: DocumentActionRecord[];
+  readonly expenses: ExpenseRecord[];
+  readonly fines: FineRecord[];
 }
 
 /** The kinds of record, used in the opaque ids so a mixed-up id never finds the wrong record. */
@@ -122,6 +139,8 @@ export const ID_KIND = {
   admin: 8,
   document: 9,
   documentAction: 10,
+  expense: 11,
+  fine: 12,
 } as const;
 
 /** An opaque id shaped like the uuids of the BFF, stable for the seeded data. */

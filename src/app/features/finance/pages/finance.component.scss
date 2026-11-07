@@ -1,0 +1,46 @@
+@use '../../../shared/styles/list-page';
+
+// A2: only the layout of the page. Header, panel, list head, filters, table, cards, notices,
+// skeleton, badges and buttons are the kit's.
+@include list-page.layout;
+
+// A6: the places of the balance and its tiles; the panel, the list head, the segmented control, the
+// table, the notices and the buttons are the kit's.
+.balance {
+  display: block;
+  margin-top: 2.5rem;
+}
+
+.balance-skeleton {
+  display: block;
+  margin-top: 2.5rem;
+}
+
+.month {
+  flex: 0 1 15rem;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: var(--quipu-franja);
+  margin: 1rem 0 0;
+}
+
+.facts .wide {
+  grid-column: auto;
+}
+
+.facts .negative {
+  --quipu-tinta: var(--quipu-estado-atrasado-texto);
+}
+
+@media (max-width: 599.98px) {
+  .facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .facts .wide {
+    grid-column: 1 / -1;
+  }
+}

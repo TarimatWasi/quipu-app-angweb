@@ -105,6 +105,17 @@ function withField(base: BffError, field: string | undefined): BffError {
   return field ? { ...base, field } : base;
 }
 
+/**
+ * The `code` the BFF answered with, even when the local catalog does not know it (an operation's
+ * own code, like CONTRACT_INVALID_FILE or EXPENSE_INVALID_AMOUNT); null when the answer has none.
+ * It is for deciding what to do, never for what to show (QP-ANGWEB-BFF-02).
+ */
+export function bodyCodeOf(error: unknown): string | null {
+  if (!(error instanceof HttpErrorResponse)) return null;
+  const body: unknown = error.error;
+  return isRecord(body) && typeof body['code'] === 'string' ? body['code'] : null;
+}
+
 /** Turns whatever a failed BFF call threw into a {@link BffError}. */
 export function toBffError(error: unknown): BffError {
   if (error instanceof TimeoutError) {

@@ -22,7 +22,7 @@ const SECTIONS: Readonly<Record<Audience, readonly NavEntry[]>> = {
     { label: 'Huéspedes', link: '/admin/guests' },
     { label: 'Contratos', link: '/admin/contracts' },
     { label: 'Pagos', link: '/admin/payments' },
-    { label: 'Finanzas', link: null },
+    { label: 'Finanzas', link: '/admin/finance' },
   ],
   CONTRACT: [
     { label: 'Estado de cuenta', link: '/home' },

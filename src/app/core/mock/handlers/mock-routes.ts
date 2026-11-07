@@ -6,6 +6,7 @@ import { ADMIN_GUEST_REGISTRATION_ROUTES } from './admin-guest-registration.hand
 import { ADMIN_GUEST_ROUTES } from './admin-guests.handlers';
 import { ADMIN_CONTRACT_ROUTES } from './admin-contracts.handlers';
 import { ADMIN_ENVIRONMENT_ROUTES } from './admin-environments.handlers';
+import { ADMIN_FINANCE_ROUTES } from './admin-finance.handlers';
 import { ADMIN_PAYMENT_ROUTES } from './admin-payments.handlers';
 import { AUTH_ROUTES } from './auth.handlers';
 import { GUEST_PROFILE_ROUTES } from './guest-profile.handlers';
@@ -19,6 +20,7 @@ export const MOCK_ROUTES: readonly MockRoute[] = [
   ...AUTH_ROUTES,
   ...ADMIN_CONTRACT_ROUTES,
   ...ADMIN_ENVIRONMENT_ROUTES,
+  ...ADMIN_FINANCE_ROUTES,
   ...ADMIN_PAYMENT_ROUTES,
   ...ADMIN_GUEST_ROUTES,
   ...ADMIN_GUEST_REGISTRATION_ROUTES,

@@ -3,6 +3,7 @@ import { MockDb } from './mock-db';
 import { seedAdministrators } from './seed-administrators';
 import { seedCredits, seedPayments, seedRefunds, seedStays } from './seed-payments';
 import { seedDocumentActions, seedDocuments } from './seed-documents';
+import { seedExpenses, seedFines, seedPendingCredits } from './seed-finance';
 import {
   seedCaseContracts,
   seedCaseEnvironments,
@@ -32,19 +33,26 @@ export function seedDb(scenario: MockScenario): MockDb {
       administrators: seedAdministrators(),
       documents,
       documentActions: [],
+      expenses: [],
+      fines: [],
     });
   }
   const refunds = seedRefunds();
+  const payments = [...seedPayments(), ...seedCasePayments()];
+  const credits = seedCredits(refunds);
+  seedPendingCredits(payments, credits);
   return new MockDb({
     environments,
     guests,
     contracts: [...seedContracts(guests, environments), ...seedCaseContracts(guests, environments)],
     stays: seedStays(),
-    payments: [...seedPayments(), ...seedCasePayments()],
+    payments,
     refunds,
-    credits: seedCredits(refunds),
+    credits,
     administrators: seedAdministrators(),
     documents,
     documentActions: seedDocumentActions(documents),
+    expenses: seedExpenses(),
+    fines: seedFines(),
   });
 }
