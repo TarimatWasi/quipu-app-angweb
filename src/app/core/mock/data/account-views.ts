@@ -275,7 +275,7 @@ function freeSinceOf(db: MockDb, environment: Environment, day: string): string 
     .filter((item) => item.environmentId === environment.id && item.startDate <= day)
     .map((item) => item.endDate ?? '')
     .filter((end) => end !== '' && end < day);
-  return ends.sort().at(-1) ?? environment.freeSince ?? day;
+  return ends.sort((a, b) => a.localeCompare(b)).at(-1) ?? environment.freeSince ?? day;
 }
 
 /** The environment as the BFF answers it: who is in it today, who comes next, since when it is free. */
