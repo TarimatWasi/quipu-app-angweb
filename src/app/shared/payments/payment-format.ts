@@ -226,3 +226,13 @@ export function balanceOf(verified: number, due: number, lastPeriod: boolean): B
     ? { kind: 'short', difference }
     : { kind: 'over', difference, refund: lastPeriod };
 }
+
+/** The day of an instant in Lima as yyyy-mm-dd (the residence's day, not the browser's). */
+export function limaDay(instant: Date): string {
+  return Number.isNaN(instant.getTime()) ? '' : (limaDayOf(instant.toISOString()) ?? '');
+}
+
+/** The month of an instant in Lima as yyyy-mm. */
+export function limaMonth(instant: Date): string {
+  return limaDay(instant).slice(0, 7);
+}

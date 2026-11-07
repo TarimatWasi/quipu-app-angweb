@@ -1,5 +1,6 @@
 import type { operations } from '@core/api/bff.generated';
 import { formatDate, formatMoney, periodLabel } from '@shared/payments/payment-format';
+import { documentLabel } from '@shared/text/document-text';
 import { COLLATOR, matchesAny } from '@shared/text/search';
 import { compareBy } from '@shared/ui/data-table/list-sort';
 import type { ListSort, PhoneSort } from '@shared/ui/data-table/list-sort';
@@ -50,7 +51,6 @@ const URGENCY: Readonly<Record<ChargeState, number>> = {
 
 export const NO_ENVIRONMENT = 'Sin ambiente';
 export const NO_NAME = 'Huésped sin nombre';
-const DOCUMENT_LABELS = { DNI: 'DNI', CE: 'CE', PASSPORT: 'Pasaporte' } as const;
 
 /** The button or link a row offers (P-06): what to do with that charge. */
 export interface ChargeAction {
@@ -122,7 +122,7 @@ function actionOf(charge: DashboardCharge, state: ChargeState): ChargeAction {
 export function documentOf(
   charge: Pick<DashboardCharge, 'documentType' | 'documentNumber'>,
 ): string {
-  return `${DOCUMENT_LABELS[charge.documentType]} ${charge.documentNumber}`;
+  return documentLabel(charge.documentType, charge.documentNumber);
 }
 
 export function toChargeRow(charge: DashboardCharge): ChargeRow {

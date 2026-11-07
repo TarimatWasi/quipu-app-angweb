@@ -309,12 +309,11 @@ export const FIRST_USE_NOW: NowContent = {
   figure: 'Bienvenida',
   label: 'Quipu aún no tiene datos',
   meta: 'Empieza por crear tus ambientes; después registra a tus huéspedes y carga sus contratos. Aquí verás los cobros de cada mes.',
-  // «Nuevo ambiente» waits for A2 (TAR-291).
-  cta: null,
+  cta: { label: 'Nuevo ambiente', to: route(['/admin/environments', 'new']) },
   urgent: false,
 };
 
-/** One step of «Para empezar»; a step whose screen does not exist yet has no link. */
+/** One step of «Para empezar»; a step whose screen does not exist yet has no link (contracts: A4, TAR-211). */
 export interface FirstStep {
   readonly title: string;
   readonly text: string;
@@ -322,7 +321,11 @@ export interface FirstStep {
 }
 
 export const FIRST_STEPS: readonly FirstStep[] = [
-  { title: 'Crea tus ambientes', text: 'Habitaciones y cabañas, con su código.', link: null },
+  {
+    title: 'Crea tus ambientes',
+    text: 'Habitaciones y cabañas, con su código.',
+    link: { label: 'Ir a Ambientes', to: route(['/admin/environments']) },
+  },
   {
     title: 'Registra a tus huéspedes',
     text: 'Con su documento; ellos completan sus datos.',

@@ -112,11 +112,9 @@ export class DocumentActionDialogComponent {
   /** What each field shows: what is missing once a send was tried, or what the BFF refused. */
   protected readonly shown = computed<DraftProblems>(() => {
     // A file that cannot be used is said at once; the rest waits for a try to send.
-    const own = this.submitted()
-      ? this.problems()
-      : this.draft().fileInvalid
-        ? { file: this.problems().file }
-        : {};
+    let own: DraftProblems = {};
+    if (this.submitted()) own = this.problems();
+    else if (this.draft().fileInvalid) own = { file: this.problems().file };
     const refused = this.refused();
     return refused === null ? own : { ...own, [refused.field]: refused.message };
   });
