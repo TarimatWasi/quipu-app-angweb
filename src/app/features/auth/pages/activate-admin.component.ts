@@ -11,14 +11,12 @@ import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.comp
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { adminNameProblem } from '../model/admin-name';
 
 interface ActivateAdminModel {
   name: string;
   newPassword: string;
 }
-
-/** The limit of the BFF for the name of an administrator (RF-22). */
-const MAX_NAME_LENGTH = 100;
 
 /** The code of the link; an empty one is the same as none. */
 function codeOf(route: ActivatedRoute): string | null {
@@ -62,16 +60,8 @@ export class ActivateAdminComponent {
   protected readonly activateForm = form(
     this.model,
     (path) => {
-      // The BFF trims the name and wants 1 to 100 characters that are not only spaces.
-      validate(path.name, ({ value }) => {
-        const name = value().trim();
-        if (name === '') {
-          return { kind: 'required', message: 'Escribe tu nombre completo' };
-        }
-        return name.length > MAX_NAME_LENGTH
-          ? { kind: 'maxLength', message: 'Máximo 100 caracteres' }
-          : undefined;
-      });
+      // The BFF trims the name and wants 1 to 100 characters, none of control and not only spaces.
+      validate(path.name, ({ value }) => adminNameProblem(value()) ?? undefined);
       newPasswordRules(path.newPassword);
     },
     {
