@@ -36,7 +36,7 @@ import {
   REACTIVATED_EXPIRED_TEXT,
 } from '../model/detail-actions';
 import { detailPanel, owesAnything } from '../model/detail-panel';
-import type { DetailPanel, PanelAction } from '../model/detail-panel';
+import type { PanelAction } from '../model/detail-panel';
 import { isAccessExpired } from '../model/guest-list-texts';
 import { documentText, guestName } from '../model/guest-texts';
 import { moreActions } from '../model/more-actions';
@@ -46,32 +46,14 @@ import { toPeriodRow } from '@shared/payments/period-rows';
 import { toStayRow } from '../model/stay-rows';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
 import { ToastService } from '@shared/ui/toast/toast.service';
-
-type LoadState = 'loading' | 'ready' | 'not-found' | 'error';
-/** What the left column shows: the months, the stays, the activation still to do, or nothing. */
-type LeftColumn = 'periods' | 'stays' | 'blocked' | 'none';
-
-interface DetailView {
-  readonly guest: GuestDetail;
-  readonly panel: DetailPanel;
-  readonly left: LeftColumn;
-}
-
-const LOAD_ERROR_TEXT = 'No se pudo cargar el huésped.';
-/** How often the panel looks at the clock again (minutes left of an access). */
-const CLOCK_MS = 15_000;
-
-function leftColumn(guest: GuestDetail, periods: readonly PeriodStatus[]): LeftColumn {
-  if (guest.status === 'PENDING_ACTIVATION' || guest.status === 'ONBOARDING') return 'blocked';
-  if (guest.type === 'TEMPORARY') return 'stays';
-  return guest.status === 'ACTIVE' || periods.length > 0 ? 'periods' : 'none';
-}
-
-/** Whether the guest has months or stays to read besides its detail. */
-function chargesKind(guest: GuestDetail): 'periods' | 'stays' | null {
-  if (guest.status !== 'ACTIVE' && guest.status !== 'INACTIVE') return null;
-  return guest.type === 'CONTRACT' ? 'periods' : 'stays';
-}
+import {
+  CLOCK_MS,
+  chargesKind,
+  DetailView,
+  leftColumn,
+  LOAD_ERROR_TEXT,
+  LoadState,
+} from '../model/guest-detail-view';
 
 /**
  * A3.2 «Detalle del huésped» (CU-06, RF-10) on the canvas «HuespedDetalle»: what comes first for
