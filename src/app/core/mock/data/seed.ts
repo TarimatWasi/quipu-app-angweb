@@ -2,6 +2,7 @@ import type { MockScenario } from '../mock-scenarios';
 import { MockDb } from './mock-db';
 import { seedAdministrators } from './seed-administrators';
 import { seedCredits, seedPayments, seedRefunds, seedStays } from './seed-payments';
+import { seedDocumentActions, seedDocuments } from './seed-documents';
 import { seedContracts, seedEnvironments, seedGuests } from './seed-people';
 
 /**
@@ -11,6 +12,7 @@ import { seedContracts, seedEnvironments, seedGuests } from './seed-people';
 export function seedDb(scenario: MockScenario): MockDb {
   const environments = seedEnvironments();
   const guests = seedGuests();
+  const documents = seedDocuments(guests);
   if (scenario === 'empty') {
     return new MockDb({
       environments,
@@ -21,6 +23,8 @@ export function seedDb(scenario: MockScenario): MockDb {
       refunds: [],
       credits: new Map(),
       administrators: seedAdministrators(),
+      documents,
+      documentActions: [],
     });
   }
   const refunds = seedRefunds();
@@ -33,5 +37,7 @@ export function seedDb(scenario: MockScenario): MockDb {
     refunds,
     credits: seedCredits(refunds),
     administrators: seedAdministrators(),
+    documents,
+    documentActions: seedDocumentActions(documents),
   });
 }

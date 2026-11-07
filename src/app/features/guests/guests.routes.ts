@@ -3,7 +3,7 @@ import { Routes } from '@angular/router';
 const loadStayForm = () => import('./pages/stay-form.component').then((m) => m.StayFormComponent);
 
 /**
- * A3, A3.1, A3.2 (minimal), A3.5 and A3.7 of the administrator; the parent route keeps them for
+ * A3, A3.1, A3.2, A3.5, A3.7 and A3.8 of the administrator; the parent route keeps them for
  * ADMIN. `new` goes before `:id`, which would take it for an id.
  */
 export const GUESTS_ROUTES: Routes = [
@@ -23,6 +23,11 @@ export const GUESTS_ROUTES: Routes = [
   {
     path: ':id/access',
     loadComponent: () => import('./pages/access.component').then((m) => m.AccessComponent),
+  },
+  {
+    path: ':id/documents',
+    loadComponent: () =>
+      import('./pages/guest-documents.component').then((m) => m.GuestDocumentsComponent),
   },
   {
     path: ':id/document',
