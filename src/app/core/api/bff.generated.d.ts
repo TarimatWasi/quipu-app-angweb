@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.22.0 (TarimatWasi/quipu-lib-contracts), spec sha256 fd7231aac85b1934393a73a341a8a723065f7a18d8262875c6ec52d4f3126565.
+ * Generated from the BFF contract v0.23.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d59b3c8db79197ab1f9bf697c0556a64f2d0eb234cd4cbdfab59a5f4d1c597f5.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -3746,7 +3746,7 @@ export interface operations {
                     code: string;
                     /** @description At most 72 bytes in UTF-8 (bcrypt limit) */
                     newPassword: string;
-                    /** @description Full name of an administrator that activates the account created by another one (RF-22, A0.5, decided 2026-11-01): required while the account has no name, and ignored once it has one. The email of an account without name links to the administrator activation screen instead of the recovery one. */
+                    /** @description Full name of an administrator that activates the account (RF-22, A0.5, decided 2026-11-01): required while the account has no name, and ignored once it has one. It applies to any administrator without a name: the first one (ADR-F2) and the ones created by another. It has at least one character that is not whitespace and no control characters (line break, tab, NUL). The email of an account without name links to the administrator activation screen instead of the recovery one. */
                     name?: string;
                 };
             };
