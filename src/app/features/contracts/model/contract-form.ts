@@ -1,5 +1,10 @@
 import type { components } from '@core/api/bff.generated';
-import { formatDate, formatMoney, parseAmount } from '@shared/payments/payment-format';
+import {
+  formatDate,
+  formatMoney,
+  formatPeriod,
+  parseAmount,
+} from '@shared/payments/payment-format';
 import { documentLabel } from '@shared/text/document-text';
 import { environmentLabel } from '@shared/text/environment-text';
 import { guestName } from '@shared/text/guest-text';
@@ -57,19 +62,17 @@ export const FILE_ACCEPT = '.pdf,application/pdf';
 // The rules, as the BFF checks them; each says what is wrong, or null when it is valid.
 
 export function guestProblem(guestId: string): string | null {
-  return guestId === '' ? 'Elige al huésped.' : null;
+  return guestId === '' ? 'Elige al huésped del contrato.' : null;
 }
 
 export function environmentProblem(environmentId: string): string | null {
-  return environmentId === '' ? 'Elige el ambiente.' : null;
+  return environmentId === '' ? 'Elige el ambiente del contrato.' : null;
 }
 
 export function feeProblem(fee: string): string | null {
-  if (fee.trim() === '') return 'Escribe la cuota mensual.';
+  if (fee.trim() === '') return 'Escribe una cuota mayor que 0.';
   const amount = parseAmount(fee);
-  return amount !== null && amount > 0
-    ? null
-    : 'La cuota debe ser mayor que 0, con dos decimales como máximo.';
+  return amount !== null && amount > 0 ? null : 'Escribe una cuota mayor que 0.';
 }
 
 function wholeNumber(text: string): number | null {
@@ -77,15 +80,15 @@ function wholeNumber(text: string): number | null {
 }
 
 export function dayProblem(day: string): string | null {
-  if (day.trim() === '') return 'Escribe el día de pago.';
+  if (day.trim() === '') return 'Escribe un día del 1 al 31.';
   const value = wholeNumber(day);
-  return value !== null && value >= 1 && value <= 31 ? null : 'El día de pago va del 1 al 31.';
+  return value !== null && value >= 1 && value <= 31 ? null : 'Escribe un día del 1 al 31.';
 }
 
 export function graceProblem(grace: string): string | null {
-  if (grace.trim() === '') return 'Escribe los días de gracia; si no hay, 0.';
+  if (grace.trim() === '') return 'Escribe de 0 a 31 días.';
   const value = wholeNumber(grace);
-  return value !== null && value <= 31 ? null : 'Los días de gracia van de 0 a 31.';
+  return value !== null && value <= 31 ? null : 'Escribe de 0 a 31 días.';
 }
 
 export function startProblem(start: string): string | null {
@@ -99,7 +102,7 @@ export function endProblem(start: string, end: string): string | null {
 }
 
 export const FILE_REQUIRED_TEXT = 'Elige el PDF del contrato.';
-export const FILE_FORMAT_TEXT = 'El archivo debe ser un PDF de 10 MB como máximo.';
+export const FILE_FORMAT_TEXT = 'El contrato debe ser un PDF de hasta 10 MB';
 
 export function fileProblem(file: File | null): string | null {
   if (file === null) return FILE_REQUIRED_TEXT;
@@ -264,65 +267,110 @@ export const FILE_HELP = 'Solo PDF, hasta 10 MB.';
 /** The 409 that stops the loading, as the dialog tells it (RN-35, RN-13, RN-25, RF-01, RN-20). */
 export interface ContractConflict {
   readonly title: string;
+  /** The text of the catalog of SRS 17 (QP-UI-17), never the one of the BFF. */
   readonly message: string;
   readonly buttonLabel: string;
-  /** What the form does once the dialog is closed. */
-  readonly next: 'environment' | 'guest';
+  /** A second, quieter way out: closing the notice. */
+  readonly closeLabel: string | null;
+  /** What the form does once the main action is taken. */
+  readonly next: 'environment' | 'guest' | 'pay';
 }
 
+/** A month or a stay the guest owes, as the 409 GUEST_HAS_PENDING_DEBT lists it (RN-25). */
+export interface Debt {
+  readonly period: string | null;
+  readonly stayStartDate: string | null;
+  readonly amountDue: number;
+}
+
+/** «octubre 2026 (S/ 800.00) y noviembre 2026 (S/ 800.00)»: what is owed, oldest first. */
+export function debtsText(debts: readonly Debt[]): string {
+  const items = debts.map((debt) => {
+    const when =
+      debt.period !== null
+        ? formatPeriod(debt.period).toLowerCase()
+        : `la estadía del ${formatDate(debt.stayStartDate ?? '')}`;
+    return `${when} (${formatMoney(debt.amountDue)})`;
+  });
+  const [last] = items.slice(-1);
+  if (last === undefined) return '';
+  return items.length === 1 ? last : `${items.slice(0, -1).join(', ')} y ${last}`;
+}
+
+const NOTICES: Readonly<Record<string, { title: string; message: string }>> = {
+  GUEST_NOT_ACTIVE: {
+    title: 'El huésped no está activo',
+    message: 'Este huésped aún no está activo: no admite contratos ni pagos',
+  },
+  GUEST_NOT_CONTRACT: {
+    title: 'El huésped no es de contrato',
+    message: 'Solo los huéspedes con contrato pueden tener un contrato',
+  },
+  ENVIRONMENT_INACTIVE: {
+    title: 'El ambiente está inactivo',
+    message: 'El ambiente está inactivo; reactívalo antes de registrar un contrato',
+  },
+};
+
+const DEBT_MESSAGE =
+  'El huésped tiene deuda pendiente: salda sus períodos impagos antes de crear un contrato nuevo o reactivarlo';
+
+/**
+ * The 409 that stops the loading as the dialog tells it (RN-35, RN-13, RN-25, RF-01, RN-20): the
+ * texts are the catalog's, and the title names the environment when it is the one at fault.
+ */
 export function conflictOf(
   code: string,
-  names: { readonly guest: string | null; readonly environment: string | null },
-  fallback: string,
+  names: { readonly environment: string | null },
+  debts: readonly Debt[],
 ): ContractConflict | null {
-  const who = names.guest ?? 'El huésped';
-  const place = names.environment ?? 'El ambiente';
-  switch (code) {
-    case 'ENVIRONMENT_OCCUPIED':
-      return {
-        title: `${place} ya tiene un contrato vigente`,
-        message:
-          'Alguien cargó otro contrato o una estadía en ese ambiente en esas fechas. Elige otro ambiente libre.',
-        buttonLabel: 'Elegir otro ambiente',
-        next: 'environment',
-      };
-    case 'ENVIRONMENT_INACTIVE':
-      return {
-        title: `${place} está inactivo`,
-        message:
-          'Un ambiente inactivo no recibe contratos. Elige otro ambiente o reactívalo primero.',
-        buttonLabel: 'Elegir otro ambiente',
-        next: 'environment',
-      };
-    case 'GUEST_NOT_ACTIVE':
-      return {
-        title: `${who} no está activo`,
-        message: 'Un contrato se carga a un huésped activo. Reactívalo primero o elige a otro.',
-        buttonLabel: 'Entendido',
-        next: 'guest',
-      };
-    case 'GUEST_NOT_CONTRACT':
-      return {
-        title: `${who} es un huésped temporal`,
-        message:
-          'Un huésped temporal tiene estadías, no contratos. Elige a un huésped de contrato.',
-        buttonLabel: 'Entendido',
-        next: 'guest',
-      };
-    case 'GUEST_HAS_PENDING_DEBT':
-      return {
-        title: `${who} tiene deuda pendiente`,
-        message: fallback,
-        buttonLabel: 'Entendido',
-        next: 'guest',
-      };
-    default:
-      return null;
+  if (code === 'ENVIRONMENT_OCCUPIED') {
+    return {
+      title: `${names.environment ?? 'El ambiente'} ya tiene un contrato vigente`,
+      message:
+        'Alguien cargó otro contrato o una estadía en ese ambiente en esas fechas. Elige otro ambiente libre.',
+      buttonLabel: 'Elegir otro ambiente',
+      closeLabel: null,
+      next: 'environment',
+    };
   }
+  if (code === 'GUEST_HAS_PENDING_DEBT') {
+    const owed = debtsText(debts);
+    return {
+      title: 'El huésped tiene deuda pendiente',
+      message: owed === '' ? DEBT_MESSAGE : `${DEBT_MESSAGE}. Debe ${owed}.`,
+      buttonLabel: 'Registrar pago',
+      closeLabel: 'Cerrar',
+      next: 'pay',
+    };
+  }
+  const notice = NOTICES[code];
+  if (notice === undefined) return null;
+  const environment = code === 'ENVIRONMENT_INACTIVE';
+  return {
+    ...notice,
+    buttonLabel: environment ? 'Elegir otro ambiente' : 'Entendido',
+    closeLabel: null,
+    next: environment ? 'environment' : 'guest',
+  };
 }
 
+/** The text under a field the BFF refused with VALIDATION_ERROR: the catalog's, by field (SRS 17). */
+export const SERVER_FIELD_TEXTS: Readonly<Record<keyof ContractFields, string>> = {
+  guestId: 'Elige al huésped del contrato.',
+  environmentId: 'Elige el ambiente del contrato.',
+  fee: 'Escribe una cuota mayor que 0.',
+  day: 'Escribe un día del 1 al 31.',
+  grace: 'Escribe de 0 a 31 días.',
+  start: 'Elige la fecha de inicio.',
+  end: END_BEFORE_START_TEXT,
+};
+
+/** FILE_STORAGE_UNAVAILABLE (503): above the form, without losing what was written. */
+export const STORAGE_TEXT = 'No se pudo acceder al archivo; inténtalo de nuevo más tarde';
+
 /** The field of the form a BFF field name points at. */
-export const SERVER_FIELDS: Readonly<Record<string, keyof ContractDraft>> = {
+export const SERVER_FIELDS: Readonly<Record<string, keyof ContractFields>> = {
   guestId: 'guestId',
   environmentId: 'environmentId',
   monthlyAmount: 'fee',
@@ -330,5 +378,4 @@ export const SERVER_FIELDS: Readonly<Record<string, keyof ContractDraft>> = {
   graceDays: 'grace',
   startDate: 'start',
   endDate: 'end',
-  file: 'file',
 };

@@ -37,7 +37,8 @@ export function contractPeriods(
   pool: CreditPool = { available: db.credit(contract.guestId).balance },
 ): ContractPeriod[] {
   const current = today().slice(0, 7);
-  const end = contract.endDate?.slice(0, 7) ?? current;
+  // A finalized contract charges up to the month it was finalized (RN-21, D-31).
+  const end = (contract.terminatedAt ?? contract.endDate)?.slice(0, 7) ?? current;
   const last = end < current ? end : current;
   let available = pool.available;
   return monthsBetween(contract.startDate.slice(0, 7), last).map((period) => {

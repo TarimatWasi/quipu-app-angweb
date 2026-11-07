@@ -53,7 +53,7 @@ interface SeedProof {
   readonly file?: string;
 }
 
-interface SeedPayment {
+export interface SeedPayment {
   readonly n: number;
   readonly guestId: string;
   readonly target: { readonly contractId: string; readonly period: string } | { stayId: string };
@@ -86,7 +86,7 @@ function proof(seed: SeedPayment, item: SeedProof, index: number): AdminProof {
   };
 }
 
-function payment(seed: SeedPayment): PaymentRecord {
+export function seedPayment(seed: SeedPayment): PaymentRecord {
   const resolvedAt = instantOn(addDays(seed.sentOn, 1), 16);
   const resolved = seed.status !== 'PENDING';
   const decision = seed.status === 'REJECTED' ? 'REJECTED' : 'APPROVED';
@@ -122,7 +122,16 @@ function monthly(
   contract: { readonly id: string; readonly day: number; readonly amount: number },
   monthsAgo: number,
 ): SeedPayment {
-  const period = addMonths(today(), -monthsAgo);
+  return monthlyFor(n, guestId, contract, addMonths(today(), -monthsAgo));
+}
+
+/** The approved payment of a month (yyyy-mm), sent two days before it was due. */
+export function monthlyFor(
+  n: number,
+  guestId: string,
+  contract: { readonly id: string; readonly day: number; readonly amount: number },
+  period: string,
+): SeedPayment {
   return {
     n,
     guestId,
@@ -207,7 +216,7 @@ function detailPayments(): SeedPayment[] {
 }
 
 export function seedPayments(): PaymentRecord[] {
-  return [...contractPayments(), ...stayPayments(), ...detailPayments()].map(payment);
+  return [...contractPayments(), ...stayPayments(), ...detailPayments()].map(seedPayment);
 }
 
 /** A refund of the surplus of an old payment of Luis (RN-39), so H1 and H4 show one. */

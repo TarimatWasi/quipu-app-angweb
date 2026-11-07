@@ -23,7 +23,9 @@ const all = (mock: MockHarness, status: 'ACTIVE' | 'INACTIVE' = 'ACTIVE') =>
 /** The first active environment that matches, from the list the BFF answers. */
 async function some(mock: MockHarness, occupied: boolean): Promise<Environment> {
   const found = (await all(mock)).content.find(
-    (environment) => (environment.occupant !== null) === occupied,
+    (environment) =>
+      (environment.occupant !== null) === occupied &&
+      (occupied || environment.nextOccupant === null),
   );
   if (found === undefined) throw new Error(`expected ${occupied ? 'an occupied' : 'a free'} one`);
   return found;

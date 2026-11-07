@@ -2,6 +2,7 @@ import type { components } from '@core/api/bff.generated';
 import { GUEST_IDS } from '../data/demo-users';
 import { addDays, today } from '../data/mock-dates';
 import { STAY_IDS } from '../data/seed-payments';
+import { CASE_GUEST_IDS } from '../data/seed-contract-cases';
 import { ENVIRONMENT_IDS } from '../data/seed-people';
 import { catalogOf, resetMockSettings, setUpMockBff, SOME_TEXT } from '../mock-bff.testing';
 import type { MockHarness } from '../mock-bff.testing';
@@ -33,8 +34,9 @@ describe('admin guests in the simulated BFF', () => {
       status: 'ALL',
       limit: 100,
     });
-    // The 9 of A3 and A3.1, and the 4 more of A3.2 (under review, up to date, no contract, lapsed).
-    expect(page.content).toHaveLength(13);
+    // The 9 of A3 and A3.1, the 4 more of A3.2 (under review, up to date, no contract, lapsed) and the
+    // 5 of A4 (no end date, about to end, expired, finalized, about to begin).
+    expect(page.content).toHaveLength(18);
     expect(page.pendingActivationCount).toBe(2);
     expect(page.onboardingCount).toBe(1);
     const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');
@@ -49,7 +51,9 @@ describe('admin guests in the simulated BFF', () => {
       status: 'ACTIVE',
       withoutContract: 'true',
     });
-    expect(free.content.map((guest) => guest.id)).toEqual([GUEST_IDS.noContract]);
+    expect(free.content.map((guest) => guest.id).sort()).toEqual(
+      [GUEST_IDS.noContract, CASE_GUEST_IDS.expired, CASE_GUEST_IDS.terminated].sort(),
+    );
     const all = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
       type: 'CONTRACT',
       status: 'ACTIVE',
@@ -262,8 +266,9 @@ describe('admin guests in the simulated BFF', () => {
       limit: 100,
     });
     const codes = page.content.map((environment) => environment.code);
-    expect(codes).toEqual(['203', 'C2', 'C3']);
-    expect(page.freeCount).toBe(2);
+    expect(codes).toEqual(['105', '203', '207', '208', 'C2', 'C3', 'C4']);
+    // 105 and C2 are free but have somebody coming, so they do not count as free.
+    expect(page.freeCount).toBe(5);
     expect((await mock.fail(mock.get('/bff/admin/environments', { freeTo: today() }))).status).toBe(
       400,
     );

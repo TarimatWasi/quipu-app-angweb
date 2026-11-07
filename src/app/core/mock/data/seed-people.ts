@@ -28,7 +28,7 @@ export const CONTRACT_IDS = {
 /** How long the access of the guest pending activation still lasts when the data is seeded. */
 const PENDING_ACCESS_MINUTES = 18;
 
-function environment(id: string, code: string, type: Environment['type']): Environment {
+export function environment(id: string, code: string, type: Environment['type']): Environment {
   return {
     id,
     code,
@@ -63,7 +63,7 @@ export function seedEnvironments(): Environment[] {
 type GuestFields = Pick<GuestRecord, 'id' | 'documentType' | 'documentNumber' | 'name' | 'type'> &
   Partial<GuestRecord>;
 
-function guest(fields: GuestFields): GuestRecord {
+export function guest(fields: GuestFields): GuestRecord {
   return {
     version: 1,
     status: 'ACTIVE',
