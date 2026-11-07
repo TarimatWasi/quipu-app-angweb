@@ -111,7 +111,7 @@ describe('AppShellComponent (P-01)', () => {
         'Inicio',
         'Ambientes',
         'Huéspedes',
-        'Contratos (pronto)',
+        'Contratos',
         'Pagos',
         'Finanzas (pronto)',
       ]);
@@ -120,9 +120,10 @@ describe('AppShellComponent (P-01)', () => {
         '/home',
         '/admin/environments',
         '/admin/guests',
+        '/admin/contracts',
         '/admin/payments',
       ]);
-      expect(nav.queryByRole('link', { name: /Contratos/ })).toBeNull();
+      expect(nav.queryByRole('link', { name: /Finanzas/ })).toBeNull();
     });
 
     it('marks the current section with aria-current="page" and only that one', async () => {

@@ -90,6 +90,9 @@ describe('A2 «Ambientes»', () => {
     const panel = view().getByRole('region', { name: 'Lo que toca ahora' });
     expect(text(panel)).toContain('ambiente libre');
     expect(text(panel)).toContain('Habitación 109');
+    expect(within(panel).getByRole('link', { name: 'Cargar contrato' }).getAttribute('href')).toBe(
+      '/admin/contracts/new',
+    );
     expect(codes()).toEqual(['109', '201', 'C2']);
     expect(text(table().getByText('Ana Quispe').closest('td') ?? document.body)).toContain(
       'contrato hasta 31 mar 2027',
@@ -184,6 +187,9 @@ describe('A2 «Ambientes»', () => {
       await screen.findByRole('dialog', { name: 'El ambiente 109 está ocupado' }),
     ).toBeTruthy();
     expect(screen.getByText(/finaliza primero ese contrato/)).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Ver contrato vigente' }).getAttribute('href')).toBe(
+      '/admin/contracts/c1',
+    );
   });
 
   it('reactivates an inactive one without asking', async () => {

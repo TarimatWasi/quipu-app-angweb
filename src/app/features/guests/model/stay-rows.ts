@@ -1,8 +1,8 @@
 import type { Stay } from '@core/api/clients/admin-guests.service';
 import { formatMoney } from '@shared/payments/payment-format';
 import { NO_ENVIRONMENT, nightsBetween, nightsText, stayDatesWithYear } from './guest-texts';
-import { PERIOD_BADGES, paymentAction } from './period-rows';
-import type { PaymentAction, StateBadge } from './period-rows';
+import { PERIOD_BADGES, paymentAction } from '@shared/payments/period-rows';
+import type { PaymentAction, StateBadge } from '@shared/payments/period-rows';
 
 /** One stay of A3.2 «Estadías» (RN-13): one card, newest first, with its single payment (RN-03). */
 export interface StayRow {

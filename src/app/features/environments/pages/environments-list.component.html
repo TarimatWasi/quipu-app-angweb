@@ -47,14 +47,17 @@
   }
   @case ('ready') {
     @if (panel(); as free) {
-      <!-- TODO(TAR-211): «Cargar contrato» as the action of the panel once A4 exists. -->
       <app-now-panel
         class="now"
         headingId="environments-now-title"
         [figure]="free.figure"
         [label]="free.label"
         [text]="free.text"
-      />
+      >
+        <a class="quipu-button quipu-button--primary" routerLink="/admin/contracts/new"
+          >Cargar contrato</a
+        >
+      </app-now-panel>
     }
 
     <section class="all" aria-labelledby="all-environments-title">
@@ -119,45 +122,29 @@
         }
       </app-list-filters>
 
-      <div class="list">
-        @if (listFailed()) {
-          <app-load-error [message]="loadErrorText" [retrying]="retrying()" (retry)="retry()" />
-        }
-        @if (rows().length > 0) {
-          <app-environments-table
-            [rows]="rows()"
-            [sort]="sort()"
-            (sortBy)="sortBy($event)"
-            (changeState)="changeState($event)"
-          />
-        } @else if (filtered() && !listFailed()) {
-          <app-empty-state
-            [heading]="noMatchHeading"
-            [filtered]="true"
-            (clearFilters)="clearFilters()"
-          />
-        } @else if (!listFailed()) {
-          <app-empty-state [heading]="empty().heading">{{ empty().text }}</app-empty-state>
-        }
-      </div>
-
-      @if (moreFailed()) {
-        <app-load-error
-          class="more-error"
-          [message]="loadErrorText"
-          [retrying]="retrying()"
-          (retry)="retry()"
+      <app-list-results
+        [shown]="rows().length"
+        [loaded]="loadedCount()"
+        [filtered]="filtered()"
+        [noMatchHeading]="noMatchHeading"
+        [empty]="empty()"
+        [errorText]="loadErrorText"
+        [listFailed]="listFailed()"
+        [moreFailed]="moreFailed()"
+        [retrying]="retrying()"
+        [hasMore]="nextCursor() !== null"
+        [loadingMore]="loadingMore()"
+        (retry)="retry()"
+        (clearFilters)="clearFilters()"
+        (more)="more()"
+      >
+        <app-environments-table
+          [rows]="rows()"
+          [sort]="sort()"
+          (sortBy)="sortBy($event)"
+          (changeState)="changeState($event)"
         />
-      } @else if (nextCursor() !== null && !listFailed()) {
-        <app-show-more
-          [summary]="false"
-          [shown]="rows().length"
-          [loaded]="loadedCount()"
-          [hasMore]="true"
-          [loading]="loadingMore()"
-          (more)="more()"
-        />
-      }
+      </app-list-results>
     </section>
   }
 }

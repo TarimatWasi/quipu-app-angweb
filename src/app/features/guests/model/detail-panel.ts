@@ -9,8 +9,8 @@ import {
 import { joinWords, onboardingSteps } from './detail-side';
 import { isAccessExpired, limaDay, whenText } from './guest-list-texts';
 import { stayDatesWithYear } from './guest-texts';
-import { openPayment, PERIOD_BADGES, registerPayment } from './period-rows';
-import type { PaymentAction, PeriodState, StateBadge } from './period-rows';
+import { openPayment, PERIOD_BADGES, registerPayment } from '@shared/payments/period-rows';
+import type { PaymentAction, PeriodState, StateBadge } from '@shared/payments/period-rows';
 
 /** A3.2 «Lo que toca ahora»: one figure, its context and at most one primary action. */
 
@@ -267,14 +267,18 @@ export const NO_CONTRACT_TEXT =
 /** 9 and 10: nothing owed nor waiting. */
 function quietPanel(guest: GuestDetail, charges: readonly Charge[]): DetailPanel {
   if (guest.type === 'CONTRACT' && guest.contract?.status !== 'ACTIVE') {
-    // TODO(TAR-211): «Cargar contrato» once the contracts screen exists.
     return {
       figure: 'Sin contrato',
       alarm: false,
       label: '',
       badge: null,
       text: NO_CONTRACT_TEXT,
-      action: null,
+      action: {
+        kind: 'link',
+        label: 'Cargar contrato',
+        link: ['/admin/contracts/new'],
+        query: { guestId: guest.id },
+      },
     };
   }
   const paid = charges.filter((charge) => charge.state === 'PAID').at(-1);

@@ -220,6 +220,34 @@ export function payablePeriods(db: MockDb, guestId: string): PayablePeriod[] {
   return [...contractPayables(db, guestId), ...stayPayables(db, guestId)];
 }
 
+/** What is owed: overdue, or with its payment rejected once its due date passed (RN-25). */
+function isOwed(item: PayablePeriod): boolean {
+  return item.status === 'OVERDUE' || (item.status === 'REJECTED' && item.dueDate < today());
+}
+
+/** The periods and stays a guest owes, oldest first (RN-25, RN-35). */
+export function owedPayables(db: MockDb, guestId: string): PayablePeriod[] {
+  return payablePeriods(db, guestId).filter(isOwed);
+}
+
+/** The 409 GUEST_HAS_PENDING_DEBT body for what a guest owes. */
+export function pendingDebtError(
+  owed: readonly PayablePeriod[],
+): Schemas['GuestHasPendingDebtError'] {
+  return {
+    code: 'GUEST_HAS_PENDING_DEBT',
+    message: 'El huésped tiene deuda pendiente',
+    periods: owed.map((item) => item.period ?? item.dueDate.slice(0, 7)),
+    debts: owed.map((item) => ({
+      period: item.period,
+      stayId: item.stayId,
+      stayStartDate: item.stayStartDate,
+      stayEndDate: item.stayEndDate,
+      amountDue: item.amountDue,
+    })),
+  };
+}
+
 /** Who occupies an environment on `day`, from contracts and stays (RN-20). */
 function occupantOn(db: MockDb, environment: Environment, day: string): Schemas['Occupant'] | null {
   const contract = db.data.contracts.find(

@@ -42,6 +42,25 @@ describe('admin guests in the simulated BFF', () => {
     expect((await mock.fail(mock.get('/bff/admin/guests', { status: 'OTRO' }))).status).toBe(400);
   });
 
+  it('offers, for A4.1, the active guests of contract type without a contract in force', async () => {
+    const mock = await admin();
+    const free = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
+      type: 'CONTRACT',
+      status: 'ACTIVE',
+      withoutContract: 'true',
+    });
+    expect(free.content.map((guest) => guest.id)).toEqual([GUEST_IDS.noContract]);
+    const all = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests', {
+      type: 'CONTRACT',
+      status: 'ACTIVE',
+      withoutContract: 'false',
+    });
+    expect(all.content.length).toBeGreaterThan(1);
+    expect(
+      (await mock.fail(mock.get('/bff/admin/guests', { withoutContract: 'tal' }))).status,
+    ).toBe(400);
+  });
+
   it('gives A3 the environment, the expired access and the type and state filters', async () => {
     const mock = await admin();
     const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');

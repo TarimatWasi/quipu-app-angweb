@@ -57,7 +57,9 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       .querySelector('app-status-badge');
     expect(contractBadge?.classList.contains('tone-paid')).toBe(true);
     expect(squash(contractBadge?.textContent)).toBe('Activo');
-    expect(ui.page().queryByRole('link', { name: 'Ver contrato' })).toBeNull();
+    expect(ui.page().getByRole('link', { name: 'Ver contrato' }).getAttribute('href')).toMatch(
+      /^\/admin\/contracts\/.+/,
+    );
     expect(ui.page().queryByRole('region', { name: 'Su registro' })).toBeNull();
     expect(ui.more()).toEqual([
       'Generar otro acceso si olvidó su contraseña',
@@ -134,7 +136,9 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
     const ui = await setup({ detail: of(guestOf({ contract: undefined })), months: [] });
 
     expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Sin contrato');
-    expect(within(ui.panel()).queryByRole('link')).toBeNull();
+    expect(
+      within(ui.panel()).getByRole('link', { name: 'Cargar contrato' }).getAttribute('href'),
+    ).toMatch(/^\/admin\/contracts\/new\?guestId=.+/);
     expect(within(ui.panel()).queryByRole('button')).toBeNull();
     const empty = ui.page().getByRole('region', { name: 'Aún no tiene meses por cobrar.' });
     expect(squash(empty.textContent)).toContain('Aparecen cuando le cargues un contrato.');

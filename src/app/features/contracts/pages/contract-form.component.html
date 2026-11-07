@@ -1,0 +1,186 @@
+<app-page-header heading="Cargar contrato" [backLink]="back().link" [backTo]="back().label" />
+
+@switch (phase()) {
+  @case ('initial-loading') {
+    <app-skeleton subject="el formulario"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <div class="side">
+            <app-skeleton-facts
+              [labels]="['Huésped', 'Ambiente', 'Cuota mensual', 'Día de pago', 'Vigencia']"
+            />
+          </div>
+          <div class="form">
+            <app-skeleton-fields
+              [labels]="['Huésped', 'Ambiente', 'Cuota mensual', 'Inicio', 'PDF del contrato']"
+            />
+            <app-skeleton-block shape="rectangle" width="12rem" />
+          </div>
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    <div class="layout">
+      <aside class="side" aria-labelledby="side-title">
+        <h2 id="side-title">Lo que se va a cargar</h2>
+        <dl class="facts">
+          @for (fact of facts(); track fact.label) {
+            <app-fact-tile
+              surface="stone"
+              [class.wide]="fact.wide"
+              [class.long]="fact.value.length > longValue"
+              [label]="fact.label"
+              [value]="fact.value"
+              [hint]="fact.hint ?? ''"
+            />
+          }
+        </dl>
+        <p class="note">{{ note() }}</p>
+      </aside>
+
+      <form class="form" novalidate aria-labelledby="form-title" [formRoot]="contractForm">
+        <h2 id="form-title">Datos del contrato</h2>
+        <div class="fields">
+          @if (fixedGuest(); as guest) {
+            <p class="fixed">
+              <span class="quipu-label">Huésped</span>
+              <strong>{{ guest }}</strong>
+            </p>
+          } @else {
+            <app-form-field
+              class="pick"
+              fieldId="contract-guest"
+              label="Huésped"
+              help="Solo huéspedes de contrato activos y sin un contrato vigente."
+              [error]="error('guestId')"
+            >
+              <select appFieldControl class="quipu-input" [formField]="contractForm.guestId">
+                <option value="">Elige un huésped</option>
+                @for (option of guestChoices(); track option.value) {
+                  <option [value]="option.value">{{ option.label }}</option>
+                }
+              </select>
+            </app-form-field>
+          }
+
+          <app-form-field
+            class="pick"
+            fieldId="contract-environment"
+            label="Ambiente"
+            help="Solo los ambientes activos y libres hoy. Lo ocupa desde el inicio."
+            [error]="error('environmentId')"
+          >
+            <select appFieldControl class="quipu-input" [formField]="contractForm.environmentId">
+              <option value="">Elige un ambiente</option>
+              @for (option of environmentChoices(); track option.value) {
+                <option [value]="option.value">{{ option.label }}</option>
+              }
+            </select>
+          </app-form-field>
+
+          <div class="money-row">
+            <app-form-field
+              fieldId="contract-fee"
+              label="Cuota mensual"
+              [money]="true"
+              [error]="error('fee')"
+            >
+              <input
+                appFieldControl
+                class="quipu-input"
+                inputmode="decimal"
+                autocomplete="off"
+                [formField]="contractForm.fee"
+              />
+            </app-form-field>
+            <app-form-field
+              fieldId="contract-day"
+              label="Día de pago"
+              help="Del 1 al 31."
+              [error]="error('day')"
+            >
+              <input
+                appFieldControl
+                class="quipu-input"
+                inputmode="numeric"
+                autocomplete="off"
+                [formField]="contractForm.day"
+              />
+            </app-form-field>
+            <app-form-field
+              fieldId="contract-grace"
+              label="Días de gracia"
+              help="Sin atraso hasta."
+              [error]="error('grace')"
+            >
+              <input
+                appFieldControl
+                class="quipu-input"
+                inputmode="numeric"
+                autocomplete="off"
+                [formField]="contractForm.grace"
+              />
+            </app-form-field>
+          </div>
+
+          <div class="dates">
+            <app-form-field fieldId="contract-start" label="Inicio" [error]="error('start')">
+              <input
+                appFieldControl
+                class="quipu-input"
+                type="date"
+                [formField]="contractForm.start"
+              />
+            </app-form-field>
+            <app-form-field
+              fieldId="contract-end"
+              label="Fin"
+              [optional]="true"
+              help="Sin fecha de fin sigue hasta que lo finalices."
+              [error]="error('end')"
+            >
+              <input
+                appFieldControl
+                class="quipu-input"
+                type="date"
+                [min]="fields().start"
+                [formField]="contractForm.end"
+              />
+            </app-form-field>
+          </div>
+
+          <app-file-field
+            fieldId="contract-file"
+            [label]="fileLabel"
+            [prompt]="filePrompt"
+            [help]="fileHelp"
+            [accept]="fileAccept"
+            [camera]="false"
+            [removable]="true"
+            [fileName]="fileName()"
+            [error]="fileError()"
+            (chosen)="chooseFile($event)"
+          />
+        </div>
+
+        @if (generalError(); as message) {
+          <p class="quipu-alert" role="alert" tabindex="-1" [id]="generalErrorId">{{ message }}</p>
+        }
+        <div class="actions">
+          <button class="quipu-button quipu-button--primary" type="submit" [disabled]="saving()">
+            {{ saving() ? 'Subiendo contrato…' : 'Cargar contrato' }}
+          </button>
+          <a class="quipu-button quipu-button--tertiary" [routerLink]="back().link">Cancelar</a>
+        </div>
+      </form>
+    </div>
+  }
+}

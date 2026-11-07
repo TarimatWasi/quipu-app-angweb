@@ -62,6 +62,7 @@ const route = (
 ): Destination => ({ kind: 'route', link, query });
 
 const PAYMENTS: Destination = route(['/admin/payments']);
+const CONTRACTS: Destination = route(['/admin/contracts']);
 const REJECTED: Destination = route(['/admin/payments'], { vista: 'rechazados' });
 
 const plural = (count: number, one: string, many: string): string => (count === 1 ? one : many);
@@ -208,8 +209,8 @@ function rejected(d: AdminDashboard, now: Date): Pending | null {
   };
 }
 
-// Refunds go to Finanzas (A6, TAR-244) and contracts to A4 (TAR-211): until those screens exist
-// their links are left out, so nothing leads to a page that is not there.
+// Refunds go to Finanzas (A6, TAR-244): until that screen exists their link is left out, so
+// nothing leads to a page that is not there.
 function refunds(d: AdminDashboard): Pending | null {
   const { count, total } = d.refunds;
   if (count <= 0) return null;
@@ -250,10 +251,10 @@ function expiring(d: AdminDashboard): Pending | null {
         : count === 1
           ? `${who} vence el ${date}. Si renueva, carga el contrato nuevo antes de esa fecha.`
           : `El primero en vencer es el de ${who}, el ${date}. Si renuevan, carga el contrato nuevo antes de esa fecha.`,
-    cta: null,
+    cta: { label: 'Ver contratos por vencer', to: CONTRACTS },
     head: `${String(count)} ${plural(count, 'contrato por vencer', 'contratos por vencer')}:`,
     text: first === null ? '' : `${who}, el ${date}.`,
-    link: null,
+    link: { label: 'Ver contratos', to: CONTRACTS },
   };
 }
 
@@ -313,7 +314,7 @@ export const FIRST_USE_NOW: NowContent = {
   urgent: false,
 };
 
-/** One step of «Para empezar»; a step whose screen does not exist yet has no link (contracts: A4, TAR-211). */
+/** One step of «Para empezar»; a step whose screen does not exist yet has no link. */
 export interface FirstStep {
   readonly title: string;
   readonly text: string;
@@ -334,7 +335,7 @@ export const FIRST_STEPS: readonly FirstStep[] = [
   {
     title: 'Carga los contratos',
     text: 'Con la cuota, el día de pago y el PDF firmado.',
-    link: null,
+    link: { label: 'Ir a Contratos', to: CONTRACTS },
   },
 ];
 

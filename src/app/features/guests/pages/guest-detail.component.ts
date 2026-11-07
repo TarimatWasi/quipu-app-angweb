@@ -27,7 +27,7 @@ import { GuestFactsComponent } from '../components/guest-facts.component';
 import { GuestStaysComponent } from '../components/guest-stays.component';
 import { MoreActionsComponent } from '../components/more-actions.component';
 import { openPendingDebtDialog } from '../components/pending-debt-dialog.component';
-import { PeriodPaymentsComponent } from '../components/period-payments.component';
+import { PeriodPaymentsComponent } from '@shared/payments/period-payments.component';
 import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
 import {
   DEACTIVATED_TEXT,
@@ -42,7 +42,7 @@ import { documentText, guestName } from '../model/guest-texts';
 import { moreActions } from '../model/more-actions';
 import type { DialogActionKind } from '../model/more-actions';
 import { callFailure, pendingDebt, REACTIVATED_TEXT, reactivateProblem } from '../model/new-guest';
-import { toPeriodRow } from '../model/period-rows';
+import { toPeriodRow } from '@shared/payments/period-rows';
 import { toStayRow } from '../model/stay-rows';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -378,6 +378,7 @@ export class GuestDetailComponent implements OnInit {
       openDeactivateGuestDialog(this.dialog, {
         who: guestName(guest),
         blocked: guest.contract?.status === 'ACTIVE',
+        contractId: guest.contract?.status === 'ACTIVE' ? guest.contract.id : null,
         deactivate: () => this.guests.deactivate(guest.id),
       }),
     )

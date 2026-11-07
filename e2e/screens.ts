@@ -150,6 +150,34 @@ export const SCREENS: readonly ScreenCapture[] = [
     role: 'admin',
     scenarios: ['normal'],
   },
+  // A4: «normal» has the four contracts in force; A4.2 is the one of Luis, which owes months.
+  {
+    id: 'a4-contratos',
+    path: '/admin/contracts',
+    role: 'admin',
+    scenarios: ['normal', 'empty', 'load-error'],
+  },
+  {
+    id: 'a4-contratos',
+    path: '/admin/contracts',
+    role: 'admin',
+    scenarios: ['slow'],
+    readiness: 'skeleton',
+  },
+  { id: 'a4-1-cargar', path: '/admin/contracts/new', role: 'admin', scenarios: ['normal'] },
+  {
+    id: 'a4-2-detalle',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000001',
+    role: 'admin',
+    scenarios: ['normal', 'conflict'],
+  },
+  {
+    id: 'a4-3-finalizar',
+    path: '/admin/contracts/00000003-0000-4000-8000-000000000001',
+    role: 'admin',
+    scenarios: ['normal'],
+    open: 'Finalizar contrato',
+  },
   { id: 'a5-1-pago-directo', path: '/admin/payments/new', role: 'admin', scenarios: ['normal'] },
   {
     id: 'a5-2-revision',

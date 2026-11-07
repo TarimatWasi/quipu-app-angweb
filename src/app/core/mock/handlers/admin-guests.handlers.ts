@@ -43,8 +43,17 @@ function versionOf(body: Record<string, unknown>): number {
 function listGuests(db: MockDb, req: MockRequest): Schemas['PagedGuests'] {
   const filter = GUEST_FILTERS.get(req.query.get('status') ?? 'CURRENT') ?? invalid('status');
   const type = req.query.get('type');
+  const without = req.query.get('withoutContract');
+  if (without !== null && without !== 'true' && without !== 'false') invalid('withoutContract');
+  const hasContract = (guest: GuestRecord) =>
+    db.data.contracts.some((item) => item.guestId === guest.id && item.status === 'ACTIVE');
   const guests = db.data.guests
-    .filter((guest) => filter(guest) && (type === null || guest.type === type))
+    .filter(
+      (guest) =>
+        filter(guest) &&
+        (type === null || guest.type === type) &&
+        (without !== 'true' || !hasContract(guest)),
+    )
     .sort((a, b) =>
       `${a.documentType}${a.documentNumber}`.localeCompare(`${b.documentType}${b.documentNumber}`),
     )

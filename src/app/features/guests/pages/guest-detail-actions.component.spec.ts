@@ -49,6 +49,9 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
     expect(notice.getAllByRole('button').map((button) => squash(button.textContent))).toEqual([
       'Cerrar',
     ]);
+    expect(notice.getByRole('link', { name: 'Ver contrato vigente' }).getAttribute('href')).toMatch(
+      /^[/]admin[/]contracts[/].+/,
+    );
     expect(known.service.deactivate).not.toHaveBeenCalled();
     await known.click(notice.getByRole('button', { name: 'Cerrar' }));
     expect(screen.queryByRole('alertdialog')).toBeNull();
