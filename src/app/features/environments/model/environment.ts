@@ -1,5 +1,6 @@
 import type { components } from '@core/api/bff.generated';
 import { formatDate, formatStay } from '@shared/payments/payment-format';
+import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { COLLATOR, matchesAny } from '@shared/text/search';
 import { compareBy } from '@shared/ui/data-table/list-sort';
 import type { ListSort, PhoneSort } from '@shared/ui/data-table/list-sort';
@@ -13,10 +14,6 @@ export type Occupant = components['schemas']['Occupant'];
 export type EnvironmentType = Environment['type'];
 export type EnvironmentStatus = Environment['status'];
 
-export const TYPE_LABELS: Readonly<Record<EnvironmentType, string>> = {
-  ROOM: 'Habitación',
-  CABIN: 'Cabaña',
-};
 export const STATUS_LABELS: Readonly<Record<EnvironmentStatus, string>> = {
   ACTIVE: 'Activo',
   INACTIVE: 'Inactivo',
@@ -93,13 +90,13 @@ function titleAndDetail(env: Environment): { title: string; detail: string } {
 
 export function toRow(env: Environment): EnvironmentRow {
   const { title, detail } = titleAndDetail(env);
-  const name = `${TYPE_LABELS[env.type]} ${env.code}`;
+  const name = `${ENVIRONMENT_TYPE_LABELS[env.type]} ${env.code}`;
   const active = env.status === 'ACTIVE';
   return {
     id: env.id,
     code: env.code,
     type: env.type,
-    typeLabel: TYPE_LABELS[env.type],
+    typeLabel: ENVIRONMENT_TYPE_LABELS[env.type],
     status: env.status,
     badge: { label: STATUS_LABELS[env.status], tone: STATUS_TONES[env.status] },
     occupant: env.occupant,
@@ -198,13 +195,13 @@ export function freePanel(freeCount: number, loaded: readonly Environment[]): Fr
   const reserved = loaded.filter(
     (env) => env.status === 'ACTIVE' && env.occupant === null && env.nextOccupant !== null,
   );
-  const names = free.map((env) => `${lower(TYPE_LABELS[env.type])} ${env.code}`);
+  const names = free.map((env) => `${lower(ENVIRONMENT_TYPE_LABELS[env.type])} ${env.code}`);
   const which =
     names.length === freeCount ? `${joinNames(names).replace(/^./, (x) => x.toUpperCase())}: ` : '';
   const booked = reserved
     .map(
       (env) =>
-        ` La ${lower(TYPE_LABELS[env.type])} ${env.code} está libre solo hasta el ${formatDate(env.nextOccupant?.startDate ?? '')}.`,
+        ` La ${lower(ENVIRONMENT_TYPE_LABELS[env.type])} ${env.code} está libre solo hasta el ${formatDate(env.nextOccupant?.startDate ?? '')}.`,
     )
     .join('');
   return {
@@ -287,7 +284,7 @@ export function draftFacts(draft: EnvironmentDraft): FormFact[] {
     { label: 'Código', value: draft.code.trim() || 'Falta el código', wide: false },
     {
       label: 'Tipo',
-      value: draft.type === '' ? 'Falta elegirlo' : TYPE_LABELS[draft.type],
+      value: draft.type === '' ? 'Falta elegirlo' : ENVIRONMENT_TYPE_LABELS[draft.type],
       wide: false,
     },
   ];
@@ -339,16 +336,4 @@ export function busyText(occupant: Occupant | undefined, today: string): string 
   return future
     ? `${who} tiene un contrato aquí que empieza el ${formatDate(occupant.startDate)}. Para desactivarlo, finaliza primero ese contrato.`
     : `Este ambiente está ocupado: finaliza primero su contrato. Hoy lo ocupa ${who}.`;
-}
-
-const LIMA_DAY = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/Lima',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-/** The day of an instant in America/Lima, yyyy-mm-dd: a stay is «now» or «later» by that day. */
-export function limaToday(instant: Date): string {
-  return LIMA_DAY.format(instant);
 }

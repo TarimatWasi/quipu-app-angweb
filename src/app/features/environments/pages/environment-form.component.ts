@@ -1,3 +1,4 @@
+import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { HttpErrorResponse } from '@angular/common/http';
 import {
   Component,
@@ -42,7 +43,6 @@ import {
   LOAD_ERROR_TEXT,
   loadedFacts,
   NOT_FOUND_TEXT,
-  TYPE_LABELS,
   UPDATED_TEXT,
 } from '../model/environment';
 import type { Environment, EnvironmentDraft, EnvironmentType } from '../model/environment';
@@ -92,7 +92,7 @@ export class EnvironmentFormComponent implements OnInit {
   /** A value longer than this goes in the smaller figure so it does not break the tile. */
   protected readonly longValue = 24;
   protected readonly types = TYPES;
-  protected readonly typeLabels = TYPE_LABELS;
+  protected readonly typeLabels = ENVIRONMENT_TYPE_LABELS;
   protected readonly codeHelp = CODE_HELP_TEXT;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;

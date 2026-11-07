@@ -46,7 +46,7 @@ import type {
 } from '../model/dashboard-charges';
 import { FIRST_STEPS, isFirstUse, nowOf, pendingOf } from '../model/dashboard-pending';
 import { LOAD_ERROR_TEXT, NO_MATCH_HEADING } from '../model/dashboard-texts';
-import { limaDay, limaMonth } from '../model/lima';
+import { limaDay, limaMonth } from '@shared/payments/payment-format';
 import { ADMIN_HOME_STYLES } from './admin-home.styles';
 
 interface HomeData {

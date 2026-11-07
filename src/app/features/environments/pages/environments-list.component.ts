@@ -22,6 +22,7 @@ import { ToastService } from '@shared/ui/toast/toast.service';
 import { openDeactivateEnvironmentDialog } from '../components/deactivate-environment-dialog.component';
 import { EnvironmentsTableComponent } from '../components/environments-table.component';
 import { AdminEnvironmentsService } from '../data/admin-environments.service';
+import { limaDay } from '@shared/payments/payment-format';
 import {
   countText,
   DEFAULT_SORT,
@@ -29,7 +30,6 @@ import {
   emptyText,
   freePanel,
   hasFilters,
-  limaToday,
   LOAD_ERROR_TEXT,
   NO_FILTERS,
   NO_MATCH_HEADING,
@@ -182,7 +182,7 @@ export class EnvironmentsListComponent {
     openDeactivateEnvironmentDialog(this.dialog, {
       code: row.code,
       occupant: environment?.occupant ?? environment?.nextOccupant ?? null,
-      today: limaToday(new Date()),
+      today: limaDay(new Date()),
       deactivate: () => this.service.deactivate(row.id),
     })
       .afterClosed()

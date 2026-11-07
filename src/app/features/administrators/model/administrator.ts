@@ -1,5 +1,5 @@
 import type { components } from '@core/api/bff.generated';
-import { formatDate } from '@shared/payments/payment-format';
+import { formatDate, limaDay } from '@shared/payments/payment-format';
 
 // Every type comes from the contract (TAR-23).
 export type AdministratorSummary = components['schemas']['AdministratorSummary'];
@@ -51,18 +51,6 @@ const BADGES = {
   inactive: { label: 'Inactivo', tone: 'unpaid' },
   pending: { label: 'Sin activar', tone: 'review' },
 } as const satisfies Record<string, AdministratorBadge>;
-
-const LIMA_DAY = new Intl.DateTimeFormat('en-CA', {
-  timeZone: 'America/Lima',
-  year: 'numeric',
-  month: '2-digit',
-  day: '2-digit',
-});
-
-/** The day an instant falls on in America/Lima, yyyy-mm-dd. */
-export function limaDay(instant: Date): string {
-  return LIMA_DAY.format(instant);
-}
 
 /** An account created and not yet activated: active, but still without a name. */
 export function isPending(administrator: AdministratorSummary): boolean {
