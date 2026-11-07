@@ -256,8 +256,38 @@ function occupantOn(db: MockDb, environment: Environment, day: string): Schemas[
       };
 }
 
+/** The contract or the stay of an environment that starts after `day`, the nearest one (RN-20). */
+function nextOccupantAfter(
+  db: MockDb,
+  environment: Environment,
+  day: string,
+): Schemas['Occupant'] | null {
+  const next = [...db.data.contracts, ...db.data.stays]
+    .filter((item) => item.environmentId === environment.id && item.startDate > day)
+    .filter((item) => !('status' in item) || item.status === 'ACTIVE')
+    .sort((a, b) => a.startDate.localeCompare(b.startDate))[0];
+  return next === undefined ? null : occupantOn(db, environment, next.startDate);
+}
+
+/** When it became free: the end of the last contract or stay, else when it was created. */
+function freeSinceOf(db: MockDb, environment: Environment, day: string): string {
+  const ends = [...db.data.contracts, ...db.data.stays]
+    .filter((item) => item.environmentId === environment.id && item.startDate <= day)
+    .map((item) => item.endDate ?? '')
+    .filter((end) => end !== '' && end < day);
+  return ends.sort((a, b) => a.localeCompare(b)).at(-1) ?? environment.freeSince ?? day;
+}
+
+/** The environment as the BFF answers it: who is in it today, who comes next, since when it is free. */
 export function environmentView(db: MockDb, environment: Environment): Environment {
-  return { ...environment, occupant: occupantOn(db, environment, today()) };
+  const day = today();
+  const occupant = occupantOn(db, environment, day);
+  return {
+    ...environment,
+    occupant,
+    nextOccupant: nextOccupantAfter(db, environment, day),
+    freeSince: occupant === null ? freeSinceOf(db, environment, day) : null,
+  };
 }
 
 /**

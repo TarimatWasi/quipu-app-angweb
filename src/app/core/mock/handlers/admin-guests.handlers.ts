@@ -181,7 +181,8 @@ function listEnvironments(db: MockDb, req: MockRequest): Schemas['PagedEnvironme
         freeTo === null ||
         !isOccupied(db, environment.id, { from: freeFrom, to: freeTo }),
     )
-    .map((environment) => environmentView(db, environment));
+    .map((environment) => environmentView(db, environment))
+    .sort((a, b) => a.code.localeCompare(b.code, 'es', { numeric: true }));
   const freeCount = db.data.environments.filter(
     (environment) =>
       environment.status === 'ACTIVE' &&

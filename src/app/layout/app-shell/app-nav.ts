@@ -18,7 +18,7 @@ type Audience = 'ADMIN' | 'CONTRACT' | 'TEMPORARY';
 const SECTIONS: Readonly<Record<Audience, readonly NavEntry[]>> = {
   ADMIN: [
     { label: 'Inicio', link: '/home' },
-    { label: 'Ambientes', link: null },
+    { label: 'Ambientes', link: '/admin/environments' },
     { label: 'Huéspedes', link: '/admin/guests' },
     { label: 'Contratos', link: null },
     { label: 'Pagos', link: '/admin/payments' },

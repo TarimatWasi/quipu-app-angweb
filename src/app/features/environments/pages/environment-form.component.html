@@ -1,0 +1,107 @@
+<app-page-header [heading]="title()" [backLink]="['/admin/environments']" backTo="Ambientes" />
+
+@switch (phase()) {
+  @case ('initial-loading') {
+    <app-skeleton subject="el ambiente"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <div class="side">
+            <app-skeleton-facts [labels]="['Estado', 'Tipo', 'Ocupación']" />
+          </div>
+          <div class="form">
+            <app-skeleton-fields [labels]="['Código', 'Tipo']" />
+            <app-skeleton-block shape="rectangle" width="12rem" />
+          </div>
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    <div class="layout">
+      <aside class="side" aria-labelledby="side-title">
+        <h2 id="side-title">{{ sideTitle() }}</h2>
+        <dl class="facts">
+          @for (fact of facts(); track fact.label) {
+            <app-fact-tile
+              surface="stone"
+              [class.wide]="fact.wide"
+              [class.long]="fact.value.length > longValue"
+              [label]="fact.label"
+              [value]="fact.value"
+            />
+          }
+        </dl>
+        @if (editing()) {
+          <p class="note">
+            Cambiar el código no cambia sus contratos ni su historial: siguen ligados a este
+            ambiente.
+          </p>
+        } @else {
+          <p class="note">Queda Activo y libre: listo para un contrato o una estadía.</p>
+        }
+      </aside>
+
+      <form class="form" novalidate aria-labelledby="form-title" [formRoot]="envForm">
+        <h2 id="form-title">Datos del ambiente</h2>
+        <div class="fields">
+          <app-form-field
+            class="code"
+            fieldId="environment-code"
+            label="Código"
+            [help]="codeHelp"
+            [error]="codeError()"
+          >
+            <input
+              appFieldControl
+              class="quipu-input"
+              autocomplete="off"
+              [formField]="envForm.code"
+            />
+          </app-form-field>
+
+          <app-form-field fieldId="environment-type" label="Tipo" [group]="true">
+            <div class="quipu-segmented">
+              @for (type of types; track type) {
+                <button
+                  type="button"
+                  [attr.aria-pressed]="draft().type === type ? 'true' : 'false'"
+                  [disabled]="saving()"
+                  (click)="chooseType(type)"
+                >
+                  {{ typeLabels[type] }}
+                </button>
+              }
+            </div>
+          </app-form-field>
+        </div>
+
+        @if (generalError(); as message) {
+          <p class="quipu-alert" role="alert" tabindex="-1" [id]="generalErrorId">{{ message }}</p>
+        }
+        <div class="actions">
+          <button
+            class="quipu-button quipu-button--primary"
+            type="submit"
+            [disabled]="saving() || reason() !== null"
+            [attr.aria-describedby]="reason() === null ? null : 'save-help'"
+          >
+            {{ saveLabel() }}
+          </button>
+          <a class="quipu-button quipu-button--tertiary" routerLink="/admin/environments"
+            >Cancelar</a
+          >
+        </div>
+        @if (reason(); as why) {
+          <p id="save-help" class="why">{{ why }}</p>
+        }
+      </form>
+    </div>
+  }
+}

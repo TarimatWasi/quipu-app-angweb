@@ -109,7 +109,7 @@ describe('AppShellComponent (P-01)', () => {
 
       expect(sectionTexts(root)).toEqual([
         'Inicio',
-        'Ambientes (pronto)',
+        'Ambientes',
         'Huéspedes',
         'Contratos (pronto)',
         'Pagos',
@@ -118,10 +118,11 @@ describe('AppShellComponent (P-01)', () => {
       const nav = barNav(root);
       expect(nav.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
         '/home',
+        '/admin/environments',
         '/admin/guests',
         '/admin/payments',
       ]);
-      expect(nav.queryByRole('link', { name: /Ambientes/ })).toBeNull();
+      expect(nav.queryByRole('link', { name: /Contratos/ })).toBeNull();
     });
 
     it('marks the current section with aria-current="page" and only that one', async () => {
@@ -494,7 +495,7 @@ describe('app-nav', () => {
   });
 
   it('a section without a screen is never current', () => {
-    expect(isCurrent({ label: 'Ambientes', link: null }, '/admin/environments')).toBe(false);
+    expect(isCurrent({ label: 'Contratos', link: null }, '/admin/contracts')).toBe(false);
   });
 
   it('a section is current on its own path and below it, not on a path that only starts alike', () => {

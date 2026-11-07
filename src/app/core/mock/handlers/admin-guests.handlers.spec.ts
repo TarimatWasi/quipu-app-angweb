@@ -243,7 +243,7 @@ describe('admin guests in the simulated BFF', () => {
       limit: 100,
     });
     const codes = page.content.map((environment) => environment.code);
-    expect(codes).toEqual(['C2', '203', 'C3']);
+    expect(codes).toEqual(['203', 'C2', 'C3']);
     expect(page.freeCount).toBe(2);
     expect((await mock.fail(mock.get('/bff/admin/environments', { freeTo: today() }))).status).toBe(
       400,
