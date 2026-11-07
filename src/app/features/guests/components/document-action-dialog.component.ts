@@ -142,10 +142,14 @@ export class DocumentActionDialogComponent {
   }
 
   protected pickFile(chosen: File | null): void {
-    if (chosen === null) return;
     this.touch();
-    const valid = isValidDocumentFile(chosen);
-    this.draft.update((draft) => ({ ...draft, file: valid ? chosen : null, fileInvalid: !valid }));
+    // No file is «Quitar» or a cancelled choice: the zone goes back to asking for one.
+    const valid = chosen !== null && isValidDocumentFile(chosen);
+    this.draft.update((draft) => ({
+      ...draft,
+      file: valid ? chosen : null,
+      fileInvalid: chosen !== null && !valid,
+    }));
   }
 
   protected cancel(): void {
