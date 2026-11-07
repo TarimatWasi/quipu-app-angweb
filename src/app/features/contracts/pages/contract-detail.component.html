@@ -1,0 +1,127 @@
+<app-page-header [heading]="title()" [backLink]="['/admin/contracts']" backTo="Contratos" />
+
+@switch (phase()) {
+  @case ('initial-loading') {
+    <app-skeleton class="now" subject="el contrato"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="8.25rem" /></ng-template
+    ></app-skeleton>
+    <app-skeleton class="layout" subject="los pagos del contrato"
+      ><ng-template appSkeletonContent>
+        <div class="form"><app-skeleton-fields [labels]="['Pagos por mes']" /></div>
+        <div class="side">
+          <app-skeleton-facts
+            [labels]="['Huésped', 'Ambiente', 'Estado', 'Cuota mensual', 'Día de pago', 'Vigencia']"
+          />
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    @if (detail(); as view) {
+      @if (refreshError(); as message) {
+        <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
+      }
+      <app-now-panel
+        class="now"
+        headingId="contract-now-title"
+        [figure]="view.panel.figure"
+        [label]="view.panel.label"
+        [text]="view.panel.text"
+        [urgent]="view.panel.urgent"
+      >
+        @if (view.panel.badge || view.panel.action) {
+          <div class="panel-extra">
+            @if (view.panel.badge; as badge) {
+              <app-status-badge [tone]="badge.tone" [label]="badge.label" />
+            }
+            @if (view.panel.action; as action) {
+              <a
+                class="quipu-button quipu-button--primary"
+                [routerLink]="action.link"
+                [queryParams]="action.query"
+                >{{ action.label }}</a
+              >
+            }
+          </div>
+        }
+      </app-now-panel>
+
+      <div class="layout">
+        <div class="form">
+          <app-period-payments
+            [rows]="view.rows"
+            [emptyHeading]="'Aún no hay meses por cobrar.'"
+            [emptyText]="view.noMonths"
+          />
+          <p class="note">{{ view.monthsNote }}</p>
+        </div>
+
+        <aside class="side" aria-labelledby="agreed-title">
+          <h2 id="agreed-title">Lo acordado</h2>
+          <dl class="facts">
+            @for (fact of view.facts; track fact.label) {
+              <app-fact-tile
+                surface="stone"
+                [class.wide]="fact.wide"
+                [class.long]="fact.value.length > longValue"
+                [label]="fact.label"
+                [value]="fact.value"
+                [hint]="fact.hint ?? ''"
+              />
+            }
+          </dl>
+
+          <section class="file" aria-labelledby="file-title">
+            <h2 id="file-title">Contrato firmado</h2>
+            <p class="file-name">{{ view.contract.file.name }}</p>
+            <p class="note">{{ view.fileText }}</p>
+            @if (view.contract.fileUrl; as url) {
+              <a
+                class="quipu-button quipu-button--secondary"
+                target="_blank"
+                rel="noopener"
+                [href]="url"
+                >Ver contrato (PDF)<span class="cdk-visually-hidden"> en una pestaña nueva</span></a
+              >
+            } @else {
+              <button
+                class="quipu-button quipu-button--secondary"
+                type="button"
+                (click)="fileUnavailable()"
+              >
+                Ver contrato (PDF)
+              </button>
+            }
+          </section>
+
+          <ul class="links">
+            <li>
+              <a [routerLink]="['/admin/guests', view.contract.guestId]">Ver huésped</a>
+              <span class="hint">{{ view.guestName }}</span>
+            </li>
+            @if (view.contract.status === 'ACTIVE') {
+              <li>
+                <button
+                  class="quipu-button quipu-button--tertiary"
+                  type="button"
+                  (click)="terminate()"
+                >
+                  Finalizar contrato
+                </button>
+                <span class="hint">libera la {{ view.environmentName }}</span>
+              </li>
+            }
+          </ul>
+        </aside>
+      </div>
+    }
+  }
+}
