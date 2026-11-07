@@ -4,9 +4,10 @@ import { Component, computed, input, output } from '@angular/core';
 export const VOUCHER_ACCEPT = '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf';
 
 /**
- * P-12 Subida de archivo (TAR-297): a dashed zone with «Elegir archivo» until a file is chosen,
- * then its name with «Cambiar»; the error and the help go under it, tied to the input. The screen
- * validates the file it receives (type and size) and decides what to keep: this only reports it.
+ * P-15 Zona de archivo (TAR-297): a dashed zone with «Elegir archivo» and, on a phone, «Tomar foto»
+ * until a file is chosen; then its name with «Cambiar» and, if the screen allows it, «Quitar». The
+ * error and the help go under it, tied to the input. The screen validates the file it receives
+ * (type and size) and decides what to keep: this only reports it.
  */
 @Component({
   selector: 'app-file-field',
@@ -22,19 +23,49 @@ export const VOUCHER_ACCEPT = '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,applica
         [attr.aria-describedby]="describedBy()"
         (change)="picked($event.target)"
       />
+      @if (camera()) {
+        <input
+          class="cdk-visually-hidden"
+          type="file"
+          accept="image/*"
+          capture="environment"
+          [id]="cameraId()"
+          [attr.aria-label]="label() + ' con la cámara'"
+          [attr.aria-describedby]="describedBy()"
+          (change)="picked($event.target)"
+        />
+      }
       @if (fileName(); as name) {
         <div class="file">
           <span class="file-name">{{ name }}</span>
-          <label class="quipu-button quipu-button--tertiary" [for]="fieldId()"
-            >Cambiar<span class="cdk-visually-hidden"> {{ label() }}</span></label
-          >
+          <span class="file-actions">
+            <label class="quipu-button quipu-button--tertiary" [for]="fieldId()"
+              >Cambiar<span class="cdk-visually-hidden"> {{ label() }}</span></label
+            >
+            @if (removable()) {
+              <button
+                class="quipu-button quipu-button--tertiary"
+                type="button"
+                (click)="chosen.emit(null)"
+              >
+                Quitar<span class="cdk-visually-hidden"> {{ label() }}</span>
+              </button>
+            }
+          </span>
         </div>
       } @else {
         <div class="drop" [class.invalid]="error() !== null">
           <p class="drop-text">{{ prompt() }}</p>
-          <label class="quipu-button quipu-button--secondary" [for]="fieldId()"
-            >Elegir archivo<span class="cdk-visually-hidden"> {{ label() }}</span></label
-          >
+          <span class="choices">
+            <label class="quipu-button quipu-button--secondary" [for]="fieldId()"
+              >Elegir archivo<span class="cdk-visually-hidden"> {{ label() }}</span></label
+            >
+            @if (camera()) {
+              <label class="quipu-button quipu-button--secondary only-narrow" [for]="cameraId()"
+                >Tomar foto<span class="cdk-visually-hidden"> para {{ label() }}</span></label
+              >
+            }
+          </span>
         </div>
       }
       @if (error(); as message) {
@@ -64,6 +95,21 @@ export const VOUCHER_ACCEPT = '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,applica
       margin: 0;
       font-weight: var(--quipu-peso-enfasis);
     }
+    .choices,
+    .file-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .only-narrow {
+      display: none;
+    }
+    @media (max-width: 599.98px) {
+      .only-narrow {
+        display: inline-flex;
+      }
+    }
     .file {
       display: flex;
       flex-wrap: wrap;
@@ -90,9 +136,17 @@ export class FileFieldComponent {
   readonly help = input('JPG, PNG o PDF, hasta 5 MB.');
   readonly error = input<string | null>(null);
   readonly accept = input(VOUCHER_ACCEPT);
-  /** A file was chosen (null when the choice was cancelled). */
+  /** «Tomar foto» on a phone, with the camera of the device; a photo is always an image. */
+  readonly camera = input(true);
+  /**
+   * Offers «Quitar», which reports no file. Only for a file chosen on this screen: one already
+   * stored is replaced with «Cambiar», not removed.
+   */
+  readonly removable = input(false);
+  /** A file was chosen; null when the choice was cancelled or «Quitar» was pressed. */
   readonly chosen = output<File | null>();
 
+  protected readonly cameraId = computed(() => `${this.fieldId()}-camera`);
   protected readonly describedBy = computed(
     () => `${this.fieldId()}${this.error() ? '-error' : '-help'}`,
   );

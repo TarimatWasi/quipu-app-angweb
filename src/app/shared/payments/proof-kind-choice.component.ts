@@ -1,27 +1,24 @@
 import { Component, input, output } from '@angular/core';
+import { ChoiceGroupComponent } from '@shared/ui/choice-group/choice-group.component';
+import type { ChoiceOption } from '@shared/ui/choice-group/choice-group.component';
 import type { ProofDraft } from './proof-fields';
 
-/** Presentation only: the owner keeps validation and any draft when the kind changes. */
+const OPTIONS: readonly ChoiceOption<ProofDraft['kind']>[] = [
+  { value: 'VOUCHER', label: 'Con voucher' },
+  { value: 'CASH', label: 'Efectivo, sin voucher' },
+];
+
+/** The kind of a proof as an `app-choice-group` (P-21). The owner keeps validation and any draft. */
 @Component({
   selector: 'app-proof-kind-choice',
   host: { '[attr.aria-label]': 'label()', '[attr.role]': 'label() ? "group" : null' },
+  imports: [ChoiceGroupComponent],
   template: `
-    <div class="quipu-segmented">
-      <button
-        type="button"
-        [attr.aria-pressed]="kind() === 'VOUCHER'"
-        (click)="kindChange.emit('VOUCHER')"
-      >
-        Con voucher
-      </button>
-      <button
-        type="button"
-        [attr.aria-pressed]="kind() === 'CASH'"
-        (click)="kindChange.emit('CASH')"
-      >
-        Efectivo, sin voucher
-      </button>
-    </div>
+    <app-choice-group
+      [options]="options"
+      [value]="kind()"
+      (valueChange)="kindChange.emit(asKind($event))"
+    />
   `,
   styles: ':host { display: block; }',
 })
@@ -30,4 +27,10 @@ export class ProofKindChoiceComponent {
   /** Omit when an enclosing fieldset already names the choice. */
   readonly label = input<string | null>(null);
   readonly kindChange = output<ProofDraft['kind']>();
+
+  protected readonly options = OPTIONS;
+
+  protected asKind(value: string): ProofDraft['kind'] {
+    return value === 'CASH' ? 'CASH' : 'VOUCHER';
+  }
 }

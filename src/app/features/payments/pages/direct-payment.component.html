@@ -201,6 +201,7 @@
                 [fieldId]="'dp-proof-' + proof.key + '-file'"
                 [fileName]="proof.file?.name ?? null"
                 [error]="fileError(i)"
+                [removable]="true"
                 (chosen)="picked(i, $event)"
               />
             } @else {
