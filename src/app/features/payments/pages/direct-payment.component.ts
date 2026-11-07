@@ -45,7 +45,7 @@ import {
   guestLabel,
   guestText,
   LoadState,
-  NOTICE_TITLES,
+  NOTICES,
   optionOf,
   PAYABLE,
   payingNote,
@@ -403,11 +403,11 @@ export class DirectPaymentComponent {
 
   private async failed(error: unknown): Promise<void> {
     const { code, message, field } = toBffErrorWithServerMessage(error);
-    const title = NOTICE_TITLES[code];
-    if (title) {
+    const notice = NOTICES[code];
+    if (notice) {
       const ref = openPaymentNoticeDialog(this.dialog, {
-        title,
-        message,
+        title: notice.title,
+        message: notice.text,
         actions: [{ label: 'Entendido', value: 'ok' }],
       });
       await firstValueFrom(ref.afterClosed());

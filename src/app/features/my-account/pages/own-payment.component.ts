@@ -403,7 +403,7 @@ export class OwnPaymentComponent {
     if (notice) {
       const ref = openPaymentNoticeDialog(this.dialog, {
         title: notice.title,
-        message,
+        message: notice.text,
         actions: [{ label: 'Entendido', value: 'ok' }],
       });
       await firstValueFrom(ref.afterClosed());

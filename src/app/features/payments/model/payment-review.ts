@@ -229,6 +229,7 @@ export type Outcome = 'APPROVED' | 'REJECTED';
 
 export interface Notice {
   readonly title: string;
+  readonly text: string;
   readonly actions: readonly NoticeAction[];
 }
 
@@ -237,16 +238,29 @@ const OK: NoticeAction = { label: 'Entendido', value: 'ok' };
 
 /** The conflicts the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
 export const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
-  PAYMENT_ALREADY_RESOLVED: { title: 'Este pago ya se resolvió', actions: [BACK] },
-  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: { title: 'Ya hay un pago aprobado', actions: [OK] },
+  PAYMENT_ALREADY_RESOLVED: {
+    title: 'Este pago ya se resolvió',
+    text: 'Este pago ya fue resuelto por otro proceso',
+    actions: [BACK],
+  },
+  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: {
+    title: 'Ya hay un pago aprobado',
+    text: 'Ya existe un pago aprobado para este período',
+    actions: [OK],
+  },
   PAYMENT_PERIOD_NOT_PAYABLE: {
     title: 'Este mes ya no se cobra',
+    text: 'Este mes ya no se cobra: el contrato terminó antes de aprobar este pago. Recházalo con un motivo para que el huésped lo sepa.',
     actions: [
       { label: 'Rechazar con motivo', value: 'reject' },
       { label: 'Cancelar', value: 'cancel' },
     ],
   },
-  PAYMENT_NOT_CORRECTABLE: { title: 'Este pago ya no se puede corregir', actions: [OK] },
+  PAYMENT_NOT_CORRECTABLE: {
+    title: 'Este pago ya no se puede corregir',
+    text: 'Este pago ya no se puede corregir: está en revisión o ya se aprobó',
+    actions: [OK],
+  },
 };
 
 /** The text of each verified amount, kept while the page reloads after adding a proof. */

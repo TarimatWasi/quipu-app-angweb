@@ -83,11 +83,22 @@ export const GUEST_TEXT = 'Elige un huésped';
 export const FUTURE_DATE_TEXT = 'La fecha no puede ser posterior a hoy';
 export const PROOF_LIMIT_TEXT = `Hasta ${String(MAX_PROOFS)} comprobantes por pago.`;
 
-/** The 409 conflicts the SRS shows as a modal, with the BFF's own message (QP-UI-17). */
-export const NOTICE_TITLES: Readonly<Partial<Record<string, string>>> = {
-  GUEST_NOT_ACTIVE: 'El huésped no está activo',
-  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: 'Ya hay un pago aprobado',
-  VOUCHER_ALREADY_EXISTS: 'Este período ya tiene un pago',
+/** The 409 conflicts the SRS shows as a modal, with the texts of the catalog (SRS 17, QP-UI-17, A5.1). */
+export const NOTICES: Readonly<
+  Partial<Record<string, { readonly title: string; readonly text: string }>>
+> = {
+  GUEST_NOT_ACTIVE: {
+    title: 'El huésped no está activo',
+    text: 'Este huésped aún no está activo: no admite contratos ni pagos',
+  },
+  PAYMENT_ALREADY_EXISTS_FOR_PERIOD: {
+    title: 'Ya hay un pago aprobado',
+    text: 'Ya existe un pago aprobado para este período',
+  },
+  VOUCHER_ALREADY_EXISTS: {
+    title: 'Este período ya tiene un pago',
+    text: 'Este período ya tiene un pago: complétalo en Revisar pago.',
+  },
 };
 
 /** Only periods and stays without any payment take a direct one (TAR-239). */
