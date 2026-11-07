@@ -13,6 +13,17 @@ import { NowPanelComponent } from './now-panel.component';
 })
 class HostComponent {}
 
+@Component({
+  imports: [NowPanelComponent],
+  template: `<app-now-panel
+    figure="S/ 1,450.00"
+    label="en cobros atrasados"
+    text="Venció."
+    [urgent]="true"
+  />`,
+})
+class UrgentHostComponent {}
+
 describe('NowPanelComponent', () => {
   it('names its region and shows the figure, what it counts, the context and the action', async () => {
     const fixture = TestBed.createComponent(HostComponent);
@@ -24,5 +35,15 @@ describe('NowPanelComponent', () => {
     expect(region.textContent).toContain('pagos por revisar');
     expect(region.textContent).toContain('El más antiguo es de Pedro Ccori.');
     expect(within(region).getByRole('link', { name: 'Revisar el más antiguo' })).toBeTruthy();
+  });
+
+  it('takes an amount or a word as its figure and marks it urgent in red ink', async () => {
+    const fixture = TestBed.createComponent(UrgentHostComponent);
+    await fixture.whenStable();
+
+    const figure = (fixture.nativeElement as HTMLElement).querySelector('.figure');
+
+    expect(figure?.textContent).toBe('S/ 1,450.00');
+    expect(figure?.classList.contains('urgent')).toBe(true);
   });
 });
