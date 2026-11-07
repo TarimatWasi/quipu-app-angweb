@@ -1,11 +1,10 @@
+import { contactEmailError, EMAIL_TEXT, PHONE_TEXT, phoneError } from '@shared/forms/contact-rules';
 import {
   ACCOUNT_EMAIL_TAKEN_TEXT,
   callFailure,
-  contactEmailError,
   createProblem,
   DOCUMENT_INVALID_TEXT,
   DOCUMENT_TAKEN_TEXT,
-  EMAIL_TEXT,
   EMPTY_NEW_GUEST,
   GUEST_EMAIL_TAKEN_TEXT,
   inactiveGuestId,
@@ -13,8 +12,6 @@ import {
   newGuestFacts,
   noticeChannels,
   pendingDebt,
-  PHONE_TEXT,
-  phoneError,
   RATE_LIMITED_TEXT,
   reactivateProblem,
   REACTIVATE_CONFLICT_TEXT,

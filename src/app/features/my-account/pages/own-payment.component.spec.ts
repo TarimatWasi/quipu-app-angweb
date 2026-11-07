@@ -58,6 +58,8 @@ function stay(overrides: Partial<StayPaymentStatus> = {}): StayPaymentStatus {
     stayId: 'stay1',
     startDate: '2026-10-20',
     endDate: '2026-10-31',
+    environmentCode: 'C1',
+    environmentType: 'CABIN',
     status: 'UNPAID',
     agreedAmount: 400,
     paymentId: null,

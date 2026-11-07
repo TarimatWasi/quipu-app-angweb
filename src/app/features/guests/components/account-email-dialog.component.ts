@@ -1,3 +1,4 @@
+import { MAX_EMAIL_LENGTH } from '@shared/forms/contact-rules';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
@@ -23,7 +24,7 @@ import {
   EMAIL_TITLE,
   emailProblem,
 } from '../model/detail-actions';
-import { callFailure, MAX_EMAIL_LENGTH } from '../model/new-guest';
+import { callFailure } from '../model/new-guest';
 import { NEW_GUEST_DIALOG_STYLES } from './new-guest-dialog.styles';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';

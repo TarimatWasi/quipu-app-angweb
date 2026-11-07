@@ -1,0 +1,97 @@
+<app-page-header [heading]="title" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton subject="tus datos"
+      ><ng-template appSkeletonContent>
+        <div class="layout">
+          <app-skeleton-block class="side" shape="rectangle" height="22.5rem" />
+          <app-skeleton-block class="form" shape="rectangle" height="38.75rem" />
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
+    }
+    @if (deal(); as d) {
+      <div class="layout">
+        <aside class="side">
+          <section aria-labelledby="deal-title" class="block">
+            <h2 id="deal-title">{{ d.title }}</h2>
+            <dl class="facts">
+              @for (fact of d.facts; track fact.label) {
+                <app-fact-tile
+                  surface="stone"
+                  [class.wide]="fact.wide"
+                  [class.long]="fact.value.length > longValue"
+                  [label]="fact.label"
+                  [value]="fact.value"
+                />
+              }
+            </dl>
+            <p class="note">{{ dealNote }}</p>
+            @if (d.contractLink) {
+              <a class="quipu-button quipu-button--tertiary link" routerLink="/guest/contract"
+                >Ver mi contrato</a
+              >
+            }
+          </section>
+          <app-own-documents
+            [rows]="documents()"
+            [limit]="limit()"
+            [chosen]="chosen()"
+            [error]="fileError()"
+            [uploading]="uploading()"
+            (pick)="pick($event)"
+            (upload)="upload()"
+            (view)="viewDocument($event)"
+          />
+        </aside>
+
+        <form class="form" novalidate [formRoot]="profileForm">
+          <app-personal-data-fields [form]="profileForm" prefix="profile" />
+          @if (generalError(); as message) {
+            <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
+          }
+          <div class="actions">
+            <button
+              class="quipu-button quipu-button--primary"
+              type="submit"
+              [disabled]="!dirty() || saving()"
+            >
+              {{ saving() ? 'Guardando…' : 'Guardar cambios' }}
+            </button>
+            @if (dirty()) {
+              <button
+                class="quipu-button quipu-button--tertiary"
+                type="button"
+                [disabled]="saving()"
+                (click)="reset()"
+              >
+                Cancelar
+              </button>
+            }
+          </div>
+          <p>
+            <button
+              class="quipu-button quipu-button--tertiary"
+              type="button"
+              (click)="changePassword($event)"
+            >
+              {{ changePasswordLabel }}
+            </button>
+          </p>
+        </form>
+      </div>
+    }
+  }
+}

@@ -23,7 +23,6 @@ export const NO_CONTRACT_TEXT =
   'Cuando la administración lo cargue, aquí verás sus fechas, tu cuota y el documento.';
 export const FILE_LINK_NOTE =
   'Se abre en otra pestaña. El enlace dura 15 minutos; si vence, vuelve a pulsar «Ver contrato».';
-export const STORAGE_TEXT = 'No se pudo acceder al archivo; inténtalo de nuevo más tarde.';
 export const LINK_EXPIRED_TEXT =
   'El enlace venció: ya hay uno nuevo, pulsa «Ver contrato» otra vez.';
 /** The links last 15 minutes (RN-37); the page asks again a little before. */
