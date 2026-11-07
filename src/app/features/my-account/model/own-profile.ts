@@ -70,7 +70,7 @@ export interface StayDeal {
   readonly startDate: string;
   readonly endDate: string;
   readonly agreedAmount: number;
-  /** Not in the contract yet: the tile is left out until the BFF sends it. */
+  /** Null for an old stay without environment (TAR-304): the tile is left out. */
   readonly environment?: { readonly type: EnvironmentType; readonly code: string };
 }
 

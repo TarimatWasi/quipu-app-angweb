@@ -321,7 +321,15 @@ export class OwnProfileComponent implements OnInit {
   private stayOf(): Observable<StayDeal | null> {
     if (this.audience !== 'TEMPORARY') return of(null);
     return this.stays.paymentStatus().pipe(
-      map(({ startDate, endDate, agreedAmount }) => ({ startDate, endDate, agreedAmount })),
+      map(({ startDate, endDate, agreedAmount, environmentCode, environmentType }) => ({
+        startDate,
+        endDate,
+        agreedAmount,
+        // An old stay without environment brings both null (TAR-304): no «Ambiente» tile.
+        ...(environmentCode !== null && environmentType !== null
+          ? { environment: { type: environmentType, code: environmentCode } }
+          : {}),
+      })),
       catchError(() => of(null)),
     );
   }
