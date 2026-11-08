@@ -23,7 +23,7 @@ import { ActivatedRoute, convertToParamMap, Router, RouterLink } from '@angular/
 import { firstValueFrom } from 'rxjs';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { AuthService, DocumentType, LOGIN_TIMING } from '@core/auth/auth.service';
 import { AccountLock, BffError, toBffError } from '@core/http/bff-error';
@@ -156,9 +156,7 @@ export class LoginComponent {
     {
       submission: {
         action: () => this.login(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, 'login-error');
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, 'login-error'),
       },
     },
   );

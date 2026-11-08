@@ -20,7 +20,7 @@ import type {
   GuestInput,
 } from '@core/api/clients/admin-guests.service';
 import { contactEmailError, phoneError } from '@shared/forms/contact-rules';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
@@ -136,9 +136,7 @@ export class NewGuestComponent {
     {
       submission: {
         action: () => this.create(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, GENERAL_ERROR_ID),
       },
     },
   );

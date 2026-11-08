@@ -12,7 +12,7 @@ import {
 } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import {
   EMAIL_FIELD_HELP,
@@ -116,9 +116,7 @@ export class AccountEmailDialogComponent {
     {
       submission: {
         action: () => this.save(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, ERROR_ID),
       },
     },
   );

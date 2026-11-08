@@ -138,20 +138,9 @@ export class FinanceComponent {
   );
 
   protected readonly phase = computed(() => this.summary.state().status);
-  protected readonly retrying = computed(() => {
-    const state = this.summary.state();
-    return state.status === 'initial-error' && state.retrying;
-  });
-  protected readonly refreshing = computed(() => {
-    const state = this.summary.state();
-    return state.status === 'ready' && state.refresh.status === 'loading';
-  });
-  protected readonly refreshError = computed(() => {
-    const state = this.summary.state();
-    return state.status === 'ready' && state.refresh.status === 'error'
-      ? state.refresh.message
-      : null;
-  });
+  protected readonly retrying = this.summary.retrying;
+  protected readonly refreshing = this.summary.refreshing;
+  protected readonly refreshError = this.summary.refreshError;
 
   protected readonly months = computed(() => monthOptions(currentMonth(this.today), this.month()));
   protected readonly phrase = computed(() => monthPhrase(this.month()));

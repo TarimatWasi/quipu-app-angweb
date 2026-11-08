@@ -13,7 +13,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -56,9 +56,7 @@ export class ForgotPasswordComponent {
     {
       submission: {
         action: () => this.send(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, 'forgot-password-error');
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, 'forgot-password-error'),
       },
     },
   );

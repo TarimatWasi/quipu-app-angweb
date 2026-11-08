@@ -16,7 +16,7 @@ import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { callFailure } from '@shared/forms/call-failure';
 import { AsyncContentState } from '@shared/data/async-content';
-import { focusFirstProblem } from '@shared/forms/form-feedback';
+import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { PersonalDataFieldsComponent } from '@shared/forms/personal-data-fields.component';
 import { personalDataRules, toPersonalData } from '@shared/forms/personal-data';
 import type { PersonalData } from '@shared/forms/personal-data';
@@ -124,20 +124,9 @@ export class OwnProfileComponent implements OnInit {
 
   private readonly loaded = new AsyncContentState<ProfileData>();
   protected readonly view = this.loaded.state;
-  protected readonly retrying = computed(() => {
-    const state = this.view();
-    return state.status === 'initial-error' && state.retrying;
-  });
-  protected readonly refreshError = computed(() => {
-    const state = this.view();
-    return state.status === 'ready' && state.refresh.status === 'error'
-      ? state.refresh.message
-      : null;
-  });
-  protected readonly refreshing = computed(() => {
-    const state = this.view();
-    return state.status === 'ready' && state.refresh.status === 'loading';
-  });
+  protected readonly retrying = this.loaded.retrying;
+  protected readonly refreshError = this.loaded.refreshError;
+  protected readonly refreshing = this.loaded.refreshing;
 
   private readonly saved = computed<PersonalData | null>(() => {
     const data = this.loaded.data();
@@ -160,9 +149,7 @@ export class OwnProfileComponent implements OnInit {
     {
       submission: {
         action: () => this.save(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, ERROR_ID),
       },
     },
   );

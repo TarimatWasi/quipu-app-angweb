@@ -7,7 +7,7 @@ import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
@@ -140,9 +140,7 @@ export class ChangePasswordDialogComponent {
     {
       submission: {
         action: () => this.change(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, GENERAL_ERROR_ID),
       },
     },
   );
