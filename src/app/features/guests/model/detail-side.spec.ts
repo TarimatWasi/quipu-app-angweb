@@ -73,7 +73,8 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
       ['Contacto de emergencia', 'Rosa Ccori (madre) · 984 112 233'],
     ]);
     expect(facts.after.map((fact) => fact.wide)).toEqual([false, false, true, true]);
-    expect(facts.after.map((fact) => fact.long)).toEqual([false, false, false, true]);
+    // Every value of 8 or more characters goes one step smaller (TAR-331).
+    expect(facts.after.map((fact) => fact.long)).toEqual([true, true, true, true]);
   });
 
   it('says what is missing, and leaves out the emergency contact before the onboarding ends', () => {
@@ -96,7 +97,7 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
       label: 'Contacto de emergencia',
       value: 'Sin registrar',
       wide: true,
-      long: false,
+      long: true,
     });
     expect(emergencyText({ name: 'Ana', phone: ' ' })).toBe('Ana');
     expect(emergencyText({ relationship: 'tía', phone: '999' })).toBe('999');
