@@ -1,7 +1,8 @@
+import { ListTable } from '@shared/ui/data-table/list-table';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
 import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
-import { Component, input, output, TemplateRef } from '@angular/core';
+import { Component, output } from '@angular/core';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
 import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
@@ -172,10 +173,7 @@ const COLUMNS: readonly DataColumn[] = [
     }
   `,
 })
-export class AdministratorsListComponent {
-  readonly loading = input(false);
-  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
-  readonly rows = input.required<readonly AdministratorRow[]>();
+export class AdministratorsListComponent extends ListTable<AdministratorRow> {
   /** The action of a row was chosen: «Desactivar» or «Reactivar», as `row.action` says. */
   readonly act = output<AdministratorRow>();
 

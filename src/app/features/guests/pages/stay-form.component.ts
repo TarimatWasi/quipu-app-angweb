@@ -1,6 +1,6 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
-import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
@@ -70,9 +70,9 @@ const GENERAL_ERROR_ID = 'stay-form-error';
 @Component({
   selector: 'app-stay-form',
   imports: [
+    RefreshErrorComponent,
     FormSummaryLayoutComponent,
     GuestFormHeaderComponent,
-    LoadErrorComponent,
     SkeletonBlockComponent,
     SkeletonFactsComponent,
     SkeletonFieldsComponent,

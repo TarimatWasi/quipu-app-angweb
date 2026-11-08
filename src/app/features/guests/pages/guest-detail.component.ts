@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
@@ -64,6 +65,7 @@ import {
 @Component({
   selector: 'app-guest-detail',
   imports: [
+    RefreshErrorComponent,
     NowPanelComponent,
     SkeletonCardsComponent,
     SkeletonFactsComponent,

@@ -1,14 +1,15 @@
+import { SortableListTable } from '@shared/ui/data-table/list-table';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
 import { DataSkeletonCellDirective } from '@shared/ui/data-table/data-skeleton-cell.directive';
-import { Component, input, output, TemplateRef } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
 import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
 import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
-import type { QueueRow, QueueSort, SortKey } from '../model/payment-queue';
+import type { QueueRow, SortKey } from '../model/payment-queue';
 import type { QueueViewParam } from '../model/queue-views';
 
 type Column = SortKey | 'state' | 'action';
@@ -219,22 +220,12 @@ const COLUMNS: readonly DataColumn<Column>[] = [
     }
   `,
 })
-export class PaymentsTableComponent {
-  readonly loading = input(false);
-  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
-  readonly rows = input.required<readonly QueueRow[]>();
-  readonly sort = input.required<QueueSort>();
+export class PaymentsTableComponent extends SortableListTable<QueueRow, SortKey, Column> {
   /** The view the rows belong to, so A5.2 can come back to it. */
   readonly view = input.required<QueueViewParam>();
   /** The name of the table and of the list of cards: the view («Por revisar»). */
   readonly caption = input.required<string>();
-  /** A sortable header was pressed. */
-  readonly sortBy = output<SortKey>();
 
   protected readonly columns = COLUMNS;
   protected readonly rowId = (row: QueueRow): string => row.id;
-
-  protected sorted(key: Column): void {
-    if (key !== 'state' && key !== 'action') this.sortBy.emit(key);
-  }
 }

@@ -54,14 +54,12 @@
     />
   }
   @case ('ready') {
-    @if (refreshError(); as message) {
-      <app-load-error
-        class="state"
-        [message]="message"
-        [retrying]="refreshing()"
-        (retry)="reload()"
-      />
-    }
+    <app-refresh-error
+      [spaced]="true"
+      [message]="refreshError()"
+      [refreshing]="refreshing()"
+      (retry)="reload()"
+    />
     @if (panel(); as credit) {
       <app-now-panel
         class="now"

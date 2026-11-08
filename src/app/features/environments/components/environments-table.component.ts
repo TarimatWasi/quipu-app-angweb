@@ -1,4 +1,5 @@
-import { Component, input, output, TemplateRef } from '@angular/core';
+import { SortableListTable } from '@shared/ui/data-table/list-table';
+import { Component, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
@@ -7,7 +8,7 @@ import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
 import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
-import type { EnvironmentRow, EnvironmentSort, SortKey } from '../model/environment';
+import type { EnvironmentRow, SortKey } from '../model/environment';
 
 type Column = SortKey | 'action';
 
@@ -155,20 +156,10 @@ const COLUMNS: readonly DataColumn<Column>[] = [
     }
   `,
 })
-export class EnvironmentsTableComponent {
-  readonly loading = input(false);
-  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
-  readonly rows = input.required<readonly EnvironmentRow[]>();
-  readonly sort = input.required<EnvironmentSort>();
-  /** A sortable header was pressed. */
-  readonly sortBy = output<SortKey>();
+export class EnvironmentsTableComponent extends SortableListTable<EnvironmentRow, SortKey, Column> {
   /** «Desactivar» or «Reactivar» of a row was pressed. */
   readonly changeState = output<EnvironmentRow>();
 
   protected readonly columns = COLUMNS;
   protected readonly rowId = (row: EnvironmentRow): string => row.id;
-
-  protected sorted(key: Column): void {
-    if (key !== 'action') this.sortBy.emit(key);
-  }
 }

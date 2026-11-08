@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -67,6 +68,7 @@ function facts(guest: GuestDetail, count: number): Fact[] {
 @Component({
   selector: 'app-guest-documents',
   imports: [
+    RefreshErrorComponent,
     DocumentActionsListComponent,
     EmptyStateComponent,
     FactTileComponent,

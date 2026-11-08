@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import {
   Component,
@@ -64,6 +65,7 @@ interface HomeData {
 @Component({
   selector: 'app-admin-home',
   imports: [
+    RefreshErrorComponent,
     ChargesTableComponent,
     DashboardNowComponent,
     EmptyStateComponent,

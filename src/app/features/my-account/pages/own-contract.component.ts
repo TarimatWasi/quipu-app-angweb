@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
@@ -50,6 +51,7 @@ interface ContractView {
 @Component({
   selector: 'app-own-contract',
   imports: [
+    RefreshErrorComponent,
     ContractDetailComponent,
     EmptyStateComponent,
     LoadErrorComponent,

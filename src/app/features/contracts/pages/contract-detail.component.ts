@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -56,6 +57,7 @@ interface Loaded {
 @Component({
   selector: 'app-contract-detail',
   imports: [
+    RefreshErrorComponent,
     FactTileComponent,
     LoadErrorComponent,
     NowPanelComponent,
