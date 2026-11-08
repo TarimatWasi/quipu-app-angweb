@@ -214,12 +214,41 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
           }),
         ),
       });
-      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('2 min');
+      expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('02:00');
 
       vi.advanceTimersByTime(3 * 60_000);
       await ui.harness.fixture.whenStable();
 
       expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Vencido');
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('counts the access down every second while the page is open (TAR-330)', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'Date'] });
+    try {
+      const ui = await setup({
+        detail: of(
+          guestOf({
+            status: 'PENDING_ACTIVATION',
+            onboardingProgress: 'NOT_STARTED',
+            contract: undefined,
+            version: 1,
+            accessExpiresAt: new Date(Date.now() + 5 * 60_000).toISOString(),
+          }),
+        ),
+      });
+      const figure = () => squash(ui.panel().querySelector('.figure')?.textContent);
+      expect(figure()).toBe('05:00');
+
+      vi.advanceTimersByTime(1_000);
+      await ui.harness.fixture.whenStable();
+      expect(figure()).toBe('04:59');
+
+      vi.advanceTimersByTime(59_000);
+      await ui.harness.fixture.whenStable();
+      expect(figure()).toBe('04:00');
     } finally {
       vi.useRealTimers();
     }
@@ -244,7 +273,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
 
     expect(ui.page().getByRole('heading', { level: 1, name: 'DNI 70412233' })).toBeTruthy();
     expect(ui.service.accountStatus).not.toHaveBeenCalled();
-    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toMatch(/^1[78] min$/);
+    expect(squash(ui.panel().querySelector('.figure')?.textContent)).toMatch(/^1[78]:\d{2}$/);
     expect(within(ui.panel()).getByRole('button', { name: 'Generar otro acceso' })).toBeTruthy();
     const blocked = ui.page().getByRole('region', { name: 'Contrato y pagos' });
     expect(words(blocked)).toBe(

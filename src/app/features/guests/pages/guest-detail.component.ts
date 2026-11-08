@@ -49,6 +49,7 @@ import { toStayRow } from '../model/stay-rows';
 import { GUEST_DETAIL_STYLES } from './guest-detail.styles';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import {
+  ACCESS_CLOCK_MS,
   CLOCK_MS,
   chargesKind,
   DetailView,
@@ -162,10 +163,18 @@ export class GuestDetailComponent implements OnInit {
     this.router.currentNavigation()?.extras.state?.[GENERATE_ACCESS_STATE] === true;
 
   constructor() {
-    // The time left of an access follows the clock while the page is open.
+    // The time left of an access follows the clock while the page is open: every second while the
+    // guest has an access to use (the countdown), and calmly for the rest of the screen.
+    let ticks = 0;
     const clock = setInterval(() => {
-      this.now.set(new Date());
-    }, CLOCK_MS);
+      ticks++;
+      if (
+        this.guest()?.status === 'PENDING_ACTIVATION' ||
+        ticks % (CLOCK_MS / ACCESS_CLOCK_MS) === 0
+      ) {
+        this.now.set(new Date());
+      }
+    }, ACCESS_CLOCK_MS);
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
       // Leaving the screen: no late answer may load, open a dialog or navigate any more.

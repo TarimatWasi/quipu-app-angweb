@@ -15,6 +15,8 @@ export interface DetailView {
 export const LOAD_ERROR_TEXT = loadErrorText('el huésped');
 /** How often the panel looks at the clock again (minutes left of an access). */
 export const CLOCK_MS = 15_000;
+/** While an access can still be used, its countdown moves every second, as on the page of the access. */
+export const ACCESS_CLOCK_MS = 1_000;
 
 export function leftColumn(guest: GuestDetail, periods: readonly PeriodStatus[]): LeftColumn {
   if (guest.status === 'PENDING_ACTIVATION' || guest.status === 'ONBOARDING') return 'blocked';
