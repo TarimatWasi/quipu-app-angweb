@@ -14,7 +14,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom, forkJoin, map, Observable } from 'rxjs';
 import { bodyCodeOf, toBffError } from '@core/http/bff-error';
 import { AsyncContentState } from '@shared/data/async-content';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, problem } from '@shared/forms/form-feedback';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
@@ -348,8 +348,4 @@ export class ContractFormComponent {
   private field(name: keyof ContractFields): FieldTree<string> {
     return this.contractForm[name];
   }
-}
-
-function problem(kind: string, message: string | null) {
-  return message === null ? undefined : { kind, message };
 }
