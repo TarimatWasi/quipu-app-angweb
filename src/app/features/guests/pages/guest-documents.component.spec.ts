@@ -178,6 +178,24 @@ describe('GuestDocumentsComponent (A3.8)', () => {
     ]);
   });
 
+  it('says «Huésped sin nombre» in «De quién son» while the guest has no name, and keeps its document apart (TAR-333)', async () => {
+    const ui = await setup({ guest: of(guestOf({ name: null })) });
+
+    const tiles = [
+      ...ui
+        .page()
+        .getByRole('complementary', { name: 'De quién son' })
+        .querySelectorAll('app-fact-tile'),
+    ].map((tile) => [
+      squash(tile.querySelector('dt')?.textContent),
+      squash(tile.querySelector('dd')?.textContent),
+    ]);
+    expect(tiles.slice(0, 2)).toEqual([
+      ['Huésped', 'Huésped sin nombre'],
+      ['Documento', 'DNI 70412233'],
+    ]);
+  });
+
   it('says there are no documents and no evidence instead of showing empty lists', async () => {
     const ui = await setup({ documents: of([]), actions: [] });
 

@@ -36,6 +36,7 @@ import {
   toDocumentRow,
 } from '../model/documents';
 import type { ActionKind, ActionRow, DocumentRow } from '../model/documents';
+import { guestName as personName } from '@shared/text/guest-text';
 import { documentText, guestName } from '../model/guest-texts';
 import { GUEST_DOCUMENTS_STYLES } from './guest-documents.styles';
 
@@ -54,7 +55,8 @@ interface Fact {
 /** The three tiles of «De quién son»: the guest, its document and how many files it has. */
 function facts(guest: GuestDetail, count: number): Fact[] {
   return [
-    { label: 'Huésped', value: guestName(guest), wide: true },
+    // The name, or «Huésped sin nombre» while it has none (TAR-333): its document has its own tile.
+    { label: 'Huésped', value: personName(guest.name), wide: true },
     { label: 'Documento', value: documentText(guest), wide: false },
     { label: 'Archivos', value: `${String(count)} de ${String(MAX_DOCUMENTS)}`, wide: false },
   ];
