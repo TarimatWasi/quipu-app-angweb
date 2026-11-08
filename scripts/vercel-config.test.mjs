@@ -205,7 +205,13 @@ test('the routes keep the order: security headers, proxies, static files and the
   assert.ok(!new RegExp(`^${fonts.src}$`).test('/fonts/OFL-Fraunces.txt'), 'only font files');
   assert.match(brand.headers['Cache-Control'], /max-age=86400/);
   assert.ok(!/immutable/.test(brand.headers['Cache-Control']), 'no hash: never immutable');
-  for (const name of ['emblema.png', 'icon.svg', 'favicon.ico', 'apple-touch-icon.png']) {
+  for (const name of [
+    'emblema.png',
+    'quipu-emblema.png',
+    'icon.svg',
+    'favicon.ico',
+    'apple-touch-icon.png',
+  ]) {
     assert.ok(new RegExp(`^${brand.src}$`).test(`/${name}`), name);
   }
   assert.ok(!new RegExp(`^${brand.src}$`).test('/index.html'), 'the index is not a brand image');
