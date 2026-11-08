@@ -199,7 +199,15 @@ test('the hosts that reach the dev backend send the secret and the others do not
 test('the routes keep the order: security headers, proxies, static files and the fallback', () => {
   assert.equal(config.rewrites, undefined, 'routes cannot be mixed with rewrites');
   assert.equal(config.headers, undefined, 'routes cannot be mixed with headers');
-  const [headers, ...rest] = config.routes;
+  const [headers, cache, ...rest] = config.routes;
+  assert.equal(cache.headers['Cache-Control'], 'public, max-age=31536000, immutable');
+  assert.equal(cache.continue, true, 'the cache rule goes on to the next route');
+  assert.ok(cache.dest === undefined, 'the cache rule sends nowhere');
+  const cached = new RegExp(`^${cache.src}$`);
+  for (const name of ['main-RVSVGVCY.js', 'chunk-B-ux9O0j.js', 'styles-5HDZB72C.css']) {
+    assert.ok(cached.test(`/${name}`), `${name} is cached for good`);
+  }
+  assert.ok(!cached.test('/index.html'), 'the index is never cached for good');
   assert.equal(headers.src, '/(.*)');
   assert.equal(headers.continue, true, 'the headers go on to the next route');
   assert.ok(headers.dest === undefined, 'the headers route sends nowhere');

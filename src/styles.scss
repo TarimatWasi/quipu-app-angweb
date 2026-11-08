@@ -321,8 +321,9 @@ html {
 }
 
 html {
-  // The page keeps the room of its scrollbar, so nothing slides sideways when it appears.
-  scrollbar-gutter: stable;
+  // The page keeps the room of its scrollbar on both sides, so nothing slides sideways when it
+  // appears and the margins stay symmetric.
+  scrollbar-gutter: stable both-edges;
 }
 
 body {

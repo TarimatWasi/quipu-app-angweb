@@ -32,15 +32,11 @@ describe('Skeleton loading region and patterns', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
-  it('is busy immediately, delays the projected layout and hides decorative content', async () => {
+  it('is busy and shows the projected layout at once, hiding the decorative content', async () => {
     const { fixture, container } = await render(HostComponent);
     expect(screen.getByRole('region', { name: 'Cargando Pagos' }).getAttribute('aria-busy')).toBe(
       'true',
     );
-    vi.advanceTimersByTime(299);
-    fixture.detectChanges();
-    expect(container.querySelector('app-skeleton-fields')).toBeNull();
-    vi.advanceTimersByTime(1);
     fixture.detectChanges();
     expect(container.querySelectorAll('app-skeleton-fields .quipu-field')).toHaveLength(2);
     expect(container.querySelectorAll('app-skeleton-facts > div')).toHaveLength(2);
