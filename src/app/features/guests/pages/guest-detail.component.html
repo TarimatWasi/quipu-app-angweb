@@ -25,7 +25,7 @@
     } @else {
       <app-skeleton subject="el huésped"
         ><ng-template appSkeletonContent>
-          <app-skeleton-block class="now" shape="rectangle" height="152px" />
+          <app-now-panel class="now" headingId="now-loading" [loading]="true" />
           <div class="layout">
             <section>
               <h2>Pagos y estadías</h2>

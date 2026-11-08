@@ -24,7 +24,7 @@
   } @else if (phase() === 'loading') {
     <app-skeleton class="now" subject="los contratos" [announceSlow]="false"
       ><ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+        ><app-now-panel headingId="now-loading" [loading]="true" /></ng-template
     ></app-skeleton>
   }
 }

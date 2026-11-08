@@ -1,5 +1,4 @@
 import { AsyncContentState } from '@shared/data/async-content';
-import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
@@ -58,7 +57,6 @@ import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
     RouterLink,
     ShowMoreComponent,
     SkeletonComponent,
-    SkeletonBlockComponent,
     SkeletonContentDirective,
   ],
   templateUrl: './payment-queue.component.html',

@@ -5,7 +5,7 @@
   @if (summary.status === 'initial-loading') {
     <app-skeleton class="now" subject="el resumen de pagos">
       <ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="var(--payment-summary-skeleton-height)"
+        ><app-now-panel headingId="now-loading" [loading]="true"
       /></ng-template>
     </app-skeleton>
   } @else if (summary.status === 'initial-error') {

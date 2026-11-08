@@ -1,5 +1,5 @@
+import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
-import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -64,9 +64,9 @@ import {
 @Component({
   selector: 'app-guest-detail',
   imports: [
+    NowPanelComponent,
     SkeletonCardsComponent,
     SkeletonFactsComponent,
-    SkeletonBlockComponent,
     SkeletonContentDirective,
     DetailNowPanelComponent,
     EmptyStateComponent,

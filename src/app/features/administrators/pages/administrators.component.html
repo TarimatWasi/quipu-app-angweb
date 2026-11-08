@@ -10,7 +10,7 @@
   @case ('loading') {
     <app-skeleton class="pending" subject="el resumen de administradores" [announceSlow]="false"
       ><ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+        ><app-now-panel headingId="now-loading" [loading]="true" /></ng-template
     ></app-skeleton>
     <section class="all" aria-labelledby="administrators-loading-title">
       <div class="all-head">
