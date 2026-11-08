@@ -1,5 +1,4 @@
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import {
   email,
@@ -166,11 +165,7 @@ export class NewAdministratorDialogComponent {
         this.ref.close({ email: input.email, emailSent: created.emailSent });
         return undefined;
       } catch (error: unknown) {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          // The session interceptor already forgot the session and goes to the login.
-          this.ref.close();
-          return undefined;
-        }
+        if (this.submission.sessionEnded(error)) return undefined;
         return this.failure(error);
       }
     });

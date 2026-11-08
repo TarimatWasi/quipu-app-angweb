@@ -1,5 +1,4 @@
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
@@ -123,11 +122,7 @@ export class DeactivateGuestDialogComponent {
   }
 
   private failed(error: unknown): void {
-    if (error instanceof HttpErrorResponse && error.status === 401) {
-      // The session interceptor already forgot the session and goes to the login.
-      this.finish();
-      return;
-    }
+    if (this.submission.sessionEnded(error)) return;
     const failure = callFailure(error);
     if (hasActiveContract(failure)) {
       this.blocked.set(true);

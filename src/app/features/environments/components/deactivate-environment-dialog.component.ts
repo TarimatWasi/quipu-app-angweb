@@ -150,11 +150,7 @@ export class DeactivateEnvironmentDialogComponent {
   }
 
   private failed(error: unknown): void {
-    if (error instanceof HttpErrorResponse && error.status === 401) {
-      // The session interceptor already forgot the session and goes to the login.
-      this.ref.close();
-      return;
-    }
+    if (this.submission.sessionEnded(error)) return;
     const occupied = occupiedBy(error);
     if (occupied !== null) {
       this.occupied.set(occupied);

@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, maxLength, validate } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -185,11 +184,7 @@ export class FineDialogComponent {
   }
 
   private failed(error: unknown): Refusals | undefined {
-    if (error instanceof HttpErrorResponse && error.status === 401) {
-      // The session interceptor already forgot the session and goes to the login.
-      this.ref.close();
-      return undefined;
-    }
+    if (this.submission.sessionEnded(error)) return undefined;
     const refused = refusal(bodyCodeOf(error), toBffError(error).field);
     focusFirstProblem(this.host, this.injector, ERROR_ID);
     const fields = { guestId: this.fineForm.guestId, amount: this.fineForm.amount };

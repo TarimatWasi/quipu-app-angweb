@@ -1,3 +1,4 @@
+import { toBffError } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
@@ -21,7 +22,7 @@ import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.com
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
-import { openTerminateContractDialog } from '../components/terminate-contract-dialog.component';
+import { openConfirmActionDialog } from '@shared/ui/confirm-action-dialog/confirm-action-dialog.component';
 import { AdminContractsService } from '../data/admin-contracts.service';
 import type { Contract } from '../model/contract';
 import {
@@ -158,10 +159,13 @@ export class ContractDetailComponent {
   protected terminate(): void {
     const data = this.loaded.data();
     if (data === null) return;
-    openTerminateContractDialog(this.dialog, {
+    openConfirmActionDialog(this.dialog, {
       title: confirmTitle(data.contract.guestName),
       points: confirmPoints(data.contract, data.rows),
-      terminate: () => this.contracts.terminate(data.contract.id),
+      button: 'Finalizar contrato',
+      pendingButton: 'Finalizando…',
+      run: () => this.contracts.terminate(data.contract.id),
+      failureText: (error) => toBffError(error).message,
     })
       .afterClosed()
       .subscribe((done) => {

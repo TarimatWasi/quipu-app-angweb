@@ -1,5 +1,4 @@
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
@@ -100,11 +99,7 @@ export class InactiveGuestDialogComponent {
   }
 
   private failed(error: unknown): void {
-    if (error instanceof HttpErrorResponse && error.status === 401) {
-      // The session interceptor already forgot the session and goes to the login.
-      this.finish();
-      return;
-    }
+    if (this.submission.sessionEnded(error)) return;
     const failure = callFailure(error);
     const debt = pendingDebt(failure);
     if (debt !== null) {

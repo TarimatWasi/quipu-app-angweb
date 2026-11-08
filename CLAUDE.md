@@ -47,7 +47,7 @@ Skeleton
 
 Formularios y diálogos
 
-- `app-form-field` + `[appFieldControl]`: etiqueta, control, error y ayuda. `app-file-field`: archivo (JPG, PNG o PDF). `app-new-password-field`, `app-personal-data-fields`: campos que repiten varios formularios. `FieldErrors`, `form-feedback`, `DialogSubmission`, `call-failure`: errores de servidor y envío de diálogos. `app-dialog-frame`: marco visual de todo diálogo. `app-concurrent-modification-dialog` (`openConcurrentModificationDialog`): el registro cambió. `app-payment-notice-dialog` (`openPaymentNoticeDialog`): conflictos de pago. `change-password-action`: abre «Cambiar contraseña».
+- `app-form-field` + `[appFieldControl]`: etiqueta, control, error y ayuda. `app-file-field`: archivo (JPG, PNG o PDF). `app-new-password-field`, `app-personal-data-fields`: campos que repiten varios formularios. `FieldErrors`, `form-feedback`, `DialogSubmission`, `call-failure`: errores de servidor y envío de diálogos. `app-dialog-frame`: marco visual de todo diálogo. `app-confirm-action-dialog` (`openConfirmActionDialog`): confirmación de una acción que no se deshace (título, lista o frase, botón y la llamada); `DialogSubmission.sessionEnded` cierra el diálogo ante un 401 (no se repite en cada diálogo). `app-concurrent-modification-dialog` (`openConcurrentModificationDialog`): el registro cambió. `app-payment-notice-dialog` (`openPaymentNoticeDialog`): conflictos de pago. `change-password-action`: abre «Cambiar contraseña».
 
 Pagos (shared/payments)
 

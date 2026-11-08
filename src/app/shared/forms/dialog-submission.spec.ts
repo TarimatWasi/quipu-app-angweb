@@ -1,8 +1,9 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { DialogSubmission } from './dialog-submission';
 
 describe('DialogSubmission', () => {
   it('ignores a duplicate submission while retaining the first result and close lock', async () => {
-    const dialog = { disableClose: false };
+    const dialog = { disableClose: false, close: vi.fn() };
     const submission = new DialogSubmission(dialog);
     let release: (value: string) => void = () => undefined;
     const response = new Promise<string>((resolve) => {
@@ -24,7 +25,7 @@ describe('DialogSubmission', () => {
   it.each([false, true, undefined])(
     'restores the original close policy (%s) after failure and permits retry',
     async (disableClose) => {
-      const dialog = { disableClose };
+      const dialog = { disableClose, close: vi.fn() };
       const submission = new DialogSubmission(dialog);
       const failure = new Error('save failed');
       await expect(submission.run(() => Promise.reject(failure))).rejects.toBe(failure);
@@ -34,4 +35,23 @@ describe('DialogSubmission', () => {
       expect(dialog.disableClose).toBe(disableClose);
     },
   );
+
+  describe('sessionEnded (TAR-323)', () => {
+    it("closes the dialog on a 401, which is the session interceptor's", () => {
+      const dialog = { disableClose: false, close: vi.fn() };
+      const submission = new DialogSubmission(dialog);
+
+      expect(submission.sessionEnded(new HttpErrorResponse({ status: 401 }))).toBe(true);
+      expect(dialog.close).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the dialog open for any other failure', () => {
+      const dialog = { disableClose: false, close: vi.fn() };
+      const submission = new DialogSubmission(dialog);
+
+      expect(submission.sessionEnded(new HttpErrorResponse({ status: 409 }))).toBe(false);
+      expect(submission.sessionEnded(new Error('network'))).toBe(false);
+      expect(dialog.close).not.toHaveBeenCalled();
+    });
+  });
 });
