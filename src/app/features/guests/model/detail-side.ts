@@ -13,8 +13,12 @@ export type Contract = components['schemas']['Contract'];
 export type OnboardingProgress = components['schemas']['OnboardingProgress'];
 type EmergencyContact = components['schemas']['EmergencyContact'];
 
-/** A value longer than this goes one step smaller (24 px, 20 on a phone), so it never overflows. */
-export const LONG_FACT = 18;
+/**
+ * A value longer than this goes one step smaller (24 px, 20 on a phone). The tiles of the side
+ * column are about 118 px wide inside, and a word of 8 letters like «Temporal» at 30 px does not fit
+ * (TAR-331): it was breaking in two, «Tempora» and «l».
+ */
+export const LONG_FACT = 7;
 
 export interface DetailFact {
   readonly label: string;

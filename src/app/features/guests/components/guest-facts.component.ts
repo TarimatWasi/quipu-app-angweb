@@ -16,8 +16,8 @@ import type { GuestDetail } from '../model/detail-side';
 
 /**
  * The facts of A3.2 (P-11 on dark stone): «Sus datos», the contract in force or the last one, and
- * «Su registro» (P-25) while the guest has not finished it. A value longer than 18 characters goes
- * one step smaller, so it never overflows its tile.
+ * «Su registro» (P-25) while the guest has not finished it. A value longer than 7 characters goes
+ * one step smaller, and a word is only broken when it is longer than the tile itself.
  */
 @Component({
   selector: 'app-guest-facts',
@@ -116,7 +116,7 @@ import type { GuestDetail } from '../model/detail-side';
     app-fact-tile {
       --quipu-cifra-ficha: var(--quipu-cifra-resumen);
       --quipu-cifra-ficha-movil: var(--quipu-cifra-resumen-movil);
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
     }
     app-fact-tile.long {
       --quipu-cifra-ficha: var(--quipu-cifra-larga);

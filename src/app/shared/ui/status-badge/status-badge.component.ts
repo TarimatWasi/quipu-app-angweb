@@ -22,7 +22,10 @@ export type StatusTone = 'paid' | 'review' | 'unpaid' | 'overdue' | 'rejected';
       font-size: 0.9375rem;
       font-weight: 700;
       line-height: 1.2;
-      white-space: nowrap;
+      /* Inside a narrow tile or cell the words wrap; the badge never leaves its box (TAR-331). */
+      box-sizing: border-box;
+      max-width: 100%;
+      white-space: normal;
     }
     .dot {
       flex: none;
