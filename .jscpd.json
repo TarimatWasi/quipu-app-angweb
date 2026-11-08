@@ -1,0 +1,10 @@
+{
+  "path": ["src/app"],
+  "pattern": "**/*.{ts,html,scss}",
+  "ignore": ["**/*.spec.ts", "**/*.testing.ts", "**/bff.generated.d.ts", "**/core/mock/**"],
+  "minLines": 7,
+  "minTokens": 70,
+  "threshold": 2,
+  "reporters": ["console"],
+  "silent": false
+}
