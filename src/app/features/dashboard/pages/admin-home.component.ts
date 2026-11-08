@@ -1,3 +1,4 @@
+import { ListFilterState } from '@shared/lists/list-page';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import {
@@ -7,14 +8,12 @@ import {
   ElementRef,
   inject,
   OnInit,
-  signal,
   viewChild,
 } from '@angular/core';
-import { form, FormField } from '@angular/forms/signals';
+import { FormField } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { AsyncContentState } from '@shared/data/async-content';
 import { formatPeriod } from '@shared/payments/payment-format';
-import { nextSort } from '@shared/ui/data-table/list-sort';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -40,12 +39,7 @@ import {
   toChargeRow,
   visibleCharges,
 } from '../model/dashboard-charges';
-import type {
-  AdminDashboard,
-  ChargeFilters,
-  ChargeSort,
-  ChargeSortKey,
-} from '../model/dashboard-charges';
+import type { AdminDashboard, ChargeFilters, ChargeSortKey } from '../model/dashboard-charges';
 import { FIRST_STEPS, isFirstUse, nowOf, pendingOf } from '../model/dashboard-pending';
 import { LOAD_ERROR_TEXT, NO_MATCH_HEADING } from '../model/dashboard-texts';
 import { limaDay, limaMonth } from '@shared/payments/payment-format';
@@ -85,7 +79,10 @@ interface HomeData {
   templateUrl: './admin-home.component.html',
   styles: ADMIN_HOME_STYLES,
 })
-export class AdminHomeComponent implements OnInit {
+export class AdminHomeComponent
+  extends ListFilterState<ChargeFilters, ChargeSortKey>
+  implements OnInit
+{
   private readonly service = inject(AdminDashboardService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -112,9 +109,6 @@ export class AdminHomeComponent implements OnInit {
       : null;
   });
 
-  protected readonly filters = signal<ChargeFilters>(NO_FILTERS);
-  protected readonly filterForm = form(this.filters);
-  protected readonly sort = signal<ChargeSort>(DEFAULT_SORT);
   protected readonly filtered = computed(() => hasFilters(this.filters()));
   private readonly chargesTitle = viewChild<ElementRef<HTMLElement>>('chargesTitle');
 
@@ -139,6 +133,7 @@ export class AdminHomeComponent implements OnInit {
   );
 
   constructor() {
+    super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.destroyRef.onDestroy(() => {
       this.loaded.dispose();
     });
@@ -156,28 +151,10 @@ export class AdminHomeComponent implements OnInit {
     this.filters.update((filters) => ({ ...filters, state: isChargeState(key) ? key : null }));
   }
 
-  protected searchFor(search: string): void {
-    this.filters.update((filters) => ({ ...filters, search }));
-  }
-
-  protected clearFilters(): void {
-    this.filters.set(NO_FILTERS);
-  }
-
   /** «Ver atrasados»: only the overdue charges, and the reader goes to them. */
   protected showOverdue(): void {
     this.filters.set({ ...NO_FILTERS, state: 'OVERDUE' });
     this.chargesTitle()?.nativeElement.focus();
-  }
-
-  protected sortBy(key: ChargeSortKey): void {
-    this.sort.update((current) => nextSort(current, key));
-  }
-
-  /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(key: string): void {
-    const choice = PHONE_SORTS.find((option) => option.key === key);
-    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
   }
 
   private async load(): Promise<void> {

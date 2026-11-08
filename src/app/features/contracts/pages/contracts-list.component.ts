@@ -1,11 +1,12 @@
+import { PagedListPage } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { form, FormField } from '@angular/forms/signals';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
-import { PagedList } from '@shared/data/paged-list';
-import { nextSort } from '@shared/ui/data-table/list-sort';
+import type { Observable } from 'rxjs';
+import type { PageRequest } from '@shared/data/page-load-state';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
@@ -34,7 +35,6 @@ import {
 import type {
   ContractFilters,
   ContractPage,
-  ContractSort,
   ContractStatus,
   ContractSummary,
   SortKey,
@@ -66,39 +66,25 @@ import type {
   templateUrl: './contracts-list.component.html',
   styleUrl: './contracts-list.component.scss',
 })
-export class ContractsListComponent {
+export class ContractsListComponent extends PagedListPage<
+  ContractStatus,
+  ContractSummary,
+  ContractPage,
+  ContractFilters,
+  SortKey
+> {
   private readonly service = inject(AdminContractsService);
 
   protected readonly views = VIEWS;
   protected readonly viewNames = VIEWS.map((option) => VIEW_LABELS[option]);
   protected readonly viewLabels = VIEW_LABELS;
-  protected readonly phoneSorts = PHONE_SORTS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
-  protected readonly view = signal<ContractStatus>('ACTIVE');
-  protected readonly filters = signal<ContractFilters>(NO_FILTERS);
-  protected readonly filterForm = form(this.filters);
-  protected readonly sort = signal<ContractSort>(DEFAULT_SORT);
-
   private readonly soon = signal<readonly ContractSummary[]>([]);
-  private readonly list = new PagedList<ContractStatus, ContractSummary, ContractPage>(
-    (status, after) => this.service.list(status, after ?? undefined),
-    (_page, request) => {
-      if (request.query === 'ACTIVE' && request.after === null) this.readSoon();
-    },
-  );
   private readonly now = new Date();
 
-  protected readonly phase = this.list.phase;
-  protected readonly retrying = this.list.retrying;
-  protected readonly loadingMore = this.list.loadingMore;
-  protected readonly listFailed = this.list.firstFailed;
-  protected readonly moreFailed = this.list.moreFailed;
-  protected readonly nextCursor = this.list.nextCursor;
-
   protected readonly filtered = computed(() => hasFilters(this.filters()));
-  protected readonly loadedCount = computed(() => this.list.items().length);
   protected readonly rows = computed(() =>
     visibleContracts(
       this.list.items().map((contract) => toRow(contract, this.now)),
@@ -111,50 +97,22 @@ export class ContractsListComponent {
   protected readonly empty = computed(() => emptyText(this.view()));
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.list.dispose();
-    });
-    this.list.reload('ACTIVE');
+    super('ACTIVE', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
+    this.start();
   }
 
-  protected chooseView(view: ContractStatus): void {
-    if (view === this.view()) return;
-    this.view.set(view);
-    this.filters.set(NO_FILTERS);
-    this.sort.set(DEFAULT_SORT);
-    this.list.switchTo(view);
+  protected fetchPage(status: ContractStatus, after: string | null): Observable<ContractPage> {
+    return this.service.list(status, after ?? undefined);
   }
 
-  protected clearFilters(): void {
-    this.filters.set(NO_FILTERS);
-  }
-
-  protected searchFor(search: string): void {
-    this.filters.update((filters) => ({ ...filters, search }));
+  protected pageReceived(_page: ContractPage, request: PageRequest<ContractStatus>): void {
+    if (request.query === 'ACTIVE' && request.after === null) this.readSoon();
   }
 
   /** The action of the panel when several contracts are about to end: only those. */
   protected showSoon(): void {
     this.filters.set({ search: '', soon: 'SOON' });
     this.sort.set(DEFAULT_SORT);
-  }
-
-  protected sortBy(key: SortKey): void {
-    this.sort.update((current) => nextSort(current, key));
-  }
-
-  /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(key: string): void {
-    const choice = PHONE_SORTS.find((option) => option.key === key);
-    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
-  }
-
-  protected more(): void {
-    this.list.more(this.view());
-  }
-
-  protected retry(): void {
-    this.list.retry(this.view());
   }
 
   /** The Vigentes also ask for the ones that end soon: a panel that fails to load is left out. */

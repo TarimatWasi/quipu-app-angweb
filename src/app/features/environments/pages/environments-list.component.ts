@@ -1,13 +1,13 @@
+import { PagedListPage } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { form, FormField } from '@angular/forms/signals';
+import { Component, computed, inject, signal } from '@angular/core';
+import { FormField } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { PagedList } from '@shared/data/paged-list';
-import { nextSort } from '@shared/ui/data-table/list-sort';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
@@ -41,7 +41,6 @@ import type {
   EnvironmentFilters,
   EnvironmentPage,
   EnvironmentRow,
-  EnvironmentSort,
   EnvironmentStatus,
   SortKey,
 } from '../model/environment';
@@ -74,39 +73,25 @@ const VIEWS: readonly EnvironmentStatus[] = ['ACTIVE', 'INACTIVE'];
   templateUrl: './environments-list.component.html',
   styleUrl: './environments-list.component.scss',
 })
-export class EnvironmentsListComponent {
+export class EnvironmentsListComponent extends PagedListPage<
+  EnvironmentStatus,
+  Environment,
+  EnvironmentPage,
+  EnvironmentFilters,
+  SortKey
+> {
   private readonly service = inject(AdminEnvironmentsService);
   private readonly dialog = inject(MatDialog);
   private readonly toasts = inject(ToastService);
 
   protected readonly views = VIEWS;
   protected readonly statusLabels = STATUS_LABELS;
-  protected readonly phoneSorts = PHONE_SORTS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
-  protected readonly view = signal<EnvironmentStatus>('ACTIVE');
-  protected readonly filters = signal<EnvironmentFilters>(NO_FILTERS);
-  protected readonly filterForm = form(this.filters);
-  protected readonly sort = signal<EnvironmentSort>(DEFAULT_SORT);
-
   private readonly freeCount = signal<number | null>(null);
-  private readonly list = new PagedList<EnvironmentStatus, Environment, EnvironmentPage>(
-    (status, after) => this.service.list(status, after ?? undefined),
-    (page) => {
-      if (this.view() === 'ACTIVE') this.freeCount.set(page.freeCount);
-    },
-  );
-
-  protected readonly phase = this.list.phase;
-  protected readonly retrying = this.list.retrying;
-  protected readonly loadingMore = this.list.loadingMore;
-  protected readonly listFailed = this.list.firstFailed;
-  protected readonly moreFailed = this.list.moreFailed;
-  protected readonly nextCursor = this.list.nextCursor;
 
   protected readonly filtered = computed(() => hasFilters(this.filters()));
-  protected readonly loadedCount = computed(() => this.list.items().length);
   protected readonly rows = computed(() =>
     visibleEnvironments(this.list.items().map(toRow), this.filters(), this.sort()),
   );
@@ -123,44 +108,19 @@ export class EnvironmentsListComponent {
   );
 
   constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.list.dispose();
-    });
-    this.list.reload('ACTIVE');
+    super('ACTIVE', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
+    this.start();
   }
 
-  protected chooseView(view: EnvironmentStatus): void {
-    if (view === this.view()) return;
-    this.view.set(view);
-    this.filters.set(NO_FILTERS);
-    this.sort.set(DEFAULT_SORT);
-    this.list.switchTo(view);
+  protected fetchPage(
+    status: EnvironmentStatus,
+    after: string | null,
+  ): Observable<EnvironmentPage> {
+    return this.service.list(status, after ?? undefined);
   }
 
-  protected clearFilters(): void {
-    this.filters.set(NO_FILTERS);
-  }
-
-  protected searchFor(search: string): void {
-    this.filters.update((filters) => ({ ...filters, search }));
-  }
-
-  protected sortBy(key: SortKey): void {
-    this.sort.update((current) => nextSort(current, key));
-  }
-
-  /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(key: string): void {
-    const choice = PHONE_SORTS.find((option) => option.key === key);
-    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
-  }
-
-  protected more(): void {
-    this.list.more(this.view());
-  }
-
-  protected retry(): void {
-    this.list.retry(this.view());
+  protected pageReceived(page: EnvironmentPage): void {
+    if (this.view() === 'ACTIVE') this.freeCount.set(page.freeCount);
   }
 
   /** «Desactivar» opens its dialog; «Reactivar» changes the state at once. */

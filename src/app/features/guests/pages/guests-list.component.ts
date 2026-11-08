@@ -1,3 +1,4 @@
+import { ListFilterState } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
@@ -6,7 +7,7 @@ import type { PageRequest as CursorPageRequest } from '@shared/data/page-load-st
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
-import { form, FormField } from '@angular/forms/signals';
+import { FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
 import { catchError, map, of, Subject, switchMap } from 'rxjs';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -32,7 +33,6 @@ import type {
   GuestFilters,
   GuestPage,
   GuestQuery,
-  GuestSort,
   GuestSummary,
   GuestView,
   SortKey,
@@ -47,7 +47,6 @@ import {
   nowPanel,
 } from '../model/guest-list-texts';
 import type { PanelCounts } from '../model/guest-list-texts';
-import { nextSort } from '@shared/ui/data-table/list-sort';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
@@ -87,7 +86,7 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
   templateUrl: './guests-list.component.html',
   styleUrl: './guests-list.component.scss',
 })
-export class GuestsListComponent {
+export class GuestsListComponent extends ListFilterState<GuestFilters, SortKey> {
   private readonly service = inject(GuestsListService);
 
   protected readonly views = VIEWS;
@@ -97,9 +96,6 @@ export class GuestsListComponent {
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
   protected readonly view = signal<GuestView>('CURRENT');
-  protected readonly filters = signal<GuestFilters>(NO_FILTERS);
-  protected readonly filterForm = form(this.filters);
-  protected readonly sort = signal<GuestSort>(DEFAULT_SORT);
 
   private readonly guests = signal<readonly GuestSummary[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
@@ -141,6 +137,7 @@ export class GuestsListComponent {
   );
 
   constructor() {
+    super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     inject(DestroyRef).onDestroy(() => {
       this.pageLoad.invalidate();
     });
@@ -174,27 +171,9 @@ export class GuestsListComponent {
     this.filters.set(NO_FILTERS);
   }
 
-  protected clearFilters(): void {
-    this.filters.set(NO_FILTERS);
-  }
-
   /** «Ver sin activar»: only the guests pending activation, without any other filter. */
   protected showPending(): void {
     this.filters.set({ ...NO_FILTERS, state: 'PENDING_ACTIVATION' });
-  }
-
-  protected sortBy(key: SortKey): void {
-    this.sort.update((current) => nextSort(current, key));
-  }
-
-  protected searchFor(search: string): void {
-    this.filters.update((filters) => ({ ...filters, search }));
-  }
-
-  /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(key: string): void {
-    const choice = PHONE_SORTS.find((option) => option.key === key);
-    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
   }
 
   protected more(): void {
