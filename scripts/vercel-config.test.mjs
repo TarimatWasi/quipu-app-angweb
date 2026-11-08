@@ -199,7 +199,17 @@ test('the hosts that reach the dev backend send the secret and the others do not
 test('the routes keep the order: security headers, proxies, static files and the fallback', () => {
   assert.equal(config.rewrites, undefined, 'routes cannot be mixed with rewrites');
   assert.equal(config.headers, undefined, 'routes cannot be mixed with headers');
-  const [headers, cache, ...rest] = config.routes;
+  const [headers, cache, fonts, brand, ...rest] = config.routes;
+  assert.equal(fonts.headers['Cache-Control'], 'public, max-age=31536000, immutable');
+  assert.ok(new RegExp(`^${fonts.src}$`).test('/fonts/fraunces-latin.woff2'), 'fonts: for good');
+  assert.ok(!new RegExp(`^${fonts.src}$`).test('/fonts/OFL-Fraunces.txt'), 'only font files');
+  assert.match(brand.headers['Cache-Control'], /max-age=86400/);
+  assert.ok(!/immutable/.test(brand.headers['Cache-Control']), 'no hash: never immutable');
+  for (const name of ['emblema.png', 'icon.svg', 'favicon.ico', 'apple-touch-icon.png']) {
+    assert.ok(new RegExp(`^${brand.src}$`).test(`/${name}`), name);
+  }
+  assert.ok(!new RegExp(`^${brand.src}$`).test('/index.html'), 'the index is not a brand image');
+  assert.ok(fonts.continue && brand.continue, 'the cache rules go on to the next route');
   assert.equal(cache.headers['Cache-Control'], 'public, max-age=31536000, immutable');
   assert.equal(cache.continue, true, 'the cache rule goes on to the next route');
   assert.ok(cache.dest === undefined, 'the cache rule sends nowhere');

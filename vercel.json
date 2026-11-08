@@ -26,6 +26,20 @@
       "continue": true
     },
     {
+      "src": "/fonts/[A-Za-z0-9_.-]+[.]woff2",
+      "headers": {
+        "Cache-Control": "public, max-age=31536000, immutable"
+      },
+      "continue": true
+    },
+    {
+      "src": "/(?:emblema[.]png|icon[.]svg|favicon[.]ico|apple-touch-icon[.]png)",
+      "headers": {
+        "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
+      },
+      "continue": true
+    },
+    {
       "src": "/bff(?:/(.*))?",
       "has": [
         {
