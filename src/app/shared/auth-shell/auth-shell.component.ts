@@ -1,6 +1,6 @@
-import { NgOptimizedImage } from '@angular/common';
 import { Component } from '@angular/core';
 import { QuipuComponent } from '@shared/quipu/quipu.component';
+import { EmblemComponent } from '@shared/ui/emblem/emblem.component';
 
 /**
  * Frame of the pages anyone can open (login, recovery, password change): the brand panel with the
@@ -9,13 +9,13 @@ import { QuipuComponent } from '@shared/quipu/quipu.component';
  */
 @Component({
   selector: 'app-auth-shell',
-  imports: [NgOptimizedImage, QuipuComponent],
+  imports: [EmblemComponent, QuipuComponent],
   template: `
     <div class="frame">
       <header class="panel">
         <app-quipu class="quipu" />
         <div class="brand">
-          <img class="emblem" ngSrc="emblema.png" priority alt="" width="132" height="132" />
+          <app-emblem class="emblem" />
           <p class="name">Quipu</p>
         </div>
         <div class="band" aria-hidden="true"></div>

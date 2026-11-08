@@ -3,9 +3,13 @@
 @use '@angular/material' as mat;
 
 // Tipografías autoalojadas (SIL OFL 1.1, ver public/fonts/OFL-*.txt): sin llamadas a terceros.
+// Fraunces está fijada en el peso 600, el único con el que se usa (roles de títulos y cifras), y
+// conserva el eje de tamaño óptico (TAR-314). Si hace falta otro peso se regenera con otro nombre
+// de archivo, porque la caché es inmutable. El rango del descriptor queda abierto para que el
+// navegador no sintetice negritas.
 @font-face {
   font-family: 'Fraunces';
-  src: url('/fonts/fraunces-latin.woff2') format('woff2');
+  src: url('/fonts/fraunces-latin-600.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;

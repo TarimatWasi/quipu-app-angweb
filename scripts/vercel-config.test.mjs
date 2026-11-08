@@ -201,13 +201,17 @@ test('the routes keep the order: security headers, proxies, static files and the
   assert.equal(config.headers, undefined, 'routes cannot be mixed with headers');
   const [headers, cache, fonts, brand, ...rest] = config.routes;
   assert.equal(fonts.headers['Cache-Control'], 'public, max-age=31536000, immutable');
-  assert.ok(new RegExp(`^${fonts.src}$`).test('/fonts/fraunces-latin.woff2'), 'fonts: for good');
+  assert.ok(
+    new RegExp(`^${fonts.src}$`).test('/fonts/fraunces-latin-600.woff2'),
+    'fonts: for good',
+  );
   assert.ok(!new RegExp(`^${fonts.src}$`).test('/fonts/OFL-Fraunces.txt'), 'only font files');
   assert.match(brand.headers['Cache-Control'], /max-age=86400/);
   assert.ok(!/immutable/.test(brand.headers['Cache-Control']), 'no hash: never immutable');
   for (const name of [
     'emblema.png',
     'quipu-emblema.png',
+    'emblema-160.avif',
     'icon.svg',
     'favicon.ico',
     'apple-touch-icon.png',
