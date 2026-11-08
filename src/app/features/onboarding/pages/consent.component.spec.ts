@@ -42,7 +42,7 @@ describe('O3 «Tu consentimiento»', () => {
   });
 
   it('accepts the version it read, tells it is complete and goes home', async () => {
-    const { api, mark, finish, router } = await setup();
+    const { api, mark, finish, router, auth } = await setup();
     const toasts = TestBed.inject(ToastService);
     const show = vi.spyOn(toasts, 'show');
 
@@ -52,6 +52,7 @@ describe('O3 «Tu consentimiento»', () => {
     expect(api.acceptConsent).toHaveBeenCalledWith('2026-10');
     expect(show).toHaveBeenCalledWith('Tu registro está completo.', { tone: 'success' });
     expect(router.url).toBe('/home');
+    expect(auth.onboardingAdvanced).toHaveBeenCalledWith(null);
   });
 
   it('says where the guest goes next by its kind', async () => {

@@ -8,11 +8,7 @@ import type { Step } from '@shared/ui/step-list/step-list.component';
 export type OnboardingStep = components['schemas']['OnboardingInProgress']['nextStep'];
 
 /** The page of each step: the BFF says which one is next and the screen goes there. */
-export const STEP_PATHS: Readonly<Record<OnboardingStep, string>> = {
-  PERSONAL_DATA: '/onboarding/personal-data',
-  DOCUMENTS: '/onboarding/documents',
-  CONSENT: '/onboarding/consent',
-};
+export { ONBOARDING_PATHS as STEP_PATHS } from '@core/guards/onboarding';
 
 /** Where a guest goes when it has nothing left to do: its home, which is H1 or T1 by its type. */
 export const HOME_PATH = '/home';

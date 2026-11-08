@@ -1,4 +1,5 @@
 import type { Session } from '@core/auth/auth.service';
+import { isRegistering } from '@core/guards/onboarding';
 
 /**
  * One entry of the menu of the bar (P-01). `link` is null while its screen does not exist yet: the
@@ -55,8 +56,12 @@ function audienceOf(session: Session): Audience | null {
   return session.guestType ?? null;
 }
 
-/** The sections of the session; none for a guest without a known type (onboarding): only «Salir». */
+/**
+ * The sections of the session; none for a guest that has not finished its registration (TAR-141)
+ * or has no known type: only «Salir».
+ */
 export function sectionsFor(session: Session | null): readonly NavEntry[] {
+  if (isRegistering(session)) return [];
   const audience = session && audienceOf(session);
   return audience ? SECTIONS[audience] : [];
 }

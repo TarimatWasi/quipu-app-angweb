@@ -81,7 +81,7 @@ export class OnboardingPersonalDataComponent extends OnboardingPage {
       const saved = await firstValueFrom(
         this.api.savePersonalData(toPersonalDataInput(this.model())),
       );
-      await this.go(saved.nextStep);
+      await this.go(saved.nextStep, saved.personalData.name);
     } catch (error: unknown) {
       return this.saveFailed(error);
     }

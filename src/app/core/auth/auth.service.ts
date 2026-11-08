@@ -30,12 +30,24 @@ export type LoginRequest = Readonly<LoginOperation['requestBody']['content']['ap
 /** A guest with a contract or a temporary one (RN-13); the administrator has none. */
 export type GuestType = components['schemas']['GuestActiveSession']['guestType'];
 
+/** Where a guest is in its life with the app: still registering, or active (RN-36). */
+export type SessionGuestStatus = 'ONBOARDING' | 'ACTIVE';
+
+/** The step of the registration a guest in onboarding goes to next, in the order of RN-33. */
+export type OnboardingStepName = 'PASSWORD' | 'PERSONAL_DATA' | 'DOCUMENTS' | 'CONSENT';
+
 /**
  * What the BFF answers to a login. The session token itself travels in an HttpOnly cookie.
  * `guestType` comes only with a guest session (SessionInfo); it decides which guest pages open.
  */
 export type Session = Readonly<
-  Pick<LoginResponse, 'role' | 'name' | 'mustChangePassword'> & { guestType?: GuestType }
+  Pick<LoginResponse, 'role' | 'name' | 'mustChangePassword'> & {
+    guestType?: GuestType;
+    /** Only a guest session has it (TAR-141): it decides whether the guest is still registering. */
+    guestStatus?: SessionGuestStatus;
+    /** Only while `guestStatus` is ONBOARDING: the step the guest must do next. */
+    nextOnboardingStep?: OnboardingStepName;
+  }
 >;
 
 /**
@@ -66,6 +78,26 @@ function isGuestType(value: unknown): value is GuestType {
   return typeof value === 'string' && Object.hasOwn(GUEST_TYPES, value);
 }
 
+// The same for the status and the steps of the onboarding.
+const GUEST_STATUSES: Readonly<Record<SessionGuestStatus, true>> = {
+  ONBOARDING: true,
+  ACTIVE: true,
+};
+const ONBOARDING_STEPS: Readonly<Record<OnboardingStepName, true>> = {
+  PASSWORD: true,
+  PERSONAL_DATA: true,
+  DOCUMENTS: true,
+  CONSENT: true,
+};
+
+function isGuestStatus(value: unknown): value is SessionGuestStatus {
+  return typeof value === 'string' && Object.hasOwn(GUEST_STATUSES, value);
+}
+
+function isOnboardingStep(value: unknown): value is OnboardingStepName {
+  return typeof value === 'string' && Object.hasOwn(ONBOARDING_STEPS, value);
+}
+
 // Leaving is best-effort: unlike the login it must not make the user wait for a sleeping backend.
 const LOGOUT_TIMEOUT_MS = 10_000;
 
@@ -79,12 +111,21 @@ function isUnreachable(error: unknown): boolean {
 /** Checks a session answer (login or /me) at the boundary: anything unexpected is an error, never a session. */
 function toSession(body: unknown): Session {
   if (typeof body === 'object' && body !== null) {
-    const { role, name, mustChangePassword, guestType } = body as Record<string, unknown>;
+    const { role, name, mustChangePassword, guestType, guestStatus, nextOnboardingStep } =
+      body as Record<string, unknown>;
     if (isRole(role) && typeof name === 'string' && typeof mustChangePassword === 'boolean') {
+      if (role !== 'GUEST') return { role, name, mustChangePassword };
       // A guest without a known type keeps its session but opens no guest page.
-      return role === 'GUEST' && isGuestType(guestType)
-        ? { role, name, mustChangePassword, guestType }
-        : { role, name, mustChangePassword };
+      return {
+        role,
+        name,
+        mustChangePassword,
+        ...(isGuestType(guestType) && { guestType }),
+        ...(isGuestStatus(guestStatus) && { guestStatus }),
+        // Only a guest that is still registering has a next step.
+        ...(guestStatus === 'ONBOARDING' &&
+          isOnboardingStep(nextOnboardingStep) && { nextOnboardingStep }),
+      };
     }
   }
   throw new Error('Unexpected login response');
@@ -190,9 +231,39 @@ export class AuthService {
         timeout({ first: this.timing.timeoutMs }),
         tap(() => {
           this.epoch++;
-          this.current.update((session) => session && { ...session, mustChangePassword: false });
+          this.current.update(
+            (session) =>
+              session && {
+                ...session,
+                mustChangePassword: false,
+                // The password was the first step of the registration (RN-33).
+                ...(session.nextOnboardingStep === 'PASSWORD' && {
+                  nextOnboardingStep: 'PERSONAL_DATA' as const,
+                }),
+              },
+          );
         }),
       );
+  }
+
+  /**
+   * TAR-141. A step of the registration was done (or the BFF said where it stands): the session
+   * follows, so the guard that keeps the guest in its registration lets it into the next step. `next`
+   * null is a closed registration (RN-36); `name` is the one the guest just saved.
+   */
+  onboardingAdvanced(next: Exclude<OnboardingStepName, 'PASSWORD'> | null, name?: string): void {
+    this.epoch++;
+    this.current.update((session) => {
+      if (session?.role !== 'GUEST') return session;
+      return {
+        role: session.role,
+        name: name ?? session.name,
+        mustChangePassword: session.mustChangePassword,
+        ...(session.guestType !== undefined && { guestType: session.guestType }),
+        guestStatus: next === null ? 'ACTIVE' : 'ONBOARDING',
+        ...(next !== null && { nextOnboardingStep: next }),
+      };
+    });
   }
 
   /** RF-16. The answer is the same for any email; no session is involved. */
