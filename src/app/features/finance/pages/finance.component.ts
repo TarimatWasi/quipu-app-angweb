@@ -1,3 +1,4 @@
+import { toBffError } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
@@ -21,7 +22,7 @@ import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.d
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
-import { openDeleteMovementDialog } from '../components/delete-movement-dialog.component';
+import { openConfirmActionDialog } from '@shared/ui/confirm-action-dialog/confirm-action-dialog.component';
 import { openExpenseDialog } from '../components/expense-dialog.component';
 import { openFineDialog } from '../components/fine-dialog.component';
 import { MovementsTableComponent } from '../components/movements-table.component';
@@ -380,13 +381,17 @@ export class FinanceComponent {
     const expense = 'category' in source;
     const kind = expense ? 'EXP' : 'FIN';
     const notice = deleteNotice(kind, this.month());
-    openDeleteMovementDialog(this.dialog, {
+    openConfirmActionDialog(this.dialog, {
       title: notice.title,
-      what: expense ? (source.description ?? row.title) : fineWho(source as Fine),
-      detail: expense ? expenseDetail(source) : fineDetail(source as Fine),
+      lead: {
+        what: expense ? (source.description ?? row.title) : fineWho(source as Fine),
+        detail: expense ? expenseDetail(source) : fineDetail(source as Fine),
+      },
       text: notice.text,
       button: notice.button,
-      remove: () =>
+      pendingButton: 'Eliminando…',
+      failureText: (error) => toBffError(error).message,
+      run: () =>
         expense ? this.service.deleteExpense(source.id) : this.service.deleteFine(source.id),
     })
       .afterClosed()

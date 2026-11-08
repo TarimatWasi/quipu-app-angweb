@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, maxLength, validate } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -213,11 +212,7 @@ export class ExpenseDialogComponent {
   }
 
   private failed(error: unknown): Refusals | undefined {
-    if (error instanceof HttpErrorResponse && error.status === 401) {
-      // The session interceptor already forgot the session and goes to the login.
-      this.ref.close();
-      return undefined;
-    }
+    if (this.submission.sessionEnded(error)) return undefined;
     if (isConcurrentModification(error)) {
       this.ref.close('conflict');
       return undefined;

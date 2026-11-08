@@ -1,4 +1,3 @@
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
@@ -179,11 +178,7 @@ export class DocumentActionDialogComponent {
       });
       this.ref.close(true);
     } catch (error: unknown) {
-      if (error instanceof HttpErrorResponse && error.status === 401) {
-        // The session interceptor already forgot the session and goes to the login.
-        this.ref.close();
-        return;
-      }
+      if (this.submission.sessionEnded(error)) return;
       const problem = actionProblem(callFailure(error));
       if (problem.place === 'field') {
         this.refused.set({ field: problem.field, message: problem.message });

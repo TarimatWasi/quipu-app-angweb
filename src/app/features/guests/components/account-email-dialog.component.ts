@@ -1,6 +1,5 @@
 import { MAX_EMAIL_LENGTH } from '@shared/forms/contact-rules';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import {
   email,
@@ -141,11 +140,7 @@ export class AccountEmailDialogComponent {
         this.ref.close(true);
         return undefined;
       } catch (error: unknown) {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          // The session interceptor already forgot the session and goes to the login.
-          this.ref.close();
-          return undefined;
-        }
+        if (this.submission.sessionEnded(error)) return undefined;
         const problem = emailProblem(callFailure(error));
         focusFirstProblem(this.host, this.injector, ERROR_ID);
         if (problem.place === 'general') {

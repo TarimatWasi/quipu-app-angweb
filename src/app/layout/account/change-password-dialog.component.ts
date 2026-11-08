@@ -1,5 +1,4 @@
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, required } from '@angular/forms/signals';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
@@ -186,11 +185,7 @@ export class ChangePasswordDialogComponent {
       try {
         await firstValueFrom(this.auth.changePassword(newPassword, currentPassword));
       } catch (error: unknown) {
-        if (error instanceof HttpErrorResponse && error.status === 401) {
-          // The session interceptor already forgot the session and goes to the login.
-          this.ref.close();
-          return undefined;
-        }
+        if (this.submission.sessionEnded(error)) return undefined;
         return this.failure(toBffError(error));
       }
 
