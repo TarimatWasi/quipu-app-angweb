@@ -3,6 +3,7 @@ import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AsyncContentState } from '@shared/data/async-content';
+import { LatestRequest } from '@shared/data/latest-request';
 import type { CallFailure } from '@shared/forms/call-failure';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { OnboardingService } from '../data/onboarding.service';
@@ -31,6 +32,9 @@ export abstract class OnboardingPage {
   protected readonly api = inject(OnboardingService);
   protected readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
+  private readonly destroyRef = inject(DestroyRef);
+  /** Which read still counts: none once the guest has left this page (it must not redirect it). */
+  private readonly latest = new LatestRequest();
 
   protected readonly loaded = new AsyncContentState<OnboardingInProgress>();
   protected readonly view = this.loaded.state;
@@ -44,7 +48,7 @@ export abstract class OnboardingPage {
 
   protected constructor(protected readonly step: OnboardingStep) {
     // Leaving the screen: no late answer may load or change anything any more.
-    inject(DestroyRef).onDestroy(() => {
+    this.destroyRef.onDestroy(() => {
       this.loaded.dispose();
     });
   }
@@ -57,8 +61,11 @@ export abstract class OnboardingPage {
   protected async load(): Promise<void> {
     const request = this.loaded.begin();
     if (request === null) return;
+    const read = this.latest.begin();
     try {
       const state = await firstValueFrom(this.api.state());
+      // A late answer of a page the guest already left must not take it away from where it is now.
+      if (!this.latest.isCurrent(read)) return;
       if (state.status === 'ACTIVE') {
         await this.leave(HOME_PATH);
       } else if (state.nextStep !== this.step) {
@@ -106,6 +113,7 @@ export abstract class OnboardingPage {
       }).afterClosed(),
       { defaultValue: undefined },
     );
+    if (this.destroyRef.destroyed) return;
     await this.leave(HOME_PATH);
   }
 }

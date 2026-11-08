@@ -1,6 +1,7 @@
 import { fireEvent, screen } from '@testing-library/dom';
-import { NEVER, of, throwError } from 'rxjs';
+import { NEVER, of, Subject, throwError } from 'rxjs';
 import { OnboardingPersonalDataComponent } from './personal-data.component';
+import type { OnboardingState } from '../data/onboarding.service';
 import {
   completed,
   fakeApi,
@@ -129,6 +130,20 @@ describe('O1 «Tus datos»', () => {
     const { router } = await setup(fakeApi(toDocuments));
 
     expect(router.url).toBe('/onboarding/documents');
+  });
+
+  it('ignores the late answer of a page the guest already left', async () => {
+    const api = fakeApi(toPersonalData);
+    const reading = new Subject<OnboardingState>();
+    api.state.mockReturnValue(reading);
+    const { router, settle } = await setup(api);
+
+    await router.navigateByUrl('/home');
+    reading.next(toDocuments);
+    reading.complete();
+    await settle();
+
+    expect(router.url).toBe('/home');
   });
 
   it('goes home when there is nothing left to do', async () => {

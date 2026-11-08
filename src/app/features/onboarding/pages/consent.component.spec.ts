@@ -1,8 +1,9 @@
 import { TestBed } from '@angular/core/testing';
 import { fireEvent, screen } from '@testing-library/dom';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import { OnboardingConsentComponent } from './consent.component';
+import type { OnboardingState } from '../data/onboarding.service';
 import { completed, fakeApi, httpError, openStep, toConsent } from './onboarding.testing';
 
 async function setup(guestType: 'CONTRACT' | 'TEMPORARY' = 'CONTRACT', api = fakeApi(toConsent)) {
@@ -98,6 +99,36 @@ describe('O3 «Tu consentimiento»', () => {
     expect(screen.getByText('Versión 2026-11')).toBeTruthy();
     expect(screen.getByText('Texto nuevo.')).toBeTruthy();
     expect(box().checked).toBe(false);
+  });
+
+  it('does not carry a box marked while the new text loads over to that text', async () => {
+    const api = fakeApi(toConsent);
+    api.acceptConsent.mockReturnValue(
+      throwError(() =>
+        httpError(400, { code: 'VALIDATION_ERROR', message: 'x', field: 'consentVersion' }),
+      ),
+    );
+    const { mark, finish, box, settle } = await setup('CONTRACT', api);
+    const reading = new Subject<OnboardingState>();
+    api.state.mockReturnValue(reading);
+
+    await mark();
+    await finish();
+    // The old text is still on screen while the new one comes: marking now is for the old one.
+    await mark();
+    expect(box().checked).toBe(true);
+    reading.next({
+      ...toConsent,
+      consent: { version: '2026-11', text: 'Nuevo.', accepted: false },
+    });
+    reading.complete();
+    await settle();
+
+    expect(screen.getByText('Versión 2026-11')).toBeTruthy();
+    expect(box().checked).toBe(false);
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Terminar registro' }).disabled,
+    ).toBe(true);
   });
 
   it('says that the registration is already complete', async () => {
