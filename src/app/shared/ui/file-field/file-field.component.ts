@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { shrinkImage } from '../../files/shrink-image';
 
 /** What a voucher may be: JPG, PNG or PDF (RF-15). */
 export const VOUCHER_ACCEPT = '.jpg,.jpeg,.png,.pdf,image/jpeg,image/png,application/pdf';
@@ -153,8 +154,14 @@ export class FileFieldComponent {
 
   protected picked(target: EventTarget | null): void {
     const input = target instanceof HTMLInputElement ? target : null;
-    this.chosen.emit(input?.files?.[0] ?? null);
+    const file = input?.files?.[0] ?? null;
     // Choosing the same file again after an error must report it again.
     if (input) input.value = '';
+    // An image is reduced here, once, so every screen receives what will be uploaded (TAR-315).
+    if (file === null) this.chosen.emit(null);
+    else
+      void shrinkImage(file).then((reduced) => {
+        this.chosen.emit(reduced);
+      });
   }
 }

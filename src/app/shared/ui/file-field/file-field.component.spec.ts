@@ -45,7 +45,9 @@ describe('FileFieldComponent (P-12)', () => {
     const file = new File(['x'], 'yape.jpg', { type: 'image/jpeg' });
     Object.defineProperty(input, 'files', { value: [file], configurable: true });
     fireEvent.change(input);
-    expect(host.chosen()).toBe(file);
+    await vi.waitFor(() => {
+      expect(host.chosen()).toBe(file);
+    });
   });
 
   it('shows the file kept with «Cambiar», and the error tied to the input', async () => {
@@ -73,7 +75,9 @@ describe('FileFieldComponent (P-12)', () => {
     Object.defineProperty(camera, 'files', { value: [photo], configurable: true });
     fireEvent.change(camera);
 
-    expect(host.chosen()).toBe(photo);
+    await vi.waitFor(() => {
+      expect(host.chosen()).toBe(photo);
+    });
   });
 
   it('leaves out the camera when the screen does not want it', async () => {
