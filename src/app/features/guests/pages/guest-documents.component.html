@@ -31,9 +31,7 @@
     }
   }
   @case ('ready') {
-    @if (refreshError(); as message) {
-      <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
-    }
+    <app-refresh-error [message]="refreshError()" [refreshing]="refreshing()" (retry)="reload()" />
     @if (content(); as c) {
       <div class="layout">
         <div class="main">

@@ -33,13 +33,13 @@
 
 Estructura de página y avisos
 
-- `app-page-header` (shared/ui/page-header): título y fecha de Lima de toda página. `app-now-panel`: «Lo que toca ahora» de una lista (cifra, etiqueta, texto y una acción proyectada; `[loading]` para su skeleton). `app-page-notice`: aviso de página por tono. `app-load-error`: error de carga con «Reintentar». `app-empty-state`: bloque vacío. `app-fact-tile`: ficha de dato (etiqueta y valor). `app-status-badge`: los cinco estados (pagado, en revisión…). `app-step-list`: pasos de un proceso. `app-toast` / `ToastService`: avisos breves.
+- `app-page-header` (shared/ui/page-header): título y fecha de Lima de toda página. `app-now-panel`: «Lo que toca ahora» de una lista (cifra, etiqueta, texto y una acción proyectada; `[loading]` para su skeleton). `app-page-notice`: aviso de página por tono. `app-load-error`: error de carga con «Reintentar». `app-refresh-error`: lo que dice una pantalla al refrescar lo que ya muestra (el error con «Reintentar» o «Actualizando…»); no dibuja nada si no hay ninguno. `app-empty-state`: bloque vacío. `app-fact-tile`: ficha de dato (etiqueta y valor). `app-status-badge`: los cinco estados (pagado, en revisión…). `app-step-list`: pasos de un proceso. `app-toast` / `ToastService`: avisos breves.
 - `app-form-summary-layout` (shared/forms): formulario más resumen lateral. `app-auth-shell` (shared/auth-shell): marco de las páginas sin sesión. `app-quipu`: el quipu de la marca. `app-emblem`: el emblema de la barra y del acceso (AVIF con PNG de respaldo). `app-shell` (layout): barra y menú.
 
 Listas
 
 - `app-list-filters`: «Buscar», selects proyectados, «Ordenar por» en móvil y conteo con «Quitar filtros». `app-list-filters-skeleton`: su skeleton (vistas, selects, orden, conteo). `app-list-results`: vacío, sin coincidencias, error y «Mostrar más» de una lista. `app-search-field`: campo «Buscar». `app-show-more`: «Mostrando X de Y». `app-choice-group`: botones segmentados (una opción pulsada). `app-status-filter`: barra de estados con filtro. `PagedList` (shared/data/paged-list.ts): estado de una lista paginada por cursor. `AsyncContentState` (shared/data/async-content.ts): estado de una lectura única (resumen, detalle). `PageLoadState`: contabilidad de páginas.
-- `app-data-table` (shared/ui/data-table) con `appDataCell`, `appDataCard`, `appDataFooter`, `appDataSkeletonCard`, `appDataSkeletonCell`: tabla con tarjetas en móvil, orden y skeleton (`[loading]`, `[skeletonBefore]`). `list-sort.ts`: orden de una lista.
+- `app-data-table` (shared/ui/data-table) con `appDataCell`, `appDataCard`, `appDataFooter`, `appDataSkeletonCard`, `appDataSkeletonCell`: tabla con tarjetas en móvil, orden y skeleton (`[loading]`, `[skeletonBefore]`). `list-sort.ts`: orden de una lista. `ListTable` y `SortableListTable` (shared/ui/data-table/list-table.ts): clases base de toda tabla de lista (filas, esqueleto, orden y cabecera pulsada); la tabla solo dice sus columnas y sus celdas. `app-data-table` reparte el ancho de las columnas él solo.
 
 Skeleton
 

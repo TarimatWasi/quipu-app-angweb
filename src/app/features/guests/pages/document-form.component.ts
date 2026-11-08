@@ -1,6 +1,6 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
-import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
@@ -68,9 +68,9 @@ const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map(
 @Component({
   selector: 'app-document-form',
   imports: [
+    RefreshErrorComponent,
     FormSummaryLayoutComponent,
     GuestFormHeaderComponent,
-    LoadErrorComponent,
     SkeletonBlockComponent,
     SkeletonFactsComponent,
     SkeletonFieldsComponent,

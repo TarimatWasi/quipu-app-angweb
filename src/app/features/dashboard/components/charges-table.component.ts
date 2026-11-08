@@ -1,4 +1,5 @@
-import { Component, input, output, TemplateRef } from '@angular/core';
+import { SortableListTable } from '@shared/ui/data-table/list-table';
+import { Component } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
@@ -7,7 +8,7 @@ import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
 import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
-import type { ChargeRow, ChargeSort, ChargeSortKey } from '../model/dashboard-charges';
+import type { ChargeRow, ChargeSortKey } from '../model/dashboard-charges';
 
 type Column = ChargeSortKey | 'action';
 
@@ -166,20 +167,9 @@ const COLUMNS: readonly DataColumn<Column>[] = [
     }
   `,
 })
-export class ChargesTableComponent {
-  readonly rows = input.required<readonly ChargeRow[]>();
-  readonly sort = input.required<ChargeSort>();
-  readonly loading = input(false);
-  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
-  /** A sortable header was pressed. */
-  readonly sortBy = output<ChargeSortKey>();
-
+export class ChargesTableComponent extends SortableListTable<ChargeRow, ChargeSortKey, Column> {
   protected readonly columns = COLUMNS;
   protected readonly rowId = (row: ChargeRow): string => row.id;
-
-  protected sorted(key: Column): void {
-    if (key !== 'action') this.sortBy.emit(key);
-  }
 
   /** «Revisar pago» is primary; the other two are secondary; «Ver huésped» is a link. In a row they are 40 px. */
   protected actionClass(row: ChargeRow, inRow = false): string {

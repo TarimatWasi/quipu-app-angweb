@@ -1,11 +1,11 @@
 <app-page-header [heading]="title()" backLink="/admin/guests" backTo="Huéspedes" />
 
-@if (refreshError(); as message) {
-  <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
-}
-@if (refreshing() && refreshError() === null) {
-  <output>Actualizando…</output>
-}
+<app-refresh-error
+  [message]="refreshError()"
+  [refreshing]="refreshing()"
+  [progress]="true"
+  (retry)="retry()"
+/>
 @switch (state()) {
   @case ('loading') {
     @if (guest(); as known) {

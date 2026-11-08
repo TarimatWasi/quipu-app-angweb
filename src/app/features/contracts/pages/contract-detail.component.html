@@ -26,9 +26,11 @@
   }
   @case ('ready') {
     @if (detail(); as view) {
-      @if (refreshError(); as message) {
-        <app-load-error [message]="message" [retrying]="refreshing()" (retry)="reload()" />
-      }
+      <app-refresh-error
+        [message]="refreshError()"
+        [refreshing]="refreshing()"
+        (retry)="reload()"
+      />
       <app-now-panel
         class="now"
         headingId="contract-now-title"

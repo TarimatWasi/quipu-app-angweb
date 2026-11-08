@@ -1,3 +1,4 @@
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
@@ -90,6 +91,7 @@ const keyOf = (tab: Tab, month: string): Key => `${tab}|${month}`;
 @Component({
   selector: 'app-finance',
   imports: [
+    RefreshErrorComponent,
     FactTileComponent,
     FieldControlDirective,
     FormFieldComponent,

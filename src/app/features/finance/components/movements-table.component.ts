@@ -1,4 +1,5 @@
-import { Component, computed, input, output, TemplateRef } from '@angular/core';
+import { SortableListTable } from '@shared/ui/data-table/list-table';
+import { Component, computed, input, output } from '@angular/core';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
 import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
@@ -6,7 +7,7 @@ import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
 import type { DataColumn } from '@shared/ui/data-table/data-table.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { FIRST_COLUMN, MIDDLE_COLUMN } from '../model/finance';
-import type { MovementRow, MovementSort, SortKey, Tab } from '../model/finance';
+import type { MovementRow, SortKey, Tab } from '../model/finance';
 
 type Column = SortKey | 'middle' | 'action';
 
@@ -152,14 +153,8 @@ function columnsOf(tab: Tab): readonly DataColumn<Column>[] {
     }
   `,
 })
-export class MovementsTableComponent {
+export class MovementsTableComponent extends SortableListTable<MovementRow, SortKey, Column> {
   readonly tab = input.required<Tab>();
-  readonly loading = input(false);
-  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
-  readonly rows = input.required<readonly MovementRow[]>();
-  readonly sort = input.required<MovementSort>();
-  /** A sortable header was pressed. */
-  readonly sortBy = output<SortKey>();
   /** «Editar» of an expense. */
   readonly edit = output<MovementRow>();
   /** «Eliminar» of an expense or a fine. */
@@ -171,8 +166,4 @@ export class MovementsTableComponent {
     () => `Movimientos: ${FIRST_COLUMN[this.tab()].toLowerCase()}`,
   );
   protected readonly columns = computed(() => columnsOf(this.tab()));
-
-  protected sorted(key: Column): void {
-    if (key === 'title' || key === 'amount') this.sortBy.emit(key);
-  }
 }
