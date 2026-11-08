@@ -84,13 +84,18 @@ export class OnboardingConsentComponent extends OnboardingPage {
   protected readonly changedTitle = CONSENT_CHANGED_TITLE;
   protected readonly changedText = CONSENT_CHANGED_TEXT;
 
-  protected readonly accepted = signal(false);
+  /** The version of the text the guest had in front when it marked the box; null if it is not marked. */
+  private readonly acceptedVersion = signal<string | null>(null);
   protected readonly checkError = signal<string | null>(null);
   protected readonly changed = signal(false);
   protected readonly problem = signal<string | null>(null);
   protected readonly sending = signal(false);
 
   protected readonly version = computed(() => this.loaded.data()?.consent.version ?? '');
+  /** Marked for the text on screen: a new text clears it, however the box was marked meanwhile. */
+  protected readonly accepted = computed(
+    () => this.version() !== '' && this.acceptedVersion() === this.version(),
+  );
   protected readonly paragraphs = computed(() =>
     consentParagraphs(this.loaded.data()?.consent.text ?? ''),
   );
@@ -106,7 +111,7 @@ export class OnboardingConsentComponent extends OnboardingPage {
   }
 
   protected check(accepted: boolean): void {
-    this.accepted.set(accepted);
+    this.acceptedVersion.set(accepted ? this.version() : null);
     if (accepted) {
       this.checkError.set(null);
       this.changed.set(false);
@@ -136,8 +141,8 @@ export class OnboardingConsentComponent extends OnboardingPage {
     if (found.place === 'check') {
       this.checkError.set(found.message);
     } else if (found.place === 'changed') {
-      // The text changed: it is read again and the box is cleared, so the guest accepts what it read.
-      this.accepted.set(false);
+      // The text changed: it is read again and the box clears itself, so the guest accepts what it read.
+      this.acceptedVersion.set(null);
       this.changed.set(true);
       await this.load();
     } else {
