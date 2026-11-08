@@ -1,11 +1,10 @@
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
-import { FieldTree, form, FormField, FormRoot, maxLength, validate } from '@angular/forms/signals';
+import { form, FormField, FormRoot, maxLength, validate } from '@angular/forms/signals';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
-import { bodyCodeOf, toBffError } from '@core/http/bff-error';
 import { isConcurrentModification } from '@core/http/concurrent-modification';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, problem } from '@shared/forms/form-feedback';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -19,11 +18,12 @@ import {
   MAX_TEXT_LENGTH,
   monthHelp,
   newExpense,
-  refusal,
   toExpenseInput,
 } from '../model/finance-forms';
 import type { ExpenseDraft, ExpenseInput } from '../model/finance-forms';
 import { FINANCE_DIALOG_STYLES } from './finance-dialog.styles';
+import { refusedField } from './refused-field';
+import type { Refusals } from './refused-field';
 
 export interface ExpenseDialogData {
   /** The expense being edited, or null for a new one. */
@@ -37,8 +37,6 @@ export interface ExpenseDialogData {
 
 /** `saved`, or `conflict` when the expense changed meanwhile (BE-SPR-DAT-13): the page asks to reload. */
 export type ExpenseDialogResult = 'saved' | 'conflict';
-
-type Refusals = { fieldTree: FieldTree<string>; kind: 'server'; message: string }[];
 
 const ERROR_ID = 'expense-error';
 
@@ -217,24 +215,21 @@ export class ExpenseDialogComponent {
       this.ref.close('conflict');
       return undefined;
     }
-    const refused = refusal(bodyCodeOf(error), toBffError(error).field);
-    focusFirstProblem(this.host, this.injector, ERROR_ID);
-    const fields = {
-      category: this.expenseForm.category,
-      amount: this.expenseForm.amount,
-      month: this.expenseForm.month,
-    };
-    if (refused === null || !(refused.field in fields)) {
-      this.general.set(toBffError(error).message);
-      return undefined;
-    }
-    const fieldTree = fields[refused.field as keyof typeof fields];
-    return [{ fieldTree, kind: 'server', message: refused.message }];
+    return refusedField({
+      error,
+      fields: {
+        category: this.expenseForm.category,
+        amount: this.expenseForm.amount,
+        month: this.expenseForm.month,
+      },
+      host: this.host,
+      injector: this.injector,
+      errorId: ERROR_ID,
+      general: (message) => {
+        this.general.set(message);
+      },
+    });
   }
-}
-
-function problem(kind: string, message: string | null) {
-  return message === null ? undefined : { kind, message };
 }
 
 /** Opens A6.1; `afterClosed()` gives `saved`, `conflict` or nothing when it was cancelled. */

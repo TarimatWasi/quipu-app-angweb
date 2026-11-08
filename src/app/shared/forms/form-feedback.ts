@@ -28,3 +28,11 @@ export function focusFirstProblem(
     { injector },
   );
 }
+
+/** The error a validator gives for a field: its kind and message, or nothing when it has none. */
+export function problem(
+  kind: string,
+  message: string | null,
+): { kind: string; message: string } | undefined {
+  return message === null ? undefined : { kind, message };
+}
