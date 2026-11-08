@@ -183,7 +183,7 @@
                 <button
                   class="quipu-button quipu-button--tertiary"
                   type="button"
-                  (click)="removeProof(i)"
+                  (click)="editor.remove(i)"
                 >
                   Quitar<span class="cdk-visually-hidden"> comprobante {{ i + 1 }}</span>
                 </button>
@@ -192,7 +192,7 @@
 
             <app-proof-kind-choice
               [kind]="proof.kind"
-              (kindChange)="kindOf(i, $event)"
+              (kindChange)="editor.kind(i, $event)"
               [label]="'Tipo del comprobante ' + (i + 1)"
             />
 
@@ -200,9 +200,9 @@
               <app-file-field
                 [fieldId]="'dp-proof-' + proof.key + '-file'"
                 [fileName]="proof.file?.name ?? null"
-                [error]="fileError(i)"
+                [error]="editor.fileError(i)"
                 [removable]="true"
-                (chosen)="picked(i, $event)"
+                (chosen)="editor.file(i, $event)"
               />
             } @else {
               <p class="detail">
@@ -215,14 +215,14 @@
                 [fieldId]="'dp-proof-' + proof.key + '-amount'"
                 label="Monto recibido"
                 [value]="proof.amount"
-                [error]="amountError(i)"
-                (valueChange)="typedAmount(i, $event)"
+                [error]="editor.amountError(i)"
+                (valueChange)="editor.amount(i, $event)"
               />
               @if (proof.kind === 'VOUCHER') {
                 <app-proof-method-field
                   [fieldId]="'dp-proof-' + proof.key + '-method'"
                   [value]="proof.method"
-                  (valueChange)="typedMethod(i, $event)"
+                  (valueChange)="editor.method(i, $event)"
                   placeholder="Por ejemplo, Yape"
                 />
               }
@@ -237,7 +237,7 @@
           type="button"
           [disabled]="atProofLimit()"
           [attr.aria-describedby]="atProofLimit() ? 'dp-proof-limit' : null"
-          (click)="addProof()"
+          (click)="editor.add()"
         >
           Agregar otro comprobante
         </button>
