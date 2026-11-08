@@ -2,6 +2,7 @@ import { AsyncContentState } from '@shared/data/async-content';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
@@ -44,6 +45,7 @@ import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 @Component({
   selector: 'app-payment-queue',
   imports: [
+    ListFiltersSkeletonComponent,
     FieldControlDirective,
     FormFieldComponent,
     EmptyStateComponent,
@@ -69,6 +71,7 @@ export class PaymentQueueComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly views = QUEUE_VIEWS;
+  protected readonly viewNames = QUEUE_VIEWS.map((option) => option.label);
   protected readonly phoneSorts = PHONE_SORTS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly noMatchHeading = NO_MATCH_HEADING;

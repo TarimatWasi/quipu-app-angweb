@@ -2,6 +2,7 @@ import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.compo
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
 import type { PageRequest as CursorPageRequest } from '@shared/data/page-load-state';
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { form, FormField } from '@angular/forms/signals';
@@ -67,6 +68,7 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
 @Component({
   selector: 'app-guests-list',
   imports: [
+    ListFiltersSkeletonComponent,
     FieldControlDirective,
     FormFieldComponent,
     EmptyStateComponent,
@@ -89,6 +91,7 @@ export class GuestsListComponent {
   private readonly service = inject(GuestsListService);
 
   protected readonly views = VIEWS;
+  protected readonly viewNames = VIEWS.map((option) => option.label);
   protected readonly phoneSorts = PHONE_SORTS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly noMatchHeading = NO_MATCH_HEADING;

@@ -33,7 +33,7 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
       font: var(--mat-sys-body-small);
     }
     .wide {
-      grid-column: 1 / -1;
+      grid-column: var(--skeleton-wide-column, 1 / -1);
     }
   `,
 })

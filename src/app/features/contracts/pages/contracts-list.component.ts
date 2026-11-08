@@ -1,3 +1,4 @@
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
@@ -49,6 +50,7 @@ import type {
 @Component({
   selector: 'app-contracts-list',
   imports: [
+    ListFiltersSkeletonComponent,
     ContractsTableComponent,
     FieldControlDirective,
     FormField,
@@ -70,6 +72,7 @@ export class ContractsListComponent {
   private readonly service = inject(AdminContractsService);
 
   protected readonly views = VIEWS;
+  protected readonly viewNames = VIEWS.map((option) => VIEW_LABELS[option]);
   protected readonly viewLabels = VIEW_LABELS;
   protected readonly phoneSorts = PHONE_SORTS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;

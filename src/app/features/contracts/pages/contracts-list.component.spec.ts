@@ -160,14 +160,17 @@ describe('A4 «Contratos»', () => {
     expect(guests()).toEqual(['Rocío Apaza', 'Iván Ticona']);
   });
 
-  it('leaves out the panel when the contracts about to end cannot be read', async () => {
+  it('says nothing is about to end when the contracts about to end cannot be read', async () => {
     const { view, guests } = await setup(
       normal,
       throwError(() => new Error('down')),
     );
 
     expect(guests()).toHaveLength(3);
-    expect(view().queryByRole('region', { name: 'Lo que toca ahora' })).toBeNull();
+    const panel = view().getByRole('region', { name: 'Lo que toca ahora' });
+    expect(panel.textContent).toContain('Ningún contrato vence pronto.');
+    expect(within(panel).queryByRole('button')).toBeNull();
+    expect(within(panel).queryByRole('link')).toBeNull();
   });
 
   it('asks the next page with the cursor of the BFF and keeps what is on screen', async () => {

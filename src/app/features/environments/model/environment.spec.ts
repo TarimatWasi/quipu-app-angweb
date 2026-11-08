@@ -116,8 +116,12 @@ describe('the filters and the order of the environments', () => {
 });
 
 describe('«Lo que toca ahora» of A2', () => {
-  it('is empty when nothing is free', () => {
-    expect(freePanel(0, [environmentOf({ occupant: contractOf() })])).toBeNull();
+  it('says there is none when nothing is free', () => {
+    expect(freePanel(0, [environmentOf({ occupant: contractOf() })])).toEqual({
+      figure: 0,
+      label: 'ambientes libres',
+      text: 'No hay ambientes libres por ahora.',
+    });
   });
 
   it('names the free ones and the one that is free only for a while', () => {
@@ -140,8 +144,8 @@ describe('«Lo que toca ahora» of A2', () => {
   });
 
   it('does not name them when the loaded ones are not all of them', () => {
-    expect(freePanel(5, [environmentOf()])?.text).toBe('Listos para un contrato o una estadía.');
-    expect(freePanel(1, [environmentOf()])?.label).toBe('ambiente libre');
+    expect(freePanel(5, [environmentOf()]).text).toBe('Listos para un contrato o una estadía.');
+    expect(freePanel(1, [environmentOf()]).label).toBe('ambiente libre');
   });
 });
 

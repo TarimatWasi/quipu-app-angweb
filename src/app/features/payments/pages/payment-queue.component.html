@@ -47,28 +47,7 @@
         >
       </div>
       <ng-template #loadingFilters>
-        <div class="quipu-segmented quipu-segmented--fill views">
-          @for (option of views; track option.status) {
-            <button type="button" disabled [attr.aria-pressed]="option === view()">
-              {{ option.label }}
-            </button>
-          }
-        </div>
-        <div class="quipu-filters">
-          <div class="quipu-field quipu-search">
-            <span class="quipu-label">Buscar</span>
-            <app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-field">
-            <span class="quipu-label">Tipo de huésped</span>
-            <app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-field quipu-only-narrow">
-            <span class="quipu-label">Ordenar por</span>
-            <app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
-        </div>
+        <app-list-filters-skeleton [views]="viewNames" [fields]="['Tipo de huésped']" />
       </ng-template>
       <app-payments-table
         [loading]="true"

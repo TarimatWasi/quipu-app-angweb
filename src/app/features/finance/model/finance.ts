@@ -126,9 +126,16 @@ export interface CreditPanel {
   readonly firstGuestId: string;
 }
 
-export function creditPanel(credits: readonly PendingCredit[]): CreditPanel | null {
+export function creditPanel(credits: readonly PendingCredit[]): CreditPanel {
   const [first] = credits;
-  if (first === undefined) return null;
+  if (first === undefined) {
+    return {
+      figure: 0,
+      label: 'devoluciones por registrar',
+      text: 'No hay dinero pendiente de devolver.',
+      firstGuestId: '',
+    };
+  }
   const total = credits.reduce((sum, credit) => sum + credit.amount, 0);
   const who = credits.map((credit) => {
     const place = credit.environmentCode === null ? '' : ` (${credit.environmentCode})`;

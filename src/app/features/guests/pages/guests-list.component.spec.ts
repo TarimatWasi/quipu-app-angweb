@@ -262,11 +262,13 @@ describe('GuestsListComponent (A3)', () => {
     expect(view.getByRole('button', { name: 'Quitar filtros' })).toBeTruthy();
   });
 
-  it('has no panel while nobody is pending', async () => {
+  it('keeps the panel, saying nobody is pending, so the page does not move', async () => {
     const { root, answer } = await setup();
     await answer(page([ROSA, LUIS]));
 
-    expect(root.querySelector('app-guests-now-panel')).toBeNull();
+    expect(root.querySelector('app-guests-now-panel')?.textContent).toContain(
+      'Todos abrieron su acceso.',
+    );
   });
 
   it('switches to «Inactivos»: asks the BFF, clears the filters and leaves out Estado and the panel', async () => {

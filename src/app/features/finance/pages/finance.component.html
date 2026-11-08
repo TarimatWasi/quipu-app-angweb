@@ -3,14 +3,44 @@
 @switch (phase()) {
   @case ('initial-loading') {
     <app-skeleton class="now" subject="Finanzas" [announceSlow]="false"
-      ><ng-template appSkeletonContent>
-        <app-skeleton-block shape="rectangle" height="8.25rem" />
-        <app-skeleton-facts
-          class="balance-skeleton"
-          [labels]="['Ingresos', 'Egresos', 'Neto del mes']"
-        />
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+    <section class="balance" aria-labelledby="finance-balance-loading">
+      <div class="quipu-list-head">
+        <h2 id="finance-balance-loading">Balance de {{ phrase() }}</h2>
+        <div class="quipu-field month">
+          <span class="quipu-label">Mes</span><app-skeleton-block shape="rectangle" />
+        </div>
+      </div>
+      <app-skeleton class="skeleton-facts" subject="Finanzas" [announceSlow]="false"
+        ><ng-template appSkeletonContent>
+          <app-skeleton-facts
+            class="facts"
+            [wideFirst]="true"
+            [labels]="['Ingresos', 'Egresos', 'Neto del mes']"
+          /> </ng-template
+      ></app-skeleton>
+    </section>
+
+    <section class="all" aria-labelledby="finance-movements-loading">
+      <div class="quipu-list-head">
+        <h2 id="finance-movements-loading">Movimientos de {{ phrase() }}</h2>
+        <button class="quipu-button quipu-button--secondary" type="button" disabled>
+          {{ tabAction() }}
+        </button>
+      </div>
+      <ng-template #movementsSkeleton>
+        <app-list-filters-skeleton [views]="tabNames" [search]="false" />
       </ng-template>
-    </app-skeleton>
+      <app-movements-table
+        [tab]="tab()"
+        [loading]="true"
+        [rows]="[]"
+        [sort]="sort()"
+        [skeletonBefore]="movementsSkeleton"
+      />
+    </section>
   }
   @case ('initial-error') {
     <app-load-error
@@ -37,13 +67,15 @@
         [label]="credit.label"
         [text]="credit.text"
       >
-        <button
-          class="quipu-button quipu-button--primary"
-          type="button"
-          (click)="registerRefund(credit.firstGuestId)"
-        >
-          Registrar devolución
-        </button>
+        @if (credit.figure > 0) {
+          <button
+            class="quipu-button quipu-button--primary"
+            type="button"
+            (click)="registerRefund(credit.firstGuestId)"
+          >
+            Registrar devolución
+          </button>
+        }
       </app-now-panel>
     }
 

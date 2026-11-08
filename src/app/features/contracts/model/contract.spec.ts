@@ -90,7 +90,13 @@ describe('a contract as A4 shows it', () => {
   });
 
   it('puts the contracts about to end in the panel, with one action', () => {
-    expect(soonPanel([])).toBeNull();
+    expect(soonPanel([])).toEqual({
+      figure: 0,
+      label: 'contratos por vencer',
+      text: 'Ningún contrato vence pronto.',
+      only: null,
+      action: '',
+    });
     const one = soonPanel([
       summaryOf({
         id: 'r',
@@ -113,8 +119,8 @@ describe('a contract as A4 shows it', () => {
     expect(two).toEqual(
       expect.objectContaining({ figure: 2, label: 'contratos por vencer', only: null }),
     );
-    expect(two?.action).toBe('Ver por vencer');
-    expect(two?.text).toContain('; Sofía (habitación 103) vence el 28 nov');
+    expect(two.action).toBe('Ver por vencer');
+    expect(two.text).toContain('; Sofía (habitación 103) vence el 28 nov');
   });
 
   it('says what an empty state is for', () => {
