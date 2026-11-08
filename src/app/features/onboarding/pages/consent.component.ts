@@ -1,6 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { AuthService } from '@core/auth/auth.service';
 import { callFailure } from '@shared/forms/call-failure';
 import { CheckFieldComponent } from '@shared/ui/check-field/check-field.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -21,7 +20,6 @@ import {
   consentEnding,
   consentParagraphs,
   consentProblem,
-  HOME_PATH,
 } from '../model/onboarding';
 import { OnboardingPage } from './onboarding-page';
 import { ONBOARDING_STYLES } from './onboarding.styles';
@@ -77,7 +75,6 @@ const CONSENT_STYLES = `
 })
 export class OnboardingConsentComponent extends OnboardingPage {
   private readonly toasts = inject(ToastService);
-  private readonly auth = inject(AuthService);
 
   protected readonly textId = TEXT_ID;
   protected readonly heading = CONSENT_HEADING;
@@ -128,8 +125,9 @@ export class OnboardingConsentComponent extends OnboardingPage {
     this.sending.set(true);
     try {
       await firstValueFrom(this.api.acceptConsent(consent.version));
+      if (this.gone) return;
       this.toasts.show(COMPLETED_TEXT, { tone: 'success' });
-      await this.router.navigateByUrl(HOME_PATH, { replaceUrl: true });
+      await this.finishRegistration();
     } catch (error: unknown) {
       await this.failed(error);
     } finally {

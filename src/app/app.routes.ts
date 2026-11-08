@@ -4,6 +4,7 @@ import { anonymousGuard } from '@core/guards/anonymous.guard';
 import { authGuard } from '@core/guards/auth.guard';
 import { contractGuestGuard, temporaryGuestGuard } from '@core/guards/guest.guard';
 import { NO_ACCESS_PATH } from '@core/guards/no-access';
+import { onboardingGuard, registrationGuard } from '@core/guards/onboarding.guard';
 import { passwordChangeGuard } from '@core/guards/password-change.guard';
 import { sessionRestoredGuard } from '@core/guards/session-restored.guard';
 import { AppShellComponent, NO_CURRENT_SECTION } from '@layout/app-shell/app-shell.component';
@@ -42,6 +43,8 @@ export const routes: Routes = [
     path: '',
     component: AppShellComponent,
     canActivate: [authGuard],
+    // On every navigation under the shell, not only when it is entered (TAR-141).
+    canActivateChild: [registrationGuard],
     children: [
       {
         path: 'home',
@@ -84,10 +87,11 @@ export const routes: Routes = [
             (m) => m.ADMINISTRATORS_ROUTES,
           ),
       },
-      // O1 to O3: a guest's registration. The guard that keeps the others out and sends the guest
-      // here comes with TAR-141; the BFF answers 403 meanwhile.
+      // O1 to O3: a guest's registration. `registrationGuard` sends a guest that has not finished it to
+      // the step it has to do next; this guard keeps out whoever is not registering (TAR-141).
       {
         path: 'onboarding',
+        canActivate: [onboardingGuard],
         loadChildren: () =>
           import('@features/onboarding/onboarding.routes').then((m) => m.ONBOARDING_ROUTES),
       },

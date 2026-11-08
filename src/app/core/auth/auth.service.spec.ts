@@ -285,7 +285,13 @@ describe('AuthService password recovery (RF-16)', () => {
     expect(req.request.body).toEqual({ token: 'el-token', newPassword: 'Nueva12345' });
     req.flush(guest);
 
-    const session = { role: 'GUEST', guestType: 'CONTRACT', name: 'Luis Huamán' };
+    const session = {
+      role: 'GUEST',
+      guestType: 'CONTRACT',
+      name: 'Luis Huamán',
+      guestStatus: 'ONBOARDING',
+      nextOnboardingStep: 'PERSONAL_DATA',
+    };
     await expect(result).resolves.toEqual({ ...session, mustChangePassword: false });
     expect(service.session()).toEqual({ ...session, mustChangePassword: false });
   });
@@ -349,6 +355,7 @@ describe('AuthService password recovery (RF-16)', () => {
         guestType: 'TEMPORARY',
         name: 'Luis',
         mustChangePassword: false,
+        guestStatus: 'ACTIVE',
       });
     });
 
@@ -509,5 +516,111 @@ describe('AuthService password recovery (RF-16)', () => {
 
       expect(controller.match(`${environment.bffBaseUrl}/bff/auth/me`)).toHaveLength(0);
     });
+  });
+});
+
+describe('AuthService and the registration of a guest (TAR-141)', () => {
+  const ME_URL = `${environment.bffBaseUrl}/bff/auth/me`;
+  const REGISTERING = {
+    role: 'GUEST',
+    guestType: 'CONTRACT',
+    name: 'DNI 70412233',
+    mustChangePassword: false,
+    guestStatus: 'ONBOARDING',
+    nextOnboardingStep: 'DOCUMENTS',
+  };
+
+  async function signedIn(body: object) {
+    const { service, controller } = setup();
+    const result = firstValueFrom(service.restore());
+    controller.expectOne(ME_URL).flush(body);
+    await result;
+    return service;
+  }
+
+  it('keeps the status and the next step of a guest in onboarding from the session answer', async () => {
+    const service = await signedIn(REGISTERING);
+
+    expect(service.session()).toEqual(REGISTERING);
+  });
+
+  it('keeps no next step for an active guest', async () => {
+    const active = await signedIn({ ...REGISTERING, guestStatus: 'ACTIVE' });
+
+    expect(active.session()?.nextOnboardingStep).toBeUndefined();
+    expect(active.session()?.guestStatus).toBe('ACTIVE');
+  });
+
+  it('keeps no status for anyone but a guest', async () => {
+    const admin = await signedIn({
+      ...ADMIN,
+      guestStatus: 'ONBOARDING',
+      nextOnboardingStep: 'CONSENT',
+    });
+    expect(admin.session()).toEqual(ADMIN);
+  });
+
+  it('ignores a status or a step that is not in the contract', async () => {
+    const service = await signedIn({
+      ...REGISTERING,
+      guestStatus: 'BANNED',
+      nextOnboardingStep: 'OTHER',
+    });
+
+    expect(service.session()?.guestStatus).toBeUndefined();
+    expect(service.session()?.nextOnboardingStep).toBeUndefined();
+  });
+
+  it('follows the steps of the registration, with the name the guest saved, and ends Active', async () => {
+    const service = await signedIn(REGISTERING);
+
+    service.onboardingAdvanced('CONSENT', 'Sonia Ccama Flores');
+    expect(service.session()).toEqual({
+      ...REGISTERING,
+      name: 'Sonia Ccama Flores',
+      nextOnboardingStep: 'CONSENT',
+    });
+
+    service.onboardingAdvanced(null);
+    expect(service.session()).toEqual({
+      role: 'GUEST',
+      guestType: 'CONTRACT',
+      name: 'Sonia Ccama Flores',
+      mustChangePassword: false,
+      guestStatus: 'ACTIVE',
+    });
+  });
+
+  it('does not touch the session of an administrator or an empty one', async () => {
+    const { service, controller } = setup();
+    service.onboardingAdvanced('DOCUMENTS');
+    expect(service.session()).toBeNull();
+
+    const result = firstValueFrom(service.restore());
+    controller.expectOne(ME_URL).flush({ ...ADMIN, mustChangePassword: false });
+    await result;
+    service.onboardingAdvanced('DOCUMENTS');
+    expect(service.session()).toEqual({ ...ADMIN, mustChangePassword: false });
+  });
+
+  it('moves a guest on from the password to the personal data when it changes the password', async () => {
+    const { service, controller } = setup();
+    const restored = firstValueFrom(service.restore());
+    controller.expectOne(ME_URL).flush({
+      ...REGISTERING,
+      mustChangePassword: true,
+      nextOnboardingStep: 'PASSWORD',
+    });
+    await restored;
+
+    const done = firstValueFrom(service.changePassword('Nueva12345'));
+    controller
+      .expectOne(`${environment.bffBaseUrl}/bff/auth/change-password`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await done;
+
+    expect(service.session()).toEqual(
+      expect.objectContaining({ mustChangePassword: false, nextOnboardingStep: 'PERSONAL_DATA' }),
+    );
   });
 });

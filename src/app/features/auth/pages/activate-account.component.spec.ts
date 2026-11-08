@@ -113,6 +113,8 @@ describe('ActivateAccountComponent (A0.4, CU-24)', () => {
       guestType: 'CONTRACT',
       name: 'Luis Huamán',
       mustChangePassword: false,
+      guestStatus: 'ONBOARDING',
+      nextOnboardingStep: 'PERSONAL_DATA',
     });
   });
 

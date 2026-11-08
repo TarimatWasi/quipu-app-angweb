@@ -78,7 +78,7 @@ describe('O1 «Tus datos»', () => {
   });
 
   it('sends the data trimmed, without what was left empty, and goes to the documents', async () => {
-    const { api, type, submit, router } = await setup();
+    const { api, type, submit, router, auth } = await setup();
 
     await type('Nombre completo', '  Sonia Ccama Flores ');
     await type('Teléfono', ' 984 112 730 ');
@@ -89,6 +89,7 @@ describe('O1 «Tus datos»', () => {
       phone: '984 112 730',
     });
     expect(router.url).toBe('/onboarding/documents');
+    expect(auth.onboardingAdvanced).toHaveBeenCalledWith('DOCUMENTS', 'Sonia Ccama Flores');
   });
 
   it('puts an email already taken under its field', async () => {

@@ -2,6 +2,7 @@ import { computed, DestroyRef, inject } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { AuthService } from '@core/auth/auth.service';
 import { AsyncContentState } from '@shared/data/async-content';
 import { LatestRequest } from '@shared/data/latest-request';
 import type { CallFailure } from '@shared/forms/call-failure';
@@ -35,6 +36,7 @@ export abstract class OnboardingPage {
   private readonly destroyRef = inject(DestroyRef);
   /** Which read still counts: none once the guest has left this page (it must not redirect it). */
   private readonly latest = new LatestRequest();
+  protected readonly auth = inject(AuthService);
 
   protected readonly loaded = new AsyncContentState<OnboardingInProgress>();
   protected readonly view = this.loaded.state;
@@ -66,6 +68,8 @@ export abstract class OnboardingPage {
       const state = await firstValueFrom(this.api.state());
       // A late answer of a page the guest already left must not take it away from where it is now.
       if (!this.latest.isCurrent(read)) return;
+      // The session follows what the BFF says, so the guard lets the guest into the step it names.
+      this.auth.onboardingAdvanced(state.status === 'ACTIVE' ? null : state.nextStep);
       if (state.status === 'ACTIVE') {
         await this.leave(HOME_PATH);
       } else if (state.nextStep !== this.step) {
@@ -78,8 +82,24 @@ export abstract class OnboardingPage {
     }
   }
 
-  protected async go(next: OnboardingStep): Promise<void> {
+  /** A step was done: the session moves on (with the name the guest saved, if any) and so does the page. */
+  protected async go(next: OnboardingStep, name?: string): Promise<void> {
+    // A page the guest already left (or another guest's session after a logout) is not touched.
+    if (this.destroyRef.destroyed) return;
+    this.auth.onboardingAdvanced(next, name);
     await this.router.navigateByUrl(STEP_PATHS[next]);
+  }
+
+  /** The registration is over: the guest is Active and goes home. */
+  protected async finishRegistration(): Promise<void> {
+    if (this.destroyRef.destroyed) return;
+    this.auth.onboardingAdvanced(null);
+    await this.router.navigateByUrl(HOME_PATH, { replaceUrl: true });
+  }
+
+  /** The guest already left this page: what was in flight must change nothing any more. */
+  protected get gone(): boolean {
+    return this.destroyRef.destroyed;
   }
 
   /**
@@ -114,6 +134,7 @@ export abstract class OnboardingPage {
       { defaultValue: undefined },
     );
     if (this.destroyRef.destroyed) return;
-    await this.leave(HOME_PATH);
+    this.loaded.dispose();
+    await this.finishRegistration();
   }
 }

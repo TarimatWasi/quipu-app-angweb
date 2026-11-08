@@ -4,7 +4,8 @@ import { AuthService } from '@core/auth/auth.service';
 
 /**
  * Improves the experience only; the real protection is the BFF's (FE-ANG-RUT-02). A session that
- * must still change its password (RF-12) goes to that page instead of the app.
+ * must still change its password (RF-12) goes to that page instead of the app. A guest that has not
+ * finished its registration is `registrationGuard`'s, which runs on every navigation under the shell.
  */
 export const authGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);

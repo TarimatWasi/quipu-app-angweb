@@ -88,6 +88,7 @@ export async function openStep(
   guestType: 'CONTRACT' | 'TEMPORARY' = 'CONTRACT',
 ) {
   const steps = ['personal-data', 'documents', 'consent'] as const;
+  const auth = { session: () => ({ guestType }), onboardingAdvanced: vi.fn() };
   TestBed.configureTestingModule({
     providers: [
       provideRouter([
@@ -99,7 +100,7 @@ export async function openStep(
         { path: 'home', children: [] },
       ]),
       { provide: OnboardingService, useValue: api },
-      { provide: AuthService, useValue: { session: () => ({ guestType }) } },
+      { provide: AuthService, useValue: auth },
     ],
   });
   const harness = await RouterTestingHarness.create();
@@ -111,5 +112,5 @@ export async function openStep(
   };
   await settle();
   const router = TestBed.inject(Router);
-  return { harness, settle, router };
+  return { harness, settle, router, auth };
 }
