@@ -125,6 +125,7 @@ export class OnboardingConsentComponent extends OnboardingPage {
     this.sending.set(true);
     try {
       await firstValueFrom(this.api.acceptConsent(consent.version));
+      if (this.gone) return;
       this.toasts.show(COMPLETED_TEXT, { tone: 'success' });
       await this.finishRegistration();
     } catch (error: unknown) {

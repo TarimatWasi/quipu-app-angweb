@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import {
   ActivatedRouteSnapshot,
+  CanActivateChildFn,
   CanActivateFn,
   provideRouter,
   RedirectCommand,
@@ -12,7 +13,7 @@ import { AuthService } from '@core/auth/auth.service';
 import type { Session } from '@core/auth/auth.service';
 import { authGuard } from './auth.guard';
 import { registrationTarget } from './onboarding';
-import { onboardingGuard } from './onboarding.guard';
+import { onboardingGuard, registrationGuard } from './onboarding.guard';
 
 const registering = (step?: Session['nextOnboardingStep']): Session => ({
   role: 'GUEST',
@@ -25,7 +26,7 @@ const registering = (step?: Session['nextOnboardingStep']): Session => ({
 const ACTIVE: Session = { ...registering(), guestStatus: 'ACTIVE' };
 const ADMIN: Session = { role: 'ADMIN', name: 'Rosa', mustChangePassword: false };
 
-function run(guard: CanActivateFn, session: Session | null, url: string) {
+function run(guard: CanActivateFn | CanActivateChildFn, session: Session | null, url: string) {
   TestBed.configureTestingModule({
     providers: [
       provideRouter([]),
@@ -88,25 +89,25 @@ describe('where a guest in its registration must be (TAR-141, RN-33)', () => {
   });
 });
 
-describe('authGuard and the registration (TAR-141)', () => {
+describe('registrationGuard (TAR-141)', () => {
   it('sends a guest in onboarding to the step it has to do next', async () => {
-    const result = await run(authGuard, registering('CONSENT'), '/home');
+    const result = await run(registrationGuard, registering('CONSENT'), '/home');
 
     expect(pathOf(result)).toBe('/onboarding/consent');
   });
 
   it('lets it into the page of its own step', async () => {
-    expect(await run(authGuard, registering('CONSENT'), '/onboarding/consent')).toBe(true);
+    expect(await run(registrationGuard, registering('CONSENT'), '/onboarding/consent')).toBe(true);
   });
 
   it.each([
     ['an active guest', ACTIVE, '/home'],
     ['an administrator', ADMIN, '/admin/guests'],
   ])('does not stop %s', async (_who, session, url) => {
-    expect(await run(authGuard, session, url)).toBe(true);
+    expect(await run(registrationGuard, session, url)).toBe(true);
   });
 
-  it('still sends a guest that must change its password to that page first', async () => {
+  it('leaves the password change to authGuard, which goes first', async () => {
     const result = await run(
       authGuard,
       { ...registering('PASSWORD'), mustChangePassword: true },
