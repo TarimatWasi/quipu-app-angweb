@@ -12,10 +12,10 @@ type Schemas = components['schemas'];
 type EmergencyContact = Schemas['EmergencyContact'];
 
 /** How many documents a guest may have, those of the onboarding included (RN-37). */
-const DOCUMENTS_LIMIT = 5;
-const MAX_NAME_LENGTH = 200;
+export const DOCUMENTS_LIMIT = 5;
+export const MAX_NAME_LENGTH = 200;
 const MAX_RELATIONSHIP_LENGTH = 50;
-const MAX_PHONE_LENGTH = 30;
+export const MAX_PHONE_LENGTH = 30;
 const PROFILE_FIELDS = new Set(['name', 'phone', 'contactEmail', 'emergencyContact']);
 const EMERGENCY_FIELDS = new Set(['name', 'relationship', 'phone']);
 
@@ -25,7 +25,7 @@ function ownGuest(ctx: MockContext, type: GuestType): GuestRecord {
 }
 
 /** A document as a list shows it, without a link and without the guest it is kept under. */
-function documentRef(record: DocumentRecord): Schemas['GuestDocumentRef'] {
+export function documentRef(record: DocumentRecord): Schemas['GuestDocumentRef'] {
   return {
     id: record.id,
     originalName: record.originalName,
@@ -50,14 +50,18 @@ function ownProfile(db: MockDb, guest: GuestRecord): Schemas['OwnProfile'] {
   };
 }
 
-function text(body: Record<string, unknown>, field: string, max: number): string | undefined {
+export function text(
+  body: Record<string, unknown>,
+  field: string,
+  max: number,
+): string | undefined {
   const value = body[field];
   if (value === undefined) return undefined;
   if (typeof value !== 'string' || value.trim() === '' || value.length > max) return invalid(field);
   return value.trim();
 }
 
-function emergencyOf(value: unknown): EmergencyContact {
+export function emergencyOf(value: unknown): EmergencyContact {
   if (typeof value !== 'object' || value === null) return invalid('emergencyContact');
   const body = value as Record<string, unknown>;
   if (Object.keys(body).some((key) => !EMERGENCY_FIELDS.has(key))) {
@@ -82,7 +86,7 @@ function emergencyOf(value: unknown): EmergencyContact {
 }
 
 /** The email of another guest is taken, whatever its case (D-76). */
-function emailTaken(db: MockDb, guest: GuestRecord, email: string): boolean {
+export function emailTaken(db: MockDb, guest: GuestRecord, email: string): boolean {
   const wanted = email.toLowerCase();
   return db.data.guests.some(
     (other) => other.id !== guest.id && other.contactEmail?.toLowerCase() === wanted,
@@ -114,7 +118,7 @@ function updateProfile(db: MockDb, guest: GuestRecord, req: MockRequest): Schema
 }
 
 /** uploadOwnDocument (TAR-242): one file, up to the limit; the guest cannot delete it later. */
-function uploadDocument(
+export function uploadDocument(
   db: MockDb,
   guest: GuestRecord,
   body: unknown,

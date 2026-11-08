@@ -4,10 +4,19 @@ import { form } from '@angular/forms/signals';
 import {
   EMPTY_PERSONAL_DATA,
   personalDataRules,
+  saveProblem,
   toEmergencyContact,
   toPersonalData,
+  toPersonalDataInput,
 } from './personal-data';
 import type { PersonalData } from './personal-data';
+
+const failure = (status: number, code: string | null = null, field: string | null = null) => ({
+  status,
+  code,
+  field,
+  body: {},
+});
 
 const VALID: PersonalData = {
   ...EMPTY_PERSONAL_DATA,
@@ -92,5 +101,51 @@ describe('the personal data of a guest', () => {
       emergencyRelationship: 'Madre',
       emergencyPhone: '+51 951 234 567',
     });
+  });
+
+  it('sends the personal data of the onboarding trimmed and only with what was filled in', () => {
+    expect(toPersonalDataInput({ ...VALID, name: ' Ana Quispe ', phone: ' 987 654 321 ' })).toEqual(
+      {
+        name: 'Ana Quispe',
+        phone: '987 654 321',
+      },
+    );
+    expect(
+      toPersonalDataInput({
+        ...VALID,
+        contactEmail: ' ana@correo.pe ',
+        emergencyName: 'Rosa',
+        emergencyRelationship: ' ',
+      }),
+    ).toEqual({
+      name: 'Ana Quispe',
+      phone: '987 654 321',
+      contactEmail: 'ana@correo.pe',
+      emergencyContact: { name: 'Rosa' },
+    });
+  });
+
+  it('puts what the BFF refuses of a field under it, and the rest above the buttons', () => {
+    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'phone'))).toEqual({
+      place: 'field',
+      field: 'phone',
+      message: 'Revisa el teléfono.',
+    });
+    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'emergencyContact.relationship'))).toEqual({
+      place: 'field',
+      field: 'emergencyRelationship',
+      message: 'Revisa el parentesco.',
+    });
+    expect(saveProblem(failure(409, 'GUEST_EMAIL_TAKEN', 'contactEmail'))).toEqual({
+      place: 'field',
+      field: 'contactEmail',
+      message: 'Ese correo ya está registrado para otro huésped',
+    });
+    expect(saveProblem(failure(429, 'RATE_LIMITED')).place).toBe('general');
+    expect(saveProblem(failure(0)).message).toContain('No se pudo conectar');
+    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'otro')).place).toBe('general');
+    expect(saveProblem(failure(500)).message).toBe(
+      'No se pudieron guardar tus datos. Inténtalo de nuevo.',
+    );
   });
 });

@@ -1,4 +1,6 @@
 import { maxLength, required, SchemaPathTree, validate } from '@angular/forms/signals';
+import { NETWORK_TEXT, RATE_LIMITED_TEXT } from '../text/error-text';
+import type { CallFailure } from './call-failure';
 import {
   contactEmailError,
   EMAIL_TEXT,
@@ -121,5 +123,55 @@ export function toPersonalData(saved: {
     emergencyName: saved.emergencyContact?.name ?? '',
     emergencyRelationship: saved.emergencyContact?.relationship ?? '',
     emergencyPhone: saved.emergencyContact?.phone ?? '',
+  };
+}
+
+const GUEST_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otro huésped';
+const UNEXPECTED_SAVE_TEXT = 'No se pudieron guardar tus datos. Inténtalo de nuevo.';
+
+/** Where the answer of a failed save of the personal data goes (H5, T3 and O1). */
+export type SaveProblem =
+  | { readonly place: 'field'; readonly field: keyof PersonalData; readonly message: string }
+  | { readonly place: 'general'; readonly message: string };
+
+const FIELD_PROBLEMS: Readonly<Record<string, SaveProblem>> = {
+  name: { place: 'field', field: 'name', message: NAME_TEXT },
+  phone: { place: 'field', field: 'phone', message: PHONE_TEXT },
+  contactEmail: { place: 'field', field: 'contactEmail', message: EMAIL_TEXT },
+  'emergencyContact.name': { place: 'field', field: 'emergencyName', message: 'Revisa el nombre.' },
+  'emergencyContact.relationship': {
+    place: 'field',
+    field: 'emergencyRelationship',
+    message: 'Revisa el parentesco.',
+  },
+  'emergencyContact.phone': { place: 'field', field: 'emergencyPhone', message: PHONE_TEXT },
+};
+
+export function saveProblem({ status, code, field }: CallFailure): SaveProblem {
+  if (status === 0) return { place: 'general', message: NETWORK_TEXT };
+  if (status === 429) return { place: 'general', message: RATE_LIMITED_TEXT };
+  if (status === 409 && code === 'GUEST_EMAIL_TAKEN') {
+    return { place: 'field', field: 'contactEmail', message: GUEST_EMAIL_TAKEN_TEXT };
+  }
+  if (code === 'VALIDATION_ERROR' && field !== null) {
+    return FIELD_PROBLEMS[field] ?? { place: 'general', message: UNEXPECTED_SAVE_TEXT };
+  }
+  return { place: 'general', message: UNEXPECTED_SAVE_TEXT };
+}
+
+/** The body of the PUT of the onboarding (PersonalDataInput): trimmed, and only what was filled in. */
+export function toPersonalDataInput(data: PersonalData): {
+  name: string;
+  phone: string;
+  contactEmail?: string;
+  emergencyContact?: EmergencyContact;
+} {
+  const contactEmail = data.contactEmail.trim();
+  const emergencyContact = toEmergencyContact(data);
+  return {
+    name: data.name.trim(),
+    phone: data.phone.trim(),
+    ...(contactEmail !== '' && { contactEmail }),
+    ...(emergencyContact !== null && { emergencyContact }),
   };
 }

@@ -78,6 +78,20 @@ export function guest(fields: GuestFields): GuestRecord {
   };
 }
 
+/** O1 to O3: has chosen its password; nothing else is done yet, not even its name. */
+function startingGuest(): GuestRecord {
+  return guest({
+    id: GUEST_IDS.starting,
+    documentType: 'DNI',
+    documentNumber: '70000014',
+    name: null,
+    type: 'CONTRACT',
+    status: 'ONBOARDING',
+    documentCount: 0,
+    onboardingProgress: 'PASSWORD_SET',
+  });
+}
+
 function contractGuests(): GuestRecord[] {
   return [
     guest({
@@ -124,6 +138,7 @@ function contractGuests(): GuestRecord[] {
       documentCount: 0,
       onboardingProgress: 'PERSONAL_DATA_SAVED',
     }),
+    startingGuest(),
     ...detailContractGuests(),
   ];
 }

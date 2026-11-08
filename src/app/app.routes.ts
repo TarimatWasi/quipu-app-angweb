@@ -84,6 +84,13 @@ export const routes: Routes = [
             (m) => m.ADMINISTRATORS_ROUTES,
           ),
       },
+      // O1 to O3: a guest's registration. The guard that keeps the others out and sends the guest
+      // here comes with TAR-141; the BFF answers 403 meanwhile.
+      {
+        path: 'onboarding',
+        loadChildren: () =>
+          import('@features/onboarding/onboarding.routes').then((m) => m.ONBOARDING_ROUTES),
+      },
       {
         path: 'guest/contract',
         canActivate: [contractGuestGuard],

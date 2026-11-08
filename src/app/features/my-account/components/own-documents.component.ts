@@ -1,8 +1,9 @@
 import { Component, computed, input, output } from '@angular/core';
 import { shrinkImage } from '@shared/files/shrink-image';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
-import { NO_DOCUMENTS_TEXT, UPLOAD_NOTE, limitText, uploadHelp } from '../model/own-profile';
-import type { OwnDocumentRow } from '../model/own-profile';
+import { limitText } from '@shared/text/file-text';
+import type { OwnDocumentRow } from '@shared/text/file-text';
+import { NO_DOCUMENTS_TEXT, UPLOAD_NOTE, uploadHelp } from '../model/own-profile';
 
 /**
  * H5 and T3 «Tus documentos (n de 5)»: the files the guest has uploaded, each with «Ver documento»,

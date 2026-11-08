@@ -1,19 +1,15 @@
 import type { components } from '@core/api/bff.generated';
 import type { CallFailure } from '@shared/forms/call-failure';
-import { EMAIL_TEXT, PHONE_TEXT } from '@shared/forms/contact-rules';
-import { NAME_TEXT, toEmergencyContact } from '@shared/forms/personal-data';
+import { toEmergencyContact } from '@shared/forms/personal-data';
 import type { EmergencyContact, PersonalData } from '@shared/forms/personal-data';
 import { formatDate, formatMoney, formatStay } from '@shared/payments/payment-format';
-import { INVALID_FILE_TEXT } from '@shared/payments/proof-rules';
 import { documentLabel } from '@shared/text/document-text';
 import type { DocumentType } from '@shared/text/document-text';
 import { environmentLabel } from '@shared/text/environment-text';
 import type { EnvironmentType } from '@shared/text/environment-text';
-import { NETWORK_TEXT, RATE_LIMITED_TEXT, STORAGE_UNAVAILABLE_TEXT } from '@shared/text/error-text';
-import { fileMeta, uploadedText } from '@shared/text/file-text';
+import { NETWORK_TEXT, STORAGE_UNAVAILABLE_TEXT } from '@shared/text/error-text';
 
 type Contract = components['schemas']['Contract'];
-type DocumentRef = components['schemas']['GuestDocumentRef'];
 
 /** H5 and T3 «Mis datos» (CU-20, CU-23, RN-17), as the canvas «MisDatos» words them. */
 
@@ -32,17 +28,10 @@ export const ACCOUNT_EMAIL_LABEL =
 export const NO_ACCOUNT_EMAIL =
   'Sin correo: si olvidas tu contraseña, pídele a la administración un acceso nuevo';
 
-const GUEST_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otro huésped';
-const UNEXPECTED_SAVE_TEXT = 'No se pudieron guardar tus datos. Inténtalo de nuevo.';
-const UNEXPECTED_UPLOAD_TEXT = 'No se pudo subir el documento. Inténtalo de nuevo.';
 const DOCUMENT_GONE_TEXT = 'Ese documento ya no está disponible.';
 const UNEXPECTED_OPEN_TEXT = 'No se pudo abrir el documento. Inténtalo de nuevo.';
 export const CANNOT_CLEAR_TEXT =
   'Por ahora no se puede quitar un dato guardado: cámbialo por otro.';
-
-export function limitText(limit: number): string {
-  return `Ya subiste el máximo de ${String(limit)} documentos`;
-}
 
 export function uploadHelp(limit: number): string {
   return `JPG, PNG o PDF de hasta 5 MB, hasta ${String(limit)} en total. Si necesitas cambiar o borrar uno, pídeselo a la administración.`;
@@ -149,36 +138,7 @@ export function stayDeal(profile: ProfileIdentity, stay: StayDeal | null): DealV
   return { title: 'Tu estadía', facts: [...facts, ...common(profile)], contractLink: false };
 }
 
-// The documents the guest has uploaded.
-
-export interface OwnDocumentRow {
-  readonly id: string;
-  readonly name: string;
-  /** «Imagen JPG · 1.2 MB · subido el 2 mar 2026». */
-  readonly meta: string;
-}
-
-export function toDocumentRows(documents: readonly DocumentRef[], now: Date): OwnDocumentRow[] {
-  return documents.map((document) => ({
-    id: document.id,
-    name: document.originalName,
-    meta: `${fileMeta(document.contentType, document.sizeBytes)} · ${uploadedText(document.uploadedAt, now)}`,
-  }));
-}
-
-/** Where the answer of a failed upload goes: under the file, over the file as a notice or a toast. */
-export type UploadProblem =
-  | { readonly place: 'file'; readonly message: string }
-  | { readonly place: 'toast'; readonly message: string };
-
-export function uploadProblem({ status, code }: CallFailure, limit: number): UploadProblem {
-  if (code === 'DOCUMENT_INVALID_FILE') return { place: 'file', message: INVALID_FILE_TEXT };
-  if (code === 'DOCUMENT_LIMIT_REACHED') return { place: 'file', message: limitText(limit) };
-  if (status === 503) return { place: 'toast', message: STORAGE_UNAVAILABLE_TEXT };
-  if (status === 429) return { place: 'toast', message: RATE_LIMITED_TEXT };
-  if (status === 0) return { place: 'toast', message: NETWORK_TEXT };
-  return { place: 'toast', message: UNEXPECTED_UPLOAD_TEXT };
-}
+// The documents the guest has uploaded: their rows are the shared ones (shared/text/file-text).
 
 /** What the toast says when a document cannot be opened; a missing one also reloads the list. */
 export function openProblem({ status }: CallFailure): { message: string; reload: boolean } {
@@ -246,33 +206,4 @@ export function toProfileUpdate(current: PersonalData, saved: PersonalData): Pro
       !sameContact(contact, toEmergencyContact(was)) && { emergencyContact: contact }),
   };
   return Object.keys(changes).length > 0 ? changes : null;
-}
-
-export type SaveProblem =
-  | { readonly place: 'field'; readonly field: keyof PersonalData; readonly message: string }
-  | { readonly place: 'general'; readonly message: string };
-
-const FIELD_PROBLEMS: Readonly<Record<string, SaveProblem>> = {
-  name: { place: 'field', field: 'name', message: NAME_TEXT },
-  phone: { place: 'field', field: 'phone', message: PHONE_TEXT },
-  contactEmail: { place: 'field', field: 'contactEmail', message: EMAIL_TEXT },
-  'emergencyContact.name': { place: 'field', field: 'emergencyName', message: 'Revisa el nombre.' },
-  'emergencyContact.relationship': {
-    place: 'field',
-    field: 'emergencyRelationship',
-    message: 'Revisa el parentesco.',
-  },
-  'emergencyContact.phone': { place: 'field', field: 'emergencyPhone', message: PHONE_TEXT },
-};
-
-export function saveProblem({ status, code, field }: CallFailure): SaveProblem {
-  if (status === 0) return { place: 'general', message: NETWORK_TEXT };
-  if (status === 429) return { place: 'general', message: RATE_LIMITED_TEXT };
-  if (status === 409 && code === 'GUEST_EMAIL_TAKEN') {
-    return { place: 'field', field: 'contactEmail', message: GUEST_EMAIL_TAKEN_TEXT };
-  }
-  if (code === 'VALIDATION_ERROR' && field !== null) {
-    return FIELD_PROBLEMS[field] ?? { place: 'general', message: UNEXPECTED_SAVE_TEXT };
-  }
-  return { place: 'general', message: UNEXPECTED_SAVE_TEXT };
 }

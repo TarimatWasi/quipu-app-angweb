@@ -34,7 +34,7 @@
 
 Estructura de página y avisos
 
-- `app-page-header` (shared/ui/page-header): título y fecha de Lima de toda página. `app-now-panel`: «Lo que toca ahora» de una lista (cifra, etiqueta, texto y una acción proyectada; `[loading]` para su skeleton). `app-page-notice`: aviso de página por tono. `app-load-error`: error de carga con «Reintentar». `app-refresh-error`: lo que dice una pantalla al refrescar lo que ya muestra (el error con «Reintentar» o «Actualizando…»); no dibuja nada si no hay ninguno. `app-empty-state`: bloque vacío. `app-fact-tile`: ficha de dato (etiqueta y valor). `app-status-badge`: los cinco estados (pagado, en revisión…). `app-step-list`: pasos de un proceso. `app-toast` / `ToastService`: avisos breves.
+- `app-page-header` (shared/ui/page-header): título y fecha de Lima de toda página. `app-now-panel`: «Lo que toca ahora» de una lista (cifra, etiqueta, texto y una acción proyectada; `[loading]` para su skeleton). `app-page-notice`: aviso de página por tono. `app-load-error`: error de carga con «Reintentar». `app-refresh-error`: lo que dice una pantalla al refrescar lo que ya muestra (el error con «Reintentar» o «Actualizando…»); no dibuja nada si no hay ninguno. `app-empty-state`: bloque vacío. `app-fact-tile`: ficha de dato (etiqueta y valor). `app-status-badge`: los cinco estados (pagado, en revisión…). `app-step-list`: pasos de un proceso (hecho, «Ahora» el paso actual, «Falta», opcional y un detalle como «2 archivos»; `variant="bar"` los dibuja como barras para el teléfono). `app-toast` / `ToastService`: avisos breves.
 - `app-form-summary-layout` (shared/forms): formulario más resumen lateral. `app-auth-shell` (shared/auth-shell): marco de las páginas sin sesión. `app-quipu`: el quipu de la marca. `app-emblem`: el emblema de la barra y del acceso (AVIF con PNG de respaldo). `app-shell` (layout): barra y menú.
 
 Listas
@@ -48,7 +48,7 @@ Skeleton
 
 Formularios y diálogos
 
-- `app-form-field` + `[appFieldControl]`: etiqueta, control, error y ayuda. `app-file-field`: archivo (JPG, PNG o PDF). `app-new-password-field`, `app-personal-data-fields`: campos que repiten varios formularios. `FieldErrors`, `form-feedback` (`focusWhenInvalid` para `onInvalid`, `problem` para un validador, `Refusals`), `DialogSubmission`, `call-failure`: errores de servidor y envío de diálogos. `app-dialog-frame`: marco visual de todo diálogo. `app-confirm-action-dialog` (`openConfirmActionDialog`): confirmación de una acción que no se deshace (título, lista o frase, botón y la llamada); `DialogSubmission.sessionEnded` cierra el diálogo ante un 401 (no se repite en cada diálogo). `app-concurrent-modification-dialog` (`openConcurrentModificationDialog`): el registro cambió. `app-payment-notice-dialog` (`openPaymentNoticeDialog`): conflictos de pago. `change-password-action`: abre «Cambiar contraseña».
+- `app-form-field` + `[appFieldControl]`: etiqueta, control, error y ayuda. `app-file-field`: archivo (JPG, PNG o PDF). `app-check-field`: una casilla en su fila (el consentimiento de O3), con error y ayuda. `app-new-password-field`, `app-personal-data-fields` (con `personalDataRules`, `saveProblem` y `toPersonalDataInput`, de `shared/forms/personal-data`): campos que repiten varios formularios. `FieldErrors`, `form-feedback` (`focusWhenInvalid` para `onInvalid`, `problem` para un validador, `Refusals`), `DialogSubmission`, `call-failure`: errores de servidor y envío de diálogos. `app-dialog-frame`: marco visual de todo diálogo. `app-confirm-action-dialog` (`openConfirmActionDialog`): confirmación de una acción que no se deshace (título, lista o frase, botón y la llamada); `DialogSubmission.sessionEnded` cierra el diálogo ante un 401 (no se repite en cada diálogo). `app-concurrent-modification-dialog` (`openConcurrentModificationDialog`): el registro cambió. `app-payment-notice-dialog` (`openPaymentNoticeDialog`): conflictos de pago. `change-password-action`: abre «Cambiar contraseña».
 
 Pagos (shared/payments)
 
@@ -56,8 +56,8 @@ Pagos (shared/payments)
 
 Textos (shared/text)
 
-- `document-text`, `environment-text`, `guest-text`, `file-text`, `error-text`, `search`: cómo se nombra un documento, ambiente, huésped, archivo, error y cómo se busca. Los errores salen del catálogo SRS 17 por `code` (`toBffError`), salvo los que el SRS lista con el texto del BFF.
+- `document-text`, `environment-text`, `guest-text`, `file-text` (también `toDocumentRows` y `uploadProblem`: las filas de documentos propios y dónde va el fallo de una subida), `error-text`, `search`: cómo se nombra un documento, ambiente, huésped, archivo, error y cómo se busca. Los errores salen del catálogo SRS 17 por `code` (`toBffError`), salvo los que el SRS lista con el texto del BFF.
 
-Por feature: lo específico de un feature (tablas, diálogos, paneles) está en su carpeta `components/` (por ejemplo `app-guests-now-panel`, `app-contracts-table`, `app-movements-table`); se revisa ahí antes de crear otro.
+Por feature: lo específico de un feature (tablas, diálogos, paneles) está en su carpeta `components/` (por ejemplo `app-guests-now-panel`, `app-contracts-table`, `app-movements-table`, `app-onboarding-frame` y la base `OnboardingPage` de los tres pasos de O1 a O3); se revisa ahí antes de crear otro.
 
 Al agregar o cambiar un componente compartido se actualiza este catálogo en el mismo PR.

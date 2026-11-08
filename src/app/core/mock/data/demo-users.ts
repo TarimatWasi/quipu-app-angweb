@@ -4,6 +4,7 @@ import type { DocumentType } from './mock-db';
 
 type AdminSession = components['schemas']['AdminSession'];
 type GuestActiveSession = components['schemas']['GuestActiveSession'];
+type GuestOnboardingSession = components['schemas']['GuestOnboardingSession'];
 
 /** The roles the scenario panel offers; each one is a demo account. */
 export const DEMO_USER_KEYS = [
@@ -11,6 +12,7 @@ export const DEMO_USER_KEYS = [
   'contract-guest',
   'temporary-guest',
   'temporary-password',
+  'onboarding-guest',
 ] as const;
 export type DemoUserKey = (typeof DEMO_USER_KEYS)[number];
 
@@ -23,7 +25,7 @@ export interface DemoUser {
   readonly documentNumber: string;
   /** The guest of the account; null for the administration. */
   readonly guestId: string | null;
-  readonly session: AdminSession | GuestActiveSession;
+  readonly session: AdminSession | GuestActiveSession | GuestOnboardingSession;
 }
 
 /** The «clave» of every demo account: not a secret, the backend is simulated and runs in the browser. */
@@ -46,6 +48,8 @@ export const GUEST_IDS = {
   upToDate: mockId(ID_KIND.guest, 11),
   noContract: mockId(ID_KIND.guest, 12),
   lapsed: mockId(ID_KIND.guest, 13),
+  // O1 to O3: the guest that has just chosen its password and still has the whole onboarding.
+  starting: mockId(ID_KIND.guest, 19),
 } as const;
 
 export const DEMO_USERS: Readonly<Record<DemoUserKey, DemoUser>> = {
@@ -97,6 +101,22 @@ export const DEMO_USERS: Readonly<Record<DemoUserKey, DemoUser>> = {
       name: 'María Fernanda Ccahuana Rojas',
       mustChangePassword: true,
       guestStatus: 'ACTIVE',
+    },
+  },
+  'onboarding-guest': {
+    key: 'onboarding-guest',
+    label: 'Huésped en su registro',
+    documentType: 'DNI',
+    documentNumber: '70000014',
+    guestId: GUEST_IDS.starting,
+    // The session follows the guest's progress (see the auth handlers); this is where it starts.
+    session: {
+      role: 'GUEST',
+      guestType: 'CONTRACT',
+      name: 'DNI 70000014',
+      mustChangePassword: false,
+      guestStatus: 'ONBOARDING',
+      nextOnboardingStep: 'PERSONAL_DATA',
     },
   },
 };

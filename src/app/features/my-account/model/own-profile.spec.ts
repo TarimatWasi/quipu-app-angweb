@@ -6,11 +6,8 @@ import {
   contractDeal,
   isDirty,
   openProblem,
-  saveProblem,
   stayDeal,
-  toDocumentRows,
   toProfileUpdate,
-  uploadProblem,
 } from './own-profile';
 
 type Contract = components['schemas']['Contract'];
@@ -106,45 +103,6 @@ describe('H5 and T3 what the administration keeps, read only', () => {
 });
 
 describe('H5 and T3 the documents', () => {
-  it('names each one by its kind, size and the day it was uploaded', () => {
-    const now = new Date('2026-11-06T15:00:00Z');
-
-    expect(
-      toDocumentRows(
-        [
-          {
-            id: 'd1',
-            originalName: 'dni.jpg',
-            contentType: 'image/jpeg',
-            sizeBytes: 1_258_291,
-            uploadedAt: '2026-03-02T15:00:00Z',
-          },
-        ],
-        now,
-      ),
-    ).toEqual([{ id: 'd1', name: 'dni.jpg', meta: 'Imagen JPG · 1.2 MB · subido el 2 mar 2026' }]);
-  });
-
-  it('puts an invalid file and the limit under the file, and the rest in a toast', () => {
-    expect(uploadProblem(failure(400, 'DOCUMENT_INVALID_FILE', 'file'), 5)).toEqual({
-      place: 'file',
-      message: 'Archivo inválido — sube JPG, PNG o PDF de máx. 5MB',
-    });
-    expect(uploadProblem(failure(409, 'DOCUMENT_LIMIT_REACHED'), 5)).toEqual({
-      place: 'file',
-      message: 'Ya subiste el máximo de 5 documentos',
-    });
-    expect(uploadProblem(failure(503, 'FILE_STORAGE_UNAVAILABLE'), 5)).toEqual({
-      place: 'toast',
-      message: 'No se pudo acceder al archivo; inténtalo de nuevo más tarde.',
-    });
-    expect(uploadProblem(failure(429), 5).message).toContain('Demasiados intentos');
-    expect(uploadProblem(failure(0), 5).message).toContain('No se pudo conectar');
-    expect(uploadProblem(failure(500), 5).message).toBe(
-      'No se pudo subir el documento. Inténtalo de nuevo.',
-    );
-  });
-
   it('says why a document does not open, and reloads the list when it is gone', () => {
     expect(openProblem(failure(404))).toEqual({
       message: 'Ese documento ya no está disponible.',
@@ -196,29 +154,5 @@ describe('H5 and T3 saving the data', () => {
     expect(clearsSaved({ ...SAVED, contactEmail: '' }, { ...SAVED, contactEmail: '' })).toBe(false);
     // Something emptied is not sent: the rest of the change still is.
     expect(toProfileUpdate(edited({ contactEmail: '' }), SAVED)).toBeNull();
-  });
-
-  it('puts what the BFF refuses of a field under it, and the rest above the buttons', () => {
-    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'phone'))).toEqual({
-      place: 'field',
-      field: 'phone',
-      message: 'Revisa el teléfono.',
-    });
-    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'emergencyContact.relationship'))).toEqual({
-      place: 'field',
-      field: 'emergencyRelationship',
-      message: 'Revisa el parentesco.',
-    });
-    expect(saveProblem(failure(409, 'GUEST_EMAIL_TAKEN', 'contactEmail'))).toEqual({
-      place: 'field',
-      field: 'contactEmail',
-      message: 'Ese correo ya está registrado para otro huésped',
-    });
-    expect(saveProblem(failure(429, 'RATE_LIMITED')).place).toBe('general');
-    expect(saveProblem(failure(0)).message).toContain('No se pudo conectar');
-    expect(saveProblem(failure(400, 'VALIDATION_ERROR', 'otro')).place).toBe('general');
-    expect(saveProblem(failure(500)).message).toBe(
-      'No se pudieron guardar tus datos. Inténtalo de nuevo.',
-    );
   });
 });

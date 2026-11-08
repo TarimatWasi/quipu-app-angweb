@@ -31,7 +31,7 @@ export interface GuestRecord {
   deactivatedAt: string | null;
   readonly documentCount: number;
   /** Where the onboarding goes (RN-33); by default none for a guest without a name, else all. */
-  readonly onboardingProgress?: Schemas['OnboardingProgress'];
+  onboardingProgress?: Schemas['OnboardingProgress'];
   emergencyContact?: Schemas['EmergencyContact'];
 }
 

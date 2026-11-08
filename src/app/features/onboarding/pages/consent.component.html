@@ -1,0 +1,71 @@
+<app-onboarding-frame step="CONSENT" [steps]="steps()" [note]="ending().side">
+  @switch (view().status) {
+    @case ('initial-loading') {
+      <app-skeleton subject="tu registro"
+        ><ng-template appSkeletonContent>
+          <div class="blocks">
+            <section class="block">
+              <h2>{{ heading }}</h2>
+              <app-skeleton-block shape="rectangle" />
+            </section>
+            <app-skeleton-block shape="rectangle" width="12rem" />
+          </div> </ng-template
+      ></app-skeleton>
+    }
+    @case ('initial-error') {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="reload()"
+      />
+    }
+    @case ('ready') {
+      <form class="form" novalidate (submit)="$event.preventDefault(); finish()">
+        @if (changed()) {
+          <app-page-notice tone="info" [heading]="changedTitle">{{ changedText }}</app-page-notice>
+        }
+
+        <section class="block">
+          <div class="heading">
+            <h2 [id]="textId">{{ heading }}</h2>
+            <span class="meta">Versión {{ version() }}</span>
+          </div>
+          <div class="text" tabindex="0" role="region" [attr.aria-labelledby]="textId">
+            @for (paragraph of paragraphs(); track $index) {
+              <p>{{ paragraph }}</p>
+            }
+          </div>
+        </section>
+
+        <app-check-field
+          fieldId="consent-accepted"
+          [label]="checkLabel"
+          [help]="checkHelp"
+          [error]="checkError()"
+          [checked]="accepted()"
+          (checkedChange)="check($event)"
+        />
+
+        @if (problem(); as message) {
+          <p class="quipu-alert" role="alert">{{ message }}</p>
+        }
+
+        <div class="actions">
+          <button
+            class="quipu-button quipu-button--primary quipu-button--big"
+            type="submit"
+            aria-describedby="consent-finish-help"
+            [disabled]="sending() || !accepted()"
+          >
+            {{ sending() ? 'Terminando…' : 'Terminar registro' }}
+          </button>
+          @if (!accepted() && !sending()) {
+            <span class="after" id="consent-finish-help">{{ needsCheck }}</span>
+          }
+        </div>
+        <p class="after">{{ ending().after }}</p>
+      </form>
+    }
+  }
+</app-onboarding-frame>
