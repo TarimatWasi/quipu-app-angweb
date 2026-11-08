@@ -20,6 +20,22 @@ import { DataFooterDirective } from './data-footer.directive';
 import { ariaSort } from './list-sort';
 import type { ListSort } from './list-sort';
 
+/** The width of the column with the buttons of a row. */
+export const ACTION_WIDTH = '9rem';
+
+/** The width of each column of the table (`<col>`), the same with skeleton rows or with data. */
+export function columnWidths(columns: readonly DataColumn[]): string[] {
+  const fixed = columns.map((c) => c.width ?? (c.align === 'action' ? ACTION_WIDTH : null));
+  const parts = columns.map((c, i) => (fixed[i] === null ? (c.grow ?? (c.rowHeader ? 2 : 1)) : 0));
+  const total = parts.reduce((sum, part) => sum + part, 0);
+  const lengths = fixed.filter((width): width is string => width !== null);
+  const rest = lengths.length > 0 ? `(100% - (${lengths.join(' + ')}))` : '100%';
+  return columns.map((_, i) => {
+    const width = fixed[i];
+    return width ?? `calc(${rest} * ${String(parts[i])} / ${String(total)})`;
+  });
+}
+
 /** One column of `app-data-table`. */
 export interface DataColumn<K extends string = string> {
   readonly key: K;
@@ -34,11 +50,16 @@ export interface DataColumn<K extends string = string> {
   /** Figures go to the right; `action` to the right and on one line. */
   readonly align?: 'start' | 'end' | 'action';
   /**
-   * Its width (`24%`, `9rem`). When the columns give one the table has a fixed layout (TAR-319):
-   * every column keeps its width whether the rows are blocks or data, so nothing moves when the
-   * list arrives, and a text that does not fit ends in «…».
+   * A fixed width (`9rem`, `80px`) for a column that does not depend on the data. The action
+   * column has one by default (`ACTION_WIDTH`).
    */
   readonly width?: string;
+  /**
+   * How much of the rest of the width the column takes, in parts (TAR-319): 2 for the one that
+   * names the row, 1 for the others. A column that carries long text (an email, who occupies an
+   * environment) asks for more.
+   */
+  readonly grow?: number;
 }
 
 /**
@@ -88,8 +109,6 @@ export class DataTableComponent<T, K extends string = string> {
   private readonly cardTemplate = contentChild(DataCardDirective);
   private readonly footerTemplate = contentChild(DataFooterDirective);
 
-  /** The columns say their widths: the layout is fixed (`.quipu-table--fixed`). */
-  protected readonly fixed = computed(() => this.columns().some((column) => column.width));
   protected readonly card = computed(() => this.cardTemplate()?.template ?? null);
   protected readonly footer = computed(() => this.footerTemplate()?.template ?? null);
   protected readonly headers = computed(() => {
@@ -98,7 +117,8 @@ export class DataTableComponent<T, K extends string = string> {
     const skeletons = new Map(
       this.skeletonCells().map((cell) => [cell.appDataSkeletonCell(), cell.template]),
     );
-    return this.columns().map((column) => {
+    const widths = columnWidths(this.columns());
+    return this.columns().map((column, index) => {
       const active = sort?.key === column.key;
       return {
         ...column,
@@ -107,6 +127,7 @@ export class DataTableComponent<T, K extends string = string> {
         down: active && sort.direction === 'desc',
         ariaSort: column.sortable ? ariaSort(sort, column.key) : null,
         template: templates.get(column.key) ?? null,
+        columnWidth: widths[index],
       };
     });
   });

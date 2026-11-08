@@ -12,18 +12,17 @@ import type { AdministratorRow } from '../model/administrator';
 const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as const;
 
 const COLUMNS: readonly DataColumn[] = [
-  { key: 'name', label: 'Nombre', rowHeader: true, width: '22%' },
-  { key: 'document', label: 'Documento', width: '15%' },
-  { key: 'email', label: 'Correo de su cuenta', width: '27%' },
-  { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado', width: '14%' },
-  { key: 'since', label: 'Desde', width: '12%' },
+  { key: 'name', label: 'Nombre', rowHeader: true },
+  { key: 'document', label: 'Documento' },
+  { key: 'email', label: 'Correo de su cuenta', grow: 2 },
+  { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado' },
+  { key: 'since', label: 'Desde' },
   {
     skeleton: { width: '7rem' },
     key: 'action',
     label: 'Acción',
     hiddenLabel: true,
     align: 'action',
-    width: '9rem',
   },
 ];
 
