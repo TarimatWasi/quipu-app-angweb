@@ -175,9 +175,17 @@ function shortDate(isoDate: string): string {
   return formatDate(isoDate).replace(/ \d{4}$/, '');
 }
 
-export function soonPanel(soon: readonly ContractSummary[]): SoonPanel | null {
+export function soonPanel(soon: readonly ContractSummary[]): SoonPanel {
   const [first] = soon;
-  if (first === undefined) return null;
+  if (first === undefined) {
+    return {
+      figure: 0,
+      label: 'contratos por vencer',
+      text: 'Ningún contrato vence pronto.',
+      only: null,
+      action: '',
+    };
+  }
   const names = soon.map(
     (contract) =>
       `${guestName(contract.guestName)} (${environmentLabel(contract.environmentType, contract.environmentCode).toLowerCase()}) vence el ${shortDate(contract.endDate ?? '')}`,

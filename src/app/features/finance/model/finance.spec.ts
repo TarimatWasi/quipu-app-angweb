@@ -70,7 +70,12 @@ describe('the balance and the movements of A6', () => {
   });
 
   it('puts the credit that waits in the panel, with who and since when, and none when nothing waits', () => {
-    expect(creditPanel([])).toBeNull();
+    expect(creditPanel([])).toEqual({
+      figure: 0,
+      label: 'devoluciones por registrar',
+      text: 'No hay dinero pendiente de devolver.',
+      firstGuestId: '',
+    });
     const one = creditPanel([creditOf()]);
     expect(one).toEqual({
       figure: 1,
@@ -89,7 +94,7 @@ describe('the balance and the movements of A6', () => {
         firstGuestId: 'g3',
       }),
     );
-    expect(two?.text).toBe(
+    expect(two.text).toBe(
       'S/ 85.00 que pagaron de más Diego Huanca (204) y Huésped sin nombre, sin un mes donde usarlos.',
     );
   });

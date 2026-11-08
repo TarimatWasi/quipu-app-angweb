@@ -154,7 +154,9 @@ describe('A6 «Finanzas»', () => {
         tone: 'success',
       });
     });
-    expect(text(page().getByRole('region', { name: /^Balance de / }))).toContain('S/ 1,175.50');
+    await vi.waitFor(() => {
+      expect(text(page().getByRole('region', { name: /^Balance de / }))).toContain('S/ 1,175.50');
+    });
   });
 
   it('asks the user to reload when the expense changed meanwhile (409)', async () => {
@@ -290,10 +292,13 @@ describe('A6 «Finanzas»', () => {
     expect(screen.getByRole('dialog')).toBeTruthy();
   });
 
-  it('says the month is empty, and offers no refund button panel, when nothing waits (scenario «empty»)', async () => {
+  it('says the month is empty, and the panel says nothing waits without a refund button (scenario «empty»)', async () => {
     const { page, titles } = await setup('empty');
 
-    expect(page().queryByRole('region', { name: 'Lo que toca ahora' })).toBeNull();
+    expect(page().getByRole('region', { name: 'Lo que toca ahora' }).textContent).toContain(
+      'No hay dinero pendiente de devolver.',
+    );
+    expect(page().queryByRole('button', { name: 'Registrar devolución' })).toBeNull();
     expect(titles()).toEqual([]);
     expect(page().getByText(/No hay egresos en/)).toBeTruthy();
   });

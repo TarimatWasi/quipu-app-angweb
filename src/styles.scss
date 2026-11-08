@@ -320,6 +320,11 @@ html {
   --mat-form-field-subscript-text-tracking: 0;
 }
 
+html {
+  // The page keeps the room of its scrollbar, so nothing slides sideways when it appears.
+  scrollbar-gutter: stable;
+}
+
 body {
   margin: 0;
   font: var(--mat-sys-body-large);

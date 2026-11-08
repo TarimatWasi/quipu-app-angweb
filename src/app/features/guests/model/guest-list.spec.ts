@@ -240,8 +240,12 @@ describe('guest list (A3) texts', () => {
 describe('«Lo que toca ahora» (A3)', () => {
   const STILL = ' Hasta que terminen no se les puede cargar un contrato ni una estadía.';
 
-  it('is not there while nobody is pending', () => {
-    expect(nowPanel({ pendingActivationCount: 0, onboardingCount: 3 }, [], NOW)).toBeNull();
+  it('says everybody opened their access while nobody is pending', () => {
+    expect(nowPanel({ pendingActivationCount: 0, onboardingCount: 3 }, [], NOW)).toEqual({
+      figure: 0,
+      label: 'huéspedes sin activar',
+      text: 'Todos abrieron su acceso. Además, 3 están completando sus datos.',
+    });
   });
 
   it('one pending guest, with its expired access by document and one in onboarding', () => {
@@ -272,7 +276,7 @@ describe('«Lo que toca ahora» (A3)', () => {
   });
 
   it('without expired accesses nor onboarding it only says what waits', () => {
-    expect(nowPanel({ pendingActivationCount: 2, onboardingCount: 0 }, [PENDING], NOW)?.text).toBe(
+    expect(nowPanel({ pendingActivationCount: 2, onboardingCount: 0 }, [PENDING], NOW).text).toBe(
       `Aún no abren su acceso.${STILL}`,
     );
   });

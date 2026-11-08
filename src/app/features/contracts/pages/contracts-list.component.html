@@ -2,10 +2,12 @@
 
 @switch (phase()) {
   @case ('loading') {
-    <app-skeleton class="now" subject="los contratos" [announceSlow]="false"
-      ><ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="8.25rem" /></ng-template
-    ></app-skeleton>
+    @if (view() === 'ACTIVE') {
+      <app-skeleton class="now" subject="los contratos" [announceSlow]="false"
+        ><ng-template appSkeletonContent
+          ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+      ></app-skeleton>
+    }
     <section class="all" aria-labelledby="contracts-loading-title">
       <div class="quipu-list-head">
         <h2 id="contracts-loading-title">Todos los contratos</h2>
@@ -14,17 +16,10 @@
         >
       </div>
       <ng-template #filtersSkeleton>
-        <div class="quipu-segmented quipu-segmented--fill views">
-          @for (option of views; track option) {
-            <button type="button" disabled>{{ viewLabels[option] }}</button>
-          }
-        </div>
-        <div class="quipu-filters">
-          <div class="quipu-field quipu-search">
-            <span class="quipu-label">Buscar</span><app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
-        </div>
+        <app-list-filters-skeleton
+          [views]="viewNames"
+          [fields]="view() === 'ACTIVE' ? ['Estado'] : []"
+        />
       </ng-template>
       <app-contracts-table
         [loading]="true"
@@ -51,7 +46,9 @@
         [label]="soon.label"
         [text]="soon.text"
       >
-        @if (soon.only; as id) {
+        @if (soon.figure === 0) {
+          <!-- nothing is about to end: the panel only says so -->
+        } @else if (soon.only; as id) {
           <a class="quipu-button quipu-button--primary" [routerLink]="['/admin/contracts', id]">{{
             soon.action
           }}</a>

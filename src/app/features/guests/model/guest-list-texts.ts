@@ -153,9 +153,15 @@ export function nowPanel(
   counts: PanelCounts,
   loaded: readonly GuestSummary[],
   now: Date,
-): NowPanel | null {
+): NowPanel {
   const pending = counts.pendingActivationCount;
-  if (pending <= 0) return null;
+  if (pending <= 0) {
+    return {
+      figure: 0,
+      label: 'huéspedes sin activar',
+      text: `Todos abrieron su acceso.${onboardingSentence(counts.onboardingCount)}`,
+    };
+  }
   const one = pending === 1;
   const expired = loaded.filter(
     (guest) => guest.status === 'PENDING_ACTIVATION' && isAccessExpired(guest.accessExpiresAt, now),

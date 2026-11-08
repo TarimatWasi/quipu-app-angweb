@@ -2,10 +2,12 @@
 
 @switch (phase()) {
   @case ('loading') {
-    <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
-      ><ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
-    ></app-skeleton>
+    @if (view() === 'CURRENT') {
+      <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
+        ><ng-template appSkeletonContent
+          ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+      ></app-skeleton>
+    }
     <section class="all" aria-labelledby="guests-loading-title">
       <div class="quipu-list-head">
         <h2 id="guests-loading-title">Todos los huéspedes</h2>
@@ -14,28 +16,10 @@
         >
       </div>
       <ng-template #filtersSkeleton>
-        <div class="quipu-segmented quipu-segmented--fill views">
-          @for (option of views; track option.view) {
-            <button type="button" disabled>{{ option.label }}</button>
-          }
-        </div>
-        <div class="quipu-filters">
-          <div class="quipu-field quipu-search">
-            <span class="quipu-label">Buscar</span><app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-field">
-            <span class="quipu-label">Tipo</span><app-skeleton-block shape="rectangle" />
-          </div>
-          @if (view() === 'CURRENT') {
-            <div class="quipu-field">
-              <span class="quipu-label">Estado</span><app-skeleton-block shape="rectangle" />
-            </div>
-          }
-          <div class="quipu-field quipu-only-narrow">
-            <span class="quipu-label">Ordenar por</span><app-skeleton-block shape="rectangle" />
-          </div>
-          <div class="quipu-list-count"><app-skeleton-block width="8rem" /></div>
-        </div>
+        <app-list-filters-skeleton
+          [views]="viewNames"
+          [fields]="view() === 'CURRENT' ? ['Tipo', 'Estado'] : ['Tipo']"
+        />
       </ng-template>
       <app-guests-table
         [loading]="true"

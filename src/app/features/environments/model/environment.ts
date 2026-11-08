@@ -187,8 +187,10 @@ function joinNames(names: readonly string[]): string {
  * The panel of «Activos» while some environment is free and has nothing coming; null when none is.
  * The count is the BFF's (every page); the names, the ones among the loaded environments.
  */
-export function freePanel(freeCount: number, loaded: readonly Environment[]): FreePanel | null {
-  if (freeCount <= 0) return null;
+export function freePanel(freeCount: number, loaded: readonly Environment[]): FreePanel {
+  if (freeCount <= 0) {
+    return { figure: 0, label: 'ambientes libres', text: 'No hay ambientes libres por ahora.' };
+  }
   const free = loaded.filter(
     (env) => env.status === 'ACTIVE' && env.occupant === null && env.nextOccupant === null,
   );

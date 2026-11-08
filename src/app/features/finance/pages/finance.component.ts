@@ -1,3 +1,4 @@
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom, map, Observable } from 'rxjs';
@@ -92,6 +93,7 @@ const keyOf = (tab: Tab, month: string): Key => `${tab}|${month}`;
     FactTileComponent,
     FieldControlDirective,
     FormFieldComponent,
+    ListFiltersSkeletonComponent,
     ListResultsComponent,
     LoadErrorComponent,
     MovementsTableComponent,
@@ -112,6 +114,7 @@ export class FinanceComponent {
 
   protected readonly tabs = TABS;
   protected readonly tabLabels = TAB_LABELS;
+  protected readonly tabNames = TABS.map((tab) => TAB_LABELS[tab]);
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
   protected readonly monthLabel = monthLabel;
 

@@ -1,3 +1,4 @@
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
@@ -57,6 +58,7 @@ const VIEWS: readonly EnvironmentStatus[] = ['ACTIVE', 'INACTIVE'];
 @Component({
   selector: 'app-environments-list',
   imports: [
+    ListFiltersSkeletonComponent,
     EnvironmentsTableComponent,
     FieldControlDirective,
     FormField,
