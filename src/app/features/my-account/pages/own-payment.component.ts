@@ -118,7 +118,7 @@ export class OwnPaymentComponent {
   private readonly temporaryPayments = inject(TemporaryGuestPaymentsService);
 
   /** The rows of proofs and the errors of the server for them, shared with the other payment page. */
-  protected readonly editor = new ProofsEditor(() => this.submitted(), true);
+  protected readonly editor = new ProofsEditor(() => this.submitted());
   private readonly proofDrafts = this.editor.drafts;
   private readonly fieldErrors = this.editor.errors;
 

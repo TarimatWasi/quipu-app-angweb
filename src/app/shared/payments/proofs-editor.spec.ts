@@ -2,9 +2,9 @@ import { ProofsEditor } from './proofs-editor';
 
 const voucher = (name = 'voucher.jpg', type = 'image/jpeg') => new File(['x'], name, { type });
 
-function editor(options: { submitted?: boolean; kindClearsProofs?: boolean } = {}) {
+function editor(options: { submitted?: boolean } = {}) {
   const state = { submitted: options.submitted ?? false };
-  const proofs = new ProofsEditor(() => state.submitted, options.kindClearsProofs ?? false);
+  const proofs = new ProofsEditor(() => state.submitted);
   const serverError = (field: string, message = 'del servidor') => {
     proofs.errors.values.update((errors) => ({ ...errors, [field]: message }));
   };
@@ -35,20 +35,17 @@ describe('ProofsEditor (TAR-326)', () => {
     expect(errors()).toEqual({ proofs: 'del servidor' });
   });
 
-  it('changing the kind forgets the error of its file; the own payment also forgets the one of the set', () => {
-    const direct = editor({ kindClearsProofs: false });
-    direct.serverError('proofs[0].file');
-    direct.serverError('proofs');
-    direct.proofs.kind(0, 'CASH');
-    // The direct payment keeps the error of the whole set.
-    expect(direct.errors()).toEqual({ proofs: 'del servidor' });
+  it('changing the kind forgets the error of its file and the one of the whole set (TAR-328)', () => {
+    const { proofs, serverError, errors } = editor();
+    serverError('proofs[0].file');
+    serverError('proofs');
+    serverError('proofs[0].amount');
 
-    const own = editor({ kindClearsProofs: true });
-    own.serverError('proofs[0].file');
-    own.serverError('proofs');
-    own.proofs.kind(0, 'CASH');
-    expect(own.errors()).toEqual({});
-    expect(own.proofs.drafts.drafts()[0]?.kind).toBe('CASH');
+    proofs.kind(0, 'CASH');
+
+    expect(proofs.drafts.drafts()[0]?.kind).toBe('CASH');
+    // The error of the amount of that row stays: the kind does not change it.
+    expect(errors()).toEqual({ 'proofs[0].amount': 'del servidor' });
   });
 
   it('the method has no server error to forget', () => {

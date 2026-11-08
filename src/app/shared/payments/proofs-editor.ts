@@ -15,20 +15,13 @@ export class ProofsEditor {
   readonly drafts = new ProofDrafts();
   readonly errors = new FieldErrors();
 
-  /**
-   * `submitted` says whether the person already tried to send (the local errors show from then on).
-   * `kindClearsProofs`: changing a row's kind also forgets the error of the whole set of proofs; the
-   * own payment does it and the direct payment does not (both kept as they were when this was
-   * extracted: a difference to decide, not to hide).
-   */
-  constructor(
-    private readonly submitted: () => boolean,
-    private readonly kindClearsProofs: boolean,
-  ) {}
+  /** `submitted` says whether the person already tried to send (the local errors show from then on). */
+  constructor(private readonly submitted: () => boolean) {}
 
   kind(index: number, kind: ProofDraft['kind']): void {
     this.drafts.update(index, { kind });
-    this.errors.clear(rowField(index, 'file'), ...(this.kindClearsProofs ? ['proofs'] : []));
+    // The kind changes what the set asks for (a cash proof carries no file), so its error goes too.
+    this.errors.clear(rowField(index, 'file'), 'proofs');
   }
 
   amount(index: number, amount: string): void {
