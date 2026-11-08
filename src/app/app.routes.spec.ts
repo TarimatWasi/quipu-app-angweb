@@ -60,9 +60,12 @@ describe('routes', () => {
   });
 
   it('opens the login page at the root', async () => {
-    const { harness, router, text } = await setup();
+    const { harness, router, text, answerNoSession } = await setup();
 
-    await harness.navigateByUrl('/');
+    // The login asks the BFF whether the browser already has a session (TAR-318).
+    const navigation = harness.navigateByUrl('/');
+    await answerNoSession();
+    await navigation;
 
     expect(router.url).toBe('/login');
     expect(text()).toContain('Iniciar sesión');
@@ -154,6 +157,20 @@ describe('routes', () => {
     expect(router.url).toBe('/home');
   });
 
+  it('takes to /home a session that a reload restores when /login is typed in the address bar (TAR-318)', async () => {
+    const { harness, router } = await setup();
+
+    const navigation = harness.navigateByUrl('/login');
+    await vi.waitFor(() => {
+      TestBed.inject(HttpTestingController)
+        .expectOne((req) => req.url.endsWith('/bff/auth/me'))
+        .flush({ role: 'ADMIN', name: 'admin@example.test', mustChangePassword: false });
+    });
+    await navigation;
+
+    expect(router.url).toBe('/home');
+  });
+
   // RF-12: the change cannot be skipped from the client either (the BFF enforces it too).
   it('sends a session that must change its password from /home to /change-password', async () => {
     const { harness, router, signIn, text } = await setup();
@@ -194,9 +211,11 @@ describe('routes', () => {
   });
 
   it('opens the recovery pages without a session', async () => {
-    const { harness, router, text } = await setup();
+    const { harness, router, text, answerNoSession } = await setup();
 
-    await harness.navigateByUrl('/forgot-password');
+    const navigation = harness.navigateByUrl('/forgot-password');
+    await answerNoSession();
+    await navigation;
     expect(router.url).toBe('/forgot-password');
     expect(text()).toContain('Recuperar contraseña');
 
@@ -252,9 +271,11 @@ describe('routes', () => {
   });
 
   it('offers the recovery link on the login page and confirms an updated password', async () => {
-    const { harness, text } = await setup();
+    const { harness, text, answerNoSession } = await setup();
 
-    await harness.navigateByUrl('/login');
+    const navigation = harness.navigateByUrl('/login');
+    await answerNoSession();
+    await navigation;
     expect(text()).toContain('¿Olvidaste tu contraseña?');
     expect(text()).not.toContain('Contraseña actualizada');
 
