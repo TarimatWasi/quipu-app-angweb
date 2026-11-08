@@ -16,6 +16,17 @@
 - **Barra de desplazamiento:** `html { scrollbar-gutter: stable both-edges }` reserva su sitio a los dos lados; no se anula.
 - **Caché:** los archivos con hash de contenido (`main-*.js`, `chunk-*.js`, `styles-*.css`) se sirven con `Cache-Control: public, max-age=31536000, immutable` (`vercel.json` y `nginx.conf`); el `index.html` nunca. Un despliegue nuevo cambia los nombres, así que en dev se actualiza solo. Las rutas se precargan en segundo plano (`PreloadAllModules`) y el arranque no espera al servidor (el token CSRF se pide sin bloquear el render): lo único que espera la pantalla es la API.
 
+## Principios de trabajo (acordados con la persona responsable)
+
+- **Todo pedido es una tarea:** antes de tocar código se abre la tarea en Jira (`TAR`), el PR la cita, se cierra con evidencia y `npm run verify` en verde. Lo que se pide como «punto aparte» es otra tarea, no un añadido a la que está en curso.
+- **Las decisiones se registran en Confluence** (la página que corresponda, con fecha, alcance, riesgo y cómo revertir), no solo en el chat ni en el PR. Un cambio de infraestructura (por ejemplo, quitar la protección de Vercel) también.
+- **Una regla que se puede verificar tiene una prueba** (`app-structure.spec.ts`, `skeleton-rules.spec.ts`, ESLint); la revisión humana queda para lo que no se puede automatizar. Si una regla se rompe dos veces, se convierte en prueba.
+- **Cuando hay un error de patrón se arregla el patrón, no solo la pantalla:** se busca el mismo defecto en todas las pantallas, se corrige el componente compartido y se escribe la regla.
+- **Consistencia visual por encima de lo nativo:** nada del navegador sin estilo del kit (la «×» azul del buscador). Colores, tipografía y espacios salen de los tokens `--quipu-*` y se escriben una sola vez (QP-UI-01).
+- **El skeleton es el componente real en carga (QP-UI-19):** solo es bloque el dato que pone la API; rótulos, títulos, vistas, filtros, botones y espacios son los de la pantalla. Un bloque que sustituye texto mide `1lh`; no hay rectángulos de alto fijo.
+- **El estado que no depende de la vista se conserva al cambiar de vista:** el aviso «Lo que toca ahora» sigue en todas las vistas y solo la lista pasa a skeleton.
+- **Lo que no se pudo verificar se dice:** si no se vio en un navegador o falta un dato, se informa así; no se afirma como hecho.
+
 ## Catálogo de componentes compartidos
 
 Estructura de página y avisos

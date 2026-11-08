@@ -1,9 +1,11 @@
-import { Component, input, output } from '@angular/core';
+import { Component, input, output, TemplateRef } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { DataCardDirective } from '@shared/ui/data-table/data-card.directive';
 import { DataCellDirective } from '@shared/ui/data-table/data-cell.directive';
+import { DataSkeletonCardDirective } from '@shared/ui/data-table/data-skeleton-card.directive';
 import { DataTableComponent } from '@shared/ui/data-table/data-table.component';
 import type { DataColumn } from '@shared/ui/data-table/data-table.component';
+import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import type { ChargeRow, ChargeSort, ChargeSortKey } from '../model/dashboard-charges';
 
@@ -28,19 +30,26 @@ const COLUMNS: readonly DataColumn<Column>[] = [
   imports: [
     DataCardDirective,
     DataCellDirective,
+    DataSkeletonCardDirective,
     DataTableComponent,
     RouterLink,
+    SkeletonBlockComponent,
     StatusBadgeComponent,
   ],
   template: `
     <app-data-table
       caption="Cobros del mes"
+      [loading]="loading()"
+      [skeletonBefore]="skeletonBefore()"
       [columns]="columns"
       [rows]="rows()"
       [rowId]="rowId"
       [sort]="sort()"
       (sortBy)="sorted($event)"
     >
+      <ng-template appDataSkeletonCard>
+        <app-skeleton-block width="55%" height="1.25rem" /><app-skeleton-block width="75%" />
+      </ng-template>
       <ng-template appDataCell="guest" [appDataCellRows]="rows()" let-row>
         @if (row.name; as fullName) {
           <span class="quipu-name">{{ fullName }}</span>
@@ -160,6 +169,8 @@ const COLUMNS: readonly DataColumn<Column>[] = [
 export class ChargesTableComponent {
   readonly rows = input.required<readonly ChargeRow[]>();
   readonly sort = input.required<ChargeSort>();
+  readonly loading = input(false);
+  readonly skeletonBefore = input<TemplateRef<unknown> | null>(null);
   /** A sortable header was pressed. */
   readonly sortBy = output<ChargeSortKey>();
 

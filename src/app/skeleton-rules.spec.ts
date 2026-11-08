@@ -1,13 +1,6 @@
 // QP-UI-19 (patrón de skeleton): un skeleton solo cubre los puntos donde la API pone un dato; lo
 // demás es el componente real. Un rectángulo de alto fijo en una pantalla es un componente entero
 // dibujado a ojo (su fuente, su alto y su espacio no siguen al real), así que no se admite.
-// KNOWN_DEBT lista las pantallas que aún lo hacen (TAR-311); la lista solo puede achicarse.
-const KNOWN_DEBT = [
-  'features/dashboard/pages/admin-home.component.html',
-  'features/my-account/pages/own-contract.component.html',
-  'features/my-account/pages/own-profile.component.html',
-];
-
 // A fixed height is right where the real thing has none of its own: the image of a proof.
 const MEDIA_PLACEHOLDERS = ['features/payments/pages/payment-review.component.html'];
 
@@ -51,14 +44,7 @@ async function offenders(): Promise<string[]> {
 
 describe('patrón de skeleton (TAR-311)', () => {
   it('ninguna pantalla nueva dibuja un componente como rectángulo de alto fijo', async () => {
-    expect(
-      (await offenders()).filter((path) => ![...KNOWN_DEBT, ...MEDIA_PLACEHOLDERS].includes(path)),
-    ).toEqual([]);
-  });
-
-  it('la deuda conocida solo puede achicarse: una pantalla ya corregida sale de la lista', async () => {
-    const found = await offenders();
-    expect(KNOWN_DEBT.filter((path) => !found.includes(path))).toEqual([]);
+    expect((await offenders()).filter((path) => !MEDIA_PLACEHOLDERS.includes(path))).toEqual([]);
   });
 
   it('detecta un rectángulo de alto fijo y deja pasar un bloque sin él', () => {

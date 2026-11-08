@@ -11,14 +11,14 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
 @Component({
   selector: 'app-skeleton-facts',
   imports: [FactTileComponent, SkeletonBlockComponent],
-  host: { 'aria-hidden': 'true' },
+  host: { 'aria-hidden': 'true', '[class.summary]': 'summary()' },
   template: `
     @for (label of labels(); track $index; let first = $first; let last = $last) {
       <app-fact-tile
         [class.wide]="first && wideFirst()"
-        [class.stone]="last && stoneLast()"
-        [label]="label"
-        [surface]="last && stoneLast() ? 'stone' : 'paper'"
+        [class.stone]="stoneAll() || (last && stoneLast())"
+        [label]="label || blank"
+        [surface]="stoneAll() || (last && stoneLast()) ? 'stone' : 'paper'"
         [hint]="hints()[$index] ?? ''"
         [hintPending]="hints()[$index] === null"
       >
@@ -33,6 +33,10 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--quipu-franja);
     }
+    :host(.summary) app-fact-tile {
+      --quipu-cifra-ficha: var(--quipu-cifra-resumen);
+      --quipu-cifra-ficha-movil: var(--quipu-cifra-resumen-movil);
+    }
     app-fact-tile {
       --quipu-skeleton-fondo: var(--quipu-piedra-oscura);
       min-width: 0;
@@ -46,9 +50,15 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
   `,
 })
 export class SkeletonFactsComponent {
+  /** The label of a tile whose name depends on the data keeps the height of its line. */
+  protected readonly blank = String.fromCharCode(160);
   readonly labels = input.required<readonly string[]>();
   readonly wideFirst = input(true);
   /** The last tile is on dark stone, as «Neto del mes» is. */
   readonly stoneLast = input(false);
+  /** Every tile is on dark stone. */
+  readonly stoneAll = input(false);
+  /** The figures are the size of a summary beside a form; `false` is the size of a balance. */
+  readonly summary = input(true);
   readonly hints = input<readonly (string | null)[]>([]);
 }

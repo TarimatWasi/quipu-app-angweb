@@ -11,11 +11,13 @@ import { SkeletonBlockComponent } from '../skeleton/skeleton-block.component';
   selector: 'app-list-filters-skeleton',
   imports: [SkeletonBlockComponent],
   template: `
-    <div class="quipu-segmented quipu-segmented--fill views">
-      @for (label of views(); track label) {
-        <button type="button" disabled>{{ label }}</button>
-      }
-    </div>
+    @if (views().length > 0) {
+      <div class="quipu-segmented quipu-segmented--fill views">
+        @for (label of views(); track label) {
+          <button type="button" disabled>{{ label }}</button>
+        }
+      </div>
+    }
     <div class="quipu-filters">
       @if (search()) {
         <div class="quipu-field quipu-search">
@@ -48,7 +50,7 @@ import { SkeletonBlockComponent } from '../skeleton/skeleton-block.component';
 })
 export class ListFiltersSkeletonComponent {
   /** The labels of the views, as the segmented control will show them. */
-  readonly views = input.required<readonly string[]>();
+  readonly views = input<readonly string[]>([]);
   /** The label of each select the list will have beside «Buscar». */
   readonly fields = input<readonly string[]>([]);
   /** The list has «Buscar». */

@@ -5,8 +5,34 @@
     <app-skeleton subject="tus datos"
       ><ng-template appSkeletonContent>
         <div class="layout">
-          <app-skeleton-block class="side" shape="rectangle" height="22.5rem" />
-          <app-skeleton-block class="form" shape="rectangle" height="38.75rem" />
+          <aside class="side">
+            <section class="block">
+              <app-skeleton-block width="12rem" height="1.5rem" />
+              <app-skeleton-facts
+                class="facts"
+                [wideFirst]="false"
+                [stoneAll]="true"
+                [labels]="['', '', '', '']"
+              />
+            </section>
+            <section class="block">
+              <h2>Tus documentos</h2>
+              <app-skeleton-cards [count]="1" [action]="true" />
+            </section>
+          </aside>
+          <div class="form">
+            <div class="skeleton-fields">
+              <section class="block">
+                <h2>Tus datos de contacto</h2>
+                <app-skeleton-fields [labels]="['Nombre completo', 'Teléfono', 'Correo']" />
+              </section>
+              <section class="block">
+                <h2>Contacto de emergencia <span class="optional">(opcional)</span></h2>
+                <app-skeleton-fields [labels]="['Nombre', 'Parentesco', 'Celular']" />
+              </section>
+            </div>
+            <app-skeleton-block shape="rectangle" width="12rem" />
+          </div>
         </div> </ng-template
     ></app-skeleton>
   }
