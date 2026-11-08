@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import {
   afterNextRender,
   Component,
@@ -124,7 +125,7 @@ export class LoginComponent {
   /** Shown from the moment the lock ends until the next attempt. */
   protected readonly unlocked = signal(false);
   private lockDialog: MatDialogRef<AccountLockedDialogComponent> | undefined;
-  private lockRequest = 0;
+  private readonly lockRequest = new LatestRequest();
   private readonly destroyRef = inject(DestroyRef);
 
   constructor() {
@@ -209,7 +210,7 @@ export class LoginComponent {
   /** SRS 17, AUTH_ACCOUNT_LOCKED: a dialog the moment it happens, then a banner while it lasts. */
   private lockAccount(lock: AccountLock) {
     if (this.destroyRef.destroyed) return;
-    const request = ++this.lockRequest;
+    const request = this.lockRequest.begin();
     this.countdown.start(lock, () => {
       this.unlock();
     });
@@ -220,8 +221,7 @@ export class LoginComponent {
     try {
       const { openAccountLockedDialog } =
         await import('../components/account-locked-dialog.component');
-      if (this.destroyRef.destroyed || request !== this.lockRequest || !this.countdown.active())
-        return;
+      if (!this.lockRequest.isCurrent(request) || !this.countdown.active()) return;
       const dialog = openAccountLockedDialog(this.injector, this.countdown);
       this.lockDialog = dialog;
       dialog
@@ -232,7 +232,7 @@ export class LoginComponent {
         });
     } catch {
       // If the chunk cannot load, the existing banner still explains the lock and offers recovery.
-      if (!this.destroyRef.destroyed && request === this.lockRequest && this.countdown.active()) {
+      if (this.lockRequest.isCurrent(request) && this.countdown.active()) {
         this.focusOnNextRender('#lock-banner');
       }
     }
@@ -243,7 +243,7 @@ export class LoginComponent {
    * it closes; and a stale password is not worth keeping, so the form starts clean.
    */
   private unlock() {
-    this.lockRequest++;
+    this.lockRequest.cancel();
     this.lockDialog?.close();
     this.lockDialog = undefined;
     this.model.update((value) => ({ ...value, password: '' }));

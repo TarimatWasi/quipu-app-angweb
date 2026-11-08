@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
@@ -180,7 +181,7 @@ export class PaymentReviewComponent {
   protected readonly backQuery: Readonly<Record<string, string>>;
   private currentId = '';
   // Moves with every load, so a late answer for a previous payment is ignored.
-  private request = 0;
+  private readonly request = new LatestRequest();
   // Moves each time another payment opens in this same component (history, "Revisar el siguiente"):
   // a write or a dialog of the previous payment must not act on the new one.
   private visit = 0;
@@ -192,7 +193,7 @@ export class PaymentReviewComponent {
     // Leaving the page counts as another visit too: late answers of this one are ignored.
     inject(DestroyRef).onDestroy(() => {
       this.visit++;
-      this.request++;
+      this.request.cancel();
     });
     route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.visit++;
@@ -380,7 +381,7 @@ export class PaymentReviewComponent {
 
   /** Loads the payment; `quiet` keeps the page on screen while it reloads. */
   private async load(id: string, quiet = false, keepDrafts = false): Promise<void> {
-    const request = ++this.request;
+    const request = this.request.begin();
     const refreshing = quiet && this.payment() !== null;
     this.refreshing.set(refreshing);
     this.currentId = id;
@@ -393,15 +394,15 @@ export class PaymentReviewComponent {
     }
     try {
       const payment = await firstValueFrom(this.payments.get(id));
-      if (request !== this.request) return;
+      if (!this.request.isCurrent(request)) return;
       this.amounts.update((current) => amountTexts(payment.proofs, keepDrafts ? current : {}));
       this.payment.set(payment);
       this.refreshError.set(null);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (request === this.request) this.failLoad(error, refreshing);
+      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (request === this.request) this.endLoad();
+      if (this.request.isCurrent(request)) this.endLoad();
     }
   }
 

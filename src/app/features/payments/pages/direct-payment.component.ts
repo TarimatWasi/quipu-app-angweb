@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
 import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
 import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
@@ -220,10 +221,10 @@ export class DirectPaymentComponent {
   protected readonly atProofLimit = this.proofDrafts.atLimit;
 
   // Moves with every load of the periods, so a late answer for a previous guest is ignored.
-  private periodsRequest = 0;
-  private guestsRequest = 0;
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly periodsRequest = new LatestRequest();
+  private readonly guestsRequest = new LatestRequest();
   private failedGuestsAfter: string | undefined;
-  private destroyed = false;
   /** Where to go back when the guest came preselected (A3.2, A4.2); A5 otherwise. */
   private readonly origin: UrlTree | null;
 
@@ -235,9 +236,6 @@ export class DirectPaymentComponent {
       this.preselected !== null
         ? (this.router.currentNavigation()?.previousNavigation?.finalUrl ?? null)
         : null;
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
     if (this.preselected === null) {
       void this.loadGuests();
     } else {
@@ -284,7 +282,7 @@ export class DirectPaymentComponent {
     this.periodChoice.set('');
     this.clearServer('guestId', 'period');
     if (id === '') {
-      this.periodsRequest++;
+      this.periodsRequest.cancel();
       this.periods.set([]);
       this.periodsState.set({ kind: 'idle' });
     } else {
@@ -360,12 +358,12 @@ export class DirectPaymentComponent {
     try {
       await firstValueFrom(this.payments.createDirect(request.payment, request.files));
     } catch (error: unknown) {
-      if (!this.destroyed) await this.failed(error);
+      if (!this.destroyRef.destroyed) await this.failed(error);
       return;
     } finally {
-      if (!this.destroyed) this.busy.set(false);
+      if (!this.destroyRef.destroyed) this.busy.set(false);
     }
-    if (this.destroyed) return;
+    if (this.destroyRef.destroyed) return;
     this.toasts.show(`Pago de ${label} registrado y aprobado.`);
     await this.leave();
   }
@@ -412,7 +410,7 @@ export class DirectPaymentComponent {
       });
       await firstValueFrom(ref.afterClosed());
       // What the guest can pay changed: show it as it is now.
-      if (!this.destroyed) await this.loadPeriods(this.guestId());
+      if (!this.destroyRef.destroyed) await this.loadPeriods(this.guestId());
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
@@ -444,13 +442,13 @@ export class DirectPaymentComponent {
   }
 
   private async loadGuests(after?: string): Promise<void> {
-    const request = ++this.guestsRequest;
+    const request = this.guestsRequest.begin();
     const isRetry = this.guestsState().kind === 'error';
     this.guestsRetrying.set(isRetry);
     if (!isRetry) this.guestsState.set({ kind: 'loading' });
     try {
       const page = await firstValueFrom(this.guests.list(after));
-      if (this.destroyed || request !== this.guestsRequest) return;
+      if (!this.guestsRequest.isCurrent(request)) return;
       const options = page.content.map((guest) => ({
         id: guest.id,
         label: guestLabel(guest),
@@ -464,45 +462,45 @@ export class DirectPaymentComponent {
       this.failedGuestsAfter = undefined;
       this.guestsState.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.guestsRequest) return;
+      if (!this.guestsRequest.isCurrent(request)) return;
       this.failedGuestsAfter = after;
       this.guestsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (!this.destroyed && request === this.guestsRequest) this.guestsRetrying.set(false);
+      if (this.guestsRequest.isCurrent(request)) this.guestsRetrying.set(false);
     }
   }
 
   private async loadPreselected(id: string): Promise<void> {
     try {
       const guest = await firstValueFrom(this.guests.get(id));
-      if (this.destroyed) return;
+      if (this.destroyRef.destroyed) return;
       this.preselectedGuest.set(guestText(guest));
     } catch {
       // The periods say whether the guest exists; the label is only a help.
-      if (!this.destroyed) this.preselectedGuest.set(null);
+      if (!this.destroyRef.destroyed) this.preselectedGuest.set(null);
     }
   }
 
   private async loadPeriods(guestId: string): Promise<void> {
-    const request = ++this.periodsRequest;
+    const request = this.periodsRequest.begin();
     this.periods.set([]);
     const isRetry = this.periodsState().kind === 'error';
     this.periodsRetrying.set(isRetry);
     if (!isRetry) this.periodsState.set({ kind: 'loading' });
     try {
       const periods = await firstValueFrom(this.payments.payablePeriods(guestId));
-      if (this.destroyed || request !== this.periodsRequest) return;
+      if (!this.periodsRequest.isCurrent(request)) return;
       this.periods.set(periods);
       if (!this.options().some((option) => option.key === this.periodChoice())) {
         this.periodChoice.set('');
       }
       this.periodsState.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.periodsRequest) return;
+      if (!this.periodsRequest.isCurrent(request)) return;
       this.periodChoice.set('');
       this.periodsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (!this.destroyed && request === this.periodsRequest) this.periodsRetrying.set(false);
+      if (this.periodsRequest.isCurrent(request)) this.periodsRetrying.set(false);
     }
   }
 
