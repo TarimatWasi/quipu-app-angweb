@@ -1,3 +1,4 @@
+import { ListFilterState } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
 import { AsyncContentState } from '@shared/data/async-content';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
@@ -5,11 +6,10 @@ import { PageLoadState } from '@shared/data/page-load-state';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { form, FormField } from '@angular/forms/signals';
+import { FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
-import { nextSort } from '@shared/ui/data-table/list-sort';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
@@ -31,7 +31,7 @@ import {
   toQueueRow,
   visiblePayments,
 } from '../model/payment-queue';
-import type { QueueFilters, QueueSort, QueueView, SortKey } from '../model/payment-queue';
+import type { QueueFilters, QueueView, SortKey } from '../model/payment-queue';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 
@@ -62,7 +62,7 @@ import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
   templateUrl: './payment-queue.component.html',
   styleUrl: './payment-queue.component.scss',
 })
-export class PaymentQueueComponent {
+export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey> {
   private readonly payments = inject(AdminPaymentsService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -75,9 +75,6 @@ export class PaymentQueueComponent {
   protected readonly noMatchHeading = NO_MATCH_HEADING;
 
   protected readonly view = signal<QueueView>(QUEUE_VIEWS[0]);
-  protected readonly filters = signal<QueueFilters>(NO_FILTERS);
-  protected readonly filterForm = form(this.filters);
-  protected readonly sort = signal<QueueSort>(DEFAULT_SORT);
 
   private readonly items = signal<readonly PaymentQueueItem[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
@@ -113,6 +110,7 @@ export class PaymentQueueComponent {
   private started = false;
 
   constructor() {
+    super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.destroyRef.onDestroy(() => {
       this.pageLoad.invalidate();
       this.summary.dispose();
@@ -138,24 +136,6 @@ export class PaymentQueueComponent {
       queryParams: { vista: view.param },
       replaceUrl: true,
     });
-  }
-
-  protected clearFilters(): void {
-    this.filters.set(NO_FILTERS);
-  }
-
-  protected sortBy(key: SortKey): void {
-    this.sort.update((current) => nextSort(current, key));
-  }
-
-  protected searchFor(search: string): void {
-    this.filters.update((filters) => ({ ...filters, search }));
-  }
-
-  /** «Ordenar por» of a phone: always ascending, as its labels say. */
-  protected sortOnPhone(key: string): void {
-    const choice = PHONE_SORTS.find((option) => option.key === key);
-    if (choice) this.sort.set({ key: choice.key, direction: 'asc' });
   }
 
   /** «Reintentar» asks again what failed: the first page of the view or the next one. */
