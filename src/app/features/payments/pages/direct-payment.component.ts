@@ -1,3 +1,4 @@
+import { ProofsEditor } from '@shared/payments/proofs-editor';
 import { LatestRequest } from '@shared/data/latest-request';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
 import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
@@ -19,15 +20,8 @@ import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
-import {
-  AdminPaymentsService,
-  DirectPayment,
-  PayablePeriod,
-  ProofKind,
-} from '../data/admin-payments.service';
+import { AdminPaymentsService, DirectPayment, PayablePeriod } from '../data/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { FieldErrors } from '@shared/forms/field-errors';
-import { ProofDrafts } from '@shared/payments/proof-drafts';
 import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import { balanceOf, formatMoney, periodLabel } from '@shared/payments/payment-format';
@@ -101,8 +95,10 @@ export class DirectPaymentComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
 
-  private readonly proofDrafts = new ProofDrafts();
-  private readonly fieldErrors = new FieldErrors();
+  /** The rows of proofs and the errors of the server for them, shared with the other payment page. */
+  protected readonly editor = new ProofsEditor(() => this.submitted(), false);
+  private readonly proofDrafts = this.editor.drafts;
+  private readonly fieldErrors = this.editor.errors;
 
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly proofLimitText = PROOF_LIMIT_TEXT;
@@ -300,48 +296,6 @@ export class DirectPaymentComponent {
     this.clearServer('receivedOn');
   }
 
-  protected kindOf(index: number, kind: ProofKind): void {
-    this.proofDrafts.update(index, { kind });
-    this.clearServer(`proofs[${String(index)}].file`);
-  }
-
-  protected typedAmount(index: number, amount: string): void {
-    this.proofDrafts.update(index, {
-      amount,
-    });
-    this.clearServer(`proofs[${String(index)}].amount`, 'proofs');
-  }
-
-  protected typedMethod(index: number, value: string): void {
-    this.proofDrafts.update(index, { method: value });
-  }
-
-  protected picked(index: number, chosen: File | null): void {
-    this.proofDrafts.chooseFile(index, chosen);
-    this.clearServer(`proofs[${String(index)}].file`);
-  }
-
-  protected addProof(): void {
-    if (this.proofDrafts.add()) this.clearServer('proofs');
-  }
-
-  /** Server errors of a proof point to it by position, so they no longer hold once one is removed. */
-  protected removeProof(index: number): void {
-    if (this.proofDrafts.remove(index)) this.fieldErrors.clearPrefix('proofs');
-  }
-
-  protected amountError(index: number): string | null {
-    const server = this.serverErrors()[`proofs[${String(index)}].amount`];
-    if (server) return server;
-    return this.proofDrafts.amountError(index, this.submitted());
-  }
-
-  protected fileError(index: number): string | null {
-    const server = this.serverErrors()[`proofs[${String(index)}].file`];
-    if (server) return server;
-    return this.proofDrafts.fileError(index, this.submitted());
-  }
-
   protected async submit(event: Event): Promise<void> {
     event.preventDefault();
     if (this.busy()) return;
@@ -373,7 +327,8 @@ export class DirectPaymentComponent {
     const item = this.selected();
     const proofs = this.proofs();
     const fieldProblem = proofs.some(
-      (_, index) => this.amountError(index) !== null || this.fileError(index) !== null,
+      (_, index) =>
+        this.editor.amountError(index) !== null || this.editor.fileError(index) !== null,
     );
     if (
       item === null ||

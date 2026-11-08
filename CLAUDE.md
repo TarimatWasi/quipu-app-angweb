@@ -51,7 +51,7 @@ Formularios y diálogos
 
 Pagos (shared/payments)
 
-- `app-proof-kind-choice`, `app-proof-amount-field`, `app-proof-method-field`, `ProofDrafts`, `proof-fields`, `proofs-body`, `proof-rules`: los comprobantes de A5.1, A5.2, H3 y T2. `app-period-payments` y `period-rows`: «Pagos por mes». `payment-format` (dinero, períodos, `limaDay`/`limaMonth`) y `credit-texts`: formatos y textos.
+- `app-proof-kind-choice`, `app-proof-amount-field`, `app-proof-method-field`, `ProofDrafts`, `ProofsEditor` (las filas de comprobantes y lo que cada cambio hace a los errores del servidor; lo usan el pago directo y el pago propio), `proof-fields`, `proofs-body`, `proof-rules`: los comprobantes de A5.1, A5.2, H3 y T2. `app-period-payments` y `period-rows`: «Pagos por mes». `payment-format` (dinero, períodos, `limaDay`/`limaMonth`) y `credit-texts`: formatos y textos.
 
 Textos (shared/text)
 
