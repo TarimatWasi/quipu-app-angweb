@@ -1,4 +1,5 @@
 import { Component, computed, input, output } from '@angular/core';
+import { shrinkImage } from '@shared/files/shrink-image';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { NO_DOCUMENTS_TEXT, UPLOAD_NOTE, limitText, uploadHelp } from '../model/own-profile';
 import type { OwnDocumentRow } from '../model/own-profile';
@@ -175,8 +176,14 @@ export class OwnDocumentsComponent {
 
   protected picked(target: EventTarget | null): void {
     const input = target instanceof HTMLInputElement ? target : null;
-    this.pick.emit(input?.files?.[0] ?? null);
+    const file = input?.files?.[0] ?? null;
     // Choosing the same file again after «Quitar» must report it again.
     if (input) input.value = '';
+    // An image is reduced before it is kept for upload (TAR-315).
+    if (file === null) this.pick.emit(null);
+    else
+      void shrinkImage(file).then((reduced) => {
+        this.pick.emit(reduced);
+      });
   }
 }
