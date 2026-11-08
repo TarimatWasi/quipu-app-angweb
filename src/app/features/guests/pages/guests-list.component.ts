@@ -1,4 +1,4 @@
-import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
 import type { PageRequest as CursorPageRequest } from '@shared/data/page-load-state';
@@ -68,6 +68,7 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
 @Component({
   selector: 'app-guests-list',
   imports: [
+    NowPanelComponent,
     ListFiltersSkeletonComponent,
     FieldControlDirective,
     FormFieldComponent,
@@ -81,7 +82,6 @@ const VIEWS: readonly { readonly view: GuestView; readonly label: string }[] = [
     RouterLink,
     ShowMoreComponent,
     SkeletonComponent,
-    SkeletonBlockComponent,
     SkeletonContentDirective,
   ],
   templateUrl: './guests-list.component.html',

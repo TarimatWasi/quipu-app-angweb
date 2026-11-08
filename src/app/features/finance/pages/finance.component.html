@@ -4,7 +4,7 @@
   @case ('initial-loading') {
     <app-skeleton class="now" subject="Finanzas" [announceSlow]="false"
       ><ng-template appSkeletonContent
-        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+        ><app-now-panel headingId="now-loading" [loading]="true" /></ng-template
     ></app-skeleton>
     <section class="balance" aria-labelledby="finance-balance-loading">
       <div class="quipu-list-head">

@@ -14,7 +14,6 @@ import { ListResultsComponent } from '@shared/ui/list-results/list-results.compo
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -69,7 +68,6 @@ const VIEWS: readonly EnvironmentStatus[] = ['ACTIVE', 'INACTIVE'];
     NowPanelComponent,
     PageHeaderComponent,
     RouterLink,
-    SkeletonBlockComponent,
     SkeletonComponent,
     SkeletonContentDirective,
   ],

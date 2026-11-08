@@ -1,3 +1,4 @@
+import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import {
@@ -50,6 +51,7 @@ const NO_ADMINISTRATORS: readonly AdministratorSummary[] = [];
 @Component({
   selector: 'app-administrators',
   imports: [
+    NowPanelComponent,
     AdministratorsListComponent,
     LoadErrorComponent,
     PageHeaderComponent,

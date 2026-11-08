@@ -43,7 +43,7 @@ describe('NowPanelComponent', () => {
 
     const figure = (fixture.nativeElement as HTMLElement).querySelector('.figure');
 
-    expect(figure?.textContent).toBe('S/ 1,450.00');
+    expect(figure?.textContent.trim()).toBe('S/ 1,450.00');
     expect(figure?.classList.contains('urgent')).toBe(true);
   });
 });
