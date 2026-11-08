@@ -5,7 +5,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { focusFirstProblem } from '@shared/forms/form-feedback';
+import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
@@ -39,9 +39,7 @@ export class ChangePasswordComponent {
     {
       submission: {
         action: () => this.change(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, 'change-password-error');
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, 'change-password-error'),
       },
     },
   );

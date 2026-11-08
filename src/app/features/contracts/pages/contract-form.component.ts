@@ -130,10 +130,7 @@ export class ContractFormComponent {
 
   private readonly loaded = new AsyncContentState<Choices>();
   protected readonly phase = computed(() => this.loaded.state().status);
-  protected readonly retrying = computed(() => {
-    const state = this.loaded.state();
-    return state.status === 'initial-error' && state.retrying;
-  });
+  protected readonly retrying = this.loaded.retrying;
 
   protected readonly fields = signal<ContractFields>(EMPTY_FIELDS);
   private readonly file = signal<File | null>(null);

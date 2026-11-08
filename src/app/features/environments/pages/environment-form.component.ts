@@ -17,7 +17,7 @@ import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { AsyncContentState } from '@shared/data/async-content';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -106,10 +106,7 @@ export class EnvironmentFormComponent {
     this.editing() ? this.loaded.state().status : 'ready',
   );
   protected readonly view = this.loaded.state;
-  protected readonly retrying = computed(() => {
-    const state = this.view();
-    return state.status === 'initial-error' && state.retrying;
-  });
+  protected readonly retrying = this.loaded.retrying;
   protected readonly generalError = signal<string | null>(null);
   protected readonly draft = signal<EnvironmentDraft>(EMPTY);
 
@@ -124,9 +121,7 @@ export class EnvironmentFormComponent {
     {
       submission: {
         action: () => this.save(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, GENERAL_ERROR_ID),
       },
     },
   );

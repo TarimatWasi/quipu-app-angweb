@@ -2,10 +2,8 @@ import { ElementRef, Injector } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
 import { bodyCodeOf, toBffError } from '@core/http/bff-error';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
+import type { Refusals } from '@shared/forms/form-feedback';
 import { refusal } from '../model/finance-forms';
-
-/** What a form of signals takes as the errors of the server: one under the field it refuses. */
-export type Refusals = { fieldTree: FieldTree<string>; kind: 'server'; message: string }[];
 
 /**
  * A refusal of the BFF in a dialog of Finanzas (TAR-323): under the field it points at, or, when it

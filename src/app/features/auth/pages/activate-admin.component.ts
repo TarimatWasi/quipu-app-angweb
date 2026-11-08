@@ -1,3 +1,4 @@
+import { linkFailure } from './link-failure';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -5,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
@@ -67,9 +68,7 @@ export class ActivateAdminComponent {
     {
       submission: {
         action: () => this.activate(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, 'activate-admin-error');
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, 'activate-admin-error'),
       },
     },
   );
@@ -100,18 +99,17 @@ export class ActivateAdminComponent {
     return undefined;
   }
 
-  private failure({ code, message, field }: BffError) {
-    focusFirstProblem(this.host, this.injector, 'activate-admin-error');
+  private failure(error: BffError) {
     // A wrong name or password does not use up the code: the person corrects it and tries again.
-    if (field === 'name') {
-      return [{ fieldTree: this.nameField(), kind: 'server', message }];
-    }
-    if (field === 'newPassword') {
-      return [{ fieldTree: this.newPasswordField(), kind: 'server', message }];
-    }
-    this.codeRejected.set(code === 'AUTH_INVALID_OR_EXPIRED_CODE');
-    this.serverError.set(message);
-    return undefined;
+    return linkFailure({
+      error,
+      fields: { name: this.nameField(), newPassword: this.newPasswordField() },
+      errorId: 'activate-admin-error',
+      host: this.host,
+      injector: this.injector,
+      serverError: this.serverError,
+      rejected: this.codeRejected,
+    });
   }
 
   /** The explicit types break the circular inference between the form and its submit action. */

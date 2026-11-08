@@ -13,7 +13,7 @@ import {
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
 import { toBffError } from '@core/http/bff-error';
-import { firstError, focusFirstProblem } from '@shared/forms/form-feedback';
+import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import type {
@@ -125,9 +125,7 @@ export class NewAdministratorDialogComponent {
     {
       submission: {
         action: () => this.create(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, BOTTOM_ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, BOTTOM_ERROR_ID),
       },
     },
   );

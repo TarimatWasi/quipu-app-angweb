@@ -93,20 +93,9 @@ export class ContractDetailComponent {
   private readonly now = signal(new Date());
 
   protected readonly phase = computed(() => this.loaded.state().status);
-  protected readonly retrying = computed(() => {
-    const state = this.loaded.state();
-    return state.status === 'initial-error' && state.retrying;
-  });
-  protected readonly refreshing = computed(() => {
-    const state = this.loaded.state();
-    return state.status === 'ready' && state.refresh.status === 'loading';
-  });
-  protected readonly refreshError = computed(() => {
-    const state = this.loaded.state();
-    return state.status === 'ready' && state.refresh.status === 'error'
-      ? state.refresh.message
-      : null;
-  });
+  protected readonly retrying = this.loaded.retrying;
+  protected readonly refreshing = this.loaded.refreshing;
+  protected readonly refreshError = this.loaded.refreshError;
 
   protected readonly title = computed(() => {
     const data = this.loaded.data();

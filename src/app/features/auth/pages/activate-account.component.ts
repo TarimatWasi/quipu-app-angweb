@@ -1,3 +1,4 @@
+import { linkFailure } from './link-failure';
 import { Component, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormRoot } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -5,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { BffError, toBffError } from '@core/http/bff-error';
 import { AuthShellComponent } from '@shared/auth-shell/auth-shell.component';
-import { focusFirstProblem } from '@shared/forms/form-feedback';
+import { focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FORM_PAGE_STYLES } from '@shared/forms/form-page.styles';
 import { NewPasswordFieldComponent } from '@shared/forms/new-password-field.component';
 import { newPasswordRules } from '@shared/forms/new-password-rules';
@@ -55,9 +56,7 @@ export class ActivateAccountComponent {
     {
       submission: {
         action: () => this.activate(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, 'activate-account-error');
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, 'activate-account-error'),
       },
     },
   );
@@ -84,15 +83,17 @@ export class ActivateAccountComponent {
     return undefined;
   }
 
-  private failure({ code, message, field }: BffError) {
-    focusFirstProblem(this.host, this.injector, 'activate-account-error');
+  private failure(error: BffError) {
     // A weak password does not use up the token: the person corrects it and tries again.
-    if (field === 'newPassword') {
-      return [{ fieldTree: this.newPasswordField(), kind: 'server', message }];
-    }
-    this.tokenRejected.set(code === 'AUTH_INVALID_OR_EXPIRED_CODE');
-    this.serverError.set(message);
-    return undefined;
+    return linkFailure({
+      error,
+      fields: { newPassword: this.newPasswordField() },
+      errorId: 'activate-account-error',
+      host: this.host,
+      injector: this.injector,
+      serverError: this.serverError,
+      rejected: this.tokenRejected,
+    });
   }
 
   /** The explicit type breaks the circular inference between the form and its submit action. */

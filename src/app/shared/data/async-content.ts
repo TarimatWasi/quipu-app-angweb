@@ -31,6 +31,26 @@ export class AsyncContentState<T> {
     return state.status === 'ready' ? state.data : null;
   });
 
+  /** The initial load failed and «Reintentar» is asking again (TAR-325). */
+  readonly retrying = computed(() => {
+    const state = this.state();
+    return state.status === 'initial-error' && state.retrying;
+  });
+
+  /** The data is on screen and a refresh is going on. */
+  readonly refreshing = computed(() => {
+    const state = this.state();
+    return state.status === 'ready' && state.refresh.status === 'loading';
+  });
+
+  /** What a refresh that failed says, while the data it had stays on screen. */
+  readonly refreshError = computed(() => {
+    const state = this.state();
+    return state.status === 'ready' && state.refresh.status === 'error'
+      ? state.refresh.message
+      : null;
+  });
+
   /** Refresh retains usable data; changing identity explicitly starts a new initial load. */
   begin(newContext = false): number | null {
     if (this.disposed || (this.pending && !newContext)) return null;

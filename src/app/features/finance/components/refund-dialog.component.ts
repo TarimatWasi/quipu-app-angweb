@@ -3,7 +3,8 @@ import { form, FormField, FormRoot, maxLength, validate } from '@angular/forms/s
 import { MAT_DIALOG_DATA, MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { firstValueFrom, Observable } from 'rxjs';
 import { DialogSubmission } from '@shared/forms/dialog-submission';
-import { firstError, focusFirstProblem, problem } from '@shared/forms/form-feedback';
+import { firstError, problem, focusWhenInvalid } from '@shared/forms/form-feedback';
+import type { Refusals } from '@shared/forms/form-feedback';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
@@ -27,7 +28,6 @@ import {
 import type { RefundDraft, RefundInput } from '../model/finance-forms';
 import { FINANCE_DIALOG_STYLES } from './finance-dialog.styles';
 import { refusedField } from './refused-field';
-import type { Refusals } from './refused-field';
 
 export interface RefundDialogData {
   /** The guests with credit to refund; the one chosen first comes in `guestId`. */
@@ -190,9 +190,7 @@ export class RefundDialogComponent {
     {
       submission: {
         action: () => this.save(),
-        onInvalid: () => {
-          focusFirstProblem(this.host, this.injector, ERROR_ID);
-        },
+        onInvalid: focusWhenInvalid(this.host, this.injector, ERROR_ID),
       },
     },
   );
