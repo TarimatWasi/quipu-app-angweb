@@ -775,6 +775,21 @@ fieldset.quipu-field > legend {
   .quipu-input {
     padding-left: calc(var(--quipu-relleno-campo) * 2 + 1.125rem);
   }
+
+  // The browser's own «×» to clear the text is blue; this one is drawn in the ink of the kit.
+  .quipu-input::-webkit-search-cancel-button {
+    appearance: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    cursor: pointer;
+    background-color: var(--quipu-tinta-secundaria);
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='M6 6l12 12M18 6L6 18'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+  }
+
+  .quipu-input::-webkit-search-cancel-button:hover {
+    background-color: var(--quipu-tinta);
+  }
 }
 
 .quipu-list-count {

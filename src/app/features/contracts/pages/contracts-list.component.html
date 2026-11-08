@@ -1,13 +1,36 @@
 <app-page-header heading="Contratos" />
 
+@if (phase() !== 'error') {
+  @if (panel(); as soon) {
+    <app-now-panel
+      class="now"
+      headingId="contracts-now-title"
+      [figure]="soon.figure"
+      [label]="soon.label"
+      [text]="soon.text"
+    >
+      @if (soon.figure === 0) {
+        <!-- nothing is about to end: the panel only says so -->
+      } @else if (soon.only; as id) {
+        <a class="quipu-button quipu-button--primary" [routerLink]="['/admin/contracts', id]">{{
+          soon.action
+        }}</a>
+      } @else {
+        <button class="quipu-button quipu-button--primary" type="button" (click)="showSoon()">
+          {{ soon.action }}
+        </button>
+      }
+    </app-now-panel>
+  } @else if (phase() === 'loading') {
+    <app-skeleton class="now" subject="los contratos" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+  }
+}
+
 @switch (phase()) {
   @case ('loading') {
-    @if (view() === 'ACTIVE') {
-      <app-skeleton class="now" subject="los contratos" [announceSlow]="false"
-        ><ng-template appSkeletonContent
-          ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
-      ></app-skeleton>
-    }
     <section class="all" aria-labelledby="contracts-loading-title">
       <div class="quipu-list-head">
         <h2 id="contracts-loading-title">Todos los contratos</h2>
@@ -38,28 +61,6 @@
     />
   }
   @case ('ready') {
-    @if (panel(); as soon) {
-      <app-now-panel
-        class="now"
-        headingId="contracts-now-title"
-        [figure]="soon.figure"
-        [label]="soon.label"
-        [text]="soon.text"
-      >
-        @if (soon.figure === 0) {
-          <!-- nothing is about to end: the panel only says so -->
-        } @else if (soon.only; as id) {
-          <a class="quipu-button quipu-button--primary" [routerLink]="['/admin/contracts', id]">{{
-            soon.action
-          }}</a>
-        } @else {
-          <button class="quipu-button quipu-button--primary" type="button" (click)="showSoon()">
-            {{ soon.action }}
-          </button>
-        }
-      </app-now-panel>
-    }
-
     <section class="all" aria-labelledby="all-contracts-title">
       <div class="quipu-list-head">
         <h2 id="all-contracts-title">Todos los contratos</h2>

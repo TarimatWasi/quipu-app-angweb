@@ -109,9 +109,7 @@ export class ContractsListComponent {
     ),
   );
   protected readonly count = computed(() => countText(this.rows().length, this.loadedCount()));
-  protected readonly panel = computed(() =>
-    this.view() === 'ACTIVE' ? soonPanel(this.soon()) : null,
-  );
+  protected readonly panel = computed(() => soonPanel(this.soon()));
   protected readonly empty = computed(() => emptyText(this.view()));
 
   constructor() {
@@ -123,7 +121,6 @@ export class ContractsListComponent {
 
   protected chooseView(view: ContractStatus): void {
     if (view === this.view()) return;
-    this.soon.set([]);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
     this.sort.set(DEFAULT_SORT);
@@ -166,7 +163,7 @@ export class ContractsListComponent {
   private readSoon(): void {
     firstValueFrom(this.service.expiringSoon())
       .then((page) => {
-        if (this.view() === 'ACTIVE') this.soon.set(page.content);
+        this.soon.set(page.content);
       })
       .catch(() => {
         this.soon.set([]);

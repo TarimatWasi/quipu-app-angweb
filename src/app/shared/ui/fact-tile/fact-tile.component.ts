@@ -16,6 +16,8 @@ export type FactTileSurface = 'paper' | 'stone';
       <dd>{{ value() }}<ng-content /></dd>
       @if (hint(); as text) {
         <dd class="hint">{{ text }}</dd>
+      } @else if (hintPending()) {
+        <dd class="hint"><ng-content select="[factHint]" /></dd>
       }
     </dl>
   `,
@@ -70,4 +72,6 @@ export class FactTileComponent {
   readonly surface = input<FactTileSurface>('paper');
   /** A line in secondary ink under the value («Sin atraso hasta el 8.»). */
   readonly hint = input('');
+  /** The hint is a datum that is still loading: its place is kept for a projected `[factHint]`. */
+  readonly hintPending = input(false);
 }

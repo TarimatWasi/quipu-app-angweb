@@ -1,17 +1,30 @@
 import { Component, input } from '@angular/core';
+import { FactTileComponent } from '../fact-tile/fact-tile.component';
 import { SkeletonBlockComponent } from './skeleton-block.component';
 
-/** Uses the kit's fact surface and spacing, with an optional full-width first fact. */
+/**
+ * The real fact tiles with a block only where the API will put the value: the label, the surface,
+ * the type, the padding and the height of the figure are the tile's own, so nothing changes when
+ * the data arrives. `hints` is parallel to `labels`: a text is a fixed hint (shown as it is), `null`
+ * is a hint that comes from the API (a block), and a missing entry means the tile has no hint.
+ */
 @Component({
   selector: 'app-skeleton-facts',
-  imports: [SkeletonBlockComponent],
+  imports: [FactTileComponent, SkeletonBlockComponent],
   host: { 'aria-hidden': 'true' },
   template: `
-    @for (label of labels(); track $index; let first = $first) {
-      <div [class.wide]="first && wideFirst()">
-        <span>{{ label }}</span
-        ><app-skeleton-block width="80%" height="1.75rem" />
-      </div>
+    @for (label of labels(); track $index; let first = $first; let last = $last) {
+      <app-fact-tile
+        [class.wide]="first && wideFirst()"
+        [class.stone]="last && stoneLast()"
+        [label]="label"
+        [surface]="last && stoneLast() ? 'stone' : 'paper'"
+        [hint]="hints()[$index] ?? ''"
+        [hintPending]="hints()[$index] === null"
+      >
+        <app-skeleton-block width="80%" height="1em" />
+        <app-skeleton-block factHint width="60%" height="1.225rem" />
+      </app-fact-tile>
     }
   `,
   styles: `
@@ -20,17 +33,12 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: var(--quipu-franja);
     }
-    div {
-      --quipu-skeleton-fondo: var(--quipu-alpaca);
-      display: grid;
-      gap: 0.75rem;
-      padding: var(--quipu-relleno-tarjeta);
-      background: var(--quipu-piedra-oscura);
+    app-fact-tile {
+      --quipu-skeleton-fondo: var(--quipu-piedra-oscura);
       min-width: 0;
     }
-    span {
-      color: var(--quipu-tinta-secundaria);
-      font: var(--mat-sys-body-small);
+    .stone {
+      --quipu-skeleton-fondo: var(--quipu-alpaca);
     }
     .wide {
       grid-column: var(--skeleton-wide-column, 1 / -1);
@@ -40,4 +48,7 @@ import { SkeletonBlockComponent } from './skeleton-block.component';
 export class SkeletonFactsComponent {
   readonly labels = input.required<readonly string[]>();
   readonly wideFirst = input(true);
+  /** The last tile is on dark stone, as «Neto del mes» is. */
+  readonly stoneLast = input(false);
+  readonly hints = input<readonly (string | null)[]>([]);
 }

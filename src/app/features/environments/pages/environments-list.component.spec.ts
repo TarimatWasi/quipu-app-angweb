@@ -99,14 +99,14 @@ describe('A2 «Ambientes»', () => {
     );
   });
 
-  it('asks the inactive ones when «Inactivos» is pressed, and leaves out the panel and Ocupación', async () => {
+  it('asks the inactive ones when «Inactivos» is pressed, keeps the panel and leaves out Ocupación', async () => {
     const { api, view, table, codes, click } = await setup(normal);
 
     await click(view().getByRole('button', { name: 'Inactivos' }));
 
     expect(api.list).toHaveBeenLastCalledWith('INACTIVE', undefined);
     expect(codes()).toEqual(['208']);
-    expect(view().queryByRole('region', { name: 'Lo que toca ahora' })).toBeNull();
+    expect(view().getByRole('region', { name: 'Lo que toca ahora' })).toBeTruthy();
     expect(view().queryByLabelText('Ocupación')).toBeNull();
     expect(table().getByRole('button', { name: 'Reactivar Habitación 208' })).toBeTruthy();
   });
