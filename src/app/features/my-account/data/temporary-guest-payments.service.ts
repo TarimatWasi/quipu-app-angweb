@@ -1,18 +1,8 @@
-import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { proofsBody } from '@shared/payments/proofs-body';
-import { HttpClient } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
-import { BFF_BASE_URL } from '@core/config/bff-base-url';
-import {
-  GuestPayment,
-  OwnPaymentsApi,
-  OwnPaymentSummary,
-  OwnProofEdit,
-  OwnProofInput,
-  paymentUrl,
-} from './own-payments';
+import { OwnPaymentsService, OwnPaymentSummary, OwnProofInput } from './own-payments';
 
 export type StayPaymentStatus = components['schemas']['StayPaymentStatus'];
 
@@ -21,35 +11,18 @@ export type StayPaymentStatus = components['schemas']['StayPaymentStatus'];
  * BFF takes the guest from the session and the stay in force or the next one (CU-22, RN-03).
  */
 @Injectable({ providedIn: 'root' })
-export class TemporaryGuestPaymentsService implements OwnPaymentsApi {
-  private readonly http = inject(HttpClient);
-  private readonly csrf = inject(CsrfBootstrapService);
-  private readonly root = inject(BFF_BASE_URL);
-  private readonly base = `${this.root}/bff/temporary-guest/payments`;
+export class TemporaryGuestPaymentsService extends OwnPaymentsService {
+  protected readonly base = `${this.root}/bff/temporary-guest/payments`;
 
   /** The stay in force today, otherwise the next one, otherwise the last one (T1). */
   paymentStatus(): Observable<StayPaymentStatus> {
     return this.http.get<StayPaymentStatus>(`${this.root}/bff/temporary-guest/payment-status`);
   }
 
-  get(id: string): Observable<GuestPayment> {
-    return this.http.get<GuestPayment>(paymentUrl(this.base, id));
-  }
-
   /** Sends the single payment of the stay (StayPaymentUpload): only the proofs and their files. */
   upload(proofs: readonly OwnProofInput[], files: readonly File[]): Observable<OwnPaymentSummary> {
     return this.csrf.protect(() =>
       this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files)),
-    );
-  }
-
-  correct(
-    id: string,
-    proofs: readonly OwnProofEdit[],
-    files: readonly File[],
-  ): Observable<OwnPaymentSummary> {
-    return this.csrf.protect(() =>
-      this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files)),
     );
   }
 }

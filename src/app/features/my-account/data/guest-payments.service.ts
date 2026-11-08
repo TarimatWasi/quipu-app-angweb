@@ -1,18 +1,9 @@
-import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { proofsBody } from '@shared/payments/proofs-body';
-import { HttpClient, HttpParams } from '@angular/common/http';
-import { inject, Injectable } from '@angular/core';
+import { HttpParams } from '@angular/common/http';
+import { Injectable } from '@angular/core';
 import { Observable } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
-import { BFF_BASE_URL } from '@core/config/bff-base-url';
-import {
-  GuestPayment,
-  OwnPaymentsApi,
-  OwnPaymentSummary,
-  OwnProofEdit,
-  OwnProofInput,
-  paymentUrl,
-} from './own-payments';
+import { OwnPaymentsService, OwnPaymentSummary, OwnProofInput } from './own-payments';
 
 export type PeriodStatus = components['schemas']['PeriodStatus'];
 export type GuestHistoryPage = components['schemas']['PagedGuestHistory'];
@@ -28,11 +19,8 @@ export const GUEST_HISTORY_PAGE_SIZE = 20;
  * session (RN-09): no guest id is ever sent. Payment ids and cursors are opaque.
  */
 @Injectable({ providedIn: 'root' })
-export class GuestPaymentsService implements OwnPaymentsApi {
-  private readonly http = inject(HttpClient);
-  private readonly csrf = inject(CsrfBootstrapService);
-  private readonly root = inject(BFF_BASE_URL);
-  private readonly base = `${this.root}/bff/guest/payments`;
+export class GuestPaymentsService extends OwnPaymentsService {
+  protected readonly base = `${this.root}/bff/guest/payments`;
 
   /** Every period of the guest's contracts with its state (H1). */
   accountStatus(): Observable<PeriodStatus[]> {
@@ -53,10 +41,6 @@ export class GuestPaymentsService implements OwnPaymentsApi {
     return this.http.get<GuestHistoryPage>(this.base, { params });
   }
 
-  get(id: string): Observable<GuestPayment> {
-    return this.http.get<GuestPayment>(paymentUrl(this.base, id));
-  }
-
   /** Sends the payment of a month (GuestPaymentUpload): `period`, the proofs and their files. */
   upload(
     period: string,
@@ -65,16 +49,6 @@ export class GuestPaymentsService implements OwnPaymentsApi {
   ): Observable<OwnPaymentSummary> {
     return this.csrf.protect(() =>
       this.http.post<OwnPaymentSummary>(this.base, proofsBody(proofs, files, { period })),
-    );
-  }
-
-  correct(
-    id: string,
-    proofs: readonly OwnProofEdit[],
-    files: readonly File[],
-  ): Observable<OwnPaymentSummary> {
-    return this.csrf.protect(() =>
-      this.http.put<OwnPaymentSummary>(paymentUrl(this.base, id), proofsBody(proofs, files)),
     );
   }
 }
