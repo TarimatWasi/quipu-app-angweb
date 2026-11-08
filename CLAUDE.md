@@ -32,7 +32,7 @@
 Estructura de página y avisos
 
 - `app-page-header` (shared/ui/page-header): título y fecha de Lima de toda página. `app-now-panel`: «Lo que toca ahora» de una lista (cifra, etiqueta, texto y una acción proyectada; `[loading]` para su skeleton). `app-page-notice`: aviso de página por tono. `app-load-error`: error de carga con «Reintentar». `app-empty-state`: bloque vacío. `app-fact-tile`: ficha de dato (etiqueta y valor). `app-status-badge`: los cinco estados (pagado, en revisión…). `app-step-list`: pasos de un proceso. `app-toast` / `ToastService`: avisos breves.
-- `app-form-summary-layout` (shared/forms): formulario más resumen lateral. `app-auth-shell` (shared/auth-shell): marco de las páginas sin sesión. `app-quipu`: el quipu de la marca. `app-shell` (layout): barra y menú.
+- `app-form-summary-layout` (shared/forms): formulario más resumen lateral. `app-auth-shell` (shared/auth-shell): marco de las páginas sin sesión. `app-quipu`: el quipu de la marca. `app-emblem`: el emblema de la barra y del acceso (AVIF con PNG de respaldo). `app-shell` (layout): barra y menú.
 
 Listas
 

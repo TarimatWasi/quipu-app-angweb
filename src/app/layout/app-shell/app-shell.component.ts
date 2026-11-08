@@ -1,4 +1,5 @@
-import { NgOptimizedImage, NgTemplateOutlet } from '@angular/common';
+import { NgTemplateOutlet } from '@angular/common';
+import { EmblemComponent } from '@shared/ui/emblem/emblem.component';
 import {
   Component,
   computed,
@@ -54,7 +55,7 @@ function changePasswordAction(): ChangePasswordAction {
 
 @Component({
   selector: 'app-shell',
-  imports: [NgOptimizedImage, NgTemplateOutlet, RouterLink, RouterOutlet, ToastComponent],
+  imports: [EmblemComponent, NgTemplateOutlet, RouterLink, RouterOutlet, ToastComponent],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
   providers: [{ provide: CHANGE_PASSWORD_ACTION, useFactory: changePasswordAction }],

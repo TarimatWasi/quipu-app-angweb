@@ -201,7 +201,7 @@ describe('AppShellComponent (P-01)', () => {
       const ui = within(root);
 
       expect(element(root, 'header').textContent.trim()).toBe('Quipu');
-      expect(element(root, 'header img.emblem').getAttribute('alt')).toBe('');
+      expect(element(root, 'header app-emblem img').getAttribute('alt')).toBe('');
       expect(root.querySelector('nav')).toBeNull();
       expect(ui.queryAllByRole('button')).toHaveLength(0);
       expect(root.querySelectorAll('main')).toHaveLength(1);

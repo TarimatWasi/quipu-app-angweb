@@ -33,7 +33,7 @@
       "continue": true
     },
     {
-      "src": "/(?:emblema[.]png|quipu-emblema[.]png|icon[.]svg|favicon[.]ico|apple-touch-icon[.]png)",
+      "src": "/(?:emblema[.]png|quipu-emblema[.]png|emblema-160[.]avif|icon[.]svg|favicon[.]ico|apple-touch-icon[.]png)",
       "headers": {
         "Cache-Control": "public, max-age=86400, stale-while-revalidate=604800"
       },
