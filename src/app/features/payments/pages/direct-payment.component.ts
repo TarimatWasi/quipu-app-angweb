@@ -96,7 +96,7 @@ export class DirectPaymentComponent {
   private readonly injector = inject(Injector);
 
   /** The rows of proofs and the errors of the server for them, shared with the other payment page. */
-  protected readonly editor = new ProofsEditor(() => this.submitted(), false);
+  protected readonly editor = new ProofsEditor(() => this.submitted());
   private readonly proofDrafts = this.editor.drafts;
   private readonly fieldErrors = this.editor.errors;
 
