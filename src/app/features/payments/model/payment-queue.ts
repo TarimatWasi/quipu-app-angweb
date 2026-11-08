@@ -1,3 +1,4 @@
+import { loadErrorText, noMatchHeading } from '@shared/text/list-text';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import type { PeriodFields } from '@shared/payments/payment-format';
 import {
@@ -27,8 +28,8 @@ export interface QueueSummary {
   readonly rejected: components['schemas']['DashboardRejected'];
 }
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar la cola de pagos.';
-export const NO_MATCH_HEADING = 'Ningún pago coincide con los filtros.';
+export const LOAD_ERROR_TEXT = loadErrorText('la cola de pagos');
+export const NO_MATCH_HEADING = noMatchHeading('pago');
 
 /** A view of the queue: its tab, how it travels in the address and what it says when empty. */
 export interface QueueView {
@@ -230,11 +231,6 @@ export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
     actionName: `${ACTIONS[item.status]} de ${item.guestName ?? item.documentNumber}`,
     primary: item.status !== 'APPROVED',
   };
-}
-
-/** «Mostrando 4 de 4», and «cargados» while more pages are left to ask. */
-export function countText(shown: number, loaded: number, more: boolean): string {
-  return `Mostrando ${String(shown)} de ${String(loaded)}${more ? ' cargados' : ''}`;
 }
 
 /** «Lo que toca ahora» of A5: the figure, what it counts, its context and the oldest to open. */

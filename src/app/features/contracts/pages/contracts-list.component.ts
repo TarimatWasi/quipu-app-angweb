@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
@@ -17,7 +18,6 @@ import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ContractsTableComponent } from '../components/contracts-table.component';
 import { AdminContractsService } from '../data/admin-contracts.service';
 import {
-  countText,
   DEFAULT_SORT,
   emptyText,
   hasFilters,

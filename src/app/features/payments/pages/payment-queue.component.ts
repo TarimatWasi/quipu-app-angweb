@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import { AsyncContentState } from '@shared/data/async-content';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
@@ -19,7 +20,6 @@ import { PaymentsTableComponent } from '../components/payments-table.component';
 import { AdminPaymentsService } from '../data/admin-payments.service';
 import type { PaymentQueueItem, QueueSummary, PaymentStatus } from '../data/admin-payments.service';
 import {
-  countText,
   DEFAULT_SORT,
   hasFilters,
   LOAD_ERROR_TEXT,
@@ -103,7 +103,7 @@ export class PaymentQueueComponent {
   });
   protected readonly loadedCount = computed(() => this.items().length);
   protected readonly count = computed(() =>
-    countText(this.rows().length, this.loadedCount(), this.nextCursor() !== null),
+    countText(this.rows().length, this.loadedCount(), this.nextCursor() !== null ? 'cargados' : ''),
   );
   protected readonly panel = computed(() => {
     const summary = this.summary.data();

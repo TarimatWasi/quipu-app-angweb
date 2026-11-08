@@ -1,3 +1,4 @@
+import { loadErrorText } from '@shared/text/list-text';
 import type { BffError } from '@core/http/bff-error';
 import { MAX_ACTIVE_ADMINISTRATORS } from './administrator';
 import type { AdministratorAction, AdministratorCounts, DocumentType } from './administrator';
@@ -6,7 +7,7 @@ import type { AdministratorAction, AdministratorCounts, DocumentType } from './a
 
 const MAX = String(MAX_ACTIVE_ADMINISTRATORS);
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar la lista de administradores.';
+export const LOAD_ERROR_TEXT = loadErrorText('la lista de administradores');
 export const ROOM_HELP_TEXT = `Puedes tener hasta ${MAX}.`;
 export const FULL_HELP_TEXT = `Ya hay ${MAX}, el máximo. Desactiva uno para crear otro.`;
 export const FOOTER_TEXT =

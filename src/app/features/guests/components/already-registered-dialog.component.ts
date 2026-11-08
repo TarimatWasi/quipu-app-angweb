@@ -2,9 +2,7 @@ import { Component, inject } from '@angular/core';
 import { MAT_DIALOG_DATA, MatDialog, MatDialogClose, MatDialogRef } from '@angular/material/dialog';
 import { DialogFrameComponent } from '@shared/ui/dialog-frame/dialog-frame.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
-import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
-import { documentText, GUEST_STATUS_BADGES } from '../model/guest-texts';
-import type { Tone } from '../model/guest-texts';
+import { documentText, GUEST_STATUS_BADGES, STATUS_TONES } from '../model/guest-texts';
 import {
   ALREADY_REGISTERED_TEXT,
   ALREADY_REGISTERED_TITLE,
@@ -13,14 +11,6 @@ import {
 } from '../model/new-guest';
 import type { NonInactiveGuestSummary } from '../model/new-guest';
 import { NEW_GUEST_DIALOG_STYLES } from './new-guest-dialog.styles';
-
-/** The P-08 tone of each colour of a guest badge. */
-const STATUS_TONES: Readonly<Record<Tone, StatusTone>> = {
-  ok: 'paid',
-  wait: 'review',
-  none: 'unpaid',
-  bad: 'overdue',
-};
 
 const TEXT_ID = 'already-registered-text';
 

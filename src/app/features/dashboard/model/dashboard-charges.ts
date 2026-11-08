@@ -50,7 +50,6 @@ const URGENCY: Readonly<Record<ChargeState, number>> = {
 };
 
 export const NO_ENVIRONMENT = 'Sin ambiente';
-export const NO_NAME = 'Huésped sin nombre';
 
 /** The button or link a row offers (P-06): what to do with that charge. */
 export interface ChargeAction {
@@ -219,8 +218,4 @@ export function segmentsOf(rows: readonly ChargeRow[]): StatusSegment[] {
 
 export function isChargeState(key: string | null): key is ChargeState {
   return key !== null && key in STATE_LABELS;
-}
-
-export function countText(shown: number, total: number): string {
-  return `Mostrando ${String(shown)} de ${String(total)} cobros`;
 }

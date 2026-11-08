@@ -1,3 +1,4 @@
+import { loadErrorText, noMatchHeading } from '@shared/text/list-text';
 import type { components } from '@core/api/bff.generated';
 import { formatDate, formatStay } from '@shared/payments/payment-format';
 import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
@@ -8,8 +9,8 @@ import { documentText, NO_ENVIRONMENT } from './guest-texts';
 type GuestSummary = components['schemas']['GuestSummary'];
 type EnvironmentRef = components['schemas']['EnvironmentRef'];
 
-export const LOAD_ERROR_TEXT = 'No se pudieron cargar los huéspedes.';
-export const NO_MATCH_HEADING = 'Ningún huésped coincide con los filtros.';
+export const LOAD_ERROR_TEXT = loadErrorText('los huéspedes', true);
+export const NO_MATCH_HEADING = noMatchHeading('huésped');
 export const NO_CURRENT_HEADING = 'Aún no hay huéspedes.';
 export const NO_CURRENT_TEXT =
   'Registra al primero con su documento: el huésped completa sus datos al activar su acceso.';
@@ -17,11 +18,6 @@ export const NO_INACTIVE_HEADING = 'No hay huéspedes inactivos.';
 export const NO_INACTIVE_TEXT = 'Un huésped que desactives aparecerá aquí, con su historial.';
 export const NO_ENVIRONMENT_DETAIL = 'se asigna con el contrato o la estadía';
 export const ACCESS_EXPIRED_TEXT = 'Acceso vencido';
-
-/** «Mostrando N de M cargados»: the guests on screen of the ones loaded so far. */
-export function countText(shown: number, loaded: number): string {
-  return `Mostrando ${String(shown)} de ${String(loaded)} cargados`;
-}
 
 /** The Ambiente column: its name, and under it what keeps it (or, inactive, the last one). */
 export interface EnvironmentText {

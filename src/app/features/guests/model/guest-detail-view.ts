@@ -1,3 +1,4 @@
+import { loadErrorText } from '@shared/text/list-text';
 import type { GuestDetail, PeriodStatus } from '@core/api/clients/admin-guests.service';
 import type { DetailPanel } from './detail-panel';
 
@@ -11,7 +12,7 @@ export interface DetailView {
   readonly left: LeftColumn;
 }
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar el huésped.';
+export const LOAD_ERROR_TEXT = loadErrorText('el huésped');
 /** How often the panel looks at the clock again (minutes left of an access). */
 export const CLOCK_MS = 15_000;
 

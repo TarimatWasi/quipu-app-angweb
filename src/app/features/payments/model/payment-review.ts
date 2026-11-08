@@ -1,3 +1,4 @@
+import { loadErrorText } from '@shared/text/list-text';
 import type { components } from '@core/api/bff.generated';
 import type { NoticeTone } from '@shared/ui/page-notice/page-notice.component';
 import {
@@ -18,7 +19,7 @@ type AdminProof = components['schemas']['AdminProof'];
 type PaymentSurplus = components['schemas']['PaymentSurplus'];
 type ProofEdit = components['schemas']['ProofEdit'];
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar este pago.';
+export const LOAD_ERROR_TEXT = loadErrorText('este pago');
 
 /** How the viewer shows a proof: the image, a PDF to download, cash, or a file it cannot open. */
 export type ProofView = 'image' | 'pdf' | 'cash' | 'missing';

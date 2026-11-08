@@ -1,3 +1,5 @@
+import { NO_NAME } from '@shared/text/guest-text';
+import { loadErrorText, noMatchHeading } from '@shared/text/list-text';
 import type { components } from '@core/api/bff.generated';
 import { formatDate, formatStay } from '@shared/payments/payment-format';
 import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
@@ -22,8 +24,6 @@ const STATUS_TONES: Readonly<Record<EnvironmentStatus, StatusTone>> = {
   ACTIVE: 'paid',
   INACTIVE: 'unpaid',
 };
-
-const NO_NAME = 'Huésped sin nombre';
 
 /** What an occupant is to the environment: «contrato hasta 31 mar 2027», «estadía 20 – 31 oct». */
 export function occupancyDetail(occupant: Occupant): string {
@@ -163,10 +163,6 @@ export function visibleEnvironments(
     .sort(compareBy(COMPARE, sort, byCode));
 }
 
-export function countText(shown: number, loaded: number): string {
-  return `Mostrando ${String(shown)} de ${String(loaded)} cargados`;
-}
-
 /** «Lo que toca ahora» of A2: how many are free, which ones and who is booked. */
 export interface FreePanel {
   readonly figure: number;
@@ -294,11 +290,11 @@ export function draftFacts(draft: EnvironmentDraft): FormFact[] {
 
 // The notices.
 
-export const LOAD_ERROR_TEXT = 'No se pudieron cargar los ambientes.';
+export const LOAD_ERROR_TEXT = loadErrorText('los ambientes', true);
 export const NOT_FOUND_TEXT = 'No se encontró el registro.';
 export const CREATED_TEXT = 'Ambiente creado.';
 export const UPDATED_TEXT = 'Ambiente actualizado.';
-export const NO_MATCH_HEADING = 'Ningún ambiente coincide con los filtros.';
+export const NO_MATCH_HEADING = noMatchHeading('ambiente');
 
 export function emptyText(status: EnvironmentStatus): { heading: string; text: string } {
   return status === 'ACTIVE'

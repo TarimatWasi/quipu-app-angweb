@@ -1,3 +1,4 @@
+import { loadErrorText } from '@shared/text/list-text';
 import type { components } from '@core/api/bff.generated';
 import {
   formatDate,
@@ -259,7 +260,7 @@ export function sideNote(guest: string | null, environment: string | null): stri
 
 // The notices.
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar el formulario.';
+export const LOAD_ERROR_TEXT = loadErrorText('el formulario');
 export const FILE_LABEL = 'PDF del contrato';
 export const FILE_PROMPT = 'Elige el PDF firmado del contrato';
 export const FILE_HELP = 'Solo PDF, hasta 10 MB.';
