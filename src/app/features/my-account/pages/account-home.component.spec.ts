@@ -58,8 +58,8 @@ describe('AccountHomeComponent', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
-    expect(ui.getByRole('link', { name: 'Subir voucher' })).toBeTruthy();
-    expect(ui.getByRole('link', { name: 'Historial de pagos' })).toBeTruthy();
+    expect(ui.getByRole('heading', { level: 1, name: 'Estado de cuenta' })).toBeTruthy();
+    expect(ui.getByRole('link', { name: 'Ver el historial de pagos' })).toBeTruthy();
     TestBed.inject(HttpTestingController).expectNone((req) =>
       req.url.endsWith('/bff/temporary-guest/payment-status'),
     );
@@ -87,8 +87,9 @@ describe('AccountHomeComponent', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     await fixture.whenStable();
 
-    expect(ui.getByRole('link', { name: 'Subir pago' })).toBeTruthy();
-    expect(ui.queryByRole('link', { name: 'Historial de pagos' })).toBeNull();
+    expect(ui.getByRole('heading', { level: 1, name: 'Estado de pago' })).toBeTruthy();
+    expect(ui.getByRole('link', { name: 'Subir voucher' })).toBeTruthy();
+    expect(ui.queryByRole('link', { name: 'Ver el historial de pagos' })).toBeNull();
     // The temporary guest has no credit (RN-38): its own credit is never asked.
     TestBed.inject(HttpTestingController).expectNone((req) =>
       req.url.endsWith('/bff/guest/credit'),

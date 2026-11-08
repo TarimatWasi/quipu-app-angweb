@@ -55,7 +55,7 @@ function isState(key: string | null): key is PeriodState {
   ],
   template: `
     <section class="section" aria-labelledby="periods-title">
-      <h2 id="periods-title">Pagos por mes</h2>
+      <h2 id="periods-title">{{ heading() }}</h2>
       @if (!loading() && rows().length === 0) {
         <app-empty-state [heading]="emptyHeading()">{{ emptyText() }}</app-empty-state>
       } @else {
@@ -72,7 +72,7 @@ function isState(key: string | null): key is PeriodState {
         }
         <app-data-table
           [loading]="loading()"
-          caption="Pagos por mes"
+          [caption]="heading()"
           [columns]="columns"
           [rows]="shown()"
           [rowId]="rowId"
@@ -85,6 +85,9 @@ function isState(key: string | null): key is PeriodState {
           /></ng-template>
           <ng-template appDataCell="month" [appDataCellRows]="shown()" let-row>
             {{ row.month }}
+            @if (row.note) {
+              <span class="note">{{ row.note }}</span>
+            }
           </ng-template>
           <ng-template appDataCell="due" [appDataCellRows]="shown()" let-row>
             <span class="figures">{{ row.due }}</span>
@@ -95,7 +98,7 @@ function isState(key: string | null): key is PeriodState {
           <ng-template appDataCell="state" [appDataCellRows]="shown()" let-row>
             <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
             @if (row.rejected) {
-              <span class="rejected">{{ rejectedText }}</span>
+              <span class="rejected">{{ rejectedLine(row) }}</span>
             }
           </ng-template>
           <ng-template appDataCell="action" [appDataCellRows]="shown()" let-row>
@@ -115,9 +118,12 @@ function isState(key: string | null): key is PeriodState {
             <div class="card-state">
               <app-status-badge [tone]="row.badge.tone" [label]="row.badge.label" />
               @if (row.rejected) {
-                <span class="rejected">{{ rejectedText }}</span>
+                <span class="rejected">{{ rejectedLine(row) }}</span>
               }
             </div>
+            @if (row.note) {
+              <p class="detail">{{ row.note }}</p>
+            }
             @if (row.action; as action) {
               <a [routerLink]="action.link" [queryParams]="action.query"
                 >{{ action.label }}<span class="cdk-visually-hidden"> de {{ row.month }}</span></a
@@ -169,6 +175,12 @@ function isState(key: string | null): key is PeriodState {
       font: var(--mat-sys-body-small);
       color: var(--quipu-tinta-secundaria);
     }
+    .note {
+      display: block;
+      font: var(--mat-sys-body-small);
+      font-weight: normal;
+      color: var(--quipu-tinta-secundaria);
+    }
     .card-state .rejected {
       margin-top: 0.25rem;
     }
@@ -176,6 +188,10 @@ function isState(key: string | null): key is PeriodState {
 })
 export class PeriodPaymentsComponent {
   readonly loading = input(false);
+  /** A3.2 and A4.2 say «Pagos por mes»; the guest's own home says «Tus meses» (H1). */
+  readonly heading = input('Pagos por mes');
+  /** The guest sees why a payment was rejected (D-34d); the administrator reads it in A5.2. */
+  readonly showReasons = input(false);
   readonly rows = input.required<readonly PeriodRow[]>();
   /** What it says while there is no month: A3.2 waits for a contract, A4.2 for its first month. */
   readonly emptyHeading = input('Aún no tiene meses por cobrar.');
@@ -200,6 +216,13 @@ export class PeriodPaymentsComponent {
     return sortPeriods(rows, this.sort());
   });
   protected readonly showing = computed(() => showingText(this.shown().length, this.rows().length));
+
+  /** «Pago rechazado», or «Rechazado: …» with its reason when the guest is the one reading. */
+  protected rejectedLine(row: PeriodRow): string {
+    return this.showReasons() && row.rejectionReason
+      ? `Rechazado: ${row.rejectionReason}`
+      : this.rejectedText;
+  }
 
   protected choose(key: string | null): void {
     this.selected.set(isState(key) ? key : null);

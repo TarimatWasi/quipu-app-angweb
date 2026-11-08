@@ -40,6 +40,7 @@ describe('A3.2 «Pagos por mes» rows', () => {
       badge: { label: 'Atrasado', tone: 'overdue' },
       rejected: true,
       rejectionReason: null,
+      note: null,
       action: { label: 'Corregir pago', link: ['/admin/payments', 'p9'], query: null },
     });
     expect(

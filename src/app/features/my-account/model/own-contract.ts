@@ -4,6 +4,7 @@ import {
   formatDate,
   formatMoney,
   limaDayOf,
+  longDay,
   monthName,
 } from '@shared/payments/payment-format';
 import { environmentLabel } from '@shared/text/environment-text';
@@ -68,15 +69,6 @@ export interface ContractContext {
 
 const OWED = new Set<PeriodStatus['status']>(['UNPAID', 'OVERDUE']);
 
-/** «28 de febrero de 2027»; the year is left out when it is the current one, unless asked. */
-function longDate(day: string, now: Date, withYear = false): string {
-  const [year = '', month = '', date = ''] = day.split('-');
-  const name = monthName(`${year}-${month}`) ?? '';
-  const sameYear = limaDayOf(now.toISOString())?.startsWith(year) === true;
-  const base = `${String(Number(date))} de ${name}`;
-  return withYear || !sameYear ? `${base} de ${year}` : base;
-}
-
 /** «hoy», «mañana», «en 30 días», «en 4 meses». */
 function untilText(days: number): string {
   if (days <= 0) return 'hoy';
@@ -101,24 +93,24 @@ function stateText(contract: Contract, { now, periods }: ContractContext): strin
     const day = limaDayOf(contract.terminatedAt ?? '');
     return day === null
       ? 'La administración lo finalizó.'
-      : `La administración lo finalizó el ${longDate(day, now)}.`;
+      : `La administración lo finalizó el ${longDay(day, now)}.`;
   }
   const end = contract.endDate ?? null;
   if (contract.status === 'EXPIRED') {
-    return end === null ? 'Terminó.' : `Terminó el ${longDate(end, now)}.`;
+    return end === null ? 'Terminó.' : `Terminó el ${longDay(end, now)}.`;
   }
   const toStart = daysFromToday(contract.startDate, now);
   if (toStart !== null && toStart > 0) {
     const due = firstDue(contract, periods);
-    const first = due === null ? '' : ` Tu primer pago vence el ${longDate(due, now)}.`;
-    return `Empieza el ${longDate(contract.startDate, now)}, ${untilText(toStart)}.${first}`;
+    const first = due === null ? '' : ` Tu primer pago vence el ${longDay(due, now)}.`;
+    return `Empieza el ${longDay(contract.startDate, now)}, ${untilText(toStart)}.${first}`;
   }
   if (end === null) {
     return 'No tiene fecha de fin: sigue hasta que tú o la administración lo terminen.';
   }
   const toEnd = daysFromToday(end, now);
   const when = toEnd === null ? '' : `, ${untilText(toEnd)}`;
-  return `Vence el ${longDate(end, now)}${when}.`;
+  return `Vence el ${longDay(end, now)}${when}.`;
 }
 
 /** What is still owed on this contract, as «octubre y noviembre» and the total; null when nothing. */
@@ -161,7 +153,7 @@ function noticeOf(
     return {
       tone: 'success',
       heading: 'Tu renovación ya está cargada.',
-      text: `Empieza el ${longDate(next.startDate, now)}; la ves abajo, en Tu próximo contrato.`,
+      text: `Empieza el ${longDay(next.startDate, now)}; la ves abajo, en Tu próximo contrato.`,
       accountLink: false,
     };
   }
@@ -169,7 +161,7 @@ function noticeOf(
     return {
       tone: 'info',
       heading: '¿Quieres seguir?',
-      text: `Habla con la administración antes del ${longDate(contract.endDate, now)} para renovar.`,
+      text: `Habla con la administración antes del ${longDay(contract.endDate, now)} para renovar.`,
       accountLink: false,
     };
   }
@@ -223,7 +215,7 @@ function factsOf(contract: Contract, before: Contract | null): ContractFact[] {
 
 function fileOf(contract: Contract, now: Date): ContractFile {
   const day = limaDayOf(contract.file.uploadedAt);
-  const loaded = day === null ? '' : ` · cargado el ${longDate(day, now)}`;
+  const loaded = day === null ? '' : ` · cargado el ${longDay(day, now)}`;
   return {
     name: contract.file.name,
     // A contract file is always a PDF (RF-15).
@@ -255,7 +247,7 @@ export function nextBlock(
 ): ContractBlock {
   return {
     state: { tone: 'paid', label: 'Vigente' },
-    text: `Empieza el ${longDate(next.startDate, context.now, true)}.`,
+    text: `Empieza el ${longDay(next.startDate, context.now, true)}.`,
     notice: null,
     facts: factsOf(next, current),
     file: fileOf(next, context.now),

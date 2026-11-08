@@ -241,3 +241,12 @@ export function limaDay(instant: Date): string {
 export function limaMonth(instant: Date): string {
   return limaDay(instant).slice(0, 7);
 }
+
+/** «5 de octubre»; with the year («… de 2027») when it is not the current one in Lima, or if asked. */
+export function longDay(day: string, now: Date, withYear = false): string {
+  const [year = '', month = '', date = ''] = day.split('-');
+  const name = monthName(`${year}-${month}`) ?? '';
+  const sameYear = limaDayOf(now.toISOString())?.startsWith(year) === true;
+  const base = `${String(Number(date))} de ${name}`;
+  return withYear || !sameYear ? `${base} de ${year}` : base;
+}

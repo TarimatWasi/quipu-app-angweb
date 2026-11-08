@@ -92,6 +92,8 @@ export interface PeriodRow {
   readonly rejected: boolean;
   /** The reviewer's reason, only for a rejected payment; «Lo que toca ahora» quotes it. */
   readonly rejectionReason: string | null;
+  /** What is worth saying under the month, e.g. the credit it uses (H1); null for most. */
+  readonly note: string | null;
   readonly action: PaymentAction | null;
 }
 
@@ -110,6 +112,7 @@ export function toPeriodRow(item: PeriodItem, guestId: string): PeriodRow {
     badge: PERIOD_BADGES[item.status],
     rejected,
     rejectionReason: rejected ? (item.rejectionReason ?? null) : null,
+    note: null,
     action: paymentAction(item.status, item.paymentId, guestId),
   };
 }

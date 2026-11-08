@@ -1,0 +1,82 @@
+<app-page-header [heading]="title" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton subject="tu estado de pago"
+      ><ng-template appSkeletonContent>
+        <div class="stack">
+          <app-now-panel headingId="stay-now-loading" [loading]="true" />
+          <section class="block">
+            <h2>Tu estadía</h2>
+            <app-skeleton-facts
+              class="facts"
+              [wideFirst]="false"
+              [stoneAll]="true"
+              [labels]="factLabels"
+            />
+          </section>
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    @if (none()) {
+      <app-empty-state class="state" [heading]="noStayTitle">{{ noStayText }}</app-empty-state>
+    } @else {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="reload()"
+      />
+    }
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error
+        class="state"
+        [message]="message"
+        [retrying]="refreshing()"
+        (retry)="reload()"
+      />
+    }
+    @if (now(); as stay) {
+      <div class="stack">
+        @if (rejected(); as alert) {
+          <app-page-notice tone="error" [heading]="alert.heading">{{
+            alert.reason
+          }}</app-page-notice>
+        }
+        @if (refund(); as notice) {
+          <app-page-notice [tone]="notice.tone" [heading]="notice.heading">{{
+            notice.text
+          }}</app-page-notice>
+        }
+        <app-now-panel
+          headingId="stay-now"
+          [figure]="stay.figure"
+          [label]="stay.label"
+          [text]="stay.text"
+          [urgent]="stay.urgent"
+        >
+          @if (stay.action; as action) {
+            <a
+              class="quipu-button quipu-button--primary"
+              [routerLink]="action.link"
+              [queryParams]="action.query"
+              >{{ action.label }}</a
+            >
+          }
+        </app-now-panel>
+        <section class="block" aria-labelledby="stay-title">
+          <h2 id="stay-title">{{ heading() }}</h2>
+          <dl class="facts">
+            @for (fact of facts(); track fact.label) {
+              <app-fact-tile surface="stone" [label]="fact.label" [value]="fact.value" />
+            }
+          </dl>
+          <p class="note">{{ note }}</p>
+        </section>
+      </div>
+    }
+  }
+}
