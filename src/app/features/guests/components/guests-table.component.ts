@@ -13,16 +13,17 @@ import type { GuestRow, GuestSort, SortKey } from '../model/guest-list';
 type Column = SortKey | 'action';
 
 const COLUMNS: readonly DataColumn<Column>[] = [
-  { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true },
-  { key: 'type', label: 'Tipo', sortable: true },
-  { key: 'environment', label: 'Ambiente', sortable: true },
-  { skeleton: { shape: 'badge' }, key: 'status', label: 'Estado', sortable: true },
+  { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true, width: '28%' },
+  { key: 'type', label: 'Tipo', sortable: true, width: '14%' },
+  { key: 'environment', label: 'Ambiente', sortable: true, width: '28%' },
+  { skeleton: { shape: 'badge' }, key: 'status', label: 'Estado', sortable: true, width: '18%' },
   {
     skeleton: { width: '7rem' },
     key: 'action',
     label: 'Acciones',
     hiddenLabel: true,
     align: 'action',
+    width: '9rem',
   },
 ];
 

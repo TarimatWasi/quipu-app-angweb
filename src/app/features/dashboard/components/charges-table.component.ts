@@ -12,13 +12,13 @@ import type { ChargeRow, ChargeSort, ChargeSortKey } from '../model/dashboard-ch
 type Column = ChargeSortKey | 'action';
 
 const COLUMNS: readonly DataColumn<Column>[] = [
-  { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true },
-  { key: 'environment', label: 'Ambiente', sortable: true },
-  { key: 'period', label: 'Período', sortable: true },
-  { key: 'amount', label: 'Monto', sortable: true, align: 'end' },
-  { key: 'due', label: 'Vence', sortable: true },
-  { key: 'state', label: 'Estado', sortable: true },
-  { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action' },
+  { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true, width: '24%' },
+  { key: 'environment', label: 'Ambiente', sortable: true, width: '13%' },
+  { key: 'period', label: 'Período', sortable: true, width: '12%' },
+  { key: 'amount', label: 'Monto', sortable: true, align: 'end', width: '12%' },
+  { key: 'due', label: 'Vence', sortable: true, width: '12%' },
+  { key: 'state', label: 'Estado', sortable: true, width: '14%' },
+  { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action', width: '9rem' },
 ];
 
 /**

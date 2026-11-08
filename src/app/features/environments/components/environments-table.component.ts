@@ -12,15 +12,23 @@ import type { EnvironmentRow, EnvironmentSort, SortKey } from '../model/environm
 type Column = SortKey | 'action';
 
 const COLUMNS: readonly DataColumn<Column>[] = [
-  { key: 'code', label: 'Ambiente', sortable: true, rowHeader: true, skeleton: { width: '4rem' } },
-  { key: 'type', label: 'Tipo', sortable: true },
-  { key: 'occupancy', label: 'Ocupación', sortable: true },
-  { key: 'status', label: 'Estado', sortable: true, skeleton: { shape: 'badge' } },
+  {
+    key: 'code',
+    label: 'Ambiente',
+    sortable: true,
+    rowHeader: true,
+    width: '14%',
+    skeleton: { width: '4rem' },
+  },
+  { key: 'type', label: 'Tipo', sortable: true, width: '14%' },
+  { key: 'occupancy', label: 'Ocupación', sortable: true, width: '36%' },
+  { key: 'status', label: 'Estado', sortable: true, width: '16%', skeleton: { shape: 'badge' } },
   {
     key: 'action',
     label: 'Acciones',
     hiddenLabel: true,
     align: 'action',
+    width: '10rem',
     skeleton: { width: '8rem' },
   },
 ];

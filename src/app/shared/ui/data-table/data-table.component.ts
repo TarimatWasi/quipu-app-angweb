@@ -13,6 +13,7 @@ import {
   output,
   TemplateRef,
 } from '@angular/core';
+import { ColumnWidthDirective } from './column-width.directive';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
 import { DataFooterDirective } from './data-footer.directive';
@@ -32,6 +33,12 @@ export interface DataColumn<K extends string = string> {
   readonly rowHeader?: boolean;
   /** Figures go to the right; `action` to the right and on one line. */
   readonly align?: 'start' | 'end' | 'action';
+  /**
+   * Its width (`24%`, `9rem`). When the columns give one the table has a fixed layout (TAR-319):
+   * every column keeps its width whether the rows are blocks or data, so nothing moves when the
+   * list arrives, and a text that does not fit ends in «…».
+   */
+  readonly width?: string;
 }
 
 /**
@@ -42,7 +49,13 @@ export interface DataColumn<K extends string = string> {
  */
 @Component({
   selector: 'app-data-table',
-  imports: [NgTemplateOutlet, SkeletonComponent, SkeletonContentDirective, SkeletonBlockComponent],
+  imports: [
+    ColumnWidthDirective,
+    NgTemplateOutlet,
+    SkeletonComponent,
+    SkeletonContentDirective,
+    SkeletonBlockComponent,
+  ],
   templateUrl: './data-table.component.html',
   styleUrl: './data-table.component.scss',
 })
@@ -75,6 +88,8 @@ export class DataTableComponent<T, K extends string = string> {
   private readonly cardTemplate = contentChild(DataCardDirective);
   private readonly footerTemplate = contentChild(DataFooterDirective);
 
+  /** The columns say their widths: the layout is fixed (`.quipu-table--fixed`). */
+  protected readonly fixed = computed(() => this.columns().some((column) => column.width));
   protected readonly card = computed(() => this.cardTemplate()?.template ?? null);
   protected readonly footer = computed(() => this.footerTemplate()?.template ?? null);
   protected readonly headers = computed(() => {

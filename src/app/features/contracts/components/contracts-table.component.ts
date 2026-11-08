@@ -12,16 +12,17 @@ import type { ContractRow, ContractSort, SortKey } from '../model/contract';
 type Column = SortKey | 'action';
 
 const COLUMNS: readonly DataColumn<Column>[] = [
-  { key: 'name', label: 'Huésped', sortable: true, rowHeader: true, skeleton: { width: '9rem' } },
-  { key: 'environment', label: 'Ambiente', sortable: true },
-  { key: 'fee', label: 'Cuota', sortable: true, align: 'end' },
-  { key: 'end', label: 'Vigencia', sortable: true },
-  { key: 'state', label: 'Estado', sortable: true, skeleton: { shape: 'badge' } },
+  { key: 'name', label: 'Huésped', sortable: true, rowHeader: true, width: '24%' },
+  { key: 'environment', label: 'Ambiente', sortable: true, width: '15%' },
+  { key: 'fee', label: 'Cuota', sortable: true, align: 'end', width: '13%' },
+  { key: 'end', label: 'Vigencia', sortable: true, width: '20%' },
+  { key: 'state', label: 'Estado', sortable: true, width: '14%', skeleton: { shape: 'badge' } },
   {
     key: 'action',
     label: 'Acciones',
     hiddenLabel: true,
     align: 'action',
+    width: '9rem',
     skeleton: { width: '6rem' },
   },
 ];

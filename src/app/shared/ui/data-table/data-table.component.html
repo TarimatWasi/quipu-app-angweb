@@ -10,12 +10,19 @@
     <ng-container [ngTemplateOutlet]="before" />
   }
   <div class="quipu-table-wrap" [class.quipu-only-wide]="card() !== null">
-    <table class="quipu-table">
+    <table class="quipu-table" [class.quipu-table--fixed]="fixed()">
       <caption class="cdk-visually-hidden">
         {{
           caption()
         }}
       </caption>
+      @if (fixed()) {
+        <colgroup>
+          @for (header of headers(); track header.key) {
+            <col [appColumnWidth]="header.width" />
+          }
+        </colgroup>
+      }
       <thead>
         <tr>
           @for (header of headers(); track header.key) {

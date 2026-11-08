@@ -42,7 +42,30 @@ async function offenders(): Promise<string[]> {
     .sort();
 }
 
+// Las tablas con ancho por columna (TAR-319): sin él el ancho sigue al contenido y el esqueleto no
+// coincide con la lista cargada. review-amounts es una tabla de tres columnas dentro de otra pantalla.
+const TABLES_WITHOUT_WIDTHS = ['features/payments/components/review-amounts.component.ts'];
+
+async function tablesWithoutWidths(): Promise<string[]> {
+  const fs = await nodeFs();
+  const files = await templates('src/app/features');
+  return files
+    .filter((path) => path.endsWith('.ts'))
+    .filter((path) => {
+      const source = fs.readFileSync(path, 'utf8');
+      return source.includes('DataColumn<') && !source.includes("width: '");
+    })
+    .map((path) => path.replace('src/app/', ''))
+    .sort();
+}
+
 describe('patrón de skeleton (TAR-311)', () => {
+  it('toda tabla da el ancho de sus columnas (TAR-319)', async () => {
+    expect((await tablesWithoutWidths()).filter((p) => !TABLES_WITHOUT_WIDTHS.includes(p))).toEqual(
+      [],
+    );
+  });
+
   it('ninguna pantalla nueva dibuja un componente como rectángulo de alto fijo', async () => {
     expect((await offenders()).filter((path) => !MEDIA_PLACEHOLDERS.includes(path))).toEqual([]);
   });

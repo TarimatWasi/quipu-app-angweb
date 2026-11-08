@@ -180,4 +180,37 @@ describe('DataTableComponent (P-08)', () => {
       vi.useRealTimers();
     }
   });
+
+  describe('with widths on the columns (TAR-319)', () => {
+    function render(columns: readonly DataColumn<Key>[]) {
+      const fixture = TestBed.createComponent<DataTableComponent<Row, Key>>(DataTableComponent);
+      fixture.componentRef.setInput('columns', columns);
+      fixture.componentRef.setInput('rows', []);
+      fixture.componentRef.setInput('rowId', (row: Row) => row.id);
+      fixture.componentRef.setInput('caption', 'Pagos');
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('has a fixed layout and gives each column its width', () => {
+      const root = render([
+        { key: 'name', label: 'Nombre', rowHeader: true, width: '60%' },
+        { key: 'amount', label: 'Monto', align: 'end', width: '30%' },
+        { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action', width: '9rem' },
+      ]);
+
+      expect(root.querySelector('table')?.classList).toContain('quipu-table--fixed');
+      const widths = Array.from(root.querySelectorAll<HTMLElement>('col')).map(
+        (col) => col.style.width,
+      );
+      expect(widths).toEqual(['60%', '30%', '9rem']);
+    });
+
+    it('keeps the layout of the content when no column gives a width', () => {
+      const root = render(COLUMNS);
+
+      expect(root.querySelector('table')?.classList).not.toContain('quipu-table--fixed');
+      expect(root.querySelector('colgroup')).toBeNull();
+    });
+  });
 });

@@ -12,10 +12,10 @@ type Column = SortKey | 'middle' | 'action';
 
 function columnsOf(tab: Tab): readonly DataColumn<Column>[] {
   return [
-    { key: 'title', label: FIRST_COLUMN[tab], sortable: true, rowHeader: true },
-    { key: 'middle', label: MIDDLE_COLUMN[tab] },
-    { key: 'amount', label: 'Monto', sortable: true, align: 'end' },
-    { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action' },
+    { key: 'title', label: FIRST_COLUMN[tab], sortable: true, rowHeader: true, width: '36%' },
+    { key: 'middle', label: MIDDLE_COLUMN[tab], width: '28%' },
+    { key: 'amount', label: 'Monto', sortable: true, align: 'end', width: '16%' },
+    { key: 'action', label: 'Acción', hiddenLabel: true, align: 'action', width: '11rem' },
   ];
 }
 
