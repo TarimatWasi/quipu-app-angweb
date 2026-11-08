@@ -5,20 +5,33 @@
     <app-skeleton subject="tu contrato"
       ><ng-template appSkeletonContent>
         <div class="page">
-          <app-skeleton-block shape="rectangle" height="3.25rem" width="32.5rem" />
-          <app-skeleton-facts
-            class="facts"
-            [wideFirst]="false"
-            [labels]="[
-              'Ambiente',
-              'Cuota mensual',
-              'Día de pago',
-              'Días de gracia',
-              'Desde',
-              'Hasta',
-            ]"
-          />
-          <app-skeleton-block shape="rectangle" height="7.5rem" />
+          <section class="block">
+            <p class="skeleton-state">
+              <app-skeleton-block shape="badge" /><app-skeleton-block
+                width="24rem"
+                height="1.5rem"
+              />
+            </p>
+          </section>
+          <section class="block">
+            <h2>Lo que acordaste</h2>
+            <app-skeleton-facts
+              class="facts"
+              [wideFirst]="false"
+              [labels]="[
+                'Ambiente',
+                'Cuota mensual',
+                'Día de pago',
+                'Días de gracia',
+                'Desde',
+                'Hasta',
+              ]"
+            />
+          </section>
+          <section class="block">
+            <h2>El documento</h2>
+            <app-skeleton-cards [count]="1" [action]="true" />
+          </section>
         </div> </ng-template
     ></app-skeleton>
   }

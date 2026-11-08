@@ -19,7 +19,8 @@ import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
-import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
+import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatusFilterComponent } from '@shared/ui/status-filter/status-filter.component';
@@ -73,7 +74,8 @@ interface HomeData {
     ListFiltersComponent,
     LoadErrorComponent,
     PageHeaderComponent,
-    SkeletonBlockComponent,
+    ListFiltersSkeletonComponent,
+    NowPanelComponent,
     SkeletonComponent,
     SkeletonContentDirective,
     StatusFilterComponent,

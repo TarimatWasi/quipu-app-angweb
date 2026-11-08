@@ -2,16 +2,22 @@
 
 @switch (view().status) {
   @case ('initial-loading') {
-    <app-skeleton class="skeleton" subject="el inicio"
-      ><ng-template appSkeletonContent>
-        <app-skeleton-block shape="rectangle" height="9.375rem" />
-        <div class="skeleton-rows">
-          <app-skeleton-block shape="rectangle" height="7.5rem" />
-          <app-skeleton-block shape="rectangle" height="4rem" />
-          <app-skeleton-block shape="rectangle" height="4rem" />
-          <app-skeleton-block shape="rectangle" height="4rem" />
-        </div> </ng-template
+    <app-skeleton class="now" subject="el inicio" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-now-panel headingId="now-loading" [loading]="true" /></ng-template
     ></app-skeleton>
+    <section class="month" aria-labelledby="charges-loading-title">
+      <h2 id="charges-loading-title">Cobros del mes</h2>
+      <ng-template #filtersSkeleton>
+        <app-list-filters-skeleton class="filters" [fields]="['Tipo de huésped']" />
+      </ng-template>
+      <app-charges-table
+        [loading]="true"
+        [rows]="[]"
+        [sort]="sort()"
+        [skeletonBefore]="filtersSkeleton"
+      />
+    </section>
   }
   @case ('initial-error') {
     <app-load-error

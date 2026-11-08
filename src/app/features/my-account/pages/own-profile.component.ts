@@ -26,6 +26,8 @@ import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
+import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
@@ -87,9 +89,11 @@ const ERROR_ID = 'own-profile-error';
     PersonalDataFieldsComponent,
     RouterLink,
     SkeletonBlockComponent,
+    SkeletonCardsComponent,
     SkeletonComponent,
     SkeletonContentDirective,
     SkeletonFactsComponent,
+    SkeletonFieldsComponent,
   ],
   templateUrl: './own-profile.component.html',
   styles: OWN_PROFILE_STYLES,

@@ -15,6 +15,21 @@ export const OWN_CONTRACT_STYLES = `
     gap: 3rem;
     margin-top: 2rem;
   }
+  .block {
+    display: grid;
+    gap: 0.875rem;
+    align-content: start;
+  }
+  .block h2,
+  .skeleton-state {
+    margin: 0;
+  }
+  .skeleton-state {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.625rem 1rem;
+  }
   .next {
     display: grid;
     gap: 0.875rem;

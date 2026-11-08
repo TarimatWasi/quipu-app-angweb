@@ -6,6 +6,7 @@ import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.componen
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
+import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
@@ -54,6 +55,7 @@ interface ContractView {
     LoadErrorComponent,
     PageHeaderComponent,
     SkeletonBlockComponent,
+    SkeletonCardsComponent,
     SkeletonComponent,
     SkeletonContentDirective,
     SkeletonFactsComponent,

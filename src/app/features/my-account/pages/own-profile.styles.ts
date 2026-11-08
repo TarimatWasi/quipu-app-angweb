@@ -38,6 +38,17 @@ export const OWN_PROFILE_STYLES = `
     gap: 0.875rem;
     justify-items: start;
   }
+  .skeleton-fields {
+    display: grid;
+    gap: 2.25rem;
+  }
+  .skeleton-fields .block {
+    justify-items: stretch;
+  }
+  .optional {
+    font-weight: normal;
+    color: var(--quipu-tinta-secundaria);
+  }
   .block h2,
   .block p {
     margin: 0;

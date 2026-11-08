@@ -11,15 +11,6 @@ export const ADMIN_HOME_STYLES = `
     display: block;
     margin-top: 1.5rem;
   }
-  .skeleton {
-    display: block;
-    margin-top: 1.75rem;
-  }
-  .skeleton-rows {
-    display: grid;
-    gap: var(--quipu-franja);
-    margin-top: 1.75rem;
-  }
   .now {
     margin-top: 1.75rem;
   }
