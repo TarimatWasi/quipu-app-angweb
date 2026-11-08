@@ -20,8 +20,12 @@ import { DataFooterDirective } from './data-footer.directive';
 import { ariaSort } from './list-sort';
 import type { ListSort } from './list-sort';
 
-/** The width of the column with the buttons of a row. */
-export const ACTION_WIDTH = '9rem';
+/**
+ * The width of the column with the buttons of a row (TAR-329): the widest actions are two links
+ * («Editar» and «Desactivar») or a button of a row («Registrar pago»), and each cell has 20 px of
+ * padding on both sides. A narrower column cut the text off.
+ */
+export const ACTION_WIDTH = '14rem';
 
 /** The width of each column of the table (`<col>`), the same with skeleton rows or with data. */
 export function columnWidths(columns: readonly DataColumn[]): string[] {

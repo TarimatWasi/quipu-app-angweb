@@ -7,7 +7,7 @@ import { fireEvent, within } from '@testing-library/dom';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
 import { DataFooterDirective } from './data-footer.directive';
-import { columnWidths, DataTableComponent } from './data-table.component';
+import { ACTION_WIDTH, columnWidths, DataTableComponent } from './data-table.component';
 import type { DataColumn } from './data-table.component';
 import type { ListSort } from './list-sort';
 
@@ -201,9 +201,9 @@ describe('DataTableComponent (P-08)', () => {
 
     it('gives the action column its width and shares the rest, twice for the one that names the row', () => {
       expect(columnWidths(COLUMNS)).toEqual([
-        'calc((100% - (9rem)) * 2 / 3)',
-        'calc((100% - (9rem)) * 1 / 3)',
-        '9rem',
+        `calc((100% - (${ACTION_WIDTH})) * 2 / 3)`,
+        `calc((100% - (${ACTION_WIDTH})) * 1 / 3)`,
+        ACTION_WIDTH,
       ]);
     });
 
@@ -216,10 +216,10 @@ describe('DataTableComponent (P-08)', () => {
           { key: 'd', label: 'D', align: 'action' },
         ]),
       ).toEqual([
-        'calc((100% - (6rem + 9rem)) * 2 / 5)',
-        'calc((100% - (6rem + 9rem)) * 3 / 5)',
+        `calc((100% - (6rem + ${ACTION_WIDTH})) * 2 / 5)`,
+        `calc((100% - (6rem + ${ACTION_WIDTH})) * 3 / 5)`,
         '6rem',
-        '9rem',
+        ACTION_WIDTH,
       ]);
       expect(columnWidths([{ key: 'a', label: 'A' }])).toEqual(['calc(100% * 1 / 1)']);
     });

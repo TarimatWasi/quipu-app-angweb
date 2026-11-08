@@ -926,6 +926,12 @@ fieldset.quipu-field > legend {
     overflow: hidden;
     text-overflow: ellipsis;
   }
+
+  // The buttons of a row are never cut off (TAR-329): if one does not fit it shows whole.
+  th.align-action,
+  td.align-action {
+    overflow: visible;
+  }
 }
 
 // Cabecera ordenable de una tabla (A3, A3.2): un botón dentro del <th aria-sort>, con su flecha que
