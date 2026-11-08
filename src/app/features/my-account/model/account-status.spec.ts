@@ -53,6 +53,20 @@ describe('H1 «Estado de cuenta»: lo que toca ahora', () => {
     expect(now.action?.label).toBe('Subir voucher de septiembre');
   });
 
+  it('says «vence» of a month whose day has not come, even when an older one is late', () => {
+    const now = accountNow(
+      [
+        period({ period: '2026-10', dueDate: '2026-10-05' }),
+        period({ period: '2026-11', status: 'UNPAID', dueDate: '2026-11-05' }),
+      ],
+      new Date('2026-11-01T15:00:00Z'),
+    );
+
+    expect(now.text).toBe(
+      'Octubre venció el 5 de octubre y noviembre vence el 5 de noviembre. Empieza por octubre.',
+    );
+  });
+
   it('says what the credit takes off the monthly amount', () => {
     const now = accountNow([period({ creditApplied: 50, amountDue: 750 })], NOW);
 

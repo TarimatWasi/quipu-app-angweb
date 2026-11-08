@@ -78,10 +78,32 @@ function spanishList(items: readonly string[]): string {
   return items.length <= 1 ? last : `${items.slice(0, -1).join(', ')} y ${last}`;
 }
 
+/** «vence» before the day of a month and «venció» once it has passed. */
+function dueVerb(period: PeriodStatus, now: Date): 'vence' | 'venció' {
+  const days = daysFromToday(period.dueDate, now);
+  return days !== null && days >= 0 ? 'vence' : 'venció';
+}
+
 /** «venció el 5 de octubre» or, before the day, «vence el 5 de noviembre». */
 function dueClause(period: PeriodStatus, now: Date): string {
-  const days = daysFromToday(period.dueDate, now);
-  return `${days !== null && days >= 0 ? 'vence' : 'venció'} el ${longDay(period.dueDate, now)}`;
+  return `${dueVerb(period, now)} el ${longDay(period.dueDate, now)}`;
+}
+
+/**
+ * «Septiembre venció el 5 de septiembre y octubre el 5 de octubre». Each month has its own tense: an
+ * old one is late while the current one may not be yet, so a month says its verb only when it
+ * differs from the one before («octubre venció … y noviembre vence el …»).
+ */
+function owedMonthsText(owed: readonly PeriodStatus[], now: Date): string {
+  const parts = owed.map((period, index) => {
+    const day = longDay(period.dueDate, now);
+    const verb = dueVerb(period, now);
+    const name = index === 0 ? capital(month(period.period)) : month(period.period);
+    const previous = owed[index - 1];
+    const sameVerb = previous !== undefined && dueVerb(previous, now) === verb;
+    return sameVerb ? `${name} el ${day}` : `${name} ${verb} el ${day}`;
+  });
+  return spanishList(parts);
 }
 
 const uploadAction = (period: PeriodStatus): PaymentAction => ({
@@ -117,15 +139,9 @@ function owedNow(owed: readonly PeriodStatus[], now: Date): AccountNow {
     };
   }
   if (owed.length > 1 && first) {
-    const parts = owed.map((period, index) => {
-      const day = longDay(period.dueDate, now);
-      return index === 0
-        ? `${capital(month(period.period))} venció el ${day}`
-        : `${month(period.period)} el ${day}`;
-    });
     return {
       ...base,
-      text: `${spanishList(parts)}. Empieza por ${month(first.period)}.`,
+      text: `${owedMonthsText(owed, now)}. Empieza por ${month(first.period)}.`,
       action: uploadAction(first),
     };
   }

@@ -133,17 +133,28 @@ describe('H1 «Estado de cuenta»', () => {
     expect(ui.queryByRole('link', { name: /Subir voucher|Corregir pago de/ })).toBeNull();
   });
 
+  it('shows the months and their actions even if the credit never answers', async () => {
+    const { ui, answer, http, settle } = await render();
+    await answer(isStatus, [period()]);
+
+    expect(ui.getByRole('link', { name: 'Subir voucher de septiembre' })).toBeTruthy();
+    expect(ui.queryByLabelText('Cargando tu estado de cuenta')).toBeNull();
+    // It answers late: the notice appears without the page moving.
+    http.expectOne(isCredit).flush({ balance: 50, toRefund: false, origins: [], lastRefund: null });
+    await settle();
+    expect(ui.getByText('Tienes S/ 50.00 a favor.')).toBeTruthy();
+  });
+
   it('says that it could not load and reads again on «Reintentar»', async () => {
     const { ui, answer, http, settle } = await render();
-    // When the months fail the credit request is cancelled with them: only the months answer.
     await answer(isStatus, { code: 'X', message: 'x' }, 500);
+    await answer(isCredit, NO_CREDIT);
 
     expect(text(ui.getByRole('alert'))).toContain('No se pudo cargar tu estado de cuenta.');
     fireEvent.click(ui.getByRole('button', { name: 'Reintentar' }));
     await settle();
     http.expectOne(isStatus).flush([]);
-    // The credit asked before was cancelled with the months: the live one is the last.
-    http.match(isCredit).at(-1)?.flush(NO_CREDIT);
+    http.expectOne(isCredit).flush(NO_CREDIT);
     await settle();
 
     expect(ui.queryByRole('alert')).toBeNull();
