@@ -1,7 +1,7 @@
 import { InjectionToken, signal } from '@angular/core';
 
-/** P-12: an answer faster than this shows no skeleton, so nothing flickers. */
-export const SKELETON_DELAY_MS = 300;
+/** The skeleton shows at once: a screen goes from nothing to the skeleton to the data, never through a blank step. */
+export const SKELETON_DELAY_MS = 0;
 /** P-12: after this long without an answer, the notice of the server waking up. */
 export const SLOW_NOTICE_MS = 8000;
 
@@ -33,10 +33,15 @@ export class LoadTiming {
 
   start(): void {
     this.stop();
+    if (this.timing.showAfterMs <= 0) this.skeleton.set(true);
     this.timers = [
-      setTimeout(() => {
-        this.skeleton.set(true);
-      }, this.timing.showAfterMs),
+      ...(this.timing.showAfterMs > 0
+        ? [
+            setTimeout(() => {
+              this.skeleton.set(true);
+            }, this.timing.showAfterMs),
+          ]
+        : []),
       setTimeout(() => {
         this.slow.set(true);
       }, this.timing.slowNoticeAfterMs),

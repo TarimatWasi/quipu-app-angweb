@@ -8,6 +8,7 @@ import type { NowPanel } from '../model/guest-list-texts';
  */
 @Component({
   selector: 'app-guests-now-panel',
+  styles: ':host { display: block; }',
   imports: [NowPanelComponent],
   template: `
     <app-now-panel

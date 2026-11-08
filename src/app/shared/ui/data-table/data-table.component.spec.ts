@@ -132,7 +132,7 @@ describe('DataTableComponent (P-08)', () => {
     expect(ui.queryByRole('list')).toBeNull();
     expect(root.querySelector('.quipu-table-wrap')?.classList).not.toContain('quipu-only-wide');
   });
-  it('delays decorative cells, disables sorting, then restores real data without timers', async () => {
+  it('shows decorative cells at once, disables sorting, then restores real data without timers', async () => {
     const { host, fixture, root, ui } = await setup();
     vi.useFakeTimers();
     try {
@@ -141,12 +141,6 @@ describe('DataTableComponent (P-08)', () => {
       expect(ui.getByRole('region', { name: 'Cargando Pagos' }).getAttribute('aria-busy')).toBe(
         'true',
       );
-      expect(root.querySelector('app-skeleton-block')).toBeNull();
-      vi.advanceTimersByTime(299);
-      fixture.detectChanges();
-      expect(root.querySelector('tbody')).toBeNull();
-      vi.advanceTimersByTime(1);
-      fixture.detectChanges();
       expect(root.querySelectorAll('tbody tr')).toHaveLength(2);
       expect(root.querySelectorAll('tbody td')).toHaveLength(6);
       expect(root.querySelector('tfoot')).toBeNull();
@@ -166,14 +160,12 @@ describe('DataTableComponent (P-08)', () => {
     }
   });
 
-  it('accepts custom cell and mobile layouts and restarts the delay for a new load', async () => {
+  it('accepts custom cell and mobile layouts and shows the skeleton again for a new load', async () => {
     const { host, fixture, root } = await setup();
     vi.useFakeTimers();
     try {
       host.customSkeleton.set(true);
       host.loading.set(true);
-      fixture.detectChanges();
-      vi.advanceTimersByTime(300);
       fixture.detectChanges();
       expect(root.querySelectorAll('tbody [data-shape="circle"]')).toHaveLength(2);
       expect(root.querySelectorAll('.quipu-card [data-shape="badge"]')).toHaveLength(2);
@@ -181,7 +173,7 @@ describe('DataTableComponent (P-08)', () => {
       fixture.detectChanges();
       host.loading.set(true);
       fixture.detectChanges();
-      expect(root.querySelector('tbody')).toBeNull();
+      expect(root.querySelector('tbody')).not.toBeNull();
       fixture.destroy();
       expect(vi.getTimerCount()).toBe(0);
     } finally {

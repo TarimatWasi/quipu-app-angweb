@@ -8,16 +8,16 @@ describe('LoadTiming (P-12)', () => {
     vi.useRealTimers();
   });
 
-  it('shows the skeleton only after 300 ms and the slow notice after 8 s', () => {
+  it('shows the skeleton at once and the slow notice after 8 s', () => {
     const timing = new LoadTiming();
+    expect(SKELETON_DELAY_MS).toBe(0);
     timing.start();
 
-    vi.advanceTimersByTime(SKELETON_DELAY_MS - 1);
-    expect(timing.skeleton()).toBe(false);
-    vi.advanceTimersByTime(1);
     expect(timing.skeleton()).toBe(true);
     expect(timing.slow()).toBe(false);
-    vi.advanceTimersByTime(SLOW_NOTICE_MS - SKELETON_DELAY_MS);
+    vi.advanceTimersByTime(SLOW_NOTICE_MS - 1);
+    expect(timing.slow()).toBe(false);
+    vi.advanceTimersByTime(1);
     expect(timing.slow()).toBe(true);
   });
 
