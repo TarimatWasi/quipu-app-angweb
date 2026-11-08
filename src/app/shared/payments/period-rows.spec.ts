@@ -39,8 +39,17 @@ describe('A3.2 «Pagos por mes» rows', () => {
       state: 'OVERDUE',
       badge: { label: 'Atrasado', tone: 'overdue' },
       rejected: true,
+      rejectionReason: null,
       action: { label: 'Corregir pago', link: ['/admin/payments', 'p9'], query: null },
     });
+    expect(
+      month('2026-10', 'OVERDUE', { paymentId: 'p9', rejectionReason: 'Falta el voucher.' })
+        .rejectionReason,
+    ).toBe('Falta el voucher.');
+    // A reason of a payment that is not rejected is not carried.
+    expect(
+      month('2026-10', 'UNDER_REVIEW', { paymentId: 'p1', rejectionReason: 'x' }).rejectionReason,
+    ).toBeNull();
     expect(month('2026-09', 'UNPAID').rejected).toBe(false);
     expect(month('2026-09', 'UNDER_REVIEW', { paymentId: 'p1' }).rejected).toBe(false);
   });
