@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
@@ -174,18 +175,12 @@ export class GuestHomePanelComponent implements OnInit {
     };
   });
 
-  private destroyed = false;
   // Move with every load, so a late answer of a previous load is ignored.
-  private statusRequest = 0;
-  private creditRequest = 0;
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly statusRequest = new LatestRequest();
+  private readonly creditRequest = new LatestRequest();
   private creditLoaded = false;
   private creditPending = false;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
 
   ngOnInit(): void {
     this.load();
@@ -207,20 +202,20 @@ export class GuestHomePanelComponent implements OnInit {
   }
 
   private async loadStatus(): Promise<void> {
-    const request = ++this.statusRequest;
+    const request = this.statusRequest.begin();
     const isRetry = this.state().kind === 'error';
     this.retrying.set(isRetry);
     if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const periods = await firstValueFrom(this.payments.accountStatus());
-      if (this.destroyed || request !== this.statusRequest) return;
+      if (!this.statusRequest.isCurrent(request)) return;
       this.periods.set(periods);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.statusRequest) return;
+      if (!this.statusRequest.isCurrent(request)) return;
       this.state.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (!this.destroyed) this.retrying.set(false);
+      if (!this.destroyRef.destroyed) this.retrying.set(false);
     }
   }
 
@@ -228,17 +223,17 @@ export class GuestHomePanelComponent implements OnInit {
   private async loadCredit(): Promise<void> {
     if (this.creditPending) return;
     this.creditPending = true;
-    const request = ++this.creditRequest;
+    const request = this.creditRequest.begin();
     try {
       const credit = await firstValueFrom(this.payments.credit());
-      if (this.destroyed || request !== this.creditRequest) return;
+      if (!this.creditRequest.isCurrent(request)) return;
       this.credit.set(credit);
       this.creditLoaded = true;
     } catch {
-      if (this.destroyed || request !== this.creditRequest) return;
+      if (!this.creditRequest.isCurrent(request)) return;
       this.credit.set(null);
     } finally {
-      if (request === this.creditRequest) this.creditPending = false;
+      if (this.creditRequest.isCurrent(request)) this.creditPending = false;
     }
   }
 }

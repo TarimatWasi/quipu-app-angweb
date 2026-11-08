@@ -97,6 +97,7 @@ type FieldErrors = { fieldTree: FieldTree<string>; kind: 'server'; message: stri
   styles: [SUMMARY_LAYOUT_STYLES, NEW_GUEST_STYLES],
 })
 export class NewGuestComponent {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly guests = inject(AdminGuestsService);
   private readonly handoff = inject(AccessHandoffService);
   private readonly router = inject(Router);
@@ -105,7 +106,6 @@ export class NewGuestComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
   /** Set when the page goes away: a late answer then neither navigates nor opens a dialog. */
-  private destroyed = false;
 
   protected readonly guestTypes = GUEST_TYPE_OPTIONS;
   protected readonly documentTypes = DOCUMENT_TYPE_OPTIONS;
@@ -153,12 +153,6 @@ export class NewGuestComponent {
   protected readonly emailError = computed(() => firstError(this.guestForm.contactEmail));
   protected readonly saving = computed(() => this.guestForm().submitting());
 
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
-
   protected chooseType(type: GuestType): void {
     this.model.update((model) => ({ ...model, type }));
   }
@@ -179,9 +173,9 @@ export class NewGuestComponent {
     try {
       answer = await firstValueFrom(this.guests.create(input));
     } catch (error: unknown) {
-      return this.destroyed ? undefined : this.failed(error, input);
+      return this.destroyRef.destroyed ? undefined : this.failed(error, input);
     }
-    if (this.destroyed) return undefined;
+    if (this.destroyRef.destroyed) return undefined;
     if (answer.alreadyRegistered) {
       this.alreadyRegistered(answer);
     } else {

@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
@@ -220,15 +221,9 @@ export class StayFormComponent implements OnInit {
   });
 
   // Each one moves with every load, so a late answer for previous dates or a stay is ignored.
-  private stayRequest = 0;
-  private freeRequest = 0;
-  private destroyed = false;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly stayRequest = new LatestRequest();
+  private readonly freeRequest = new LatestRequest();
 
   ngOnInit(): void {
     const params = this.route.snapshot.paramMap;
@@ -298,12 +293,12 @@ export class StayFormComponent implements OnInit {
     try {
       await firstValueFrom(call);
     } catch (error: unknown) {
-      if (!this.destroyed) await this.failed(error);
+      if (!this.destroyRef.destroyed) await this.failed(error);
       return;
     } finally {
-      if (!this.destroyed) this.busy.set(false);
+      if (!this.destroyRef.destroyed) this.busy.set(false);
     }
-    if (this.destroyed) return;
+    if (this.destroyRef.destroyed) return;
     this.toasts.show(loaded ? STAY_UPDATED_TEXT : STAY_CREATED_TEXT);
     await this.backToGuest();
   }
@@ -372,7 +367,7 @@ export class StayFormComponent implements OnInit {
   private async concurrent(): Promise<void> {
     const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
-    if (!this.destroyed && choice === 'reload' && this.stayId !== null) {
+    if (!this.destroyRef.destroyed && choice === 'reload' && this.stayId !== null) {
       await this.loadStay(this.stayId);
     }
   }
@@ -384,7 +379,7 @@ export class StayFormComponent implements OnInit {
       buttonLabel: notice.buttonLabel,
     });
     await firstValueFrom(ref.afterClosed());
-    if (this.destroyed) return;
+    if (this.destroyRef.destroyed) return;
     if (notice.leaves) {
       await this.backToGuest();
       return;
@@ -407,7 +402,7 @@ export class StayFormComponent implements OnInit {
   private async loadGuest(): Promise<void> {
     try {
       const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (!this.destroyed) this.guest.set(guest);
+      if (!this.destroyRef.destroyed) this.guest.set(guest);
     } catch {
       // "Volver al huésped" and "—" stand in for the name; the save says what is wrong.
     }
@@ -415,7 +410,7 @@ export class StayFormComponent implements OnInit {
 
   /** Loads the stay to correct with its current `version` and starts the form from it. */
   private async loadStay(stayId: string): Promise<void> {
-    const request = ++this.stayRequest;
+    const request = this.stayRequest.begin();
     const refreshing = this.state().kind === 'ready' && this.loaded() !== null;
     this.refreshing.set(refreshing);
     const isRetry = this.state().kind === 'error';
@@ -426,7 +421,7 @@ export class StayFormComponent implements OnInit {
     this.generalError.set(null);
     try {
       const stay = await firstValueFrom(this.guests.findStay(this.guestId, stayId));
-      if (!this.isCurrentStay(request)) return;
+      if (!this.stayRequest.isCurrent(request)) return;
       this.refreshError.set(null);
       this.loaded.set(stay);
       this.rejected.set(null);
@@ -434,14 +429,10 @@ export class StayFormComponent implements OnInit {
       this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
       if (stay) this.refreshFree();
     } catch (error: unknown) {
-      if (this.isCurrentStay(request)) this.failLoad(error, refreshing);
+      if (this.stayRequest.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (this.isCurrentStay(request)) this.endLoad();
+      if (this.stayRequest.isCurrent(request)) this.endLoad();
     }
-  }
-
-  private isCurrentStay(request: number): boolean {
-    return !this.destroyed && request === this.stayRequest;
   }
 
   /** A failed refresh keeps the form and says so; any other failure replaces it. */
@@ -464,7 +455,7 @@ export class StayFormComponent implements OnInit {
       void this.loadFree();
       return;
     }
-    this.freeRequest++;
+    this.freeRequest.cancel();
     this.free.set([]);
     this.freeState.set({ kind: 'idle' });
     this.keepChoiceIfOffered();
@@ -472,20 +463,20 @@ export class StayFormComponent implements OnInit {
 
   /** Every free environment for the dates, all pages; the choice is checked once all are in. */
   private async loadFree(): Promise<void> {
-    const request = ++this.freeRequest;
+    const request = this.freeRequest.begin();
     const { start, end } = this.draft();
     if (!this.freeRetrying()) this.freeState.set({ kind: 'loading' });
     try {
       const free = await firstValueFrom(this.environments.allFree(start, end));
-      if (this.destroyed || request !== this.freeRequest) return;
+      if (!this.freeRequest.isCurrent(request)) return;
       this.free.set(free);
       this.freeState.set({ kind: 'ready' });
       this.keepChoiceIfOffered();
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.freeRequest) return;
+      if (!this.freeRequest.isCurrent(request)) return;
       this.freeState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (!this.destroyed && request === this.freeRequest) this.freeRetrying.set(false);
+      if (this.freeRequest.isCurrent(request)) this.freeRetrying.set(false);
     }
   }
 

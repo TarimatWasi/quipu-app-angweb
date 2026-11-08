@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
 import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
 import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
@@ -264,13 +265,9 @@ export class OwnPaymentComponent {
     }
   });
 
-  private destroyed = false;
   private readonly destroyRef = inject(DestroyRef);
-  protected readonly watchDestroy = this.destroyRef.onDestroy(() => {
-    this.destroyed = true;
-  });
   // Moves with every load, so a late answer of a previous load is ignored.
-  private loadRequest = 0;
+  private readonly loadRequest = new LatestRequest();
 
   // The page loads when it is created, not from a lifecycle hook or the constructor.
   protected readonly started = this.load();
@@ -360,12 +357,12 @@ export class OwnPaymentComponent {
     try {
       await firstValueFrom(send);
     } catch (error: unknown) {
-      if (!this.destroyed) await this.failed(error);
+      if (!this.destroyRef.destroyed) await this.failed(error);
       return;
     } finally {
-      if (!this.destroyed) this.busy.set(false);
+      if (!this.destroyRef.destroyed) this.busy.set(false);
     }
-    if (this.destroyed) return;
+    if (this.destroyRef.destroyed) return;
     this.toasts.show(SENT_TEXT);
     await this.router.navigateByUrl(HOME);
   }
@@ -408,7 +405,7 @@ export class OwnPaymentComponent {
       });
       await firstValueFrom(ref.afterClosed());
       // What the guest can pay or correct changed: show it as it is now.
-      if (notice.afterClose === 'reload' && !this.destroyed) await this.load();
+      if (notice.afterClose === 'reload' && !this.destroyRef.destroyed) await this.load();
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
@@ -439,14 +436,14 @@ export class OwnPaymentComponent {
   }
 
   private async load(): Promise<void> {
-    const request = ++this.loadRequest;
+    const request = this.loadRequest.begin();
     const refreshing = this.state().kind === 'ready';
     this.refreshing.set(refreshing);
     const isRetry = this.state().kind === 'error';
     this.retrying.set(isRetry);
     if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
     try {
-      const current = () => !this.destroyed && request === this.loadRequest;
+      const current = () => this.loadRequest.isCurrent(request);
       if (this.paymentId !== null) {
         await this.loadPayment(this.paymentId, current);
       } else if (this.audience === 'TEMPORARY') {
@@ -459,9 +456,9 @@ export class OwnPaymentComponent {
         this.state.set({ kind: 'ready' });
       }
     } catch (error: unknown) {
-      if (!this.destroyed && request === this.loadRequest) this.failLoad(error, refreshing);
+      if (this.loadRequest.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (!this.destroyed && request === this.loadRequest) this.endLoad();
+      if (this.loadRequest.isCurrent(request)) this.endLoad();
     }
   }
 

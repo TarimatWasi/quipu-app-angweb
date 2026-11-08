@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
@@ -150,10 +151,9 @@ export class GuestDetailComponent implements OnInit {
   });
 
   private currentId = '';
-  private destroyed = false;
   private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
   // Moves with every load, so a late answer for a previous guest is ignored.
-  private request = 0;
+  private readonly request = new LatestRequest();
   /**
    * A3.7 asked for «Generar otro acceso»: it opens once the guest is loaded. Read while the page is
    * created, when the navigation that brings it is still the current one.
@@ -169,8 +169,7 @@ export class GuestDetailComponent implements OnInit {
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
       // Leaving the screen: no late answer may load, open a dialog or navigate any more.
-      this.destroyed = true;
-      this.request++;
+      this.request.cancel();
       this.closeDialogs();
     });
   }
@@ -215,7 +214,7 @@ export class GuestDetailComponent implements OnInit {
 
   /** Loads the guest and what its panel needs; `quiet` keeps the page on screen meanwhile. */
   private async load(id: string, quiet = false): Promise<void> {
-    const request = ++this.request;
+    const request = this.request.begin();
     const refreshing = quiet && this.state() === 'ready';
     this.refreshing.set(refreshing);
     this.currentId = id;
@@ -226,19 +225,19 @@ export class GuestDetailComponent implements OnInit {
     }
     try {
       const guest = await firstValueFrom(this.guests.get(id));
-      if (request !== this.request || this.destroyed) return;
+      if (!this.request.isCurrent(request)) return;
       this.guest.set(guest);
       const kind = chargesKind(guest);
       const [periods, stays] = await Promise.all([
         firstValueFrom(kind === 'periods' ? this.guests.accountStatus(id) : of([])),
         firstValueFrom(kind === 'stays' ? this.guests.allStays(id) : of<Stay[]>([])),
       ]);
-      if (request !== this.request) return;
+      if (!this.request.isCurrent(request)) return;
       this.show(guest, periods, stays);
     } catch (error: unknown) {
-      if (request === this.request) this.failLoad(error, refreshing);
+      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (request === this.request) this.endLoad();
+      if (this.request.isCurrent(request)) this.endLoad();
     }
   }
 
@@ -286,7 +285,7 @@ export class GuestDetailComponent implements OnInit {
    * dialogs or navigate.
    */
   private showing(id: string): boolean {
-    return !this.destroyed && id === this.currentId;
+    return !this.destroyRef.destroyed && id === this.currentId;
   }
 
   /** Keeps a dialog of this guest, so it closes when the page moves to another one. */

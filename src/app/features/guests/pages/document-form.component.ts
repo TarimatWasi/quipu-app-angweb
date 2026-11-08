@@ -1,3 +1,4 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
@@ -153,14 +154,8 @@ export class DocumentFormComponent implements OnInit {
       : null;
   });
 
-  private request = 0;
-  private destroyed = false;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly request = new LatestRequest();
 
   ngOnInit(): void {
     this.guestId = this.route.snapshot.paramMap.get('id') ?? '';
@@ -199,12 +194,12 @@ export class DocumentFormComponent implements OnInit {
         this.guests.updateGuest(this.guestId, withVersion(loaded, this.changes())),
       );
     } catch (error: unknown) {
-      if (!this.destroyed) await this.failed(error);
+      if (!this.destroyRef.destroyed) await this.failed(error);
       return;
     } finally {
-      if (!this.destroyed) this.busy.set(false);
+      if (!this.destroyRef.destroyed) this.busy.set(false);
     }
-    if (this.destroyed) return;
+    if (this.destroyRef.destroyed) return;
     this.toasts.show(DOCUMENT_UPDATED_TEXT);
     await this.backToGuest();
   }
@@ -231,7 +226,7 @@ export class DocumentFormComponent implements OnInit {
   private async concurrent(): Promise<void> {
     const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
-    if (!this.destroyed && choice === 'reload') {
+    if (!this.destroyRef.destroyed && choice === 'reload') {
       await this.load();
     }
   }
@@ -242,7 +237,7 @@ export class DocumentFormComponent implements OnInit {
 
   /** Loads the guest with its current `version` and starts the form from its document. */
   private async load(): Promise<void> {
-    const request = ++this.request;
+    const request = this.request.begin();
     const refreshing = this.state().kind === 'ready';
     this.refreshing.set(refreshing);
     const isRetry = this.state().kind === 'error';
@@ -253,7 +248,7 @@ export class DocumentFormComponent implements OnInit {
     this.generalError.set(null);
     try {
       const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (!this.isCurrent(request)) return;
+      if (!this.request.isCurrent(request)) return;
       this.refreshError.set(null);
       this.who.set(guestName(guest));
       if (guest.status !== 'PENDING_ACTIVATION') {
@@ -266,14 +261,10 @@ export class DocumentFormComponent implements OnInit {
       this.documentNumber.set(guest.documentNumber);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.isCurrent(request)) this.failLoad(error, refreshing);
+      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
     } finally {
-      if (this.isCurrent(request)) this.endLoad();
+      if (this.request.isCurrent(request)) this.endLoad();
     }
-  }
-
-  private isCurrent(request: number): boolean {
-    return !this.destroyed && request === this.request;
   }
 
   /** A failed refresh keeps the form and says so; any other failure replaces it. */

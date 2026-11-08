@@ -1,7 +1,8 @@
+import { LatestRequest } from '@shared/data/latest-request';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -61,14 +62,7 @@ export class GuestHistoryComponent implements OnInit {
     return state.kind === 'error' ? state.message : '';
   });
 
-  private destroyed = false;
-  private request = 0;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
+  private readonly request = new LatestRequest();
 
   ngOnInit(): void {
     void this.load();
@@ -109,14 +103,14 @@ export class GuestHistoryComponent implements OnInit {
   }
 
   private async load(after?: string): Promise<void> {
-    const request = ++this.request;
+    const request = this.request.begin();
     this.loadingMore.set(after !== undefined);
     const isRetry = this.state().kind === 'error';
     this.retrying.set(isRetry);
     if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const page = await firstValueFrom(this.payments.history(after));
-      if (this.destroyed || request !== this.request) return;
+      if (!this.request.isCurrent(request)) return;
       this.items.update((current) =>
         after === undefined ? page.content : [...current, ...page.content],
       );
@@ -124,10 +118,10 @@ export class GuestHistoryComponent implements OnInit {
       this.creditBalance.set(page.creditBalance);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed || request !== this.request) return;
+      if (!this.request.isCurrent(request)) return;
       this.state.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (!this.destroyed && request === this.request) this.retrying.set(false);
+      if (this.request.isCurrent(request)) this.retrying.set(false);
     }
   }
 }

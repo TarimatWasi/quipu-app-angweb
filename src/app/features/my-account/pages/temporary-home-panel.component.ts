@@ -104,6 +104,7 @@ type LoadState =
   styles: HOME_PANEL_STYLES,
 })
 export class TemporaryHomePanelComponent implements OnInit {
+  private readonly destroyRef = inject(DestroyRef);
   private readonly payments = inject(TemporaryGuestPaymentsService);
 
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
@@ -135,14 +136,6 @@ export class TemporaryHomePanelComponent implements OnInit {
     return stay !== null && takesNewPayment(stay);
   });
 
-  private destroyed = false;
-
-  constructor() {
-    inject(DestroyRef).onDestroy(() => {
-      this.destroyed = true;
-    });
-  }
-
   ngOnInit(): void {
     void this.load();
   }
@@ -158,17 +151,17 @@ export class TemporaryHomePanelComponent implements OnInit {
     if (!isRetry) this.state.set({ kind: 'loading' });
     try {
       const stay = await firstValueFrom(this.payments.paymentStatus());
-      if (this.destroyed) return;
+      if (this.destroyRef.destroyed) return;
       this.stay.set(stay);
       this.state.set({ kind: 'ready' });
     } catch (error: unknown) {
-      if (this.destroyed) return;
+      if (this.destroyRef.destroyed) return;
       const { message } = toBffErrorWithServerMessage(error);
       // The guest has no stay yet (RESOURCE_NOT_FOUND): the BFF's own text says so.
       const noStay = error instanceof HttpErrorResponse && error.status === 404;
       this.state.set({ kind: noStay ? 'no-stay' : 'error', message });
     } finally {
-      if (!this.destroyed) this.retrying.set(false);
+      if (!this.destroyRef.destroyed) this.retrying.set(false);
     }
   }
 }
