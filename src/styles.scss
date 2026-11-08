@@ -122,6 +122,9 @@ html {
   // P-16: caja de papel de hasta 480 px.
   --quipu-dialogo-ancho: 30rem;
   --quipu-alto-control: 48px;
+  // Ancho de un filtro de lista (TAR-319): fijo, para que el esqueleto y la lista cargada coincidan;
+  // el texto de una opción que no cabe termina en «…». Cabe «Pendiente de activación».
+  --quipu-ancho-filtro: 16rem;
   --quipu-alto-control-fila: 40px;
   --quipu-toque: 44px;
   --quipu-borde-ancho: 1px;
@@ -753,9 +756,11 @@ fieldset.quipu-field > legend {
   gap: 1rem;
   margin: 1.25rem 0 1rem;
 
-  > .quipu-field,
+  // Los filtros (selects) tienen un ancho fijo; el buscador crece (.quipu-search).
+  > .quipu-field:not(.quipu-search),
   > app-form-field {
-    min-width: 12rem;
+    flex: 0 0 var(--quipu-ancho-filtro);
+    min-width: 0;
   }
 }
 
@@ -898,6 +903,28 @@ fieldset.quipu-field > legend {
   tfoot tr {
     border-top: var(--quipu-franja) solid var(--quipu-piedra);
     background: var(--quipu-piedra-oscura);
+  }
+}
+
+// Tabla de columnas con ancho propio (TAR-319): cada columna guarda su ancho con filas de esqueleto
+// o con datos, y lo que no cabe en una línea termina en «…». Se usa con `width` en las columnas de
+// app-data-table; las celdas de dos líneas (nombre y detalle) recortan cada línea.
+.quipu-table--fixed {
+  table-layout: fixed;
+
+  th,
+  td {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .quipu-name,
+  .quipu-unnamed,
+  .detail {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 

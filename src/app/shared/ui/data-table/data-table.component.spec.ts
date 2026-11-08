@@ -7,7 +7,7 @@ import { fireEvent, within } from '@testing-library/dom';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
 import { DataFooterDirective } from './data-footer.directive';
-import { DataTableComponent } from './data-table.component';
+import { columnWidths, DataTableComponent } from './data-table.component';
 import type { DataColumn } from './data-table.component';
 import type { ListSort } from './list-sort';
 
@@ -179,5 +179,49 @@ describe('DataTableComponent (P-08)', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  describe('widths of the columns (TAR-319)', () => {
+    function render(columns: readonly DataColumn<Key>[]) {
+      const fixture = TestBed.createComponent<DataTableComponent<Row, Key>>(DataTableComponent);
+      fixture.componentRef.setInput('columns', columns);
+      fixture.componentRef.setInput('rows', []);
+      fixture.componentRef.setInput('rowId', (row: Row) => row.id);
+      fixture.componentRef.setInput('caption', 'Pagos');
+      fixture.detectChanges();
+      return fixture.nativeElement as HTMLElement;
+    }
+
+    it('always has a fixed layout and a width for each column, with skeleton or with data', () => {
+      const root = render(COLUMNS);
+
+      expect(root.querySelector('table')?.classList).toContain('quipu-table--fixed');
+      expect(root.querySelectorAll('col')).toHaveLength(COLUMNS.length);
+    });
+
+    it('gives the action column its width and shares the rest, twice for the one that names the row', () => {
+      expect(columnWidths(COLUMNS)).toEqual([
+        'calc((100% - (9rem)) * 2 / 3)',
+        'calc((100% - (9rem)) * 1 / 3)',
+        '9rem',
+      ]);
+    });
+
+    it('lets a column with long text ask for more and another keep a fixed width', () => {
+      expect(
+        columnWidths([
+          { key: 'a', label: 'A', rowHeader: true },
+          { key: 'b', label: 'B', grow: 3 },
+          { key: 'c', label: 'C', width: '6rem' },
+          { key: 'd', label: 'D', align: 'action' },
+        ]),
+      ).toEqual([
+        'calc((100% - (6rem + 9rem)) * 2 / 5)',
+        'calc((100% - (6rem + 9rem)) * 3 / 5)',
+        '6rem',
+        '9rem',
+      ]);
+      expect(columnWidths([{ key: 'a', label: 'A' }])).toEqual(['calc(100% * 1 / 1)']);
+    });
   });
 });

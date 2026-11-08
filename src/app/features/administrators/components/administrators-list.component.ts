@@ -14,7 +14,7 @@ const ACTION_LABELS = { deactivate: 'Desactivar', reactivate: 'Reactivar' } as c
 const COLUMNS: readonly DataColumn[] = [
   { key: 'name', label: 'Nombre', rowHeader: true },
   { key: 'document', label: 'Documento' },
-  { key: 'email', label: 'Correo de su cuenta' },
+  { key: 'email', label: 'Correo de su cuenta', grow: 2 },
   { skeleton: { shape: 'badge' }, key: 'state', label: 'Estado' },
   { key: 'since', label: 'Desde' },
   {

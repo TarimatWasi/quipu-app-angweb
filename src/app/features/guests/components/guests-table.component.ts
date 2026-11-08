@@ -15,7 +15,7 @@ type Column = SortKey | 'action';
 const COLUMNS: readonly DataColumn<Column>[] = [
   { key: 'guest', label: 'Huésped', sortable: true, rowHeader: true },
   { key: 'type', label: 'Tipo', sortable: true },
-  { key: 'environment', label: 'Ambiente', sortable: true },
+  { key: 'environment', label: 'Ambiente', sortable: true, grow: 2 },
   { skeleton: { shape: 'badge' }, key: 'status', label: 'Estado', sortable: true },
   {
     skeleton: { width: '7rem' },

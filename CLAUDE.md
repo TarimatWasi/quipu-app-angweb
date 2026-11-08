@@ -24,6 +24,7 @@
 - **Cuando hay un error de patrón se arregla el patrón, no solo la pantalla:** se busca el mismo defecto en todas las pantallas, se corrige el componente compartido y se escribe la regla.
 - **Consistencia visual por encima de lo nativo:** nada del navegador sin estilo del kit (la «×» azul del buscador). Colores, tipografía y espacios salen de los tokens `--quipu-*` y se escriben una sola vez (QP-UI-01).
 - **El skeleton es el componente real en carga (QP-UI-19):** solo es bloque el dato que pone la API; rótulos, títulos, vistas, filtros, botones y espacios son los de la pantalla. Un bloque que sustituye texto mide `1lh`; no hay rectángulos de alto fijo.
+- **El ancho no sigue al contenido (TAR-319):** `app-data-table` reparte el ancho él solo (la tabla tiene diseño fijo, la columna de acción mide 9 rem, la que nombra la fila toma doble y lo que no cabe termina en «…»); una columna con texto largo pide más con `grow` y una de medida propia usa `width`. Los filtros miden `--quipu-ancho-filtro`. Así el esqueleto y la lista cargada tienen el mismo ancho y nada se mueve al llegar los datos.
 - **El estado que no depende de la vista se conserva al cambiar de vista:** el aviso «Lo que toca ahora» sigue en todas las vistas y solo la lista pasa a skeleton.
 - **Lo que no se pudo verificar se dice:** si no se vio en un navegador o falta un dato, se informa así; no se afirma como hecho.
 
