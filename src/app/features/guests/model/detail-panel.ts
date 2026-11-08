@@ -6,6 +6,7 @@ import {
   formatPeriod,
   monthName,
 } from '@shared/payments/payment-format';
+import { countdownText } from './access';
 import { joinWords, onboardingSteps } from './detail-side';
 import { isAccessExpired, limaDay, whenText } from './guest-list-texts';
 import { stayDatesWithYear } from './guest-texts';
@@ -110,10 +111,10 @@ export const EXPIRED_AFTER_REACTIVATION_TEXT =
 export const EXPIRED_TEXT =
   'Nadie lo usó a tiempo. Genera otro y entrégaselo: el anterior ya no sirve.';
 
-/** «18 min», «3 h» or «2 días» left to use the access. */
+/** «18:00» (minutes and seconds, as the page of the access counts), «3 h» or «2 días» left to use the access. */
 function timeLeft(ms: number): string {
+  if (ms < 3_600_000) return countdownText(ms);
   const minutes = Math.ceil(ms / 60_000);
-  if (minutes < 60) return `${String(minutes)} min`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${String(hours)} h`;
   const days = Math.floor(hours / 24);

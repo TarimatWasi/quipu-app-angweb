@@ -111,7 +111,7 @@ describe('A3.2 «Lo que toca ahora»', () => {
     expect(panel({ guest: guestOf({ ...guest, accessExpiresAt: null }) }).figure).toBe('Vencido');
   });
 
-  it('2. pending activation: the minutes left and when it expires', () => {
+  it('2. pending activation: the countdown left and when it expires', () => {
     const guest = guestOf({
       status: 'PENDING_ACTIVATION',
       onboardingProgress: 'NOT_STARTED',
@@ -119,7 +119,7 @@ describe('A3.2 «Lo que toca ahora»', () => {
     });
 
     expect(panel({ guest })).toEqual({
-      figure: '18 min',
+      figure: '18:00',
       alarm: false,
       label: 'para que use su acceso',
       badge: null,
