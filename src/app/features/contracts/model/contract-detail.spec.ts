@@ -54,6 +54,41 @@ describe('the detail of a contract (A4.2)', () => {
     });
   });
 
+  it('corrects a rejected payment instead of asking for another one, quoting why it was rejected', () => {
+    const panel = detailPanel(
+      contractOf({ guestName: 'Ana Quispe' }),
+      rows(
+        item('2026-10', 'OVERDUE', {
+          paymentId: 'p9',
+          rejectionReason: 'Faltan S/ 100.00: el voucher es de S/ 700.00.',
+        }),
+      ),
+      NOW,
+    );
+    expect(panel).toEqual({
+      figure: 'S/ 800.00',
+      label: 'por pagar',
+      text: 'Octubre 2026: venció el 5 oct y su pago fue rechazado («Faltan S/ 100.00: el voucher es de S/ 700.00.»). Corrígelo o agrega lo que falte en la revisión del pago.',
+      urgent: true,
+      badge: { label: 'Atrasado', tone: 'overdue' },
+      action: { label: 'Corregir pago', link: ['/admin/payments', 'p9'], query: null },
+    });
+  });
+
+  it('corrects a rejected payment without a reason, and still registers the others in person', () => {
+    const rejectedOnly = detailPanel(
+      contractOf(),
+      rows(item('2026-10', 'UNPAID', { paymentId: 'p9' })),
+      NOW,
+    );
+    expect(rejectedOnly.text).toBe(
+      'Octubre 2026: venció el 5 oct y su pago fue rechazado. Corrígelo o agrega lo que falte en la revisión del pago.',
+    );
+
+    const none = detailPanel(contractOf(), rows(item('2026-10', 'OVERDUE')), NOW);
+    expect(none.action?.label).toBe('Registrar pago');
+  });
+
   it('adds the months that are owed and says the debt stays after the contract ended', () => {
     const owed = detailPanel(
       contractOf({ status: 'TERMINATED', terminatedAt: '2026-08-31' }),
@@ -76,7 +111,7 @@ describe('the detail of a contract (A4.2)', () => {
       expect.objectContaining({
         figure: 'S/ 800.00',
         label: 'por revisar',
-        text: 'Octubre 2026: Luis subió su voucher.',
+        text: 'Octubre 2026: Luis envió su pago.',
         urgent: false,
       }),
     );

@@ -18,6 +18,8 @@ export interface PeriodItem {
   readonly amountDue: number;
   readonly contractId: string;
   readonly paymentId?: string | null;
+  /** Why its payment was rejected, when it was and the reviewer wrote it (PeriodStatus). */
+  readonly rejectionReason?: string | null;
 }
 
 export interface StateBadge {
@@ -88,6 +90,8 @@ export interface PeriodRow {
   readonly badge: StateBadge;
   /** Its payment was rejected: «Pago rechazado» in red under the badge. */
   readonly rejected: boolean;
+  /** The reviewer's reason, only for a rejected payment; «Lo que toca ahora» quotes it. */
+  readonly rejectionReason: string | null;
   readonly action: PaymentAction | null;
 }
 
@@ -105,6 +109,7 @@ export function toPeriodRow(item: PeriodItem, guestId: string): PeriodRow {
     state: item.status,
     badge: PERIOD_BADGES[item.status],
     rejected,
+    rejectionReason: rejected ? (item.rejectionReason ?? null) : null,
     action: paymentAction(item.status, item.paymentId, guestId),
   };
 }

@@ -82,9 +82,25 @@ function isOwed(row: PeriodRow): boolean {
   return row.state === 'OVERDUE' || row.state === 'UNPAID';
 }
 
-/** The debt: its figure in red and the way to register the payment in person. */
+/**
+ * The debt: its figure in red and the way to register the payment in person. A month whose payment
+ * was rejected is corrected, not paid again (RN-05, RN-15): its reason is quoted and the action opens
+ * that payment, as A1 and A3.2 do.
+ */
 function owedPanel(contract: Contract, owed: readonly PeriodRow[], first: PeriodRow): DetailPanel {
   const total = owed.reduce((sum, row) => sum + row.amountDue, 0);
+  const rejected = owed.filter((row) => row.rejected && row.action !== null).at(-1);
+  if (rejected?.action) {
+    const reason = rejected.rejectionReason ? ` («${rejected.rejectionReason}»)` : '';
+    return {
+      figure: formatMoney(total),
+      label: 'por pagar',
+      text: `${rejected.month}: venció el ${formatShortDate(rejected.dueDate)} y su pago fue rechazado${reason}. Corrígelo o agrega lo que falte en la revisión del pago.`,
+      urgent: true,
+      badge: rejected.badge,
+      action: rejected.action,
+    };
+  }
   const ending =
     contract.status === 'ACTIVE'
       ? 'Si te pagó en persona, regístralo como pago directo.'
@@ -107,7 +123,7 @@ function reviewPanel(contract: Contract, review: PeriodRow): DetailPanel {
   return {
     figure: formatMoney(review.amountDue),
     label: 'por revisar',
-    text: `${review.month}: ${firstName(contract.guestName)} subió su voucher.`,
+    text: `${review.month}: ${firstName(contract.guestName)} envió su pago.`,
     urgent: false,
     badge: review.badge,
     action: review.action,
