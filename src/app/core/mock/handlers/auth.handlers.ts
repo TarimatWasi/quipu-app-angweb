@@ -6,6 +6,8 @@ import {
   findDemoUser,
   findDemoUserByDocument,
 } from '../data/demo-users';
+import type { DemoUser } from '../data/demo-users';
+import type { GuestRecord } from '../data/mock-db';
 import { failure, invalid, noContent, ok, raise } from '../mock-reply';
 import type { MockContext, MockRoute } from '../mock-types';
 
@@ -23,12 +25,41 @@ function text(fields: Record<string, unknown>, name: string): string {
   return typeof value === 'string' && value.trim() !== '' ? value : invalid(name);
 }
 
+/**
+ * The session of a guest whose onboarding is open follows what it has done (RN-33): the step it goes
+ * to next, and Active once it has accepted the consent.
+ */
+function onboardingSession(user: DemoUser, guest: GuestRecord): SessionInfo | null {
+  const { session } = user;
+  if (session.role !== 'GUEST' || session.guestStatus !== 'ONBOARDING') return null;
+  if (guest.status === 'ACTIVE') {
+    return {
+      role: 'GUEST',
+      guestType: session.guestType,
+      name: guest.name ?? session.name,
+      mustChangePassword: false,
+      guestStatus: 'ACTIVE',
+    };
+  }
+  const progress = guest.onboardingProgress;
+  const nextOnboardingStep =
+    progress === 'DOCUMENTS_DONE'
+      ? 'CONSENT'
+      : progress === 'PERSONAL_DATA_SAVED'
+        ? 'DOCUMENTS'
+        : 'PERSONAL_DATA';
+  return { ...session, name: guest.name ?? session.name, nextOnboardingStep };
+}
+
 /** The session of the demo account, with the password change already done when it was. */
 function sessionOf(ctx: MockContext): SessionInfo | null {
   const user = ctx.user();
   if (user === null) {
     return null;
   }
+  const guest = user.guestId === null ? undefined : ctx.db.guest(user.guestId);
+  const onboarding = guest === undefined ? null : onboardingSession(user, guest);
+  if (onboarding !== null) return onboarding;
   return ctx.passwordChanged() ? { ...user.session, mustChangePassword: false } : user.session;
 }
 

@@ -4,21 +4,38 @@ import { Component, input } from '@angular/core';
 export interface Step {
   readonly label: string;
   readonly done: boolean;
-  /** A missing step that can be skipped says «Falta · opcional». */
+  /** A pending step that can be skipped says «Falta · opcional» (or «Ahora · opcional»). */
   readonly optional: boolean;
+  /** The step the person is on: «Ahora», marked as the current one. */
+  readonly current?: boolean;
+  /** What a done step adds to «Hecho», e.g. «2 archivos». */
+  readonly detail?: string;
+}
+
+/** The state of a step in words: «Hecho · 2 archivos», «Ahora · opcional», «Falta». */
+export function stepState(step: Step): string {
+  if (step.done) return step.detail ? `Hecho · ${step.detail}` : 'Hecho';
+  const state = step.current ? 'Ahora' : 'Falta';
+  return step.optional ? `${state} · opcional` : state;
 }
 
 /**
  * P-25 Lista de pasos: each step in its own alpaca row, with a green check and «Hecho» once done,
- * or an empty circle and «Falta» (or «Falta · opcional»). The state is always in words; the marks
- * are hidden from screen readers.
+ * or an empty circle and «Falta» (or «Falta · opcional»); the step the person is on says «Ahora» and
+ * is marked as the current one. The state is always in words; the marks are hidden from screen
+ * readers. `bar` is the same list as a row of bars with the name under each, for a phone.
  */
 @Component({
   selector: 'app-step-list',
   template: `
-    <ol [attr.aria-label]="label()">
+    <ol [attr.aria-label]="label()" [class.bar]="variant() === 'bar'">
       @for (step of steps(); track step.label) {
-        <li [class.done]="step.done">
+        <li
+          [class.done]="step.done"
+          [class.current]="step.current"
+          [attr.aria-current]="step.current ? 'step' : null"
+        >
+          <span class="bar-fill" aria-hidden="true"></span>
           <span class="mark" aria-hidden="true">
             @if (step.done) {
               <svg
@@ -37,9 +54,7 @@ export interface Step {
           </span>
           <span class="name">{{ step.label }}</span>
           <span class="cdk-visually-hidden">: </span>
-          <span class="state">{{
-            step.done ? 'Hecho' : step.optional ? 'Falta · opcional' : 'Falta'
-          }}</span>
+          <span class="state">{{ stateOf(step) }}</span>
         </li>
       }
     </ol>
@@ -90,10 +105,64 @@ export interface Step {
       color: var(--quipu-verde-texto);
       font-weight: var(--quipu-peso-enfasis);
     }
+    .current {
+      background: var(--quipu-piedra-oscura);
+    }
+    .current .mark {
+      border-color: var(--quipu-qolle);
+      background: var(--quipu-qolle);
+    }
+    .current .state {
+      color: var(--quipu-tinta);
+      font-weight: var(--quipu-peso-enfasis);
+    }
+    .bar-fill {
+      display: none;
+    }
+    .bar {
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      grid-auto-flow: column;
+      gap: 3px;
+    }
+    .bar li {
+      display: grid;
+      align-content: start;
+      gap: 0.375rem;
+      padding: 0;
+      background: none;
+    }
+    .bar .bar-fill {
+      display: block;
+      height: 0.5rem;
+      border-radius: 2px;
+      background: var(--quipu-piedra-oscura);
+    }
+    .bar .done .bar-fill {
+      background: var(--quipu-chilca);
+    }
+    .bar .current .bar-fill {
+      background: var(--quipu-qolle);
+    }
+    .bar .mark,
+    .bar .state {
+      /* The bar says the state in words for screen readers only; the name is what a phone shows. */
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+    }
+    .bar .name {
+      font: var(--mat-sys-body-small);
+      line-height: 1.2;
+    }
   `,
 })
 export class StepListComponent {
   readonly steps = input.required<readonly Step[]>();
   /** The accessible name of the list, e.g. «Pasos de su registro». */
   readonly label = input.required<string>();
+  readonly variant = input<'list' | 'bar'>('list');
+
+  protected readonly stateOf = stepState;
 }

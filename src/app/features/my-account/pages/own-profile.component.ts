@@ -18,7 +18,7 @@ import { callFailure } from '@shared/forms/call-failure';
 import { AsyncContentState } from '@shared/data/async-content';
 import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { PersonalDataFieldsComponent } from '@shared/forms/personal-data-fields.component';
-import { personalDataRules, toPersonalData } from '@shared/forms/personal-data';
+import { personalDataRules, saveProblem, toPersonalData } from '@shared/forms/personal-data';
 import type { PersonalData } from '@shared/forms/personal-data';
 import { INVALID_FILE_TEXT, isValidVoucher } from '@shared/payments/proof-rules';
 import { CHANGE_PASSWORD_ACTION } from '@shared/ui/account-actions/change-password-action';
@@ -32,6 +32,8 @@ import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.d
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
+import { toDocumentRows, uploadProblem } from '@shared/text/file-text';
+import type { OwnDocumentRow } from '@shared/text/file-text';
 import { OwnDocumentsComponent } from '../components/own-documents.component';
 import { GuestProfileService } from '../data/guest-profile.service';
 import { OwnContractService } from '../data/own-contract.service';
@@ -50,13 +52,10 @@ import {
   openProblem,
   PROFILE_TITLE,
   SAVED_TEXT,
-  saveProblem,
   stayDeal,
-  toDocumentRows,
   toProfileUpdate,
-  uploadProblem,
 } from '../model/own-profile';
-import type { DealView, OwnDocumentRow, StayDeal } from '../model/own-profile';
+import type { DealView, StayDeal } from '../model/own-profile';
 import { OWN_PROFILE_STYLES } from './own-profile.styles';
 
 type Contract = components['schemas']['Contract'];

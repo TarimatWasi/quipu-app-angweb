@@ -77,6 +77,7 @@ describe('MockPanelComponent', () => {
       'Huésped con contrato',
       'Huésped temporal',
       'Huésped con clave temporal',
+      'Huésped en su registro',
     ]);
     const scenarios = screen.getByLabelText<HTMLSelectElement>('Escenario');
     expect([...scenarios.options].map((option) => option.text.trim())).toEqual([

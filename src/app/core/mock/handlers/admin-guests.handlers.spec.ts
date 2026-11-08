@@ -34,11 +34,12 @@ describe('admin guests in the simulated BFF', () => {
       status: 'ALL',
       limit: 100,
     });
-    // The 9 of A3 and A3.1, the 4 more of A3.2 (under review, up to date, no contract, lapsed) and the
-    // 5 of A4 (no end date, about to end, expired, finalized, about to begin).
-    expect(page.content).toHaveLength(18);
+    // The 9 of A3 and A3.1, the 4 more of A3.2 (under review, up to date, no contract, lapsed), the
+    // 5 of A4 (no end date, about to end, expired, finalized, about to begin) and the one that starts
+    // its onboarding (O1).
+    expect(page.content).toHaveLength(19);
     expect(page.pendingActivationCount).toBe(2);
-    expect(page.onboardingCount).toBe(1);
+    expect(page.onboardingCount).toBe(2);
     const current = await mock.get<Schemas['PagedGuests']>('/bff/admin/guests');
     expect(current.content.map((guest) => guest.status)).not.toContain('INACTIVE');
     expect((await mock.fail(mock.get('/bff/admin/guests', { status: 'OTRO' }))).status).toBe(400);

@@ -1,0 +1,109 @@
+<app-onboarding-frame step="DOCUMENTS" [steps]="steps()" [note]="leaveNote">
+  @switch (view().status) {
+    @case ('initial-loading') {
+      <app-skeleton subject="tu registro"
+        ><ng-template appSkeletonContent>
+          <div class="blocks">
+            <section class="block">
+              <h2>Archivos</h2>
+              <app-skeleton-block shape="rectangle" />
+            </section>
+            <app-skeleton-block shape="rectangle" width="12rem" />
+          </div> </ng-template
+      ></app-skeleton>
+    }
+    @case ('initial-error') {
+      <app-load-error
+        class="state"
+        [message]="loadErrorText"
+        [retrying]="retrying()"
+        (retry)="reload()"
+      />
+    }
+    @case ('ready') {
+      <form class="form" novalidate (submit)="$event.preventDefault(); submit()">
+        <section class="block" aria-labelledby="files-title">
+          <h2 id="files-title">
+            Archivos <span class="optional">({{ count() }})</span>
+          </h2>
+
+          @if (uploaded().length > 0) {
+            <p class="sub" id="uploaded-title">Ya subidos</p>
+            <ul class="rows" aria-labelledby="uploaded-title">
+              @for (row of uploaded(); track row.id) {
+                <li class="item">
+                  <span class="what">
+                    <strong>{{ row.name }}</strong>
+                    <span class="meta">{{ row.meta }}</span>
+                  </span>
+                </li>
+              }
+            </ul>
+          }
+
+          @if (rows().length > 0) {
+            <p class="sub" id="queued-title">Por subir</p>
+            <ul class="rows" aria-labelledby="queued-title">
+              @for (row of rows(); track row.id) {
+                <li class="item chosen" [class.invalid]="row.error !== null">
+                  <span class="what">
+                    <strong>{{ row.name }}</strong>
+                    <span class="meta">{{ row.meta }}</span>
+                    @if (row.error; as message) {
+                      <span class="quipu-field-error" role="alert">{{ message }}</span>
+                    }
+                  </span>
+                  @if (row.sending) {
+                    <span class="meta">Subiendo…</span>
+                  } @else if (!sending()) {
+                    <button
+                      class="quipu-button quipu-button--tertiary"
+                      type="button"
+                      (click)="remove(row.id)"
+                    >
+                      Quitar<span class="cdk-visually-hidden"> {{ row.name }}</span>
+                    </button>
+                  } @else {
+                    <span class="meta">En espera</span>
+                  }
+                </li>
+              }
+            </ul>
+          }
+
+          @if (canAdd() && !sending()) {
+            <app-file-field
+              fieldId="onboarding-document"
+              [label]="fieldLabel"
+              [prompt]="prompt()"
+              [help]="rulesNote"
+              (chosen)="pick($event)"
+            />
+          } @else if (full()) {
+            <app-page-notice tone="info" [heading]="fullText">Puedes continuar.</app-page-notice>
+          }
+        </section>
+
+        @if (problem(); as message) {
+          <p class="quipu-alert" role="alert">{{ message }}</p>
+        }
+
+        <div class="actions">
+          <button
+            class="quipu-button quipu-button--primary quipu-button--big"
+            type="submit"
+            [disabled]="sending()"
+          >
+            {{ buttonLabel() }}
+          </button>
+          @if (canSkip()) {
+            <button class="quipu-button quipu-button--tertiary" type="button" (click)="skip()">
+              Omitir este paso
+            </button>
+          }
+        </div>
+        <p class="after">{{ after }}</p>
+      </form>
+    }
+  }
+</app-onboarding-frame>
