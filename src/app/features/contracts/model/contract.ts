@@ -1,5 +1,11 @@
+import { loadErrorText, noMatchHeading } from '@shared/text/list-text';
 import type { components } from '@core/api/bff.generated';
-import { daysFromToday, formatDate, formatMoney } from '@shared/payments/payment-format';
+import {
+  daysFromToday,
+  formatDate,
+  formatMoney,
+  formatShortDate,
+} from '@shared/payments/payment-format';
 import { documentLabel } from '@shared/text/document-text';
 import { environmentLabel } from '@shared/text/environment-text';
 import { guestName } from '@shared/text/guest-text';
@@ -156,10 +162,6 @@ export function visibleContracts(
     .sort(compareBy(COMPARE, sort, byEnd));
 }
 
-export function countText(shown: number, loaded: number): string {
-  return `Mostrando ${String(shown)} de ${String(loaded)} cargados`;
-}
-
 /** «Lo que toca ahora» of A4: the contracts about to end and what to do about them. */
 export interface SoonPanel {
   readonly figure: number;
@@ -168,11 +170,6 @@ export interface SoonPanel {
   /** The contract to open when there is one; with several, the action filters the list. */
   readonly only: string | null;
   readonly action: string;
-}
-
-/** «31 mar», without the year: the panel speaks of this year. */
-function shortDate(isoDate: string): string {
-  return formatDate(isoDate).replace(/ \d{4}$/, '');
 }
 
 export function soonPanel(soon: readonly ContractSummary[]): SoonPanel {
@@ -188,7 +185,7 @@ export function soonPanel(soon: readonly ContractSummary[]): SoonPanel {
   }
   const names = soon.map(
     (contract) =>
-      `${guestName(contract.guestName)} (${environmentLabel(contract.environmentType, contract.environmentCode).toLowerCase()}) vence el ${shortDate(contract.endDate ?? '')}`,
+      `${guestName(contract.guestName)} (${environmentLabel(contract.environmentType, contract.environmentCode).toLowerCase()}) vence el ${formatShortDate(contract.endDate ?? '')}`,
   );
   return {
     figure: soon.length,
@@ -201,8 +198,8 @@ export function soonPanel(soon: readonly ContractSummary[]): SoonPanel {
 
 // The notices.
 
-export const LOAD_ERROR_TEXT = 'No se pudieron cargar los contratos.';
-export const NO_MATCH_HEADING = 'Ningún contrato coincide con los filtros.';
+export const LOAD_ERROR_TEXT = loadErrorText('los contratos', true);
+export const NO_MATCH_HEADING = noMatchHeading('contrato');
 export const CREATED_TEXT = 'Contrato cargado.';
 
 export function emptyText(status: ContractStatus): { heading: string; text: string } {

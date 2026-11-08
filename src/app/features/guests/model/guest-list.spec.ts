@@ -10,7 +10,7 @@ import {
   visibleGuests,
 } from './guest-list';
 import type { GuestSummary } from './guest-list';
-import { accessText, countText, environmentText, nowPanel } from './guest-list-texts';
+import { accessText, environmentText, nowPanel } from './guest-list-texts';
 import { nextSort } from '@shared/ui/data-table/list-sort';
 
 // 2026-11-05 12:00 in Lima (UTC-5).
@@ -230,10 +230,6 @@ describe('guest list (A3) texts', () => {
     });
     expect(accessText(null, NOW)).toBeNull();
     expect(accessText('no es fecha', NOW)).toBeNull();
-  });
-
-  it('counts what is shown of what is loaded', () => {
-    expect(countText(3, 20)).toBe('Mostrando 3 de 20 cargados');
   });
 });
 

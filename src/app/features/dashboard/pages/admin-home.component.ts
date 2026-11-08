@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import {
   Component,
   computed,
@@ -29,7 +30,6 @@ import { DashboardNowComponent } from '../components/dashboard-now.component';
 import { FirstStepsComponent } from '../components/first-steps.component';
 import { AdminDashboardService } from '../data/admin-dashboard.service';
 import {
-  countText,
   DEFAULT_SORT,
   hasFilters,
   isChargeState,
@@ -133,7 +133,7 @@ export class AdminHomeComponent implements OnInit {
     visibleCharges(this.content()?.rows ?? [], this.filters(), this.sort()),
   );
   protected readonly count = computed(() =>
-    countText(this.rows().length, this.content()?.rows.length ?? 0),
+    countText(this.rows().length, this.content()?.rows.length ?? 0, 'cobros'),
   );
 
   constructor() {

@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -27,7 +28,6 @@ import { openRefundDialog } from '../components/refund-dialog.component';
 import { AdminFinanceService } from '../data/admin-finance.service';
 import {
   balanceFacts,
-  countText,
   creditPanel,
   currentMonth,
   deleteNotice,
@@ -167,7 +167,7 @@ export class FinanceComponent {
       this.sort(),
     ),
   );
-  protected readonly count = computed(() => countText(this.rows().length, this.total()));
+  protected readonly count = computed(() => countText(this.rows().length, this.total(), ''));
   protected readonly nextCursor = this.list.nextCursor;
   protected readonly listLoading = computed(() => this.list.phase() === 'loading');
   protected readonly listFailed = this.list.firstFailed;

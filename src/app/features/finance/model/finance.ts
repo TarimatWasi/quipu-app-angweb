@@ -1,3 +1,4 @@
+import { loadErrorText } from '@shared/text/list-text';
 import type { components, operations } from '@core/api/bff.generated';
 import { formatDate, formatMoney, formatPeriod, formatStay } from '@shared/payments/payment-format';
 import { guestName } from '@shared/text/guest-text';
@@ -266,7 +267,7 @@ export function sortMovements(rows: readonly MovementRow[], sort: MovementSort):
 
 // The notices (SRS 17).
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar Finanzas.';
+export const LOAD_ERROR_TEXT = loadErrorText('Finanzas');
 export const EXPENSE_CREATED_TEXT = 'Egreso registrado.';
 export const EXPENSE_UPDATED_TEXT = 'Egreso actualizado. El neto se recalculó.';
 export const EXPENSE_DELETED_TEXT = 'Egreso eliminado. El neto se recalculó.';
@@ -304,10 +305,6 @@ export const TAB_ACTIONS: Readonly<Record<Tab, string>> = {
   FIN: 'Nueva multa',
   REF: 'Registrar devolución',
 };
-
-export function countText(shown: number, total: number): string {
-  return `Mostrando ${String(shown)} de ${String(total)}`;
-}
 
 /** The label of a thing the dialogs of deleting say: «Mantenimiento y reparaciones · S/ 320.00». */
 export function expenseDetail(expense: Expense): string {

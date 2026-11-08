@@ -1,5 +1,4 @@
 import {
-  countText,
   DEFAULT_SORT,
   emptyText,
   hasFilters,
@@ -83,10 +82,6 @@ describe('a contract as A4 shows it', () => {
     expect(hasFilters({ search: ' ', soon: 'ALL' })).toBe(false);
     expect(hasFilters({ search: 'ana', soon: 'ALL' })).toBe(true);
     expect(hasFilters({ search: '', soon: 'SOON' })).toBe(true);
-  });
-
-  it('counts what is shown among what is loaded', () => {
-    expect(countText(3, 17)).toBe('Mostrando 3 de 17 cargados');
   });
 
   it('puts the contracts about to end in the panel, with one action', () => {

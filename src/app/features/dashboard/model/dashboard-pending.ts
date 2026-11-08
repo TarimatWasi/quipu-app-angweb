@@ -6,7 +6,8 @@ import {
   formatStay,
   monthName,
 } from '@shared/payments/payment-format';
-import { documentOf, NO_ENVIRONMENT, NO_NAME } from './dashboard-charges';
+import { NO_NAME } from '@shared/text/guest-text';
+import { documentOf, NO_ENVIRONMENT } from './dashboard-charges';
 import type { AdminDashboard, DashboardCharge } from './dashboard-charges';
 
 /**

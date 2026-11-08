@@ -1,6 +1,5 @@
 import { chargeOf } from './dashboard.testing';
 import {
-  countText,
   DEFAULT_SORT,
   hasFilters,
   isChargeState,
@@ -213,6 +212,5 @@ describe('the filters and the order of the charges', () => {
     expect(isChargeState('OVERDUE')).toBe(true);
     expect(isChargeState('REJECTED')).toBe(false);
     expect(isChargeState(null)).toBe(false);
-    expect(countText(5, 17)).toBe('Mostrando 5 de 17 cobros');
   });
 });

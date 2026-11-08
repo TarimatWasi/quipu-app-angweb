@@ -1,3 +1,4 @@
+import { AMOUNT_TEXT } from '@shared/payments/proof-rules';
 import type { components } from '@core/api/bff.generated';
 import { formatMoney, parseAmount } from '@shared/payments/payment-format';
 import { documentLabel } from '@shared/text/document-text';
@@ -21,7 +22,6 @@ export const MAX_METHOD_LENGTH = 50;
 export const CATEGORY_REQUIRED_TEXT = 'Elige una categoría';
 export const GUEST_REQUIRED_TEXT = 'Elige un huésped';
 export const MONTH_REQUIRED_TEXT = 'Elige un mes';
-export const AMOUNT_TEXT = 'El monto debe ser mayor a 0';
 export const METHOD_REQUIRED_TEXT = 'Escribe cómo devolviste el dinero';
 export const DATE_REQUIRED_TEXT = 'Elige la fecha en que devolviste el dinero.';
 export const DATE_FUTURE_TEXT = 'La fecha no puede ser futura.';

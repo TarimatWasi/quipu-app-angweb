@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
@@ -37,7 +38,6 @@ import type {
   SortKey,
 } from '../model/guest-list';
 import {
-  countText,
   LOAD_ERROR_TEXT,
   NO_CURRENT_HEADING,
   NO_CURRENT_TEXT,

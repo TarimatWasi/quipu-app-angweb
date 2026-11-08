@@ -1,6 +1,5 @@
 import {
   balanceFacts,
-  countText,
   creditPanel,
   currentMonth,
   deleteNotice,
@@ -197,7 +196,6 @@ describe('the balance and the movements of A6', () => {
     });
     expect(emptyText('FIN', '2026-11').heading).toBe('No hay multas en noviembre.');
     expect(emptyText('REF', '2026-11').heading).toBe('No hay devoluciones en noviembre.');
-    expect(countText(3, 5)).toBe('Mostrando 3 de 5');
   });
 
   it('says what a refund did to the balance and what deleting does to it (RN-24)', () => {

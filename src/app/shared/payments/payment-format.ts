@@ -133,6 +133,11 @@ export function formatDate(isoDate: string): string {
   return parts ? shortDate(parts, parts.year) : isoDate;
 }
 
+/** "2026-11-03" → "3 nov": the date without the year, for a text that speaks of this year. */
+export function formatShortDate(isoDate: string): string {
+  return formatDate(isoDate).replace(/ \d{4}$/, '');
+}
+
 /** "2026-11-03T19:05:00Z" → "3 nov 2026, 14:05" (time of Lima). */
 export function formatDateTime(isoDateTime: string): string {
   const date = new Date(isoDateTime);

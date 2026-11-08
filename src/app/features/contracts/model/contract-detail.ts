@@ -1,6 +1,8 @@
+import { loadErrorText } from '@shared/text/list-text';
 import {
   daysFromToday,
   formatDate,
+  formatShortDate,
   formatMoney,
   formatPeriod,
 } from '@shared/payments/payment-format';
@@ -16,7 +18,7 @@ import type { FormFact } from './contract-form';
 
 /** A4.2 «Detalle del contrato» (CU-07) and A4.3 «Finalizar» (CU-12) as the canvas «ContratoDetalle» words it. */
 
-export const LOAD_ERROR_TEXT = 'No se pudo cargar el contrato.';
+export const LOAD_ERROR_TEXT = loadErrorText('el contrato');
 export const NOT_FOUND_TEXT = 'No se encontró el contrato.';
 export const TERMINATED_TEXT = 'Contrato finalizado.';
 export const FILE_ERROR_TEXT = 'No se pudo acceder al archivo; inténtalo de nuevo más tarde.';
@@ -49,10 +51,6 @@ const DAY_MS = 86_400_000;
 /** The day after an ISO date, yyyy-mm-dd. */
 function nextDay(isoDate: string): string {
   return new Date(Date.parse(isoDate) + DAY_MS).toISOString().slice(0, 10);
-}
-
-function shortDate(isoDate: string): string {
-  return formatDate(isoDate).replace(/ \d{4}$/, '');
 }
 
 function firstName(name: string | null): string {
@@ -94,7 +92,7 @@ function owedPanel(contract: Contract, owed: readonly PeriodRow[], first: Period
   return {
     figure: formatMoney(total),
     label: 'por pagar',
-    text: `${owedMonths(owed)}: venció el ${shortDate(first.dueDate)}. ${ending}`,
+    text: `${owedMonths(owed)}: venció el ${formatShortDate(first.dueDate)}. ${ending}`,
     urgent: true,
     badge: first.badge,
     action: {
@@ -137,11 +135,11 @@ function endedPanel(contract: Contract, environment: string): DetailPanel {
 
 /** A contract about to end: talk to the guest and, to renew it, load the new one from the next day. */
 function soonPanel(contract: Contract, endDate: string, days: number, environment: string) {
-  const renew = shortDate(nextDay(endDate));
+  const renew = formatShortDate(nextDay(endDate));
   return {
     figure: `${String(days)} días`,
     label: 'para que venza',
-    text: `Vence el ${shortDate(endDate)}. Conversa con ${firstName(contract.guestName)}: para renovarlo, carga el contrato nuevo desde el ${renew}; si no, la ${environment} queda libre al día siguiente.`,
+    text: `Vence el ${formatShortDate(endDate)}. Conversa con ${firstName(contract.guestName)}: para renovarlo, carga el contrato nuevo desde el ${renew}; si no, la ${environment} queda libre al día siguiente.`,
     urgent: false,
     badge: STATE_BADGES.SOON,
     action: {

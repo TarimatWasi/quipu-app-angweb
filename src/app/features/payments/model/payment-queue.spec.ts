@@ -1,6 +1,5 @@
 import type { components } from '@core/api/bff.generated';
 import {
-  countText,
   DEFAULT_SORT,
   hasFilters,
   NO_FILTERS,
@@ -156,11 +155,6 @@ describe('A5 queue model', () => {
       'pay_a',
       'pay_c',
     ]);
-  });
-
-  it('says how many are shown of the loaded ones', () => {
-    expect(countText(2, 4, false)).toBe('Mostrando 2 de 4');
-    expect(countText(20, 20, true)).toBe('Mostrando 20 de 20 cargados');
   });
 
   it('counts every pending payment and names the oldest with its month and how long it waits', () => {

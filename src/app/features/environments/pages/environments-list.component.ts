@@ -1,3 +1,4 @@
+import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { form, FormField } from '@angular/forms/signals';
@@ -22,7 +23,6 @@ import { EnvironmentsTableComponent } from '../components/environments-table.com
 import { AdminEnvironmentsService } from '../data/admin-environments.service';
 import { limaDay } from '@shared/payments/payment-format';
 import {
-  countText,
   DEFAULT_SORT,
   doneText,
   emptyText,
