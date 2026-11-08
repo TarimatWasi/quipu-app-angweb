@@ -1,13 +1,18 @@
 <app-page-header heading="Huéspedes" />
 
+@if (phase() !== 'error') {
+  @if (panel(); as now) {
+    <app-guests-now-panel class="now" [panel]="now" (showPending)="showPending()" />
+  } @else if (phase() === 'loading') {
+    <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+  }
+}
+
 @switch (phase()) {
   @case ('loading') {
-    @if (view() === 'CURRENT') {
-      <app-skeleton class="now" subject="el resumen de huéspedes" [announceSlow]="false"
-        ><ng-template appSkeletonContent
-          ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
-      ></app-skeleton>
-    }
     <section class="all" aria-labelledby="guests-loading-title">
       <div class="quipu-list-head">
         <h2 id="guests-loading-title">Todos los huéspedes</h2>
@@ -38,10 +43,6 @@
     />
   }
   @case ('ready') {
-    @if (panel(); as now) {
-      <app-guests-now-panel class="now" [panel]="now" (showPending)="showPending()" />
-    }
-
     <section class="all" aria-labelledby="all-guests-title">
       <div class="quipu-list-head">
         <h2 id="all-guests-title">Todos los huéspedes</h2>

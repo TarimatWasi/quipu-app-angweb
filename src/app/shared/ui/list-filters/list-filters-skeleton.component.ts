@@ -40,6 +40,10 @@ import { SkeletonBlockComponent } from '../skeleton/skeleton-block.component';
     :host {
       display: block;
     }
+    /* The same distance from the heading as the real views, which the page lays out. */
+    .views {
+      margin-top: 1rem;
+    }
   `,
 })
 export class ListFiltersSkeletonComponent {

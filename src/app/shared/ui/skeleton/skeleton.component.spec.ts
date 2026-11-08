@@ -39,7 +39,7 @@ describe('Skeleton loading region and patterns', () => {
     );
     fixture.detectChanges();
     expect(container.querySelectorAll('app-skeleton-fields .quipu-field')).toHaveLength(2);
-    expect(container.querySelectorAll('app-skeleton-facts > div')).toHaveLength(2);
+    expect(container.querySelectorAll('app-skeleton-facts > app-fact-tile')).toHaveLength(2);
     expect(container.querySelectorAll('app-skeleton-cards .card')).toHaveLength(2);
     expect(
       container.querySelector('app-skeleton-fields')?.closest('[aria-hidden="true"]'),

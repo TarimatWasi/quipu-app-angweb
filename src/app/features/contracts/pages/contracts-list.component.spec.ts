@@ -121,7 +121,7 @@ describe('A4 «Contratos»', () => {
 
     expect(api.list).toHaveBeenLastCalledWith('EXPIRED', undefined);
     expect(guests()).toEqual(['Marco Huanca']);
-    expect(view().queryByRole('region', { name: 'Lo que toca ahora' })).toBeNull();
+    expect(view().getByRole('region', { name: 'Lo que toca ahora' })).toBeTruthy();
     expect(view().queryByLabelText('Estado')).toBeNull();
   });
 

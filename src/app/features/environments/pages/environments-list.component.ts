@@ -96,7 +96,7 @@ export class EnvironmentsListComponent {
   private readonly list = new PagedList<EnvironmentStatus, Environment, EnvironmentPage>(
     (status, after) => this.service.list(status, after ?? undefined),
     (page) => {
-      this.freeCount.set(page.freeCount);
+      if (this.view() === 'ACTIVE') this.freeCount.set(page.freeCount);
     },
   );
 
@@ -115,7 +115,9 @@ export class EnvironmentsListComponent {
   protected readonly count = computed(() => countText(this.rows().length, this.loadedCount()));
   protected readonly panel = computed(() => {
     const count = this.freeCount();
-    return this.view() !== 'ACTIVE' || count === null ? null : freePanel(count, this.list.items());
+    return count === null
+      ? null
+      : freePanel(count, this.view() === 'ACTIVE' ? this.list.items() : []);
   });
   protected readonly empty = computed(() => emptyText(this.view()));
   protected readonly searchHint = computed(() =>
@@ -131,7 +133,6 @@ export class EnvironmentsListComponent {
 
   protected chooseView(view: EnvironmentStatus): void {
     if (view === this.view()) return;
-    this.freeCount.set(null);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
     this.sort.set(DEFAULT_SORT);

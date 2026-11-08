@@ -271,7 +271,7 @@ describe('GuestsListComponent (A3)', () => {
     );
   });
 
-  it('switches to «Inactivos»: asks the BFF, clears the filters and leaves out Estado and the panel', async () => {
+  it('switches to «Inactivos»: asks the BFF, clears the filters and leaves out Estado and keeps the panel', async () => {
     const { root, view, answer, click, search, choose } = await setup();
     await answer(page([ROSA, EXPIRED]));
     await choose('Tipo', 'CONTRACT');
@@ -300,7 +300,7 @@ describe('GuestsListComponent (A3)', () => {
     expect(view.getByLabelText<HTMLInputElement>('Buscar').value).toBe('');
     expect(view.getByLabelText<HTMLSelectElement>('Tipo').value).toBe('ALL');
     expect(view.queryByLabelText('Estado')).toBeNull();
-    expect(root.querySelector('app-guests-now-panel')).toBeNull();
+    expect(root.querySelector('app-guests-now-panel')).not.toBeNull();
     expect(view.getByRole('heading', { name: 'No hay huéspedes inactivos.' })).toBeTruthy();
     expect(
       view.getByText('Un huésped que desactives aparecerá aquí, con su historial.'),

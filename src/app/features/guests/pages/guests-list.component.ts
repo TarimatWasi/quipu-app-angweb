@@ -129,8 +129,9 @@ export class GuestsListComponent {
   protected readonly count = computed(() => countText(this.rows().length, this.loadedCount()));
   protected readonly panel = computed(() => {
     const counts = this.counts();
-    if (this.view() !== 'CURRENT' || counts === null) return null;
-    return nowPanel(counts, this.guests(), new Date());
+    if (counts === null) return null;
+    // The guests that expired are named from the loaded ones, which are the current ones only.
+    return nowPanel(counts, this.view() === 'CURRENT' ? this.guests() : [], new Date());
   });
   protected readonly emptyHeading = computed(() =>
     this.view() === 'CURRENT' ? NO_CURRENT_HEADING : NO_INACTIVE_HEADING,
@@ -169,7 +170,6 @@ export class GuestsListComponent {
     if (view === this.view()) return;
     this.pageLoad.reset();
     this.guests.set([]);
-    this.counts.set(null);
     this.view.set(view);
     this.filters.set(NO_FILTERS);
   }
@@ -235,9 +235,11 @@ export class GuestsListComponent {
       request.after === null ? page.content : [...loaded, ...page.content],
     );
     this.nextCursor.set(page.nextCursor);
-    this.counts.set({
-      pendingActivationCount: page.pendingActivationCount,
-      onboardingCount: page.onboardingCount,
-    });
+    if (this.view() === 'CURRENT') {
+      this.counts.set({
+        pendingActivationCount: page.pendingActivationCount,
+        onboardingCount: page.onboardingCount,
+      });
+    }
   }
 }

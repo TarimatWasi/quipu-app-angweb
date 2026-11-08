@@ -1,13 +1,30 @@
 <app-page-header heading="Ambientes" />
 
+@if (phase() !== 'error') {
+  @if (panel(); as free) {
+    <app-now-panel
+      class="now"
+      headingId="environments-now-title"
+      [figure]="free.figure"
+      [label]="free.label"
+      [text]="free.text"
+    >
+      @if (free.figure > 0) {
+        <a class="quipu-button quipu-button--primary" routerLink="/admin/contracts/new"
+          >Cargar contrato</a
+        >
+      }
+    </app-now-panel>
+  } @else if (phase() === 'loading') {
+    <app-skeleton class="now" subject="los ambientes" [announceSlow]="false"
+      ><ng-template appSkeletonContent
+        ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
+    ></app-skeleton>
+  }
+}
+
 @switch (phase()) {
   @case ('loading') {
-    @if (view() === 'ACTIVE') {
-      <app-skeleton class="now" subject="los ambientes" [announceSlow]="false"
-        ><ng-template appSkeletonContent
-          ><app-skeleton-block shape="rectangle" height="152px" /></ng-template
-      ></app-skeleton>
-    }
     <section class="all" aria-labelledby="environments-loading-title">
       <div class="quipu-list-head">
         <h2 id="environments-loading-title">Todos los ambientes</h2>
@@ -38,22 +55,6 @@
     />
   }
   @case ('ready') {
-    @if (panel(); as free) {
-      <app-now-panel
-        class="now"
-        headingId="environments-now-title"
-        [figure]="free.figure"
-        [label]="free.label"
-        [text]="free.text"
-      >
-        @if (free.figure > 0) {
-          <a class="quipu-button quipu-button--primary" routerLink="/admin/contracts/new"
-            >Cargar contrato</a
-          >
-        }
-      </app-now-panel>
-    }
-
     <section class="all" aria-labelledby="all-environments-title">
       <div class="quipu-list-head">
         <h2 id="all-environments-title">Todos los ambientes</h2>
