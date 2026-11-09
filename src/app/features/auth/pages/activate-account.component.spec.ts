@@ -153,6 +153,22 @@ describe('ActivateAccountComponent (A0.4, CU-24)', () => {
     expect(ui.queryByLabelText('Contraseña')).toBeNull();
   });
 
+  it('tells the person to wait when the server rate-limits the activation, and keeps the form', async () => {
+    const { ui, fill, submit, request } = await setup();
+    await fill(VALID);
+    await submit();
+
+    (await request()).flush(
+      { code: 'RATE_LIMITED', message: 'x' },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+
+    expect(
+      await ui.findByText('Demasiados intentos, espera un momento antes de volver a intentar'),
+    ).toBeTruthy();
+    expect(ui.getByLabelText('Contraseña')).toBeTruthy();
+  });
+
   it('shows a disabled account as a general error and keeps the form', async () => {
     const { ui, fill, submit, request } = await setup();
     await fill(VALID);

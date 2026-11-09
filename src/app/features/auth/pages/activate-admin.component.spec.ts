@@ -188,6 +188,22 @@ describe('ActivateAdminComponent (A0.5, RF-22)', () => {
     expect(ui.queryByLabelText('Nombre completo')).toBeNull();
   });
 
+  it('tells the person to wait when the server rate-limits the activation, and keeps the form', async () => {
+    const { ui, fill, submit, request } = await setup();
+    await fill(NAME, VALID);
+    await submit();
+
+    (await request()).flush(
+      { code: 'RATE_LIMITED', message: 'x' },
+      { status: 429, statusText: 'Too Many Requests' },
+    );
+
+    expect(
+      await ui.findByText('Demasiados intentos, espera un momento antes de volver a intentar'),
+    ).toBeTruthy();
+    expect(ui.getByLabelText('Nombre completo')).toBeTruthy();
+  });
+
   it('shows a general error when the server cannot be reached', async () => {
     const { ui, fill, submit, request } = await setup();
     await fill(NAME, VALID);
