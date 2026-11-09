@@ -11,7 +11,6 @@ import { MAX_PROOFS } from '@shared/payments/proof-rules';
 
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
 export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;
-export const SENT_TEXT = 'Pago enviado. Queda pendiente de revisión.';
 
 /** The screen H1 or T1 of each kind of guest, as the canvas names it («Volver a Estado de cuenta»). */
 export const HOME_NAMES: Readonly<Record<GuestType, string>> = {
@@ -168,4 +167,11 @@ export function paymentSummary({ audience, period, stay, payment }: SummarySourc
     due: period ? formatShortDate(period.dueDate) : null,
     note: creditNote(period?.amount ?? 0, credit) + CONTRACT_NOTE,
   };
+}
+
+/** «Pago enviado»: what the guest reads once the payment went, in the words of the canvas «Voucher». */
+export function sentText(audience: GuestType, month: string | null): string {
+  const what =
+    audience === 'CONTRACT' && month !== null ? `Tu pago de ${month}` : 'Tu pago de la estadía';
+  return `${what} está en revisión. Verás el resultado en tu ${HOME_NAMES[audience].toLowerCase()}; si no se aprueba, te diremos por qué y podrás corregirlo.`;
 }

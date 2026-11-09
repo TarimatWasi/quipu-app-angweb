@@ -36,13 +36,14 @@ import {
 } from '../data/temporary-guest-payments.service';
 import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { coveredAmountText, creditAppliedText } from '@shared/payments/credit-texts';
 import {
   balanceOf,
   formatMoney,
   formatPeriod,
   formatStay,
   hasRejectedPayment,
+  limaDayOf,
+  longDay,
   monthName,
   PERIOD_STATUS_LABELS,
   periodLabel,
@@ -72,7 +73,7 @@ import {
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
   OwnPaymentMode,
-  SENT_TEXT,
+  sentText,
 } from '../model/own-payment';
 
 const GENERAL_ERROR_ID = 'own-payment-error';
@@ -137,8 +138,6 @@ export class OwnPaymentComponent {
   protected readonly proofLimitText = OWN_PROOF_LIMIT_TEXT;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly formatMoney = formatMoney;
-  protected readonly creditAppliedText = creditAppliedText;
-  protected readonly coveredAmountText = coveredAmountText;
   protected readonly periodLabel = periodLabel;
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
   protected readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;
@@ -219,7 +218,7 @@ export class OwnPaymentComponent {
 
   /** Whether the proofs form is on screen. */
   protected readonly showForm = computed(() => {
-    if (this.state().kind !== 'ready') return false;
+    if (this.state().kind !== 'ready' || this.sent()) return false;
     switch (this.mode()) {
       case 'correct':
         return true;
@@ -260,6 +259,11 @@ export class OwnPaymentComponent {
   protected readonly atProofLimit = this.proofDrafts.atLimit;
 
   protected readonly homeName = HOME_NAMES[this.audience];
+  /** The payment went: the screen says so and leads back, instead of leaving. */
+  protected readonly sent = signal(false);
+  protected readonly sentText = computed(() =>
+    sentText(this.audience, monthName(this.payment()?.period ?? this.selected()?.period ?? '')),
+  );
   protected readonly summary = computed(() =>
     paymentSummary({
       audience: this.audience,
@@ -310,7 +314,27 @@ export class OwnPaymentComponent {
   }
 
   protected proofKindLabel(proof: GuestProof): string {
-    return proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo';
+    return proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo, sin voucher';
+  }
+
+  /** The line under a proof: its file and means, what the administration verified or that it confirms it. */
+  protected proofDetail(proof: GuestProof): string {
+    const parts: string[] = [];
+    if (proof.kind === 'CASH') parts.push('Lo confirma la administración');
+    if (proof.file) parts.push(proof.file.name);
+    if (proof.method) parts.push(proof.method);
+    if (proof.verifiedAmount !== null)
+      parts.push(`verificado ${formatMoney(proof.verifiedAmount)}`);
+    return parts.join(' · ');
+  }
+
+  /** What the review of the payment says: when it went and what comes next. */
+  protected readText(payment: GuestPayment): string {
+    if (payment.status === 'APPROVED') return 'La administración aprobó este pago.';
+    const day = limaDayOf(payment.submittedAt);
+    const sent =
+      day === null ? 'Enviaste este pago' : `Enviaste este pago el ${longDay(day, new Date())}`;
+    return `${sent} y la administración lo está revisando. No puedes enviar otro mientras tanto; si no se aprueba, te diremos por qué y podrás corregirlo aquí.`;
   }
 
   protected choosePeriod(target: EventTarget | null): void {
@@ -343,8 +367,7 @@ export class OwnPaymentComponent {
       if (!this.destroyRef.destroyed) this.busy.set(false);
     }
     if (this.destroyRef.destroyed) return;
-    this.toasts.show(SENT_TEXT);
-    await this.router.navigateByUrl(HOME);
+    this.sent.set(true);
   }
 
   /** The call that sends the payment, or null when the form still has a problem to fix. */

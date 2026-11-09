@@ -15,10 +15,26 @@ import type { PeriodStatus } from '../data/guest-payments.service';
 import type { GuestPayment } from '../data/own-payments';
 import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
 import { OwnPaymentComponent } from './own-payment.component';
-import { OWN_PROOF_LIMIT_TEXT, SENT_TEXT } from '../model/own-payment';
-import { ToastService } from '@shared/ui/toast/toast.service';
-/** The text of the toast the screen asked for, or '' when there is none. */
-const toastText = () => TestBed.inject(ToastService).current()?.text ?? '';
+import { OWN_PROOF_LIMIT_TEXT } from '../model/own-payment';
+/** «Pago enviado»: the screen says it, and leads back instead of leaving. */
+function expectSent(
+  ui: { page: () => BoundFunctions<typeof queries> },
+  what: string,
+  home: string,
+) {
+  expect(ui.page().getByText('Pago enviado')).toBeTruthy();
+  expect(
+    ui
+      .page()
+      .getByText(
+        `${what} está en revisión. Verás el resultado en tu ${home.toLowerCase()}; si no se aprueba, te diremos por qué y podrás corregirlo.`,
+      ),
+  ).toBeTruthy();
+  // The one of the header and the button of the panel both lead back.
+  const links = ui.page().getAllByRole('link', { name: `Volver a ${home}` });
+  expect(links.map((link) => link.getAttribute('href'))).toEqual(['/home', '/home']);
+  expect(ui.page().queryByRole('button', { name: /^Enviar/ })).toBeNull();
+}
 
 const isStatus = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/guest/account-status');
 const isStay = (req: HttpRequest<unknown>) =>
@@ -280,8 +296,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(sent.files).toEqual(['voucher.pdf']);
       await ui.flush(req, { id: 'pay_new', status: 'PENDING' }, 201);
 
-      expect(TestBed.inject(Router).url).toBe('/home');
-      expect(toastText()).toBe(SENT_TEXT);
+      expectSent(ui, 'Tu pago de noviembre', 'Estado de cuenta');
     });
 
     it('says what is left to pay after the credit and compares the sum with it (RN-38)', async () => {
@@ -505,8 +520,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       ]);
       await ui.flush(req, { id: 'pay/7', status: 'PENDING' });
 
-      expect(TestBed.inject(Router).url).toBe('/home');
-      expect(toastText()).toBe(SENT_TEXT);
+      expectSent(ui, 'Tu pago de septiembre', 'Estado de cuenta');
     });
 
     it('compares the corrected sum with what is left to pay after the credit (RN-38)', async () => {
@@ -603,12 +617,28 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         payment({ status: 'PENDING', rejectionReason: null }),
       );
 
+      expect(ui.page().getByRole('heading', { name: 'Lo que enviaste' })).toBeTruthy();
       expect(ui.page().getByText('Pendiente de revisión')).toBeTruthy();
-      expect(ui.page().getByText(/Voucher · yape\.png · Yape · S\/ 300\.00/)).toBeTruthy();
+      expect(
+        ui
+          .page()
+          .getByText(
+            /Enviaste este pago el .* y la administración lo está revisando\. No puedes enviar otro mientras tanto; si no se aprueba, te diremos por qué y podrás corregirlo aquí\./,
+          ),
+      ).toBeTruthy();
+      expect(ui.page().getByText('Comprobante 1 · Voucher')).toBeTruthy();
+      expect(ui.page().getByText('yape.png · Yape')).toBeTruthy();
+      expect(ui.page().getByText('Suma')).toBeTruthy();
       expect(ui.page().queryByRole('group', { name: 'Comprobante 1' })).toBeNull();
       // A pending payment was already sent: nothing is asked to pay while it is reviewed.
       expect(ui.page().queryByText(/Por pagar/)).toBeNull();
-      expect(ui.page().getByText('A cubrir con este pago S/ 350.00')).toBeTruthy();
+      expect(summaryOf(ui).getByText('S/ 350.00')).toBeTruthy();
+      expect(
+        ui
+          .page()
+          .getAllByRole('link', { name: 'Volver a Estado de cuenta' })
+          .map((link) => link.getAttribute('href')),
+      ).toEqual(['/home', '/home']);
     });
 
     it('shows what an approved payment covered and the credit used, never «Por pagar»', async () => {
@@ -619,9 +649,10 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       );
 
       expect(ui.page().getByText('Aprobado')).toBeTruthy();
+      expect(ui.page().getByText('La administración aprobó este pago.')).toBeTruthy();
       expect(ui.page().queryByText(/Por pagar/)).toBeNull();
-      expect(ui.page().getByText('A cubrir con este pago S/ 300.00')).toBeTruthy();
       expect(summaryOf(ui).getByText('Cuota')).toBeTruthy();
+      expect(summaryOf(ui).getByText('S/ 350.00')).toBeTruthy();
       expect(
         summaryOf(ui).getByText(/Cuota S\/ 350\.00 − S\/ 50\.00 que tienes a favor\./),
       ).toBeTruthy();
@@ -662,8 +693,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(sent.proofs).toEqual([{ kind: 'VOUCHER', amount: 400, fileIndex: 0 }]);
       await ui.flush(req, { id: 'pay_new', status: 'PENDING' }, 201);
 
-      expect(TestBed.inject(Router).url).toBe('/home');
-      expect(toastText()).toBe(SENT_TEXT);
+      expectSent(ui, 'Tu pago de la estadía', 'Estado de pago');
     });
 
     it('shows «Ya enviaste un pago» for the stay and leads back to the payment state', async () => {
@@ -758,7 +788,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       const req = await ui.expect1(isPut('temporary-guest', 'pay_r'));
       expect((await bodyOf(req)).proofs).toEqual([{ id: 'proof-c', kind: 'CASH', amount: 400 }]);
       await ui.flush(req, { id: 'pay_r', status: 'PENDING' });
-      expect(TestBed.inject(Router).url).toBe('/home');
+      expectSent(ui, 'Tu pago de la estadía', 'Estado de pago');
     });
 
     it('shows the BFF text when the guest has no stay yet', async () => {

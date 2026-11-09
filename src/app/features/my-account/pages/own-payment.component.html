@@ -1,12 +1,5 @@
 <section class="page" [attr.aria-label]="title()">
   <app-page-header [heading]="title()" [backLink]="home" [backTo]="homeName" />
-  @if (mode() === 'read' && payment(); as p) {
-    <app-status-badge
-      [tone]="paymentStatusTones[p.status]"
-      [label]="paymentStatusLabels[p.status]"
-    />
-  }
-
   @if (refreshError(); as message) {
     <app-load-error [message]="message" [retrying]="refreshing()" (retry)="retry()" />
   }
@@ -56,31 +49,42 @@
         <app-own-payment-summary [summary]="summary()" />
       </aside>
       <div class="main">
+        @if (sent()) {
+          <section class="sent" aria-labelledby="own-payment-sent">
+            <p id="own-payment-sent" class="sent-title">Pago enviado</p>
+            <p>{{ sentText() }}</p>
+            <a class="quipu-button quipu-button--primary" [routerLink]="home"
+              >Volver a {{ homeName }}</a
+            >
+          </section>
+        }
         @if (mode() === 'read' && payment(); as p) {
-          <section aria-labelledby="own-payment-proofs">
-            @if (labelOf(p); as label) {
-              <p class="strong">{{ label }}</p>
-            }
-            <p class="muted">Total declarado {{ formatMoney(p.amount) }}</p>
-            <p class="muted">{{ coveredAmountText(p.amountDue) }}</p>
-            <h2 id="own-payment-proofs">Comprobantes</h2>
-            <ul class="proof-list">
-              @for (proof of p.proofs; track proof.id) {
+          <section class="review" aria-labelledby="own-payment-proofs">
+            <h2 id="own-payment-proofs">Lo que enviaste</h2>
+            <div class="status">
+              <app-status-badge
+                [tone]="paymentStatusTones[p.status]"
+                [label]="paymentStatusLabels[p.status]"
+              />
+              <p>{{ readText(p) }}</p>
+            </div>
+            <ol class="entries">
+              @for (proof of p.proofs; track proof.id; let i = $index) {
                 <li>
-                  {{ proofKindLabel(proof) }}
-                  @if (proof.file; as file) {
-                    · {{ file.name }}
-                  }
-                  @if (proof.method; as method) {
-                    · {{ method }}
-                  }
-                  · {{ formatMoney(proof.declaredAmount) }}
-                  @if (proof.verifiedAmount !== null) {
-                    · verificado {{ formatMoney(proof.verifiedAmount) }}
-                  }
+                  <div>
+                    <strong>Comprobante {{ i + 1 }} · {{ proofKindLabel(proof) }}</strong>
+                    <span class="help">{{ proofDetail(proof) }}</span>
+                  </div>
+                  <span class="amount">{{ formatMoney(proof.declaredAmount) }}</span>
                 </li>
               }
-            </ul>
+              <li class="total">
+                <strong>Suma</strong><strong class="amount">{{ formatMoney(p.amount) }}</strong>
+              </li>
+            </ol>
+            <a class="quipu-button quipu-button--primary" [routerLink]="home"
+              >Volver a {{ homeName }}</a
+            >
           </section>
         }
 
