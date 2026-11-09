@@ -10,6 +10,7 @@ import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
+import type { BoundFunctions, queries } from '@testing-library/dom';
 import type { PeriodStatus } from '../data/guest-payments.service';
 import type { GuestPayment } from '../data/own-payments';
 import type { StayPaymentStatus } from '../data/temporary-guest-payments.service';
@@ -211,6 +212,10 @@ async function cash(ui: Ui, n: number, amount: string) {
 
 const send = (ui: Ui, name = 'Enviar pago') => ui.click(ui.page().getByRole('button', { name }));
 
+/** «Lo que estás pagando»: the summary beside the form. */
+const summaryOf = (ui: { page: () => BoundFunctions<typeof queries> }) =>
+  within(ui.page().getByRole('complementary', { name: 'Lo que estás pagando' }));
+
 describe('OwnPaymentComponent (H3, T2)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
@@ -237,7 +242,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     it('offers only the months without any payment and links the rejected ones to their correction', async () => {
       const ui = await newContractPayment();
 
-      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Subir pago');
+      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Subir voucher');
       const options = [...ui.page().getByLabelText('Mes').querySelectorAll('option')].map(
         (option) => option.textContent.trim(),
       );
@@ -253,12 +258,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     it('sends the chosen month with a voucher and cash, then goes home saying it is pending review', async () => {
       const ui = await newContractPayment('/guest/payments/new?period=2026-11');
       expect(ui.page().getByLabelText<HTMLSelectElement>('Mes').value).toBe('2026-11');
-      expect(
-        ui
-          .page()
-          .getByText(/Cuota S\/ 350.00/)
-          .textContent.trim(),
-      ).toBe('Cuota S/ 350.00 · Por pagar S/ 300.00');
+      expect(ui.page().getByText('Cuota S/ 350.00 · Por pagar S/ 300.00')).toBeTruthy();
 
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
       const shortcuts = within(ui.proof(1).getByRole('group', { name: 'Medios frecuentes' }));
@@ -287,9 +287,10 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     it('says what is left to pay after the credit and compares the sum with it (RN-38)', async () => {
       const ui = await newContractPayment('/guest/payments/new?period=2026-11');
 
-      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
-        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
-      );
+      expect(
+        summaryOf(ui).getByText(/Cuota S\/ 350\.00 − S\/ 50\.00 que tienes a favor\./),
+      ).toBeTruthy();
+      expect(summaryOf(ui).getByText('Por pagar')).toBeTruthy();
       await cash(ui, 1, '350');
       expect(ui.page().getByRole('status').textContent).toMatch(
         /Suma S\/ 350.00 · Sobran S\/ 50.00/,
@@ -298,13 +299,8 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
 
       await ui.choose(ui.page().getByLabelText('Mes'), '2026-10');
-      expect(
-        ui
-          .page()
-          .getByText(/Cuota S\/ 350.00/)
-          .textContent.trim(),
-      ).toBe('Cuota S/ 350.00 · Por pagar S/ 350.00');
-      expect(ui.page().queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(ui.page().getByText('Cuota S/ 350.00 · Por pagar S/ 350.00')).toBeTruthy();
+      expect(ui.page().queryByText(/que tienes a favor/)).toBeNull();
       expect(ui.page().getByRole('status').textContent).toMatch(
         /Suma S\/ 300.00 · Faltan S\/ 50.00/,
       );
@@ -481,11 +477,15 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       const ui = await setup('/guest/payments/pay%2F7');
       await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
 
-      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain(
-        'Corregir pago de Septiembre 2026',
-      );
-      expect(ui.page().getByText('Tu pago no se aprobó')).toBeTruthy();
-      expect(ui.page().getByText('El monto no coincide')).toBeTruthy();
+      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Corregir pago');
+      expect(summaryOf(ui).getByText('Septiembre 2026')).toBeTruthy();
+      expect(ui.page().getByText('Tu pago de septiembre no se aprobó.')).toBeTruthy();
+      expect(ui.page().getByText(/Motivo: El monto no coincide/)).toBeTruthy();
+      expect(
+        ui
+          .page()
+          .getByText(/Agrega otro comprobante por la diferencia o corrige el que enviaste\./),
+      ).toBeTruthy();
       expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto (S/)').value).toBe('300');
       expect(ui.proof(1).getByLabelText<HTMLInputElement>('Medio de pago (opcional)').value).toBe(
         'Yape',
@@ -516,10 +516,11 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         payment({ creditApplied: 50, amountDue: 300 }),
       );
 
-      expect(ui.page().getByText('Por pagar S/ 300.00')).toBeTruthy();
-      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
-        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
-      );
+      expect(summaryOf(ui).getByText('Por pagar')).toBeTruthy();
+      expect(summaryOf(ui).getByText('S/ 300.00')).toBeTruthy();
+      expect(
+        summaryOf(ui).getByText(/Cuota S\/ 350\.00 − S\/ 50\.00 que tienes a favor\./),
+      ).toBeTruthy();
       expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
     });
 
@@ -527,8 +528,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       const ui = await setup('/guest/payments/pay%2F7');
       await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
 
-      expect(ui.page().getByText('Por pagar S/ 350.00')).toBeTruthy();
-      expect(ui.page().queryByRole('note', { name: 'Crédito a favor' })).toBeNull();
+      expect(summaryOf(ui).getByText('Por pagar')).toBeTruthy();
+      expect(summaryOf(ui).getByText('S/ 350.00')).toBeTruthy();
+      expect(ui.page().queryByText(/que tienes a favor/)).toBeNull();
       expect(ui.page().getByRole('status').textContent).toMatch(/Faltan S\/ 50.00/);
     });
 
@@ -619,9 +621,10 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByText('Aprobado')).toBeTruthy();
       expect(ui.page().queryByText(/Por pagar/)).toBeNull();
       expect(ui.page().getByText('A cubrir con este pago S/ 300.00')).toBeTruthy();
-      expect(ui.page().getByRole('note', { name: 'Crédito a favor' }).textContent.trim()).toBe(
-        'Se descuentan S/ 50.00 de tu crédito a favor, que sobró de un pago anterior.',
-      );
+      expect(summaryOf(ui).getByText('Cuota')).toBeTruthy();
+      expect(
+        summaryOf(ui).getByText(/Cuota S\/ 350\.00 − S\/ 50\.00 que tienes a favor\./),
+      ).toBeTruthy();
     });
 
     it('says it found no payment when the id is not the guest’s', async () => {
@@ -644,10 +647,10 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       const ui = await setup('/temporary-guest/payment');
       await ui.flush(await ui.expect1(isStay), stay());
 
-      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain(
-        'Subir pago de la estadía',
-      );
-      expect(ui.page().getByText('Monto acordado S/ 400.00')).toBeTruthy();
+      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Subir voucher');
+      expect(summaryOf(ui).getByText('Monto acordado')).toBeTruthy();
+      expect(summaryOf(ui).getByText('S/ 400.00')).toBeTruthy();
+      expect(summaryOf(ui).getByText('Vence')).toBeTruthy();
       expect(ui.page().queryByLabelText('Mes')).toBeNull();
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
       await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '400');
@@ -747,9 +750,8 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         }),
       );
 
-      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain(
-        'Corregir pago de 20 – 31 oct',
-      );
+      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Corregir pago');
+      expect(summaryOf(ui).getByText('20 – 31 oct')).toBeTruthy();
       await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '400');
       await send(ui, 'Enviar de nuevo');
 

@@ -1,4 +1,12 @@
 import type { GuestType } from '@core/auth/auth.service';
+import type { components } from '@core/api/bff.generated';
+import {
+  formatMoney,
+  formatPeriod,
+  formatShortDate,
+  formatStay,
+  periodLabel,
+} from '@shared/payments/payment-format';
 import { MAX_PROOFS } from '@shared/payments/proof-rules';
 
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
@@ -81,3 +89,83 @@ export type LoadState =
 
 /** What the page is for: a first payment, the correction of a rejected one or reading one. */
 export type OwnPaymentMode = 'new' | 'correct' | 'read';
+
+type PeriodStatus = components['schemas']['PeriodStatus'];
+type StayPaymentStatus = components['schemas']['StayPaymentStatus'];
+type GuestPayment = components['schemas']['GuestPayment'];
+
+/** What the guest is paying (H3, T2): the month or the stay, what it asks, when it is due. */
+export interface PaymentSummary {
+  readonly label: string;
+  readonly value: string;
+  readonly amountLabel: string;
+  readonly amount: string;
+  /** Null when the screen does not know it (a payment opened by its id). */
+  readonly due: string | null;
+  readonly note: string;
+}
+
+const CONTRACT_NOTE =
+  'Puedes juntar varios vouchers y efectivo. La administración revisa cada uno antes de aprobar el pago.';
+const STAY_NOTE =
+  'Se paga una sola vez por estadía, con uno o varios comprobantes. La administración los revisa antes de aprobar.';
+
+export interface SummarySource {
+  readonly audience: GuestType;
+  /** The month chosen to pay (H3, first payment). */
+  readonly period: PeriodStatus | null;
+  /** The stay of the temporary guest (T2, first payment). */
+  readonly stay: StayPaymentStatus | null;
+  /** The own payment opened by its id (to correct or to read). */
+  readonly payment: GuestPayment | null;
+}
+
+function creditNote(fee: number, credit: number): string {
+  return credit > 0
+    ? `Cuota ${formatMoney(fee)} − ${formatMoney(credit)} que tienes a favor. `
+    : '';
+}
+
+/** «Lo que estás pagando»: the facts of the month or the stay on the canvas «Voucher». */
+export function paymentSummary({ audience, period, stay, payment }: SummarySource): PaymentSummary {
+  const contract = audience === 'CONTRACT';
+  if (payment !== null) {
+    const credit = payment.creditApplied;
+    const fee = payment.amountDue + credit;
+    // A payment still to correct says what is left to pay; one in review or approved, what it asked.
+    const open = payment.status === 'REJECTED';
+    let amountLabel = 'Por pagar';
+    if (!open) amountLabel = contract ? 'Cuota' : 'Monto acordado';
+    return {
+      label: contract ? 'Mes' : 'Estadía',
+      value: periodLabel({
+        period: payment.period,
+        stayStartDate: payment.stayStartDate ?? null,
+        stayEndDate: payment.stayEndDate ?? null,
+      }),
+      amountLabel,
+      amount: formatMoney(open ? payment.amountDue : fee),
+      due: null,
+      note: contract ? creditNote(fee, credit) + CONTRACT_NOTE : STAY_NOTE,
+    };
+  }
+  if (!contract) {
+    return {
+      label: 'Estadía',
+      value: stay ? formatStay(stay.startDate, stay.endDate) : '—',
+      amountLabel: 'Monto acordado',
+      amount: stay ? formatMoney(stay.agreedAmount) : '—',
+      due: stay ? formatShortDate(stay.endDate) : null,
+      note: STAY_NOTE,
+    };
+  }
+  const credit = period?.creditApplied ?? 0;
+  return {
+    label: 'Mes',
+    value: period ? formatPeriod(period.period) : 'Elige el mes',
+    amountLabel: credit > 0 ? 'Por pagar' : 'Cuota',
+    amount: period ? formatMoney(period.amountDue) : '—',
+    due: period ? formatShortDate(period.dueDate) : null,
+    note: creditNote(period?.amount ?? 0, credit) + CONTRACT_NOTE,
+  };
+}

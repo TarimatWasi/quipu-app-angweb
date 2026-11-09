@@ -43,6 +43,7 @@ import {
   formatPeriod,
   formatStay,
   hasRejectedPayment,
+  monthName,
   PERIOD_STATUS_LABELS,
   periodLabel,
   takesNewPayment,
@@ -57,6 +58,8 @@ import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
+import { OwnPaymentSummaryComponent } from '../components/own-payment-summary.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
@@ -65,6 +68,7 @@ import { ToastService } from '@shared/ui/toast/toast.service';
 import {
   HOME_NAMES,
   LoadState,
+  paymentSummary,
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
   OwnPaymentMode,
@@ -102,6 +106,8 @@ function idOf(id: string | null): string | null {
     FieldControlDirective,
     FormFieldComponent,
     LoadErrorComponent,
+    FormSummaryLayoutComponent,
+    OwnPaymentSummaryComponent,
     PageHeaderComponent,
     PageNoticeComponent,
     StatusBadgeComponent,
@@ -253,15 +259,29 @@ export class OwnPaymentComponent {
   protected readonly proofsError = computed(() => this.serverErrors()['proofs'] ?? null);
   protected readonly atProofLimit = this.proofDrafts.atLimit;
 
+  protected readonly homeName = HOME_NAMES[this.audience];
+  protected readonly summary = computed(() =>
+    paymentSummary({
+      audience: this.audience,
+      period: this.selected(),
+      stay: this.stay(),
+      payment: this.payment(),
+    }),
+  );
+  /** «Tu pago de octubre no se aprobó.» / «Tu pago de la estadía no se aprobó.» over the form to correct. */
+  protected readonly rejectedHeading = computed(() => {
+    const month = monthName(this.payment()?.period ?? '');
+    return this.audience === 'CONTRACT' && month !== null
+      ? `Tu pago de ${month} no se aprobó.`
+      : 'Tu pago de la estadía no se aprobó.';
+  });
+
   protected readonly title = computed(() => {
     switch (this.mode()) {
       case 'new':
-        return this.audience === 'CONTRACT' ? 'Subir pago' : 'Subir pago de la estadía';
-      case 'correct': {
-        const payment = this.payment();
-        const label = payment ? this.labelOf(payment) : '';
-        return label ? `Corregir pago de ${label}` : 'Corregir pago';
-      }
+        return 'Subir voucher';
+      case 'correct':
+        return 'Corregir pago';
       case 'read':
         return 'Tu pago';
     }

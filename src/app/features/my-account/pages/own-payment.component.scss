@@ -91,3 +91,16 @@ form {
   gap: 1.5rem;
   max-width: var(--quipu-columna-formulario);
 }
+
+.main {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+// The canvas puts the form first and the summary beside it; on a phone the summary comes first.
+@media (min-width: 900.02px) {
+  .summary {
+    order: 2;
+  }
+}
