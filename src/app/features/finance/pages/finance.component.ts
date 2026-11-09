@@ -1,4 +1,4 @@
-import { toBffError } from '@core/http/bff-error';
+import { toBffErrorWithGone } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
@@ -57,6 +57,7 @@ import {
   TAB_LABELS,
   TABS,
 } from '../model/finance';
+import { EXPENSE_GONE_TEXT, FINE_GONE_TEXT } from '../model/finance-forms';
 import type {
   Expense,
   Fine,
@@ -285,8 +286,8 @@ export class FinanceComponent {
   }
 
   /** After a change: the balance, the list and what waits for a refund are read again. */
-  private refresh(message: string): void {
-    this.toasts.show(message, { tone: 'success' });
+  private refresh(message: string, tone: 'success' | null = 'success'): void {
+    this.toasts.show(message, { tone });
     void this.loadSummary(false);
     void this.loadCredits();
     this.list.reload(this.key());
@@ -370,6 +371,8 @@ export class FinanceComponent {
     const expense = 'category' in source;
     const kind = expense ? 'EXP' : 'FIN';
     const notice = deleteNotice(kind, this.month());
+    const goneText = expense ? EXPENSE_GONE_TEXT : FINE_GONE_TEXT;
+    let gone = false;
     openConfirmActionDialog(this.dialog, {
       title: notice.title,
       lead: {
@@ -379,13 +382,19 @@ export class FinanceComponent {
       text: notice.text,
       button: notice.button,
       pendingButton: 'Eliminando…',
-      failureText: (error) => toBffError(error).message,
+      failureText: (error) => {
+        const failure = toBffErrorWithGone(error, goneText);
+        gone = failure.code === 'RESOURCE_NOT_FOUND';
+        return failure.message;
+      },
       run: () =>
         expense ? this.service.deleteExpense(source.id) : this.service.deleteFine(source.id),
     })
       .afterClosed()
       .subscribe((done) => {
         if (done === true) this.refresh(expense ? EXPENSE_DELETED_TEXT : FINE_DELETED_TEXT);
+        // The record is gone: back to the list, which no longer shows it, with the same text.
+        else if (gone) this.refresh(goneText, null);
       });
   }
 

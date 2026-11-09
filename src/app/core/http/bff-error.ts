@@ -147,6 +147,17 @@ export function toBffError(error: unknown): BffError {
   return withField(known(code), fieldOf(body));
 }
 
+/**
+ * {@link toBffError} for a call whose resource may no longer exist: a 404 `RESOURCE_NOT_FOUND`
+ * (which the catalog cannot word, it has no single text) is worded by the screen, «La multa no
+ * existe.», and anything else keeps the catalog's text.
+ */
+export function toBffErrorWithGone(error: unknown, gone: string): BffError {
+  return bodyCodeOf(error) === 'RESOURCE_NOT_FOUND'
+    ? { code: 'RESOURCE_NOT_FOUND', message: gone }
+    : toBffError(error);
+}
+
 // A server text longer than this is not a sentence written for the UI: it is never shown.
 const MAX_SERVER_MESSAGE_LENGTH = 500;
 

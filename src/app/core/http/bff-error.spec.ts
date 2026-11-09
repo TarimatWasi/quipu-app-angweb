@@ -1,6 +1,11 @@
 import { HttpErrorResponse, HttpHeaders } from '@angular/common/http';
 import { firstValueFrom, NEVER, timeout } from 'rxjs';
-import { bodyCodeOf, toBffError, toBffErrorWithServerMessage } from './bff-error';
+import {
+  bodyCodeOf,
+  toBffError,
+  toBffErrorWithGone,
+  toBffErrorWithServerMessage,
+} from './bff-error';
 
 const bff = (status: number, code: string, message = 'texto del servidor', field?: unknown) =>
   new HttpErrorResponse({ status, error: { code, message, field } });
@@ -292,5 +297,23 @@ describe('bodyCodeOf', () => {
     expect(bodyCodeOf(new HttpErrorResponse({ status: 500, error: '<html>' }))).toBeNull();
     expect(bodyCodeOf(new HttpErrorResponse({ status: 400, error: { code: 7 } }))).toBeNull();
     expect(bodyCodeOf(new Error('x'))).toBeNull();
+  });
+});
+
+describe('toBffErrorWithGone', () => {
+  const failure = (status: number, code: string) =>
+    new HttpErrorResponse({ status, error: { code, message: 'x' } });
+
+  it('words a RESOURCE_NOT_FOUND with the text of the screen', () => {
+    expect(toBffErrorWithGone(failure(404, 'RESOURCE_NOT_FOUND'), 'La multa no existe.')).toEqual({
+      code: 'RESOURCE_NOT_FOUND',
+      message: 'La multa no existe.',
+    });
+  });
+
+  it('keeps the catalog text for any other failure', () => {
+    expect(toBffErrorWithGone(failure(429, 'RATE_LIMITED'), 'La multa no existe.').message).toBe(
+      toBffError(failure(429, 'RATE_LIMITED')).message,
+    );
   });
 });

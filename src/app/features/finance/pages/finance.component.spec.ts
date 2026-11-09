@@ -191,6 +191,24 @@ describe('A6 «Finanzas»', () => {
     expect(page().getByText('Mostrando 4 de 4')).toBeTruthy();
   });
 
+  it('says the expense no longer exists when it was deleted meanwhile, and reads the list again', async () => {
+    const { mock, click, dialog, toast, titles, action } = await setup();
+    await click(action('Eliminar Internet'));
+    const confirm = await dialog('¿Eliminar este egreso?');
+    mock.bff.db.data.expenses.splice(0);
+
+    await click(confirm.getByRole('button', { name: 'Eliminar egreso' }));
+
+    expect(await confirm.findByText('El gasto no existe.')).toBeTruthy();
+    await click(confirm.getByRole('button', { name: 'Cancelar' }));
+    await vi.waitFor(() => {
+      expect(toast).toHaveBeenCalledWith('El gasto no existe.', { tone: null });
+    });
+    await vi.waitFor(() => {
+      expect(titles()).not.toContain('Internet');
+    });
+  });
+
   it('keeps the expense when the deletion is cancelled', async () => {
     const { click, dialog, titles, action } = await setup();
     await click(action('Eliminar Internet'));

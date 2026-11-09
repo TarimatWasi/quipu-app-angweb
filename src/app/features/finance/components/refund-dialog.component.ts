@@ -17,6 +17,7 @@ import {
   MAX_METHOD_LENGTH,
   MAX_TEXT_LENGTH,
   methodProblem,
+  GUEST_GONE_TEXT,
   METHOD_SHORTCUTS,
   newRefund,
   refundAmountHelp,
@@ -254,6 +255,7 @@ export class RefundDialogComponent {
       host: this.host,
       injector: this.injector,
       errorId: ERROR_ID,
+      gone: GUEST_GONE_TEXT,
       general: (message) => {
         this.general.set(message);
       },

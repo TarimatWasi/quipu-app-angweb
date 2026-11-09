@@ -248,6 +248,11 @@ function isRefusedField(field: string | undefined): field is RefusedField {
   return field !== undefined && Object.hasOwn(REFUSED_TEXTS, field);
 }
 
+// RESOURCE_NOT_FOUND, one text per resource (SRS 17).
+export const GUEST_GONE_TEXT = 'El huésped no existe.';
+export const FINE_GONE_TEXT = 'La multa no existe.';
+export const EXPENSE_GONE_TEXT = 'El gasto no existe.';
+
 /** The field of the form a refusal points at and what to say under it; null when it is none of them. */
 export function refusal(
   code: string | null,

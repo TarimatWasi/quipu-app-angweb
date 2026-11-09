@@ -15,6 +15,7 @@ import {
   amountProblem,
   categoryProblem,
   draftOfExpense,
+  EXPENSE_GONE_TEXT,
   EXPENSE_INTRO,
   MAX_TEXT_LENGTH,
   monthHelp,
@@ -223,6 +224,7 @@ export class ExpenseDialogComponent {
       host: this.host,
       injector: this.injector,
       errorId: ERROR_ID,
+      gone: EXPENSE_GONE_TEXT,
       general: (message) => {
         this.general.set(message);
       },
