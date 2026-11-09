@@ -160,10 +160,14 @@ export class GuestDocumentsComponent {
   protected act(kind: ActionKind, row: DocumentRow): void {
     const guestId = this.currentId();
     if (this.refreshing()) return;
+    let gone = false;
     const ref = openDocumentActionDialog(this.dialog, {
       kind,
       name: row.name,
       today: limaDay(new Date().toISOString()) ?? '',
+      onGone: () => {
+        gone = true;
+      },
       run: ({ request, file }) =>
         kind === 'replace' && file !== null
           ? this.documents.replace(guestId, row.id, file, request)
@@ -172,7 +176,12 @@ export class GuestDocumentsComponent {
     this.dialogs.add(ref);
     ref.afterClosed().subscribe((done) => {
       this.dialogs.delete(ref);
-      if (done !== true || guestId !== this.currentId()) return;
+      if (guestId !== this.currentId()) return;
+      // The document is gone: back to the list, which no longer shows it (SRS 17, RESOURCE_NOT_FOUND).
+      if (done !== true) {
+        if (gone) void this.load(false);
+        return;
+      }
       this.toasts.show(kind === 'delete' ? DOCUMENT_DELETED_TEXT : DOCUMENT_REPLACED_TEXT, {
         tone: 'success',
       });
