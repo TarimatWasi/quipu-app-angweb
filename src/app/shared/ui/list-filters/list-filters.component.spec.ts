@@ -10,6 +10,7 @@ import { ListFiltersComponent } from './list-filters.component';
       idPrefix="pay"
       placeholder="Huésped o documento"
       sortKey="up"
+      [searchable]="searchable()"
       [count]="count()"
       [filtered]="search() !== ''"
       [phoneSorts]="sorts"
@@ -26,6 +27,7 @@ import { ListFiltersComponent } from './list-filters.component';
 })
 class HostComponent {
   readonly search = signal('');
+  readonly searchable = signal(true);
   readonly count = signal('Mostrando 4 de 4');
   readonly sorted = signal<string | null>(null);
   readonly sorts = [
@@ -35,6 +37,17 @@ class HostComponent {
 }
 
 describe('ListFiltersComponent', () => {
+  it('leaves «Buscar» out when the rows have nothing to look for, and keeps the rest', async () => {
+    const fixture = TestBed.createComponent(HostComponent);
+    fixture.componentInstance.searchable.set(false);
+    await fixture.whenStable();
+    const ui = within(fixture.nativeElement as HTMLElement);
+
+    expect(ui.queryByRole('searchbox')).toBeNull();
+    expect(ui.getByLabelText('Tipo')).toBeTruthy();
+    expect(ui.getByText('Mostrando 4 de 4')).toBeTruthy();
+  });
+
   it('searches, shows the count, clears the filters and reports the order of a phone', async () => {
     const fixture = TestBed.createComponent(HostComponent);
     await fixture.whenStable();

@@ -1,0 +1,5 @@
+@use '../../../shared/styles/list-page';
+
+// H4: only the layout of the page. Header, notice, filters, table, cards, skeleton, badges and
+// buttons are the kit's.
+@include list-page.layout;
