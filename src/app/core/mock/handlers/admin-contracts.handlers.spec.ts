@@ -48,6 +48,7 @@ const list = (mock: MockHarness, query: Record<string, string | number> = {}) =>
 
 describe('admin contracts in the simulated BFF', () => {
   afterEach(() => {
+    vi.useRealTimers();
     resetMockSettings();
   });
 
@@ -87,6 +88,10 @@ describe('admin contracts in the simulated BFF', () => {
   });
 
   it('loads a contract, which then shows in the list and occupies its environment', async () => {
+    // A contract that starts today owes its first month once the payment day and its grace have
+    // passed (day 5 plus 3): on the 9th the second load would say «deuda» and not «ocupado».
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-02T17:00:00Z'));
     const mock = await admin();
     const created = await mock.send<Schemas['Contract']>('POST', '/bff/admin/contracts', form());
     expect(created).toEqual(
