@@ -18,7 +18,7 @@ import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.d
 import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { OnboardingFrameComponent } from '../components/onboarding-frame.component';
-import { DATA_AFTER } from '../model/onboarding';
+import { DATA_AFTER, EMERGENCY_HINT } from '../model/onboarding';
 import { OnboardingPage } from './onboarding-page';
 import { ONBOARDING_STYLES } from './onboarding.styles';
 
@@ -50,6 +50,7 @@ export class OnboardingPersonalDataComponent extends OnboardingPage {
 
   protected readonly errorId = ERROR_ID;
   protected readonly after = DATA_AFTER;
+  protected readonly emergencyHint = EMERGENCY_HINT;
   protected readonly generalError = signal<string | null>(null);
 
   private readonly model = signal<PersonalData>({ ...EMPTY_PERSONAL_DATA });

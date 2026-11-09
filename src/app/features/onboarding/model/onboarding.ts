@@ -98,6 +98,8 @@ export function isOutOfOrder({ status, code }: CallFailure): boolean {
 
 // O1 «Tus datos».
 
+export const EMERGENCY_HINT = 'Puedes dejarlo vacío y agregarlo después en Mis datos.';
+
 export const DATA_AFTER = 'Después: tus documentos (opcional).';
 
 // O2 «Tus documentos».

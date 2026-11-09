@@ -43,6 +43,12 @@ describe('O1 «Tus datos»', () => {
     ]);
   });
 
+  it('tells under the emergency contact that it can be left empty', async () => {
+    await setup();
+
+    expect(screen.getByText('Puedes dejarlo vacío y agregarlo después en Mis datos.')).toBeTruthy();
+  });
+
   it('keeps the frame while it loads and only the fields are a skeleton', async () => {
     const api = fakeApi(toPersonalData);
     api.state.mockReturnValue(NEVER);
