@@ -1,4 +1,13 @@
-import { Component, DestroyRef, inject, input, linkedSignal, output } from '@angular/core';
+import {
+  Component,
+  computed,
+  DestroyRef,
+  inject,
+  input,
+  linkedSignal,
+  output,
+} from '@angular/core';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { openEmailChangeDialog } from './email-change-dialog.component';
 import {
@@ -24,9 +33,9 @@ import type { EmailVerificationClient } from './email-verification';
     <div class="quipu-field">
       <p class="quipu-label">{{ label }}</p>
       <p class="value">{{ current() ?? noEmail }}</p>
-      @if (waiting(); as address) {
+      @if (pendingNote(); as note) {
         <div class="quipu-notice quipu-notice--info pending">
-          <p>{{ pendingText(address) }}</p>
+          <p>{{ note }}</p>
           <button class="quipu-button quipu-button--tertiary" type="button" (click)="open()">
             {{ enterCode }}
           </button>
@@ -70,6 +79,10 @@ export class EmailChangeFieldComponent {
    * server keeps it pending even if the dialog closes) or the email changes.
    */
   protected readonly waiting = linkedSignal(() => this.pending());
+  protected readonly pendingNote = computed(() => {
+    const address = this.waiting();
+    return address === null ? null : pendingText(address);
+  });
 
   protected readonly label = EMAIL_LABEL;
   protected readonly noEmail = NO_EMAIL_TEXT;
@@ -77,7 +90,6 @@ export class EmailChangeFieldComponent {
   protected readonly enterCode = ENTER_CODE_LABEL;
   protected readonly addLabel = ADD_EMAIL_LABEL;
   protected readonly changeLabel = CHANGE_EMAIL_LABEL;
-  protected readonly pendingText = pendingText;
 
   /** Opens on the code when one is pending, unless the guest asked to change the address. */
   protected open(fresh = false): void {
@@ -89,13 +101,13 @@ export class EmailChangeFieldComponent {
         this.waiting.set(email);
       },
     });
-    const subscription = ref.afterClosed().subscribe((email) => {
-      if (email === undefined) return;
-      this.waiting.set(null);
-      this.changed.emit(email);
-    });
-    this.destroyRef.onDestroy(() => {
-      subscription.unsubscribe();
-    });
+    ref
+      .afterClosed()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((email) => {
+        if (email === undefined) return;
+        this.waiting.set(null);
+        this.changed.emit(email);
+      });
   }
 }

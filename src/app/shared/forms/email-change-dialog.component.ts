@@ -79,114 +79,7 @@ const ERROR_ID = 'email-change-error';
 @Component({
   selector: 'app-email-change-dialog',
   imports: [DialogFrameComponent, FieldControlDirective, FormField, FormFieldComponent, FormRoot],
-  template: `
-    @if (sentTo(); as address) {
-      <form novalidate [formRoot]="codeForm" [attr.aria-describedby]="error() ? errorId : null">
-        <app-dialog-frame [heading]="title">
-          <div class="body">
-            <p [id]="leadId">{{ codeLead(address) }}</p>
-            <app-form-field fieldId="email-change-code" [label]="codeLabel" [error]="codeError()">
-              <input
-                appFieldControl
-                class="quipu-input code"
-                type="text"
-                inputmode="numeric"
-                autocomplete="one-time-code"
-                aria-required="true"
-                [formField]="codeForm.code"
-              />
-            </app-form-field>
-            <div class="again">
-              <button
-                class="quipu-button quipu-button--tertiary"
-                type="button"
-                [disabled]="busy() || wait.active()"
-                (click)="resend()"
-              >
-                {{ wait.active() ? resendWaitLabel(wait.remaining()) : resendLabel }}
-              </button>
-              <button
-                class="quipu-button quipu-button--tertiary"
-                type="button"
-                [disabled]="busy()"
-                (click)="otherEmail()"
-              >
-                {{ otherEmailLabel }}
-              </button>
-            </div>
-            @if (notice(); as message) {
-              <p class="notice" role="status">{{ message }}</p>
-            }
-            @if (error(); as message) {
-              <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
-            }
-          </div>
-          <ng-container dialogActions>
-            <button
-              class="quipu-button quipu-button--tertiary"
-              type="button"
-              [disabled]="busy()"
-              (click)="cancel()"
-            >
-              Cancelar
-            </button>
-            <button class="quipu-button quipu-button--primary" type="submit" [disabled]="busy()">
-              {{ confirming() ? confirmingLabel : confirmLabel }}
-            </button>
-          </ng-container>
-        </app-dialog-frame>
-      </form>
-    } @else {
-      <form novalidate [formRoot]="emailForm" [attr.aria-describedby]="error() ? errorId : null">
-        <app-dialog-frame [heading]="title">
-          <div class="body">
-            <p [id]="leadId">{{ requestLead }}</p>
-            <app-form-field
-              fieldId="email-change-email"
-              [label]="emailLabel"
-              [error]="emailError()"
-            >
-              <input
-                appFieldControl
-                class="quipu-input"
-                type="email"
-                inputmode="email"
-                autocomplete="email"
-                aria-required="true"
-                [formField]="emailForm.email"
-              />
-            </app-form-field>
-            @if (error(); as message) {
-              <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
-            }
-          </div>
-          <ng-container dialogActions>
-            <button
-              class="quipu-button quipu-button--tertiary"
-              type="button"
-              [disabled]="busy()"
-              (click)="cancel()"
-            >
-              Cancelar
-            </button>
-            <button
-              class="quipu-button quipu-button--primary"
-              type="submit"
-              [disabled]="busy() || wait.active()"
-            >
-              {{
-                requesting()
-                  ? sendingLabel
-                  : wait.active()
-                    ? resendWaitLabel(wait.remaining())
-                    : sendLabel
-              }}
-            </button>
-          </ng-container>
-        </app-dialog-frame>
-      </form>
-    }
-  `,
+  templateUrl: './email-change-dialog.component.html',
   styles: `
     .body {
       display: grid;
@@ -220,14 +113,7 @@ export class EmailChangeDialogComponent {
   protected readonly requestLead = REQUEST_LEAD;
   protected readonly emailLabel = NEW_EMAIL_LABEL;
   protected readonly codeLabel = CODE_LABEL;
-  protected readonly sendLabel = SEND_CODE_LABEL;
-  protected readonly sendingLabel = SENDING_CODE_LABEL;
-  protected readonly confirmLabel = CONFIRM_LABEL;
-  protected readonly confirmingLabel = CONFIRMING_LABEL;
-  protected readonly resendLabel = RESEND_LABEL;
   protected readonly otherEmailLabel = OTHER_EMAIL_LABEL;
-  protected readonly codeLead = codeLead;
-  protected readonly resendWaitLabel = resendWaitLabel;
   protected readonly leadId = LEAD_ID;
   protected readonly errorId = ERROR_ID;
 
@@ -273,6 +159,18 @@ export class EmailChangeDialogComponent {
   protected readonly codeError = computed(() => firstError(this.codeForm.code));
   protected readonly requesting = computed(() => this.emailForm().submitting());
   protected readonly confirming = computed(() => this.codeForm().submitting());
+  protected readonly lead = computed(() => codeLead(this.sentTo() ?? ''));
+  /** «Reenviar en 0:45» while the BFF asks to wait; the same wait holds «Enviar código». */
+  private readonly waitLabel = computed(() =>
+    this.wait.active() ? resendWaitLabel(this.wait.remaining()) : null,
+  );
+  protected readonly resendButton = computed(() => this.waitLabel() ?? RESEND_LABEL);
+  protected readonly sendButton = computed(() =>
+    this.requesting() ? SENDING_CODE_LABEL : (this.waitLabel() ?? SEND_CODE_LABEL),
+  );
+  protected readonly confirmButton = computed(() =>
+    this.confirming() ? CONFIRMING_LABEL : CONFIRM_LABEL,
+  );
   protected readonly busy = computed(
     () => this.requesting() || this.confirming() || this.resending(),
   );
