@@ -170,43 +170,39 @@
               @for (proof of proofs(); track proof.key; let i = $index) {
                 <fieldset class="proof">
                   <legend>Comprobante {{ i + 1 }}</legend>
-                  <app-form-field
-                    [fieldId]="'op-kind-' + proof.key"
-                    label="Tipo de comprobante"
-                    [group]="true"
-                  >
-                    <app-proof-kind-choice
-                      [kind]="proof.kind"
-                      (kindChange)="editor.kind(i, $event)"
-                    />
-                  </app-form-field>
+                  <app-proof-kind-choice
+                    [kind]="proof.kind"
+                    [label]="'Tipo del comprobante ' + (i + 1)"
+                    (kindChange)="editor.kind(i, $event)"
+                  />
 
                   @if (proof.kind === 'VOUCHER') {
                     <app-file-field
                       [fieldId]="'op-proof-' + proof.key + '-file'"
                       [fileName]="proof.file?.name ?? proof.keptFile"
-                      [help]="
-                        proof.keptFile && !proof.file
-                          ? 'Elige otro solo si quieres cambiar el archivo enviado. JPG, PNG o PDF de hasta 5 MB.'
-                          : 'JPG, PNG o PDF de hasta 5 MB.'
-                      "
+                      [help]="proofTexts.fileHelp"
                       [error]="editor.fileError(i)"
                       (chosen)="editor.file(i, $event)"
                     />
+                  } @else {
+                    <p class="help">{{ proofTexts.cashHelp }}</p>
+                  }
+
+                  <app-proof-amount-field
+                    [fieldId]="'op-proof-' + proof.key + '-amount'"
+                    [label]="amountLabel(proof.kind)"
+                    [value]="proof.amount"
+                    [error]="editor.amountError(i)"
+                    (valueChange)="editor.amount(i, $event)"
+                  />
+
+                  @if (proof.kind === 'VOUCHER') {
                     <app-proof-method-field
                       [fieldId]="'op-proof-' + proof.key + '-method'"
                       [value]="proof.method"
                       (valueChange)="editor.method(i, $event)"
                     />
                   }
-
-                  <app-proof-amount-field
-                    [fieldId]="'op-proof-' + proof.key + '-amount'"
-                    label="Monto (S/)"
-                    [value]="proof.amount"
-                    [error]="editor.amountError(i)"
-                    (valueChange)="editor.amount(i, $event)"
-                  />
 
                   @if (proofs().length > 1) {
                     <button

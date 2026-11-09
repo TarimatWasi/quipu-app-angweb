@@ -36,8 +36,8 @@ export class ProofDrafts {
     this.update(index, { file: valid ? file : null, fileInvalid: file !== null && !valid });
   }
 
-  amountError(index: number, submitted: boolean): string | null {
-    return proofAmountError(this.drafts()[index]?.amount ?? '', submitted);
+  amountError(index: number, submitted: boolean, text?: string): string | null {
+    return proofAmountError(this.drafts()[index]?.amount ?? '', submitted, text);
   }
 
   fileError(index: number, submitted: boolean): string | null {

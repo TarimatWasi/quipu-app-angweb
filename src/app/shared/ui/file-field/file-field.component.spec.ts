@@ -101,4 +101,37 @@ describe('FileFieldComponent (P-12)', () => {
 
     expect(host.chosen()).toBeNull();
   });
+
+  it('says the voucher prompt by width and camera when the screen names none (D-92)', async () => {
+    const { ui, host, fixture } = await setup();
+    expect(ui.getByText('Arrastra aquí la foto o el PDF del voucher').className).toBe('only-wide');
+    expect(ui.getByText('Toma una foto del voucher o elige el archivo').className).toBe(
+      'only-narrow',
+    );
+
+    host.camera.set(false);
+    await fixture.whenStable();
+    expect(ui.getByText('Elige la foto o el PDF del voucher').className).toBe('only-narrow');
+  });
+
+  it('reports a file dropped on the zone, and ignores a drop that carries none', async () => {
+    const { ui, host, fixture } = await setup();
+    const zone = ui.getByText('Elegir archivo').closest<HTMLElement>('.drop');
+    if (zone === null) throw new Error('The zone is missing');
+
+    fireEvent.dragOver(zone);
+    await fixture.whenStable();
+    expect(zone.classList).toContain('over');
+
+    fireEvent.drop(zone, { dataTransfer: { files: [] } });
+    await fixture.whenStable();
+    expect(zone.classList).not.toContain('over');
+    expect(host.chosen()).toBeUndefined();
+
+    const file = new File(['x'], 'yape.pdf', { type: 'application/pdf' });
+    fireEvent.drop(zone, { dataTransfer: { files: [file] } });
+    await vi.waitFor(() => {
+      expect(host.chosen()).toBe(file);
+    });
+  });
 });

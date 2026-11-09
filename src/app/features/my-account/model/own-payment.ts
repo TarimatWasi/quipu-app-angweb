@@ -12,6 +12,19 @@ import { MAX_PROOFS } from '@shared/payments/proof-rules';
 /** H3 and T2 in the SRS: «Puedes juntar hasta 5 comprobantes.» */
 export const OWN_PROOF_LIMIT_TEXT = `Puedes juntar hasta ${String(MAX_PROOFS)} comprobantes.`;
 
+/** The words of the guest's proofs on the canvas «Voucher» (D-92: the administration says its own). */
+export const OWN_PROOF_TEXTS = {
+  amountError: 'Escribe el monto que pagaste, mayor que cero.',
+  fileHelp: 'JPG, PNG o PDF, hasta 5 MB. Que se lean el monto, la fecha y el número de operación.',
+  cashHelp:
+    'Registra el efectivo que entregaste. La administración lo confirma con lo que recibió.',
+} as const;
+
+/** «Monto de este voucher» or «Monto en efectivo»: what the amount of a proof is. */
+export function ownAmountLabel(kind: 'VOUCHER' | 'CASH'): string {
+  return kind === 'VOUCHER' ? 'Monto de este voucher' : 'Monto en efectivo';
+}
+
 /** The screen H1 or T1 of each kind of guest, as the canvas names it («Volver a Estado de cuenta»). */
 export const HOME_NAMES: Readonly<Record<GuestType, string>> = {
   CONTRACT: 'Estado de cuenta',

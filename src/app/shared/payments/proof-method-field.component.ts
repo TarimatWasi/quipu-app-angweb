@@ -3,6 +3,7 @@ import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { PAYMENT_METHOD_SHORTCUTS } from './proof-rules';
 
+/** «Medio de pago (opcional)» with its shortcuts; the same words in A5.1, A5.2, H3 and T2 (D-92). */
 @Component({
   selector: 'app-proof-method-field',
   imports: [FormFieldComponent, FieldControlDirective],
@@ -13,11 +14,11 @@ import { PAYMENT_METHOD_SHORTCUTS } from './proof-rules';
         class="quipu-input"
         type="text"
         maxlength="60"
-        [attr.placeholder]="placeholder()"
+        placeholder="Por ejemplo, Yape"
         [value]="value()"
         (input)="valueChange.emit($event.target.value)"
       />
-      <div class="quipu-segmented" role="group" aria-label="Medios frecuentes">
+      <div class="quipu-segmented" role="group" aria-label="Elegir un medio de pago">
         @for (shortcut of shortcuts; track shortcut) {
           <button
             type="button"
@@ -35,7 +36,6 @@ import { PAYMENT_METHOD_SHORTCUTS } from './proof-rules';
 export class ProofMethodFieldComponent {
   readonly fieldId = input.required<string>();
   readonly value = input.required<string>();
-  readonly placeholder = input<string | null>(null);
   readonly valueChange = output<string>();
   protected readonly shortcuts = PAYMENT_METHOD_SHORTCUTS;
 }

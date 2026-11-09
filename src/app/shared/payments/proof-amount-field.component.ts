@@ -29,7 +29,8 @@ import { FieldControlDirective } from '@shared/ui/form-field/field-control.direc
 })
 export class ProofAmountFieldComponent {
   readonly fieldId = input.required<string>();
-  readonly label = input('Monto (S/)');
+  /** What the amount is on each screen: «Monto recibido», «Monto de este voucher»… */
+  readonly label = input.required<string>();
   readonly value = input.required<string>();
   readonly error = input<string | null>(null);
   readonly help = input<string | null>(null);

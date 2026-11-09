@@ -14,6 +14,7 @@
           [fileName]="file()?.name ?? null"
           [error]="fileError()"
           [removable]="true"
+          [camera]="false"
           (chosen)="picked($event)"
         />
       } @else {
@@ -37,7 +38,6 @@
         <app-proof-method-field
           fieldId="proof-method"
           [value]="method()"
-          placeholder="Por ejemplo, Yape"
           (valueChange)="method.set($event)"
         />
       }
