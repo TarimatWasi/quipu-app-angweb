@@ -1,4 +1,5 @@
 import { computed, signal } from '@angular/core';
+import type { Signal } from '@angular/core';
 
 export type RefreshState =
   | { readonly status: 'idle' }
@@ -16,6 +17,30 @@ export type ActionState =
   | { readonly status: 'error'; readonly message: string };
 
 /**
+ * What a screen reads of an {@link AsyncContent}, written once for every source of that state
+ * (`AsyncContentState` and `ResourceContent`, TAR-355).
+ */
+export function contentSignals<T>(state: Signal<AsyncContent<T>>) {
+  return {
+    /** The initial load failed and «Reintentar» is asking again (TAR-325). */
+    retrying: computed(() => {
+      const now = state();
+      return now.status === 'initial-error' && now.retrying;
+    }),
+    /** The data is on screen and a refresh is going on. */
+    refreshing: computed(() => {
+      const now = state();
+      return now.status === 'ready' && now.refresh.status === 'loading';
+    }),
+    /** What a refresh that failed says, while the data it had stays on screen. */
+    refreshError: computed(() => {
+      const now = state();
+      return now.status === 'ready' && now.refresh.status === 'error' ? now.refresh.message : null;
+    }),
+  };
+}
+
+/**
  * State of ONE read that yields a single value (a summary, a detail): initial load, initial error
  * and a refresh that keeps the data on screen. For a paged list with a cursor use `PageLoadState`.
  * Transport, error translation and empty semantics belong to the caller.
@@ -31,25 +56,10 @@ export class AsyncContentState<T> {
     return state.status === 'ready' ? state.data : null;
   });
 
-  /** The initial load failed and «Reintentar» is asking again (TAR-325). */
-  readonly retrying = computed(() => {
-    const state = this.state();
-    return state.status === 'initial-error' && state.retrying;
-  });
-
-  /** The data is on screen and a refresh is going on. */
-  readonly refreshing = computed(() => {
-    const state = this.state();
-    return state.status === 'ready' && state.refresh.status === 'loading';
-  });
-
-  /** What a refresh that failed says, while the data it had stays on screen. */
-  readonly refreshError = computed(() => {
-    const state = this.state();
-    return state.status === 'ready' && state.refresh.status === 'error'
-      ? state.refresh.message
-      : null;
-  });
+  private readonly signals = contentSignals(this.state);
+  readonly retrying = this.signals.retrying;
+  readonly refreshing = this.signals.refreshing;
+  readonly refreshError = this.signals.refreshError;
 
   /** Refresh retains usable data; changing identity explicitly starts a new initial load. */
   begin(newContext = false): number | null {

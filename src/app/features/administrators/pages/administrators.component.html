@@ -34,7 +34,7 @@
     />
   }
   @case ('ready') {
-    @if (list.error() !== undefined || retrying()) {
+    @if (failed()) {
       <app-load-error
         class="state"
         [message]="loadErrorText"

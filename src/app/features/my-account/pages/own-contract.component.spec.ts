@@ -210,6 +210,20 @@ describe('OwnContractComponent (H2)', () => {
     vi.restoreAllMocks();
   });
 
+  it('keeps the contract on screen when asking for new links fails (TAR-355)', async () => {
+    const ui = await setup();
+    vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 15 * 60_000);
+    ui.contracts.get.mockReturnValue(throwError(() => httpError(500)));
+
+    fireEvent.click(ui.page().getByRole('link', { name: 'Ver contrato' }));
+    await ui.settle();
+
+    expect(ui.page().getByText('contrato-201.pdf')).toBeTruthy();
+    expect(ui.page().getByText('No se pudo cargar tu contrato.')).toBeTruthy();
+    expect(ui.page().getByRole('heading', { level: 1 }).textContent).toBe('Mi contrato');
+    vi.restoreAllMocks();
+  });
+
   it('says the storage failed when the link never came, with «Reintentar» to ask again', async () => {
     const ui = await setup({
       contracts: of({ current: contractOf({ fileUrl: null }), next: null }),
