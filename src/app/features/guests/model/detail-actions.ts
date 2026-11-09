@@ -39,7 +39,7 @@ export const ACCESS_OPTIONS: readonly AccessOption[] = [
   {
     mode: 'LINK',
     label: 'Enlace (recomendado)',
-    help: 'Abre el enlace y elige su contraseña. Si tiene correo de cuenta, también le llega ahí.',
+    help: 'Abre el enlace y elige su contraseña. Si tiene correo, también le llega ahí.',
   },
   {
     mode: 'TEMPORARY_PASSWORD',
@@ -48,17 +48,17 @@ export const ACCESS_OPTIONS: readonly AccessOption[] = [
   },
 ];
 
-// Correo de cuenta (RF-16, D-76).
-export const EMAIL_TITLE = 'Correo de cuenta';
+// El correo del huésped, el de su cuenta (RF-16, TAR-349: reemplaza D-76).
+export const EMAIL_TITLE = 'Cambiar correo';
 export const EMAIL_LEAD =
-  'A este correo le llega el código para recuperar su contraseña. Es distinto del correo de contacto, que cambia el huésped en Mis datos.';
+  'A este correo le llegan los avisos y el código para recuperar su contraseña. El huésped también puede cambiarlo en Mis datos, confirmándolo con un código.';
 export const EMAIL_FIELD_HELP =
   'Si ya tenía uno, le avisamos al anterior del cambio y los códigos que tenga dejan de servir.';
-export const EMAIL_REQUIRED_TEXT = 'Escribe el correo de cuenta.';
+export const EMAIL_REQUIRED_TEXT = 'Escribe el correo.';
 export const EMAIL_INVALID_TEXT = 'Escribe un correo válido.';
 export const EMAIL_LONG_TEXT = 'El correo puede tener hasta 200 caracteres.';
 export const EMAIL_TAKEN_TEXT = 'Ese correo ya está en uso por otra cuenta';
-export const EMAIL_SAVED_TEXT = 'Correo de cuenta guardado.';
+export const EMAIL_SAVED_TEXT = 'Correo guardado.';
 
 // Failures shared by the three calls, worded here (QP-ANGWEB-BFF-02: never the server's text).
 export const CONFLICT_TEXT =
@@ -99,7 +99,7 @@ export type EmailProblem =
 /** Where a failure of the account email goes: under the field, or above the buttons. */
 export function emailProblem(failure: CallFailure): EmailProblem {
   const { status, code, field } = failure;
-  if (status === 409 && (code === 'ACCOUNT_EMAIL_TAKEN' || code === 'GUEST_EMAIL_TAKEN')) {
+  if (status === 409 && code === 'ACCOUNT_EMAIL_TAKEN') {
     return { place: 'field', message: EMAIL_TAKEN_TEXT };
   }
   if (code === 'VALIDATION_ERROR' && field === 'email') {

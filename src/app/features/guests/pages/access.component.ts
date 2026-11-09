@@ -95,7 +95,7 @@ export class AccessComponent {
     ? whatsappUrl(this.handoff.phone, this.handoff.access.shareMessage)
     : null;
   protected readonly email = this.handoff
-    ? emailNotice(this.handoff.contactEmail, this.handoff.access.emailSent)
+    ? emailNotice(this.handoff.email, this.handoff.access.emailSent)
     : null;
 
   constructor() {

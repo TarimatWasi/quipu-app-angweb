@@ -1,0 +1,96 @@
+@if (sentTo(); as address) {
+  <form novalidate [formRoot]="codeForm" [attr.aria-describedby]="error() ? errorId : null">
+    <app-dialog-frame [heading]="title">
+      <div class="body">
+        <p [id]="leadId">{{ lead() }}</p>
+        <app-form-field fieldId="email-change-code" [label]="codeLabel" [error]="codeError()">
+          <input
+            appFieldControl
+            class="quipu-input code"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            aria-required="true"
+            [formField]="codeForm.code"
+          />
+        </app-form-field>
+        <div class="again">
+          <button
+            class="quipu-button quipu-button--tertiary"
+            type="button"
+            [disabled]="busy() || wait.active()"
+            (click)="resend()"
+          >
+            {{ resendButton() }}
+          </button>
+          <button
+            class="quipu-button quipu-button--tertiary"
+            type="button"
+            [disabled]="busy()"
+            (click)="otherEmail()"
+          >
+            {{ otherEmailLabel }}
+          </button>
+        </div>
+        @if (notice(); as message) {
+          <p class="notice" role="status">{{ message }}</p>
+        }
+        @if (error(); as message) {
+          <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
+        }
+      </div>
+      <ng-container dialogActions>
+        <button
+          class="quipu-button quipu-button--tertiary"
+          type="button"
+          [disabled]="busy()"
+          (click)="cancel()"
+        >
+          Cancelar
+        </button>
+        <button class="quipu-button quipu-button--primary" type="submit" [disabled]="busy()">
+          {{ confirmButton() }}
+        </button>
+      </ng-container>
+    </app-dialog-frame>
+  </form>
+} @else {
+  <form novalidate [formRoot]="emailForm" [attr.aria-describedby]="error() ? errorId : null">
+    <app-dialog-frame [heading]="title">
+      <div class="body">
+        <p [id]="leadId">{{ requestLead }}</p>
+        <app-form-field fieldId="email-change-email" [label]="emailLabel" [error]="emailError()">
+          <input
+            appFieldControl
+            class="quipu-input"
+            type="email"
+            inputmode="email"
+            autocomplete="email"
+            aria-required="true"
+            [formField]="emailForm.email"
+          />
+        </app-form-field>
+        @if (error(); as message) {
+          <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
+        }
+      </div>
+      <ng-container dialogActions>
+        <button
+          class="quipu-button quipu-button--tertiary"
+          type="button"
+          [disabled]="busy()"
+          (click)="cancel()"
+        >
+          Cancelar
+        </button>
+        <button
+          class="quipu-button quipu-button--primary"
+          type="submit"
+          [disabled]="busy() || wait.active()"
+        >
+          {{ sendButton() }}
+        </button>
+      </ng-container>
+    </app-dialog-frame>
+  </form>
+}

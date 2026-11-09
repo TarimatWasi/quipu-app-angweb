@@ -63,7 +63,7 @@ export function dataFacts(guest: GuestDetail): {
   readonly after: readonly DetailFact[];
 } {
   const phone = guest.phone?.trim() ?? '';
-  const email = guest.contactEmail?.trim() ?? '';
+  const email = guest.email?.trim() ?? '';
   const after = [
     fact('Tipo', GUEST_TYPE_LABELS[guest.type]),
     fact('Teléfono', phone === '' ? NO_PHONE : phone),
@@ -79,7 +79,8 @@ export function dataFacts(guest: GuestDetail): {
 
 export const PENDING_DATA_NOTE =
   'Su nombre y sus datos los completa el huésped al activar su acceso.';
-export const DATA_NOTE = 'Sus datos de contacto los cambia solo el huésped, desde Mis datos.';
+export const DATA_NOTE =
+  'Sus datos de contacto los cambia el huésped desde Mis datos; el correo también puedes cambiarlo tú.';
 
 export function dataNote(guest: GuestDetail): string {
   return guest.status === 'PENDING_ACTIVATION' ? PENDING_DATA_NOTE : DATA_NOTE;

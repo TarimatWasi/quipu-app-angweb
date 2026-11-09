@@ -14,7 +14,7 @@ export interface AccessHandoff {
   /** The phone the administrator typed, for WhatsApp; null without one. */
   readonly phone: string | null;
   /** The email the access was also sent to; null without one. */
-  readonly contactEmail: string | null;
+  readonly email: string | null;
   readonly access: AccessGrant;
   /** true when it replaces a previous access («Acceso nuevo generado»), from the guest's page. */
   readonly regenerated: boolean;

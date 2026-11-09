@@ -23,11 +23,6 @@ export const NO_DOCUMENTS_TEXT = 'Aún no subiste documentos.';
 export const UPLOAD_NOTE = 'Una vez subido no lo puedes borrar ni cambiar.';
 export const CHANGE_PASSWORD_LABEL = 'Cambiar contraseña';
 
-export const ACCOUNT_EMAIL_LABEL =
-  'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)';
-export const NO_ACCOUNT_EMAIL =
-  'Sin correo: si olvidas tu contraseña, pídele a la administración un acceso nuevo';
-
 const DOCUMENT_GONE_TEXT = 'Ese documento ya no está disponible.';
 const UNEXPECTED_OPEN_TEXT = 'No se pudo abrir el documento. Inténtalo de nuevo.';
 export const CANNOT_CLEAR_TEXT =
@@ -66,20 +61,15 @@ export interface StayDeal {
 interface ProfileIdentity {
   readonly documentType: DocumentType;
   readonly documentNumber: string;
-  readonly accountEmail: string | null;
 }
 
+// The email is no longer kept by the administration only: the guest changes it with a code, among
+// its own data (TAR-349).
 function common(profile: ProfileIdentity): DealFact[] {
   return [
     {
       label: 'Documento',
       value: documentLabel(profile.documentType, profile.documentNumber),
-      wide: true,
-    },
-    {
-      label: ACCOUNT_EMAIL_LABEL,
-      value: profile.accountEmail ?? NO_ACCOUNT_EMAIL,
-      // A long label and an address do not fit half a row.
       wide: true,
     },
   ];
@@ -155,7 +145,6 @@ type ProfileUpdate = components['schemas']['ProfileUpdateInput'];
 const trimmed = (data: PersonalData): PersonalData => ({
   name: data.name.trim(),
   phone: data.phone.trim(),
-  contactEmail: data.contactEmail.trim(),
   emergencyName: data.emergencyName.trim(),
   emergencyRelationship: data.emergencyRelationship.trim(),
   emergencyPhone: data.emergencyPhone.trim(),
@@ -175,12 +164,7 @@ export function isDirty(current: PersonalData, saved: PersonalData): boolean {
 export function clearsSaved(current: PersonalData, saved: PersonalData): boolean {
   const now = trimmed(current);
   const was = trimmed(saved);
-  const optional = [
-    'contactEmail',
-    'emergencyName',
-    'emergencyRelationship',
-    'emergencyPhone',
-  ] as const;
+  const optional = ['emergencyName', 'emergencyRelationship', 'emergencyPhone'] as const;
   return optional.some((key) => was[key] !== '' && now[key] === '');
 }
 
@@ -200,8 +184,6 @@ export function toProfileUpdate(current: PersonalData, saved: PersonalData): Pro
   const changes: ProfileUpdate = {
     ...(now.name !== was.name && { name: now.name }),
     ...(now.phone !== was.phone && { phone: now.phone }),
-    ...(now.contactEmail !== was.contactEmail &&
-      now.contactEmail !== '' && { contactEmail: now.contactEmail }),
     ...(contact !== null &&
       !sameContact(contact, toEmergencyContact(was)) && { emergencyContact: contact }),
   };

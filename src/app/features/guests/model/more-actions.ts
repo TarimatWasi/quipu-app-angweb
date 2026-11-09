@@ -34,7 +34,7 @@ function accessActions(guest: GuestDetail, panelGenerates: boolean): MoreAction[
   }
   actions.push({
     kind: 'account-email',
-    label: 'Cambiar correo de cuenta',
+    label: 'Cambiar correo',
     hint: 'al que llega la recuperación de contraseña',
   });
   return actions;

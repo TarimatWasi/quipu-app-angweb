@@ -9,6 +9,7 @@ import { ADMIN_ENVIRONMENT_ROUTES } from './admin-environments.handlers';
 import { ADMIN_FINANCE_ROUTES } from './admin-finance.handlers';
 import { ADMIN_PAYMENT_ROUTES } from './admin-payments.handlers';
 import { AUTH_ROUTES } from './auth.handlers';
+import { GUEST_EMAIL_ROUTES } from './guest-email.handlers';
 import { GUEST_ONBOARDING_ROUTES } from './guest-onboarding.handlers';
 import { GUEST_PROFILE_ROUTES } from './guest-profile.handlers';
 import { GUEST_ROUTES } from './guest.handlers';
@@ -31,4 +32,5 @@ export const MOCK_ROUTES: readonly MockRoute[] = [
   ...GUEST_ROUTES,
   ...GUEST_PROFILE_ROUTES,
   ...GUEST_ONBOARDING_ROUTES,
+  ...GUEST_EMAIL_ROUTES,
 ];

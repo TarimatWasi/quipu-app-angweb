@@ -8,7 +8,7 @@ const HANDOFF: AccessHandoff = {
   documentNumber: '70412233',
   type: 'CONTRACT',
   phone: null,
-  contactEmail: null,
+  email: null,
   access: {
     mode: 'TEMPORARY_PASSWORD',
     temporaryPassword: 'clave-secreta',

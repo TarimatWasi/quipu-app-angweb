@@ -105,7 +105,7 @@ function emailTaken(db: MockDb, email: string): boolean {
   const wanted = email.toLowerCase();
   return (
     db.data.administrators.some((record) => record.email.toLowerCase() === wanted) ||
-    db.data.guests.some((guest) => guest.accountEmail?.toLowerCase() === wanted)
+    db.data.guests.some((guest) => guest.email?.toLowerCase() === wanted)
   );
 }
 

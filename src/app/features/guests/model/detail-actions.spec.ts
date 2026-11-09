@@ -47,10 +47,6 @@ describe('A3.2 actions: titles and failures in local words (QP-ANGWEB-BFF-02)', 
       place: 'field',
       message: 'Ese correo ya está en uso por otra cuenta',
     });
-    expect(emailProblem(failure(409, 'GUEST_EMAIL_TAKEN', 'contactEmail'))).toEqual({
-      place: 'field',
-      message: 'Ese correo ya está en uso por otra cuenta',
-    });
     expect(emailProblem(failure(400, 'VALIDATION_ERROR', 'email'))).toEqual({
       place: 'field',
       message: 'Escribe un correo válido.',
