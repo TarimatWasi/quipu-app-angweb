@@ -336,6 +336,26 @@ describe('GuestDocumentsComponent: delete (A3.8, CU-29)', () => {
     expect(ui.toast()).toBe('Documento borrado.');
   });
 
+  it('says the document is gone on a 404 and, once closed, reads the list again without it', async () => {
+    const ui = await setup();
+    await openDelete(ui);
+    await ui.click(ui.dialog().getByRole('button', { name: 'Error de carga' }));
+
+    ui.documents.delete.mockReturnValueOnce(
+      throwError(() => httpError(404, { code: 'RESOURCE_NOT_FOUND' })),
+    );
+    ui.documents.list.mockReturnValue(of([present(DOCUMENTS[1])]));
+    await ui.click(ui.dialog().getByRole('button', { name: 'Borrar documento' }));
+    expect(ui.dialog().getByRole('alert').textContent).toContain('Este documento ya no está');
+    expect(ui.page().getByText('dni-luis.jpg', { selector: 'strong' })).toBeTruthy();
+
+    await ui.click(ui.dialog().getByRole('button', { name: 'Cancelar' }));
+
+    expect(ui.dialogElement()).toBeNull();
+    expect(ui.page().queryByText('dni-luis.jpg', { selector: 'strong' })).toBeNull();
+    expect(ui.page().getByText('recibo-de-luz.pdf', { selector: 'strong' })).toBeTruthy();
+  });
+
   it('puts what the BFF refuses of a field under it and clears it when the field changes', async () => {
     const ui = await setup();
     await openDelete(ui);

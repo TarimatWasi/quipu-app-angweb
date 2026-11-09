@@ -49,6 +49,8 @@ export interface DocumentActionData {
   readonly today: string;
   /** The call to the BFF; the page owns the data, the dialog only the form. */
   readonly run: (input: DocumentActionInput) => Observable<unknown>;
+  /** The BFF said the document is no longer there (404): the page reads its list again when this closes. */
+  readonly onGone: () => void;
 }
 
 const LEAD_ID = 'document-action-lead';
@@ -179,7 +181,9 @@ export class DocumentActionDialogComponent {
       this.ref.close(true);
     } catch (error: unknown) {
       if (this.submission.sessionEnded(error)) return;
-      const problem = actionProblem(callFailure(error));
+      const failure = callFailure(error);
+      if (failure.status === 404) this.data.onGone();
+      const problem = actionProblem(failure);
       if (problem.place === 'field') {
         this.refused.set({ field: problem.field, message: problem.message });
       } else {
