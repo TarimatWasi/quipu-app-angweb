@@ -103,6 +103,18 @@
                 }
               }
             </tr>
+            @if (detail(); as detailTemplate) {
+              @if (openRows().includes(rowId()(row))) {
+                <tr class="quipu-detail-row">
+                  <td [attr.colspan]="headers().length">
+                    <ng-container
+                      [ngTemplateOutlet]="detailTemplate"
+                      [ngTemplateOutletContext]="{ $implicit: row, index }"
+                    />
+                  </td>
+                </tr>
+              }
+            }
           }
         }
       </tbody>

@@ -1,131 +1,92 @@
-import { LatestRequest } from '@shared/data/latest-request';
-import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
-import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
-import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
+import { PagedListPage } from '@shared/lists/list-page';
+import { countText } from '@shared/text/list-text';
 import { Component, computed, inject, signal } from '@angular/core';
+import { FormField } from '@angular/forms/signals';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
-import { GuestHistoryItem, GuestPaymentsService } from '../data/guest-payments.service';
-import type { GuestPayment, GuestProof } from '../data/own-payments';
+import type { Observable } from 'rxjs';
+import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
+import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
+import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
+import { ListResultsComponent } from '@shared/ui/list-results/list-results.component';
+import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
+import { PaymentHistoryTableComponent } from '../components/payment-history-table.component';
+import { GuestPaymentsService } from '../data/guest-payments.service';
+import type { GuestHistoryItem, GuestHistoryPage } from '../data/guest-payments.service';
 import {
-  formatDate,
-  formatDateTime,
-  formatMoney,
-  periodLabel,
-} from '@shared/payments/payment-format';
-import { PAYMENT_STATUS_LABELS } from '../model/own-payment-labels';
-import { PAYMENT_PAGE_STYLES } from '@shared/payments/payment-page.styles';
-import { OWN_PAYMENT_STYLES } from './own-payment.styles';
-
-type LoadState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'error'; readonly message: string };
-
-const SURPLUS_TEXTS: Readonly<Record<NonNullable<GuestPayment['surplus']>['outcome'], string>> = {
-  CREDIT: 'quedó como crédito a favor',
-  REFUND_PENDING: 'te lo devolveremos',
-  REFUNDED: 'te lo devolvimos',
-};
+  creditHeading,
+  DEFAULT_SORT,
+  EMPTY,
+  hasFilters,
+  LOAD_ERROR_TEXT,
+  NO_FILTERS,
+  NO_MATCH_HEADING,
+  PHONE_SORTS,
+  STATE_OPTIONS,
+  toRows,
+  visibleRows,
+} from '../model/payment-history';
+import type { HistoryFilters, SortKey } from '../model/payment-history';
 
 /**
- * H4 (CU-19, RF-10): the own payment history, newest first and paginated with the opaque cursor
- * of the BFF (RN-09: only the guest's own, without voucher URLs). A rejected payment shows its
- * reason and «Corregir pago» (H3); a pending one, «Ver pago». The refunds of Quipu come as rows
- * of their own, labelled Devuelto (RN-39).
+ * H4 (CU-19, RF-10) on the canvas «Historial»: the own payments and refunds, newest first and
+ * page by page with the cursor of the BFF (RN-09: only the guest's own, without voucher URLs). The
+ * state filter and the order work on what is loaded. The credit in favor is a notice over the list
+ * (RN-38); the refunds of Quipu are rows of their own, «Devuelto» (RN-39).
  */
 @Component({
   selector: 'app-guest-history',
-  imports: [SkeletonCardsComponent, SkeletonContentDirective, SkeletonComponent, RouterLink],
+  imports: [
+    FieldControlDirective,
+    FormField,
+    FormFieldComponent,
+    ListFiltersComponent,
+    ListFiltersSkeletonComponent,
+    ListResultsComponent,
+    LoadErrorComponent,
+    PageHeaderComponent,
+    PageNoticeComponent,
+    PaymentHistoryTableComponent,
+    RouterLink,
+  ],
   templateUrl: './guest-history.component.html',
-  styles: [PAYMENT_PAGE_STYLES, OWN_PAYMENT_STYLES],
+  styleUrl: './guest-history.component.scss',
 })
-export class GuestHistoryComponent {
-  private readonly payments = inject(GuestPaymentsService);
+export class GuestHistoryComponent extends PagedListPage<
+  'ALL',
+  GuestHistoryItem,
+  GuestHistoryPage,
+  HistoryFilters,
+  SortKey
+> {
+  private readonly service = inject(GuestPaymentsService);
 
-  protected readonly formatMoney = formatMoney;
-  protected readonly formatDate = formatDate;
-  protected readonly formatDateTime = formatDateTime;
-  protected readonly statusLabels = PAYMENT_STATUS_LABELS;
-  protected readonly surplusTexts = SURPLUS_TEXTS;
+  protected readonly loadErrorText = LOAD_ERROR_TEXT;
+  protected readonly noMatchHeading = NO_MATCH_HEADING;
+  protected readonly empty = EMPTY;
+  protected readonly stateOptions = STATE_OPTIONS;
 
-  protected readonly items = signal<readonly GuestHistoryItem[]>([]);
-  protected readonly cursor = signal<string | null>(null);
-  protected readonly creditBalance = signal(0);
-  protected readonly retrying = signal(false);
-  protected readonly state = signal<LoadState>({ kind: 'loading' });
-  /** Whether the failed load was "Mostrar más" (the rows already shown stay). */
-  protected readonly loadingMore = signal(false);
-  protected readonly loadError = computed(() => {
-    const state = this.state();
-    return state.kind === 'error' ? state.message : '';
-  });
+  private readonly creditBalance = signal(0);
 
-  private readonly request = new LatestRequest();
+  protected readonly credit = computed(() => creditHeading(this.creditBalance()));
+  protected readonly filtered = computed(() => hasFilters(this.filters()));
+  protected readonly rows = computed(() =>
+    visibleRows(toRows(this.list.items()), this.filters(), this.sort()),
+  );
+  protected readonly count = computed(() => countText(this.rows().length, this.loadedCount()));
 
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    void this.load();
-    return true;
+  constructor() {
+    super('ALL', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
+    this.start();
   }
 
-  protected more(): void {
-    if (this.retrying() || this.state().kind === 'loading') return;
-    const cursor = this.cursor();
-    if (cursor !== null) void this.load(cursor);
+  protected fetchPage(_view: 'ALL', after: string | null): Observable<GuestHistoryPage> {
+    return this.service.history(after ?? undefined);
   }
 
-  protected retry(): void {
-    if (this.retrying() || this.state().kind === 'loading') return;
-    if (this.loadingMore()) {
-      this.more();
-    } else {
-      void this.load();
-    }
-  }
-
-  protected periodOf(payment: GuestPayment): string {
-    return periodLabel({
-      period: payment.period,
-      stayStartDate: payment.stayStartDate ?? null,
-      stayEndDate: payment.stayEndDate ?? null,
-    });
-  }
-
-  protected proofText(proof: GuestProof): string {
-    const parts = [
-      proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo',
-      proof.method ?? '',
-      proof.uploadedBy === 'GUEST' ? 'enviado por ti' : 'agregado por la administración',
-      `declarado ${formatMoney(proof.declaredAmount)}`,
-      proof.verifiedAmount === null ? '' : `verificado ${formatMoney(proof.verifiedAmount)}`,
-    ];
-    return parts.filter((part) => part !== '').join(' · ');
-  }
-
-  private async load(after?: string): Promise<void> {
-    const request = this.request.begin();
-    this.loadingMore.set(after !== undefined);
-    const isRetry = this.state().kind === 'error';
-    this.retrying.set(isRetry);
-    if (!isRetry) this.state.set({ kind: 'loading' });
-    try {
-      const page = await firstValueFrom(this.payments.history(after));
-      if (!this.request.isCurrent(request)) return;
-      this.items.update((current) =>
-        after === undefined ? page.content : [...current, ...page.content],
-      );
-      this.cursor.set(page.nextCursor);
-      this.creditBalance.set(page.creditBalance);
-      this.state.set({ kind: 'ready' });
-    } catch (error: unknown) {
-      if (!this.request.isCurrent(request)) return;
-      this.state.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
-    } finally {
-      if (this.request.isCurrent(request)) this.retrying.set(false);
-    }
+  protected pageReceived(page: GuestHistoryPage): void {
+    this.creditBalance.set(page.creditBalance);
   }
 }

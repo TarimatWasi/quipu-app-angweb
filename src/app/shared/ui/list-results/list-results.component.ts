@@ -32,7 +32,12 @@ export interface EmptyText {
           (clearFilters)="clearFilters.emit()"
         />
       } @else if (!listFailed()) {
-        <app-empty-state [heading]="empty().heading">{{ empty().text }}</app-empty-state>
+        <app-empty-state [heading]="empty().heading"
+          >{{ empty().text
+          }}<ng-container ngProjectAs="[emptyAction]"
+            ><ng-content select="[emptyAction]"
+          /></ng-container>
+        </app-empty-state>
       }
     </div>
 

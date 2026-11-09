@@ -16,6 +16,7 @@ import {
 import { ColumnWidthDirective } from './column-width.directive';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
+import { DataDetailDirective } from './data-detail.directive';
 import { DataFooterDirective } from './data-footer.directive';
 import { ariaSort } from './list-sort';
 import type { ListSort } from './list-sort';
@@ -106,15 +107,19 @@ export class DataTableComponent<T, K extends string = string> {
   readonly sort = input<ListSort<K> | null>(null);
   /** A sortable header was pressed; the screen orders the rows. */
   readonly sortBy = output<K>();
+  /** The ids of the rows that show their detail under them (P-24); needs `appDataDetail`. */
+  readonly openRows = input<readonly string[]>([]);
 
   protected readonly skeletonCard = contentChild(DataSkeletonCardDirective);
   private readonly skeletonCells = contentChildren(DataSkeletonCellDirective);
   private readonly cells = contentChildren(DataCellDirective);
   private readonly cardTemplate = contentChild(DataCardDirective);
   private readonly footerTemplate = contentChild(DataFooterDirective);
+  private readonly detailTemplate = contentChild(DataDetailDirective);
 
   protected readonly card = computed(() => this.cardTemplate()?.template ?? null);
   protected readonly footer = computed(() => this.footerTemplate()?.template ?? null);
+  protected readonly detail = computed(() => this.detailTemplate()?.template ?? null);
   protected readonly headers = computed(() => {
     const sort = this.sort();
     const templates = new Map(this.cells().map((cell) => [cell.appDataCell(), cell.template]));
