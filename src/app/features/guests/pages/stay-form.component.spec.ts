@@ -586,11 +586,15 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
       'Solo los huéspedes temporales tienen estadías',
     ],
   ])(
-    'shows %s in a dialog with the BFF message and goes back to A3.2',
+    'shows %s in a dialog with the catalog text and goes back to A3.2',
     async (code, title, message) => {
       const ui = await registerReady();
       await fillAndSave(ui);
-      await ui.flush(await ui.expect1(isCreate), { code, message, guestId: 'g1' }, 409);
+      await ui.flush(
+        await ui.expect1(isCreate),
+        { code, message: 'texto del servidor', guestId: 'g1' },
+        409,
+      );
 
       const alert = await screen.findByRole('alertdialog', { name: title });
       expect(alert.textContent).toContain(message);
@@ -600,20 +604,20 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     },
   );
 
-  it('shows a field error of the BFF next to its field', async () => {
+  it('shows the catalog text of a field the BFF points at next to its field', async () => {
     const ui = await registerReady();
     await fillAndSave(ui);
     await ui.flush(
       await ui.expect1(isCreate),
       {
         code: 'VALIDATION_ERROR',
-        message: 'El monto admite hasta dos decimales',
+        message: 'texto del servidor',
         field: 'agreedAmount',
       },
       400,
     );
 
-    expect(ui.errorOf(AMOUNT)).toBe('El monto admite hasta dos decimales');
+    expect(ui.errorOf(AMOUNT)).toBe('Escribe un monto mayor que 0.');
     expect(document.activeElement).toBe(ui.page().getByLabelText(AMOUNT));
   });
 
@@ -622,22 +626,22 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     await fillAndSave(ui);
     await ui.flush(
       await ui.expect1(isCreate),
-      { code: 'RATE_LIMITED', message: 'Demasiados intentos, espera un momento' },
+      { code: 'RATE_LIMITED', message: 'texto del servidor' },
       429,
     );
 
     expect(ui.page().getByRole('alert').textContent).toContain(
-      'Demasiados intentos, espera un momento',
+      'Demasiados intentos, espera un momento antes de volver a intentar',
     );
   });
 
-  it('goes back to A3.2 with the BFF message when the stay is gone on save', async () => {
+  it('goes back to A3.2 with the catalog text when the stay is gone on save', async () => {
     const ui = await correctReady();
     await ui.type(AMOUNT, '450');
     await ui.click(ui.save());
     await ui.flush(
       await ui.expect1(isUpdate),
-      { code: 'STAY_NOT_FOUND', message: 'La estadía no existe' },
+      { code: 'STAY_NOT_FOUND', message: 'texto del servidor' },
       404,
     );
 

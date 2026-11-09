@@ -24,7 +24,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { AdminEnvironmentsService, Environment } from '../data/admin-environments.service';
 import { AdminGuestsService, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
-import { toBffErrorWithServerMessage } from '@core/http/bff-error';
+import { bodyCodeOf, toBffError, toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
@@ -42,6 +42,8 @@ import {
   STAY_UPDATED_TEXT,
   todayText,
 } from '../model/guest-texts';
+import { goneText, stayFieldText } from '../model/stay-document-failures';
+import { callFailure } from '@shared/forms/call-failure';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { openGuestNoticeDialog } from '../components/guest-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -347,19 +349,24 @@ export class StayFormComponent {
     if (isConcurrentModification(error)) {
       return this.concurrent();
     }
-    const { code, message, field } = toBffErrorWithServerMessage(error);
+    const code = bodyCodeOf(error) ?? '';
     const notice = NOTICES[code];
     if (notice) {
       if (code === 'ENVIRONMENT_OCCUPIED') this.rejected.set(this.draft().environmentId || null);
-      return this.notice(notice, message);
+      return this.notice(notice);
     }
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.toasts.show(message);
+      this.toasts.show(goneText(callFailure(error)));
       return this.backToGuest();
     }
-    const key = code === 'STAY_OVERLAP' ? 'dates' : FIELD_KEYS[field ?? ''];
-    if (key) {
-      this.serverErrors.update((errors) => ({ ...errors, [key]: message }));
+    const { message, field } = toBffError(error);
+    const key = FIELD_KEYS[field ?? ''];
+    if (code === 'STAY_OVERLAP') {
+      // The text of the BFF names the stay the dates cross (SRS 17).
+      const overlap = toBffErrorWithServerMessage(error).message;
+      this.serverErrors.update((errors) => ({ ...errors, dates: overlap }));
+    } else if (key && code === 'VALIDATION_ERROR') {
+      this.serverErrors.update((errors) => ({ ...errors, [key]: stayFieldText(key) }));
     } else {
       this.generalError.set(message);
     }
@@ -375,10 +382,10 @@ export class StayFormComponent {
     }
   }
 
-  private async notice(notice: Notice, message: string): Promise<void> {
+  private async notice(notice: Notice): Promise<void> {
     const ref = openGuestNoticeDialog(this.dialog, {
       title: notice.title,
-      message: notice.text ?? message,
+      message: notice.text,
       buttonLabel: notice.buttonLabel,
     });
     await firstValueFrom(ref.afterClosed());

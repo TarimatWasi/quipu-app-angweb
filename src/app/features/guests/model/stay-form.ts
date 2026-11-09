@@ -3,6 +3,7 @@ import type { Environment } from './environment';
 import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { parseAmount } from '@shared/payments/payment-format';
 import { nightsBetween } from './guest-texts';
+import { GUEST_NOT_ACTIVE_TEXT, GUEST_NOT_TEMPORARY_TEXT } from './stay-document-failures';
 type Stay = components['schemas']['Stay'];
 type StayInput = components['schemas']['StayInput'];
 
@@ -25,8 +26,7 @@ export const FIELD_KEYS: Readonly<Partial<Record<string, FieldKey>>> = {
 
 export interface Notice {
   readonly title: string;
-  /** Null: the BFF's own message is shown (QP-UI-17); otherwise the canvas text. */
-  readonly text: string | null;
+  readonly text: string;
   readonly buttonLabel: string;
   /** Whether the action goes back to A3.2 (nothing left to do here). */
   readonly leaves: boolean;
@@ -42,13 +42,13 @@ export const NOTICES: Readonly<Partial<Record<string, Notice>>> = {
   },
   GUEST_NOT_ACTIVE: {
     title: 'El huésped no está activo',
-    text: null,
+    text: GUEST_NOT_ACTIVE_TEXT,
     buttonLabel: 'Volver al huésped',
     leaves: true,
   },
   GUEST_NOT_TEMPORARY: {
     title: 'El huésped no es temporal',
-    text: null,
+    text: GUEST_NOT_TEMPORARY_TEXT,
     buttonLabel: 'Volver al huésped',
     leaves: true,
   },
