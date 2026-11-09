@@ -323,6 +323,17 @@ describe('LoginComponent', () => {
       ).toBeTruthy();
     });
 
+    it('tells the person to wait when the server rate-limits the login, and keeps the form', async () => {
+      const { ui, failWith } = await setup();
+
+      await failWith(429, { code: 'RATE_LIMITED', message: 'x' });
+
+      expect(
+        await ui.findByText('Demasiados intentos, espera un momento antes de volver a intentar'),
+      ).toBeTruthy();
+      expect(ui.getByLabelText('Contraseña')).toBeTruthy();
+    });
+
     it('hides the detail of a code it does not know', async () => {
       const { ui, failWith } = await setup();
 

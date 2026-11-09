@@ -78,7 +78,7 @@ export class ActivateAccountComponent {
     } catch (error: unknown) {
       return this.failure(toBffError(error));
     }
-    // TODO(TAR-141): a guest with onboarding steps left goes to O1 instead of the home.
+    // A guest with onboarding steps left is sent from the home to its step by `registrationGuard`.
     await this.router.navigateByUrl('/home');
     return undefined;
   }
