@@ -88,7 +88,7 @@
           </section>
         }
 
-        @if (mode() === 'correct' && payment(); as p) {
+        @if (mode() === 'correct' && !sent() && payment(); as p) {
           <app-page-notice role="note" tone="error" [heading]="rejectedHeading()">
             @if (p.rejectionReason; as reason) {
               Motivo: {{ reason }}

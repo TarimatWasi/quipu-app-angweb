@@ -521,6 +521,8 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await ui.flush(req, { id: 'pay/7', status: 'PENDING' });
 
       expectSent(ui, 'Tu pago de septiembre', 'Estado de cuenta');
+      // The correction is over: its rejection notice goes with the form.
+      expect(ui.page().queryByText('Tu pago de septiembre no se aprobó.')).toBeNull();
     });
 
     it('compares the corrected sum with what is left to pay after the credit (RN-38)', async () => {
