@@ -59,6 +59,11 @@ export interface EmailChangeData {
   readonly pending: string | null;
   /** The calls of the path the screen works under (guest, temporary guest or onboarding). */
   readonly client: EmailVerificationClient;
+  /**
+   * Told every time a code goes out: the server keeps it pending even if the dialog is closed
+   * before confirming it, so the screen must know which address waits for its code.
+   */
+  readonly codeSent?: (email: string) => void;
 }
 
 const LEAD_ID = 'email-change-lead';
@@ -302,6 +307,7 @@ export class EmailChangeDialogComponent {
       await this.submission.run(async () => {
         try {
           await firstValueFrom(this.data.client.request(address), { defaultValue: null });
+          this.data.codeSent?.(address);
           this.wait.start(RESEND_WAIT_SECONDS);
           this.codeModel.set({ code: '' });
           this.notice.set(CODE_SENT_TEXT);
@@ -323,6 +329,7 @@ export class EmailChangeDialogComponent {
       const address = this.emailModel().email.trim();
       try {
         await firstValueFrom(this.data.client.request(address), { defaultValue: null });
+        this.data.codeSent?.(address);
         this.wait.start(RESEND_WAIT_SECONDS);
         this.codeModel.set({ code: '' });
         this.codeForm.code().reset();

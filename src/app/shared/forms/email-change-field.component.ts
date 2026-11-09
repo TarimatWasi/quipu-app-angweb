@@ -1,4 +1,4 @@
-import { Component, DestroyRef, inject, input, output } from '@angular/core';
+import { Component, DestroyRef, inject, input, linkedSignal, output } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { openEmailChangeDialog } from './email-change-dialog.component';
 import {
@@ -24,7 +24,7 @@ import type { EmailVerificationClient } from './email-verification';
     <div class="quipu-field">
       <p class="quipu-label">{{ label }}</p>
       <p class="value">{{ current() ?? noEmail }}</p>
-      @if (pending(); as address) {
+      @if (waiting(); as address) {
         <div class="quipu-notice quipu-notice--info pending">
           <p>{{ pendingText(address) }}</p>
           <button class="quipu-button quipu-button--tertiary" type="button" (click)="open()">
@@ -65,6 +65,11 @@ export class EmailChangeFieldComponent {
   readonly pending = input<string | null>(null);
   readonly client = input.required<EmailVerificationClient>();
   readonly changed = output<string>();
+  /**
+   * The address waiting for its code: what the page read, until a code goes out from here (the
+   * server keeps it pending even if the dialog closes) or the email changes.
+   */
+  protected readonly waiting = linkedSignal(() => this.pending());
 
   protected readonly label = EMAIL_LABEL;
   protected readonly noEmail = NO_EMAIL_TEXT;
@@ -78,11 +83,16 @@ export class EmailChangeFieldComponent {
   protected open(fresh = false): void {
     const ref = openEmailChangeDialog(this.dialog, {
       current: this.current(),
-      pending: fresh ? null : this.pending(),
+      pending: fresh ? null : this.waiting(),
       client: this.client(),
+      codeSent: (email) => {
+        this.waiting.set(email);
+      },
     });
     const subscription = ref.afterClosed().subscribe((email) => {
-      if (email !== undefined) this.changed.emit(email);
+      if (email === undefined) return;
+      this.waiting.set(null);
+      this.changed.emit(email);
     });
     this.destroyRef.onDestroy(() => {
       subscription.unsubscribe();
