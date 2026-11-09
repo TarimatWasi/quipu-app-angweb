@@ -104,6 +104,49 @@ describe('H4 history rows', () => {
     expect(row?.outcome).toBe('Sobraron S/ 30.00: te los devolveremos.');
   });
 
+  it('keeps the order of what happened on the same day: rejected, then the voucher added', () => {
+    const [row] = toRows([
+      paymentItem(
+        payment({
+          status: 'PENDING',
+          verifiedAmount: null,
+          submittedAt: '2026-10-04T15:00:00Z',
+          reviews: [
+            { decision: 'REJECTED', reason: 'Falta la diferencia', at: '2026-10-06T14:00:00Z' },
+          ],
+          proofs: [
+            {
+              id: 'a',
+              kind: 'VOUCHER',
+              method: 'Yape',
+              declaredAmount: 500,
+              verifiedAmount: null,
+              uploadedBy: 'GUEST',
+              addedAt: '2026-10-04T15:00:00Z',
+              file: null,
+            },
+            {
+              id: 'b',
+              kind: 'VOUCHER',
+              method: 'Transferencia',
+              declaredAmount: 300,
+              verifiedAmount: null,
+              uploadedBy: 'GUEST',
+              addedAt: '2026-10-06T20:00:00Z',
+              file: null,
+            },
+          ],
+        }),
+      ),
+    ]);
+
+    expect(row?.events.map((event) => event.text)).toEqual([
+      'Enviaste el pago.',
+      'La administración lo rechazó: Falta la diferencia.',
+      'Agregaste un voucher de S/ 300.00.',
+    ]);
+  });
+
   it('shows what was sent while a payment is not approved and what was verified after', () => {
     const [pending, approved] = toRows([
       paymentItem(payment({ status: 'PENDING', verifiedAmount: null, amount: 800 })),

@@ -161,9 +161,8 @@ function eventsOf(payment: GuestPayment, refund: GuestRefund | undefined): Event
   const first = proofs[0];
   const registeredByAdmin = first?.uploadedBy === 'ADMIN';
   const firstDay = dayOf(first?.addedAt ?? payment.submittedAt);
-  const events: { day: string; text: string }[] = [];
-  if (!registeredByAdmin)
-    events.push({ day: dayOf(payment.submittedAt), text: 'Enviaste el pago.' });
+  const events: { at: string; text: string }[] = [];
+  if (!registeredByAdmin) events.push({ at: payment.submittedAt, text: 'Enviaste el pago.' });
   for (const proof of proofs) {
     if (
       proof.uploadedBy === 'GUEST' &&
@@ -171,7 +170,7 @@ function eventsOf(payment: GuestPayment, refund: GuestRefund | undefined): Event
       dayOf(proof.addedAt) !== firstDay
     ) {
       events.push({
-        day: dayOf(proof.addedAt),
+        at: proof.addedAt,
         text: `Agregaste un voucher de ${formatMoney(proof.declaredAmount)}.`,
       });
     }
@@ -185,16 +184,18 @@ function eventsOf(payment: GuestPayment, refund: GuestRefund | undefined): Event
     } else if (registeredByAdmin) {
       text = 'La administración registró tu pago y lo aprobó.';
     }
-    events.push({ day: dayOf(review.at), text });
+    events.push({ at: review.at, text });
   }
   if (refund) {
     events.push({
-      day: refund.date,
+      // A refund only knows its day: it goes after what happened that day.
+      at: `${refund.date}T23:59:59Z`,
       text: `Quipu te devolvió ${formatMoney(refund.amount)} por ${refund.method}.`,
     });
   }
-  events.sort((a, b) => a.day.localeCompare(b.day));
-  return events.map((event) => ({ date: formatShortDate(event.day), text: event.text }));
+  // The full instants order them: two things on the same day keep the order they happened in.
+  events.sort((a, b) => new Date(a.at).getTime() - new Date(b.at).getTime());
+  return events.map((event) => ({ date: formatShortDate(dayOf(event.at)), text: event.text }));
 }
 
 function paymentRow(payment: GuestPayment, refund: GuestRefund | undefined): HistoryRow {
