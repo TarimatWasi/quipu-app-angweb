@@ -370,7 +370,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         'VOUCHER_NO_ACTIVE_CONTRACT',
         403,
         'No tienes un contrato vigente',
-        'No tienes un contrato vigente activo',
+        'No tienes un contrato vigente activo. Si debes un mes, la administración puede registrar tu pago.',
       ],
       [
         'GUEST_NOT_ACTIVE',
@@ -379,7 +379,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         'No puedes enviar pagos mientras tu cuenta no esté activa. Consulta con la administración.',
       ],
     ])(
-      'shows %s in a dialog with the text of the catalog and stays on the page',
+      'shows %s in a dialog with the text of the canvas and leads back to the account',
       async (code, status, title, text) => {
         const ui = await newContractPayment('/guest/payments/new?period=2026-10');
         await cash(ui, 1, '350');
@@ -392,14 +392,14 @@ describe('OwnPaymentComponent (H3, T2)', () => {
 
         expect(ui.dialog().getByRole('heading', { name: title })).toBeTruthy();
         expect(ui.dialog().getByText(text)).toBeTruthy();
-        await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
+        await ui.click(ui.dialog().getByRole('button', { name: 'Ver Estado de cuenta' }));
 
         ui.http.expectNone(isStatus);
-        expect(TestBed.inject(Router).url).toBe('/guest/payments/new?period=2026-10');
+        expect(TestBed.inject(Router).url).toBe('/home');
       },
     );
 
-    it('shows that the month already has a payment and loads the months again', async () => {
+    it('shows that the month already has a payment and leads back to the account', async () => {
       const ui = await newContractPayment('/guest/payments/new?period=2026-10');
       await cash(ui, 1, '350');
       await send(ui);
@@ -409,19 +409,17 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         409,
       );
 
-      expect(
-        ui.dialog().getByRole('heading', { name: 'Este período ya tiene un pago' }),
-      ).toBeTruthy();
+      expect(ui.dialog().getByRole('heading', { name: 'Ya enviaste un pago' })).toBeTruthy();
       expect(
         ui
           .dialog()
           .getByText(
-            'Ya enviaste un pago para este período y la administración lo está revisando.',
+            'Ya enviaste un pago para este período y la administración lo está revisando. Te avisaremos en tu estado de cuenta.',
           ),
       ).toBeTruthy();
-      await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
+      await ui.click(ui.dialog().getByRole('button', { name: 'Ver Estado de cuenta' }));
 
-      await ui.flush(await ui.expect1(isStatus), PERIODS);
+      expect(TestBed.inject(Router).url).toBe('/home');
     });
 
     it('shows an error of a proof under that proof, with the BFF text', async () => {
@@ -573,7 +571,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       ui.http.expectNone(isPut('guest', 'pay%2F7'));
     });
 
-    it('shows «Tu pago ya cambió» when it can no longer be corrected and opens it read-only', async () => {
+    it('shows «Tu pago ya cambió» when it can no longer be corrected and leads back to the account', async () => {
       const ui = await setup('/guest/payments/pay%2F7');
       await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
       await send(ui, 'Enviar de nuevo');
@@ -585,20 +583,15 @@ describe('OwnPaymentComponent (H3, T2)', () => {
 
       expect(ui.dialog().getByRole('heading', { name: 'Tu pago ya cambió' })).toBeTruthy();
       expect(
-        ui.dialog().getByText('Este pago ya no se puede corregir: está en revisión o ya se aprobó'),
+        ui
+          .dialog()
+          .getByText(
+            'Este pago ya no se puede corregir: está en revisión o ya se aprobó. La administración lo completó mientras lo editabas; mira cómo quedó en tu estado de cuenta.',
+          ),
       ).toBeTruthy();
-      await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
+      await ui.click(ui.dialog().getByRole('button', { name: 'Ver Estado de cuenta' }));
 
-      await ui.flush(
-        await ui.expect1(isGet('guest', 'pay%2F7')),
-        payment({ status: 'APPROVED', rejectionReason: null }),
-      );
-      expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Tu pago');
-      expect(ui.page().getByText('Aprobado')).toBeTruthy();
-      expect(ui.page().queryByRole('button', { name: 'Enviar de nuevo' })).toBeNull();
-      // An approved payment owes nothing: what it covered is not shown as «Por pagar».
-      expect(ui.page().queryByText(/Por pagar/)).toBeNull();
-      expect(ui.page().getByText('A cubrir con este pago S/ 350.00')).toBeTruthy();
+      expect(TestBed.inject(Router).url).toBe('/home');
     });
 
     it('opens a pending payment read-only, without a form', async () => {
@@ -670,7 +663,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(toastText()).toBe(SENT_TEXT);
     });
 
-    it('shows «Ya subiste un voucher para esta estadía» with the BFF text and loads the stay again', async () => {
+    it('shows «Ya enviaste un pago» for the stay and leads back to the payment state', async () => {
       const ui = await setup('/temporary-guest/payment');
       await ui.flush(await ui.expect1(isStay), stay());
       await cash(ui, 1, '400');
@@ -681,26 +674,17 @@ describe('OwnPaymentComponent (H3, T2)', () => {
         409,
       );
 
-      expect(
-        ui.dialog().getByRole('heading', { name: 'Ya subiste un voucher para esta estadía' }),
-      ).toBeTruthy();
+      expect(ui.dialog().getByRole('heading', { name: 'Ya enviaste un pago' })).toBeTruthy();
       expect(
         ui
           .dialog()
           .getByText(
-            'Ya enviaste un pago para esta estadía y la administración lo está revisando.',
+            'Ya enviaste un pago para esta estadía y la administración lo está revisando. Te avisaremos en tu estado de pago.',
           ),
       ).toBeTruthy();
-      await ui.click(ui.dialog().getByRole('button', { name: 'Entendido' }));
+      await ui.click(ui.dialog().getByRole('button', { name: 'Ver Estado de pago' }));
 
-      await ui.flush(
-        await ui.expect1(isStay),
-        stay({ status: 'UNDER_REVIEW', paymentId: 'pay_t' }),
-      );
-      expect(ui.page().queryByRole('button', { name: 'Enviar pago' })).toBeNull();
-      expect(ui.page().getByRole('link', { name: 'Ver pago' }).getAttribute('href')).toBe(
-        '/temporary-guest/payment/pay_t',
-      );
+      expect(TestBed.inject(Router).url).toBe('/home');
     });
 
     it('shows a stay without a stay in force in a dialog', async () => {
@@ -710,7 +694,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await send(ui);
       await ui.flush(
         await ui.expect1(isStayUpload),
-        error('VOUCHER_NO_ACTIVE_STAY', 'No tienes una estadía vigente ni próxima.'),
+        error('VOUCHER_NO_ACTIVE_STAY', 'texto del servidor'),
         403,
       );
 
@@ -720,7 +704,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(
         ui
           .dialog()
-          .getByText('No tienes una estadía vigente ni próxima; consulta con la administración'),
+          .getByText('No tienes una estadía vigente ni próxima; consulta con la administración.'),
       ).toBeTruthy();
     });
 

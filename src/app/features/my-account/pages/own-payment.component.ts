@@ -63,6 +63,7 @@ import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.compo
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import {
+  HOME_NAMES,
   LoadState,
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
@@ -361,11 +362,11 @@ export class OwnPaymentComponent {
       const ref = openPaymentNoticeDialog(this.dialog, {
         title: notice.title,
         message: notice.text,
-        actions: [{ label: 'Entendido', value: 'ok' }],
+        actions: [{ label: `Ver ${HOME_NAMES[this.audience]}`, value: 'home' }],
       });
       await firstValueFrom(ref.afterClosed());
-      // What the guest can pay or correct changed: show it as it is now.
-      if (notice.afterClose === 'reload' && !this.destroyRef.destroyed) await this.load();
+      // What the guest can pay or correct changed: the account shows it as it is now.
+      if (!this.destroyRef.destroyed) await this.router.navigateByUrl(HOME);
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
