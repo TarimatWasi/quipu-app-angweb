@@ -1,8 +1,8 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -61,13 +61,20 @@ export class TemporaryHomeComponent {
   protected readonly note = ONE_PAYMENT_NOTE;
   protected readonly factLabels = ['Entrada', 'Salida', 'Noches', 'Monto acordado'];
 
-  private readonly loaded = new AsyncContentState<StayPaymentStatus>();
+  /** The read starts with the page, from a field: not in a hook (CMP-10, Sonar S7059). */
+  private readonly read = rxResource<StayPaymentStatus, undefined>({
+    stream: () => this.payments.paymentStatus(),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_STAY_TEXT });
   protected readonly view = this.loaded.state;
   protected readonly retrying = this.loaded.retrying;
   protected readonly refreshError = this.loaded.refreshError;
   protected readonly refreshing = this.loaded.refreshing;
   /** The guest has no stay yet (404): an empty state, not an error. */
-  protected readonly none = signal(false);
+  protected readonly none = computed(() => {
+    const error = this.loaded.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
 
   private readonly stay = computed(() => this.loaded.data());
   protected readonly now = computed(() => {
@@ -91,30 +98,7 @@ export class TemporaryHomeComponent {
     return stay ? refundNotice(stay) : null;
   });
 
-  /** The read starts with the page, not in a hook (CMP-10, Sonar S7059). */
-  protected readonly started = this.load();
-
-  constructor() {
-    // Leaving the screen: no late answer may load or change anything any more.
-    inject(DestroyRef).onDestroy(() => {
-      this.loaded.dispose();
-    });
-  }
-
   protected reload(): void {
-    void this.load();
-  }
-
-  private async load(): Promise<void> {
-    const request = this.loaded.begin();
-    if (request === null) return;
-    try {
-      const stay = await firstValueFrom(this.payments.paymentStatus());
-      this.none.set(false);
-      this.loaded.succeed(request, stay);
-    } catch (error: unknown) {
-      const missing = error instanceof HttpErrorResponse && error.status === 404;
-      if (this.loaded.fail(request, LOAD_STAY_TEXT)) this.none.set(missing);
-    }
+    this.loaded.reload();
   }
 }

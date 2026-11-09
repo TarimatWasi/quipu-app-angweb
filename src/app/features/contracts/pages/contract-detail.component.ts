@@ -1,12 +1,13 @@
 import { toBffError } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, switchMap } from 'rxjs';
+import { catchError, map, NEVER, switchMap, tap, throwError } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { PeriodPaymentsComponent } from '@shared/payments/period-payments.component';
 import { toPeriodRow } from '@shared/payments/period-rows';
 import type { PeriodRow } from '@shared/payments/period-rows';
@@ -81,16 +82,45 @@ export class ContractDetailComponent {
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly toasts = inject(ToastService);
-  private readonly destroyRef = inject(DestroyRef);
 
   /** A value longer than this goes in the smaller figure so it does not break the tile. */
   protected readonly longValue = 24;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
 
-  private id = '';
-  private readonly loaded = new AsyncContentState<Loaded>();
+  private readonly id = this.route.snapshot.paramMap.get('id') ?? '';
   /** The moment the page was read: «vence en 5 días» counts from it. */
   private readonly now = signal(new Date());
+  /**
+   * The contract first, then the months of its guest: the signed link is fresh on every read. A
+   * contract that is gone (404) goes back to the list and the page keeps loading until it leaves.
+   */
+  private readonly read = rxResource<Loaded, undefined>({
+    stream: () =>
+      this.contracts.get(this.id).pipe(
+        switchMap((contract) =>
+          this.guests.accountStatus(contract.guestId).pipe(
+            map((periods) => ({
+              contract,
+              rows: ownPeriods(periods, contract.id).map((item) =>
+                toPeriodRow(item, contract.guestId),
+              ),
+            })),
+          ),
+        ),
+        tap(() => {
+          this.now.set(new Date());
+        }),
+        catchError((error: unknown) => {
+          if (!(error instanceof HttpErrorResponse && error.status === 404)) {
+            return throwError(() => error);
+          }
+          this.toasts.show(NOT_FOUND_TEXT);
+          void this.router.navigate([LIST]);
+          return NEVER;
+        }),
+      ),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_ERROR_TEXT });
 
   protected readonly phase = computed(() => this.loaded.state().status);
   protected readonly retrying = this.loaded.retrying;
@@ -123,16 +153,8 @@ export class ContractDetailComponent {
     };
   });
 
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-    this.id = this.route.snapshot.paramMap.get('id') ?? '';
-    void this.load(true);
-  }
-
   protected reload(): void {
-    void this.load(this.loaded.data() === null);
+    this.loaded.reload();
   }
 
   /** The storage could not sign the link: the rest of the contract came, the PDF is asked again. */
@@ -162,34 +184,5 @@ export class ContractDetailComponent {
         this.toasts.show(TERMINATED_TEXT, { tone: 'success' });
         this.reload();
       });
-  }
-
-  /** The contract first, then the months of its guest: the signed link is fresh on every read. */
-  private async load(initial: boolean): Promise<void> {
-    const request = this.loaded.begin(initial);
-    if (request === null) return;
-    try {
-      const data = await firstValueFrom(
-        this.contracts.get(this.id).pipe(
-          switchMap(async (contract): Promise<Loaded> => {
-            const periods = await firstValueFrom(this.guests.accountStatus(contract.guestId));
-            return {
-              contract,
-              rows: ownPeriods(periods, contract.id).map((item) =>
-                toPeriodRow(item, contract.guestId),
-              ),
-            };
-          }),
-        ),
-      );
-      if (this.loaded.succeed(request, data)) this.now.set(new Date());
-    } catch (error: unknown) {
-      if (error instanceof HttpErrorResponse && error.status === 404) {
-        this.toasts.show(NOT_FOUND_TEXT);
-        void this.router.navigate([LIST]);
-        return;
-      }
-      this.loaded.fail(request, LOAD_ERROR_TEXT);
-    }
   }
 }

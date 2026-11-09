@@ -1,19 +1,21 @@
-import {
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, forkJoin, map, Observable } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import {
+  catchError,
+  firstValueFrom,
+  forkJoin,
+  map,
+  NEVER,
+  Observable,
+  tap,
+  throwError,
+} from 'rxjs';
 import { bodyCodeOf, toBffError } from '@core/http/bff-error';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { firstError, focusFirstProblem, problem } from '@shared/forms/form-feedback';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
@@ -114,7 +116,6 @@ export class ContractFormComponent {
   private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
 
   /** A value longer than this goes in the smaller figure so it does not break the tile. */
   protected readonly longValue = 24;
@@ -126,9 +127,36 @@ export class ContractFormComponent {
   protected readonly fileAccept = FILE_ACCEPT;
 
   /** The guest it comes from (A3.2), or null when it comes from the list. */
-  private guestId: string | null = null;
+  private readonly guestId = this.route.snapshot.queryParamMap.get('guestId');
 
-  private readonly loaded = new AsyncContentState<Choices>();
+  /**
+   * The guests (or the one it comes from) and the environments, with the page. A guest that is gone
+   * (404) goes back to the list and the page keeps loading until it leaves.
+   */
+  private readonly choicesRead = rxResource<Choices, undefined>({
+    stream: () =>
+      this.read().pipe(
+        tap((choices) => {
+          if (choices.fixed)
+            this.fields.update((fields) => ({ ...fields, guestId: choices.fixed?.id ?? '' }));
+        }),
+        catchError((error: unknown) => {
+          if (!(
+            error instanceof HttpErrorResponse &&
+            error.status === 404 &&
+            this.guestId !== null
+          )) {
+            return throwError(() => error);
+          }
+          this.toasts.show('No se encontró el registro.');
+          void this.router.navigate([LIST]);
+          return NEVER;
+        }),
+      ),
+  });
+  private readonly loaded = new ResourceContent(this.choicesRead, {
+    message: () => LOAD_ERROR_TEXT,
+  });
   protected readonly phase = computed(() => this.loaded.state().status);
   protected readonly retrying = this.loaded.retrying;
 
@@ -199,14 +227,6 @@ export class ContractFormComponent {
   );
   protected readonly note = computed(() => sideNote(this.guestLabel(), this.environmentLabel()));
 
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-    this.guestId = this.route.snapshot.queryParamMap.get('guestId');
-    void this.load();
-  }
-
   /** The message to show under a field: what is wrong once touched, or what the BFF refused. */
   protected error(name: keyof ContractFields): string | null {
     return firstError(this.contractForm[name]);
@@ -218,26 +238,7 @@ export class ContractFormComponent {
   }
 
   protected reload(): void {
-    void this.load();
-  }
-
-  private async load(): Promise<void> {
-    const request = this.loaded.begin(true);
-    if (request === null) return;
-    try {
-      const choices = await firstValueFrom(this.read());
-      if (this.loaded.succeed(request, choices)) {
-        if (choices.fixed)
-          this.fields.update((fields) => ({ ...fields, guestId: choices.fixed?.id ?? '' }));
-      }
-    } catch (error: unknown) {
-      if (error instanceof HttpErrorResponse && error.status === 404 && this.guestId !== null) {
-        this.toasts.show('No se encontró el registro.');
-        void this.router.navigate([LIST]);
-        return;
-      }
-      this.loaded.fail(request, LOAD_ERROR_TEXT);
-    }
+    this.loaded.reload();
   }
 
   private read(): Observable<Choices> {

@@ -1,14 +1,15 @@
 import { computed, DestroyRef, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, NEVER, of, switchMap } from 'rxjs';
+import type { Observable } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
-import { AsyncContentState } from '@shared/data/async-content';
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import type { CallFailure } from '@shared/forms/call-failure';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { OnboardingService } from '../data/onboarding.service';
-import type { OnboardingInProgress } from '../data/onboarding.service';
+import type { OnboardingInProgress, OnboardingState } from '../data/onboarding.service';
 import {
   COMPLETE_BUTTON,
   COMPLETE_MESSAGES,
@@ -34,11 +35,17 @@ export abstract class OnboardingPage {
   protected readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
   private readonly destroyRef = inject(DestroyRef);
-  /** Which read still counts: none once the guest has left this page (it must not redirect it). */
-  private readonly latest = new LatestRequest();
   protected readonly auth = inject(AuthService);
 
-  protected readonly loaded = new AsyncContentState<OnboardingInProgress>();
+  /**
+   * The registration, read with the page (FE-ANG-CMP-10). A page that is not the step to do goes to
+   * the one that is and keeps loading until it leaves; a read of a page the guest already left is
+   * cancelled with it, so it never takes the guest away from where it is now.
+   */
+  private readonly read = rxResource<OnboardingInProgress, undefined>({
+    stream: () => this.api.state().pipe(switchMap((state) => this.arrive(state))),
+  });
+  protected readonly loaded = new ResourceContent(this.read, { message: () => LOAD_TEXT });
   protected readonly view = this.loaded.state;
   protected readonly retrying = this.loaded.retrying;
   protected readonly loadErrorText = LOAD_TEXT;
@@ -48,38 +55,23 @@ export abstract class OnboardingPage {
     registrationSteps(this.step, this.loaded.data()?.documents.length ?? 0),
   );
 
-  protected constructor(protected readonly step: OnboardingStep) {
-    // Leaving the screen: no late answer may load or change anything any more.
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-  }
+  protected constructor(protected readonly step: OnboardingStep) {}
 
+  /** Reads the registration again, keeping what is on screen; a page that is not the step to do goes to the one that is. */
   protected reload(): void {
-    void this.load();
+    this.loaded.reload();
   }
 
-  /** Reads the registration; a page that is not the step to do goes to the one that is. */
-  protected async load(): Promise<void> {
-    const request = this.loaded.begin();
-    if (request === null) return;
-    const read = this.latest.begin();
-    try {
-      const state = await firstValueFrom(this.api.state());
-      // A late answer of a page the guest already left must not take it away from where it is now.
-      if (!this.latest.isCurrent(read)) return;
-      // The session follows what the BFF says, so the guard lets the guest into the step it names.
-      this.auth.onboardingAdvanced(state.status === 'ACTIVE' ? null : state.nextStep);
-      if (state.status === 'ACTIVE') {
-        await this.leave(HOME_PATH);
-      } else if (state.nextStep !== this.step) {
-        await this.leave(STEP_PATHS[state.nextStep]);
-      } else {
-        this.loaded.succeed(request, state);
-      }
-    } catch {
-      this.loaded.fail(request, LOAD_TEXT);
-    }
+  /** What a page fills with the registration of its own step, each time it is read (O1 its form). */
+  protected arrived?(state: OnboardingInProgress): void;
+
+  private arrive(state: OnboardingState): Observable<OnboardingInProgress> {
+    // The session follows what the BFF says, so the guard lets the guest into the step it names.
+    this.auth.onboardingAdvanced(state.status === 'ACTIVE' ? null : state.nextStep);
+    if (state.status === 'ACTIVE') return this.leave(HOME_PATH);
+    if (state.nextStep !== this.step) return this.leave(STEP_PATHS[state.nextStep]);
+    this.arrived?.(state);
+    return of(state);
   }
 
   /** A step was done: the session moves on (with the name the guest saved, if any) and so does the page. */
@@ -113,15 +105,16 @@ export abstract class OnboardingPage {
       return true;
     }
     if (isOutOfOrder(failure)) {
-      void this.load();
+      this.reload();
       return true;
     }
     return false;
   }
 
-  private async leave(path: string): Promise<void> {
-    this.loaded.dispose();
-    await this.router.navigateByUrl(path, { replaceUrl: true });
+  /** Goes to `path`; the page keeps loading until it is gone. */
+  private leave(path: string): Observable<never> {
+    void this.router.navigateByUrl(path, { replaceUrl: true });
+    return NEVER;
   }
 
   private async completed(): Promise<void> {
@@ -133,8 +126,6 @@ export abstract class OnboardingPage {
       }).afterClosed(),
       { defaultValue: undefined },
     );
-    if (this.destroyRef.destroyed) return;
-    this.loaded.dispose();
     await this.finishRegistration();
   }
 }

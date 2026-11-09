@@ -1,20 +1,13 @@
 import { DOCUMENT } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormRoot } from '@angular/forms/signals';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { catchError, firstValueFrom, forkJoin, map, Observable, of, tap } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { callFailure } from '@shared/forms/call-failure';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { EmailChangeFieldComponent } from '@shared/forms/email-change-field.component';
 import { EMAIL_ADDED_TEXT, EMAIL_CHANGED_TEXT } from '@shared/forms/email-verification';
 import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
@@ -123,7 +116,22 @@ export class OwnProfileComponent {
   protected readonly errorId = ERROR_ID;
   protected readonly generalError = signal<string | null>(null);
 
-  private readonly loaded = new AsyncContentState<ProfileData>();
+  /** Whether the next answer fills the form with what is saved (the first read, «Reintentar»). */
+  private resetForm = true;
+  /** The read starts with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10). */
+  private readonly read = rxResource<ProfileData, undefined>({
+    stream: () =>
+      forkJoin({
+        profile: this.api.profile(),
+        contract: this.contractOf(),
+        stay: this.stayOf(),
+      }).pipe(
+        tap(({ profile }) => {
+          if (this.resetForm) this.model.set(toPersonalData(profile));
+        }),
+      ),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_PROFILE_TEXT });
   protected readonly view = this.loaded.state;
   protected readonly retrying = this.loaded.retrying;
   protected readonly refreshError = this.loaded.refreshError;
@@ -182,23 +190,8 @@ export class OwnProfileComponent {
   protected readonly fileError = signal<string | null>(null);
   protected readonly uploading = signal(false);
 
-  constructor() {
-    // Leaving the screen: no late answer may load or change anything any more.
-    inject(DestroyRef).onDestroy(() => {
-      this.loaded.dispose();
-    });
-  }
-
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    void this.load(true);
-    return true;
-  }
-
   protected reload(): void {
-    void this.load(true);
+    this.load(true);
   }
 
   protected reset(): void {
@@ -214,10 +207,10 @@ export class OwnProfileComponent {
   }
 
   /** The email changed with its code: say so and read it again, keeping what is being typed. */
-  protected async emailChanged(): Promise<void> {
+  protected emailChanged(): void {
     const had = this.email() !== null;
     this.toasts.show(had ? EMAIL_CHANGED_TEXT : EMAIL_ADDED_TEXT, { tone: 'success' });
-    await this.load(false);
+    this.load(false);
   }
 
   protected pick(file: File | null): void {
@@ -233,7 +226,7 @@ export class OwnProfileComponent {
       await firstValueFrom(this.api.upload(file));
       this.chosen.set(null);
       this.toasts.show(DOCUMENT_UPLOADED_TEXT, { tone: 'success' });
-      await this.load(false);
+      this.load(false);
     } catch (error: unknown) {
       this.uploadFailed(error);
     } finally {
@@ -250,7 +243,7 @@ export class OwnProfileComponent {
       if (error instanceof HttpErrorResponse && error.status === 401) return;
       const problem = openProblem(callFailure(error));
       this.toasts.show(problem.message);
-      if (problem.reload) await this.load(false);
+      if (problem.reload) this.load(false);
     }
   }
 
@@ -280,7 +273,7 @@ export class OwnProfileComponent {
       return this.saveFailed(error);
     }
     this.toasts.show(SAVED_TEXT, { tone: 'success' });
-    await this.load(true);
+    this.load(true);
     return undefined;
   }
 
@@ -298,21 +291,9 @@ export class OwnProfileComponent {
   }
 
   /** `resetForm` fills the form with what is saved; an upload keeps what the guest is typing. */
-  private async load(resetForm: boolean): Promise<void> {
-    const request = this.loaded.begin();
-    if (request === null) return;
-    try {
-      const [profile, contract, stay] = await Promise.all([
-        firstValueFrom(this.api.profile()),
-        firstValueFrom(this.contractOf()),
-        firstValueFrom(this.stayOf()),
-      ]);
-      if (this.loaded.succeed(request, { profile, contract, stay }) && resetForm) {
-        this.model.set(toPersonalData(profile));
-      }
-    } catch {
-      this.loaded.fail(request, LOAD_PROFILE_TEXT);
-    }
+  private load(resetForm: boolean): void {
+    this.resetForm = resetForm;
+    this.loaded.reload();
   }
 
   // What the administration keeps is a help, not the point of the page: without it the data and

@@ -24,7 +24,7 @@ const NO_IDENTITY = (): null => null;
 
 /**
  * The state of ONE read made with a resource (`rxResource`, `httpResource`), said as
- * `AsyncContentState` says it (TAR-355, FE-ANG-HTTP-03): first load, first error with
+ * the screens of Quipu say it (TAR-355, FE-ANG-HTTP-03): first load, first error with
  * «Reintentar», and a refresh that keeps the data on screen. A resource forgets its value when a
  * reload fails; {@link reload} keeps the data it had, so a failed refresh shows
  * `app-refresh-error` over it instead of taking it away. The screen reads again only through

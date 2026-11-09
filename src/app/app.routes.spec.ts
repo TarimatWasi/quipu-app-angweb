@@ -53,8 +53,9 @@ describe('routes', () => {
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
     // The home of the administrator (A1) asks its summary; these tests are about the routes.
+    // A page that is gone already cancelled its read (a resource does): only the open ones answer.
     for (const request of http.match((req) => req.url.endsWith('/bff/admin/dashboard'))) {
-      request.error(new ProgressEvent('error'));
+      if (!request.cancelled) request.error(new ProgressEvent('error'));
     }
     http.verify();
   });

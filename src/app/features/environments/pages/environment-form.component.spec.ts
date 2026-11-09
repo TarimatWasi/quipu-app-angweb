@@ -46,7 +46,8 @@ async function setup(path: string, loaded: Observable<Environment> = of(environm
   await router.navigateByUrl(path);
   const settle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await harness.fixture.whenStable();
+    // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+    TestBed.tick();
   };
   await settle();
   const page = () => within(harness.routeNativeElement ?? document.body);

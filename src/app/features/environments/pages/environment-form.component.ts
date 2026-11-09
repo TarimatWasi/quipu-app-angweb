@@ -1,22 +1,15 @@
 import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { HttpErrorResponse } from '@angular/common/http';
-import {
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  inject,
-  Injector,
-  signal,
-} from '@angular/core';
+import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { catchError, firstValueFrom, NEVER, tap, throwError } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
@@ -86,7 +79,6 @@ export class EnvironmentFormComponent {
   private readonly toasts = inject(ToastService);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
-  private readonly destroyRef = inject(DestroyRef);
 
   /** A value longer than this goes in the smaller figure so it does not break the tile. */
   protected readonly longValue = 24;
@@ -97,10 +89,32 @@ export class EnvironmentFormComponent {
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
 
   /** The id of the environment being edited, or null when a new one is created. */
-  private id: string | null = null;
-  protected readonly editing = signal(false);
+  private readonly id = this.route.snapshot.paramMap.get('id');
+  protected readonly editing = signal(this.id !== null);
 
-  private readonly loaded = new AsyncContentState<Environment>();
+  /**
+   * The environment being edited, which fills the form when it arrives; a new one reads nothing. One
+   * that is gone (404) goes back to A2 and the page keeps loading until it leaves.
+   */
+  private readonly read = rxResource<Environment, string | undefined>({
+    params: () => this.id ?? undefined,
+    stream: ({ params: id }) =>
+      this.service.get(id).pipe(
+        tap((environment) => {
+          this.draft.set(draftOf(environment));
+          this.generalError.set(null);
+        }),
+        catchError((error: unknown) => {
+          if (!(error instanceof HttpErrorResponse && error.status === 404)) {
+            return throwError(() => error);
+          }
+          this.toasts.show(NOT_FOUND_TEXT);
+          void this.router.navigate(['/admin/environments']);
+          return NEVER;
+        }),
+      ),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_ERROR_TEXT });
   /** A new environment has nothing to load: its form is ready at once. */
   protected readonly phase = computed(() =>
     this.editing() ? this.loaded.state().status : 'ready',
@@ -152,41 +166,12 @@ export class EnvironmentFormComponent {
     return this.saving() ? 'Creando…' : 'Crear ambiente';
   });
 
-  constructor() {
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-    this.id = this.route.snapshot.paramMap.get('id');
-    if (this.id === null) return;
-    this.editing.set(true);
-    void this.load(this.id);
-  }
-
   protected chooseType(type: EnvironmentType): void {
     this.draft.update((draft) => ({ ...draft, type }));
   }
 
   protected reload(): void {
-    if (this.id !== null) void this.load(this.id);
-  }
-
-  private async load(id: string): Promise<void> {
-    const request = this.loaded.begin(true);
-    if (request === null) return;
-    try {
-      const environment = await firstValueFrom(this.service.get(id));
-      if (this.loaded.succeed(request, environment)) {
-        this.draft.set(draftOf(environment));
-        this.generalError.set(null);
-      }
-    } catch (error: unknown) {
-      if (error instanceof HttpErrorResponse && error.status === 404) {
-        this.toasts.show(NOT_FOUND_TEXT);
-        void this.router.navigate(['/admin/environments']);
-        return;
-      }
-      this.loaded.fail(request, LOAD_ERROR_TEXT);
-    }
+    if (this.id !== null) this.loaded.reload();
   }
 
   private async save() {
