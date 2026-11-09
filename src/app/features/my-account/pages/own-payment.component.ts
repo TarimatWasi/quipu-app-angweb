@@ -72,6 +72,8 @@ import {
   paymentSummary,
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
+  OWN_PROOF_TEXTS,
+  ownAmountLabel,
   OwnPaymentMode,
   sentText,
 } from '../model/own-payment';
@@ -126,7 +128,7 @@ export class OwnPaymentComponent {
   private readonly temporaryPayments = inject(TemporaryGuestPaymentsService);
 
   /** The rows of proofs and the errors of the server for them, shared with the other payment page. */
-  protected readonly editor = new ProofsEditor(() => this.submitted());
+  protected readonly editor = new ProofsEditor(() => this.submitted(), OWN_PROOF_TEXTS.amountError);
   private readonly proofDrafts = this.editor.drafts;
   private readonly fieldErrors = this.editor.errors;
 
@@ -136,6 +138,8 @@ export class OwnPaymentComponent {
   protected readonly paymentId: string | null = idOf(this.route.snapshot.paramMap.get('id'));
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly proofLimitText = OWN_PROOF_LIMIT_TEXT;
+  protected readonly proofTexts = OWN_PROOF_TEXTS;
+  protected readonly amountLabel = ownAmountLabel;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly formatMoney = formatMoney;
   protected readonly periodLabel = periodLabel;

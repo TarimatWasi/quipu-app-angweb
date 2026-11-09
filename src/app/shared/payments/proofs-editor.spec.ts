@@ -110,4 +110,12 @@ describe('ProofsEditor (TAR-326)', () => {
     expect(proofs.amountError(0)).toBe('Monto rechazado');
     expect(proofs.fileError(0)).toBe('Archivo rechazado');
   });
+
+  it('says the amount rule in the words of its page, the administration by default (D-92)', () => {
+    const own = new ProofsEditor(() => true, 'Escribe el monto que pagaste, mayor que cero.');
+    const admin = new ProofsEditor(() => true);
+
+    expect(own.amountError(0)).toBe('Escribe el monto que pagaste, mayor que cero.');
+    expect(admin.amountError(0)).toBe('El monto debe ser mayor a 0');
+  });
 });

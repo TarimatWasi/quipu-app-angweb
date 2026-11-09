@@ -202,6 +202,7 @@
                 [fileName]="proof.file?.name ?? null"
                 [error]="editor.fileError(i)"
                 [removable]="true"
+                [camera]="false"
                 (chosen)="editor.file(i, $event)"
               />
             } @else {
@@ -223,7 +224,6 @@
                   [fieldId]="'dp-proof-' + proof.key + '-method'"
                   [value]="proof.method"
                   (valueChange)="editor.method(i, $event)"
-                  placeholder="Por ejemplo, Yape"
                 />
               }
             </div>

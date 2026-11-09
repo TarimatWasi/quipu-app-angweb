@@ -29,9 +29,14 @@ export interface ProofPayload {
   readonly fileIndex?: number;
 }
 
-export function proofAmountError(amount: string, submitted: boolean): string | null {
+/** `text` is what the page says: the guest's own words differ from the administration's (D-92). */
+export function proofAmountError(
+  amount: string,
+  submitted: boolean,
+  text = AMOUNT_TEXT,
+): string | null {
   const value = parseAmount(amount);
-  return submitted && (value === null || value <= 0) ? AMOUNT_TEXT : null;
+  return submitted && (value === null || value <= 0) ? text : null;
 }
 
 export function proofFileError(

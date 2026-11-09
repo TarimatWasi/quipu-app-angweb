@@ -223,7 +223,7 @@ async function newContractPayment(url = '/guest/payments/new') {
 /** The single proof as cash of `amount`. */
 async function cash(ui: Ui, n: number, amount: string) {
   await ui.click(ui.proof(n).getByRole('button', { name: 'Efectivo, sin voucher' }));
-  await ui.type(ui.proof(n).getByLabelText('Monto (S/)'), amount);
+  await ui.type(ui.proof(n).getByLabelText('Monto en efectivo'), amount);
 }
 
 const send = (ui: Ui, name = 'Enviar pago') => ui.click(ui.page().getByRole('button', { name }));
@@ -277,9 +277,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByText('Cuota S/ 350.00 · Por pagar S/ 300.00')).toBeTruthy();
 
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
-      const shortcuts = within(ui.proof(1).getByRole('group', { name: 'Medios frecuentes' }));
+      const shortcuts = within(ui.proof(1).getByRole('group', { name: 'Elegir un medio de pago' }));
       await ui.click(shortcuts.getByRole('button', { name: 'Yape' }));
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '200');
+      await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '200');
       await ui.click(ui.page().getByRole('button', { name: 'Agregar otro comprobante' }));
       await cash(ui, 2, '100');
       expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
@@ -310,7 +310,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByRole('status').textContent).toMatch(
         /Suma S\/ 350.00 · Sobran S\/ 50.00/,
       );
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '300');
+      await ui.type(ui.proof(1).getByLabelText('Monto en efectivo'), '300');
       expect(ui.page().getByRole('status').textContent).toMatch(/Suma S\/ 300.00 · Completo/);
 
       await ui.choose(ui.page().getByLabelText('Mes'), '2026-10');
@@ -331,9 +331,37 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(ui.page().getByLabelText('Mes').getAttribute('aria-describedby')).toBe(
         'op-period-error op-period-help',
       );
-      expect(ui.proof(1).getByText('El monto debe ser mayor a 0')).toBeTruthy();
+      expect(ui.proof(1).getByText('Escribe el monto que pagaste, mayor que cero.')).toBeTruthy();
       expect(ui.proof(1).getByText('Sube el archivo del voucher')).toBeTruthy();
       ui.http.expectNone(isGuestUpload);
+    });
+
+    it('names each part of a proof with the words of the canvas «Voucher» (D-92)', async () => {
+      const ui = await newContractPayment('/guest/payments/new?period=2026-10');
+      const proof = ui.proof(1);
+
+      expect(proof.getByRole('group', { name: 'Tipo del comprobante 1' })).toBeTruthy();
+      expect(proof.queryByText('Tipo de comprobante')).toBeNull();
+      expect(
+        proof.getByText(
+          'JPG, PNG o PDF, hasta 5 MB. Que se lean el monto, la fecha y el número de operación.',
+        ),
+      ).toBeTruthy();
+      expect(proof.getByText('Arrastra aquí la foto o el PDF del voucher')).toBeTruthy();
+      expect(proof.getByText('Toma una foto del voucher o elige el archivo')).toBeTruthy();
+      expect(proof.getByLabelText('Medio de pago (opcional)').getAttribute('placeholder')).toBe(
+        'Por ejemplo, Yape',
+      );
+      expect(proof.getByLabelText('Monto de este voucher')).toBeTruthy();
+
+      await ui.click(proof.getByRole('button', { name: 'Efectivo, sin voucher' }));
+      expect(
+        proof.getByText(
+          'Registra el efectivo que entregaste. La administración lo confirma con lo que recibió.',
+        ),
+      ).toBeTruthy();
+      expect(proof.getByLabelText('Monto en efectivo')).toBeTruthy();
+      expect(proof.queryByLabelText('Medio de pago (opcional)')).toBeNull();
     });
 
     it('rejects a file that is not JPG, PNG or PDF of up to 5 MB before sending it', async () => {
@@ -350,7 +378,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       const big = new File(['x'], 'grande.pdf', { type: 'application/pdf' });
       Object.defineProperty(big, 'size', { value: 5 * 1024 * 1024 + 1 });
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), big);
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '350');
+      await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '350');
       await send(ui);
 
       expect(
@@ -436,7 +464,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
     it('shows an error of a proof under that proof, with the BFF text', async () => {
       const ui = await newContractPayment('/guest/payments/new?period=2026-10');
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '300');
+      await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '300');
       await ui.click(ui.page().getByRole('button', { name: 'Agregar otro comprobante' }));
       await cash(ui, 2, '50');
       await send(ui);
@@ -501,7 +529,9 @@ describe('OwnPaymentComponent (H3, T2)', () => {
           .page()
           .getByText(/Agrega otro comprobante por la diferencia o corrige el que enviaste\./),
       ).toBeTruthy();
-      expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto (S/)').value).toBe('300');
+      expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto de este voucher').value).toBe(
+        '300',
+      );
       expect(ui.proof(1).getByLabelText<HTMLInputElement>('Medio de pago (opcional)').value).toBe(
         'Yape',
       );
@@ -555,7 +585,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       await ui.flush(await ui.expect1(isGet('guest', 'pay%2F7')), payment());
 
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '350');
+      await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '350');
       await send(ui, 'Enviar de nuevo');
 
       const req = await ui.expect1(isPut('guest', 'pay%2F7'));
@@ -686,7 +716,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
       expect(summaryOf(ui).getByText('Vence')).toBeTruthy();
       expect(ui.page().queryByLabelText('Mes')).toBeNull();
       await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), voucherFile());
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '400');
+      await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '400');
       await send(ui);
 
       const req = await ui.expect1(isStayUpload);
@@ -784,7 +814,7 @@ describe('OwnPaymentComponent (H3, T2)', () => {
 
       expect(ui.page().getByRole('heading', { level: 1 }).textContent).toContain('Corregir pago');
       expect(summaryOf(ui).getByText('20 – 31 oct')).toBeTruthy();
-      await ui.type(ui.proof(1).getByLabelText('Monto (S/)'), '400');
+      await ui.type(ui.proof(1).getByLabelText('Monto en efectivo'), '400');
       await send(ui, 'Enviar de nuevo');
 
       const req = await ui.expect1(isPut('temporary-guest', 'pay_r'));

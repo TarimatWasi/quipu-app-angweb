@@ -15,8 +15,14 @@ export class ProofsEditor {
   readonly drafts = new ProofDrafts();
   readonly errors = new FieldErrors();
 
-  /** `submitted` says whether the person already tried to send (the local errors show from then on). */
-  constructor(private readonly submitted: () => boolean) {}
+  /**
+   * `submitted` says whether the person already tried to send (the local errors show from then on);
+   * `amountText` is what the page says under an amount that is not above zero (D-92).
+   */
+  constructor(
+    private readonly submitted: () => boolean,
+    private readonly amountText?: string,
+  ) {}
 
   kind(index: number, kind: ProofDraft['kind']): void {
     this.drafts.update(index, { kind });
@@ -50,7 +56,7 @@ export class ProofsEditor {
   amountError(index: number): string | null {
     const server = this.errors.values()[rowField(index, 'amount')];
     if (server) return server;
-    return this.drafts.amountError(index, this.submitted());
+    return this.drafts.amountError(index, this.submitted(), this.amountText);
   }
 
   /** What is under the file of a row: the server's word first, then the local rule. */
