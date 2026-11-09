@@ -85,6 +85,9 @@ const KIN_OPTIONS: readonly ChoiceOption[] = RELATIONSHIPS.map((value) => ({
       <h2 [id]="prefix() + '-emergency'">
         Contacto de emergencia <span class="optional">(opcional)</span>
       </h2>
+      @if (emergencyHint(); as hint) {
+        <p class="hint">{{ hint }}</p>
+      }
       <div class="fields">
         <app-form-field
           [fieldId]="prefix() + '-emergency-name'"
@@ -151,6 +154,11 @@ const KIN_OPTIONS: readonly ChoiceOption[] = RELATIONSHIPS.map((value) => ({
     h2 {
       margin: 0;
     }
+    .hint {
+      margin: 0;
+      font: var(--mat-sys-body-medium);
+      color: var(--quipu-tinta-secundaria);
+    }
     .optional {
       font-weight: normal;
       color: var(--quipu-tinta-secundaria);
@@ -169,6 +177,8 @@ export class PersonalDataFieldsComponent {
   readonly form = input.required<FieldTree<PersonalData>>();
   /** Ids of the fields start with it, so two forms on a page never share one. */
   readonly prefix = input('personal');
+  /** What the screen says under «Contacto de emergencia»; O1 tells it can be left empty. */
+  readonly emergencyHint = input<string | null>(null);
 
   protected readonly nameHelp = NAME_HELP;
   protected readonly phoneHelp = PHONE_HELP;

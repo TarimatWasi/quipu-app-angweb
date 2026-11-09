@@ -26,7 +26,11 @@
     }
     @case ('ready') {
       <form class="form" novalidate [formRoot]="dataForm">
-        <app-personal-data-fields [form]="dataForm" prefix="onboarding" />
+        <app-personal-data-fields
+          [form]="dataForm"
+          prefix="onboarding"
+          [emergencyHint]="emergencyHint"
+        />
         @if (generalError(); as message) {
           <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
         }
