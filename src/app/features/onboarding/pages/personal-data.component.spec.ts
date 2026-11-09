@@ -133,6 +133,23 @@ describe('O1 «Tus datos»', () => {
     await settle();
   });
 
+  it('asks the BFF where the registration is and goes there when the step was sent out of order', async () => {
+    const api = fakeApi(toPersonalData);
+    api.savePersonalData.mockReturnValue(
+      throwError(() => httpError(409, { code: 'ONBOARDING_STEP_OUT_OF_ORDER', message: 'x' })),
+    );
+    const { type, submit, router } = await setup(api);
+    await type('Nombre completo', 'Sonia');
+    await type('Teléfono', '984 112 730');
+    api.state.mockReturnValue(of(toDocuments));
+
+    await submit();
+
+    await vi.waitFor(() => {
+      expect(router.url).toBe('/onboarding/documents');
+    });
+  });
+
   it('goes to the step that comes first when the BFF says it is another one', async () => {
     const { router } = await setup(fakeApi(toDocuments));
 
