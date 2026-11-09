@@ -15,7 +15,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -82,7 +81,7 @@ const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map(
   templateUrl: './document-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
-export class DocumentFormComponent implements OnInit {
+export class DocumentFormComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -157,9 +156,13 @@ export class DocumentFormComponent implements OnInit {
   private readonly destroyRef = inject(DestroyRef);
   private readonly request = new LatestRequest();
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     this.guestId = this.route.snapshot.paramMap.get('id') ?? '';
     void this.load();
+    return true;
   }
 
   protected chooseType(type: DocumentType): void {

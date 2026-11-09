@@ -1,6 +1,6 @@
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
 import { AsyncContentState } from '@shared/data/async-content';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
@@ -65,7 +65,7 @@ interface ContractView {
   templateUrl: './own-contract.component.html',
   styles: OWN_CONTRACT_STYLES,
 })
-export class OwnContractComponent implements OnInit {
+export class OwnContractComponent {
   private readonly contracts = inject(OwnContractService);
   private readonly payments = inject(GuestPaymentsService);
   private readonly toasts = inject(ToastService);
@@ -101,8 +101,12 @@ export class OwnContractComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     void this.load();
+    return true;
   }
 
   protected reload(): void {

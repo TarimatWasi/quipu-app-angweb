@@ -1,6 +1,6 @@
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -86,7 +86,7 @@ function facts(guest: GuestDetail, count: number): Fact[] {
   templateUrl: './guest-documents.component.html',
   styles: GUEST_DOCUMENTS_STYLES,
 })
-export class GuestDocumentsComponent implements OnInit {
+export class GuestDocumentsComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly documents = inject(AdminGuestDocumentsService);
   private readonly route = inject(ActivatedRoute);
@@ -131,7 +131,10 @@ export class GuestDocumentsComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id') ?? '';
       // The dialogs of the guest left behind go with it.
@@ -139,6 +142,7 @@ export class GuestDocumentsComponent implements OnInit {
       this.currentId.set(id);
       void this.load(true);
     });
+    return true;
   }
 
   protected reload(): void {

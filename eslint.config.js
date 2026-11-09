@@ -395,6 +395,14 @@ export const createConfig = (features) =>
               'ImportDeclaration[source.value=/skeleton\\/skeleton.component$/] ImportSpecifier[imported.name="SKELETON_TIMING"]',
             message: 'QP-UI-16: keep the shared loading thresholds; override timings only in tests',
           },
+          {
+            // A page reads from a field that starts with it (`started = this.start()`), so the
+            // read does not wait for the first change detection and Sonar S7059 stays quiet. The
+            // shared kit keeps its lifecycle hooks (the skeleton starts its timers in one).
+            selector: "MethodDefinition[key.name='ngOnInit']",
+            message:
+              'FE-ANG-CMP-10: no data is loaded in ngOnInit; start the read from a field (`started = this.start()`)',
+          },
         ],
       },
     },

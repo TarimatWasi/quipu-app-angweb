@@ -7,7 +7,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { FieldTree, form, FormRoot } from '@angular/forms/signals';
@@ -97,7 +96,7 @@ const ERROR_ID = 'own-profile-error';
   templateUrl: './own-profile.component.html',
   styles: OWN_PROFILE_STYLES,
 })
-export class OwnProfileComponent implements OnInit {
+export class OwnProfileComponent {
   private readonly audience =
     inject(ActivatedRoute).snapshot.data['audience'] === 'TEMPORARY' ? 'TEMPORARY' : 'CONTRACT';
   private readonly api: OwnProfileClient =
@@ -183,8 +182,12 @@ export class OwnProfileComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     void this.load(true);
+    return true;
   }
 
   protected reload(): void {
