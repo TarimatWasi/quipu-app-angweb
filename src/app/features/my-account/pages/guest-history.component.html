@@ -1,108 +1,80 @@
-<section class="page" aria-labelledby="history-title">
-  <header class="head">
-    <div>
-      <a routerLink="/home">Volver al inicio</a>
-      <h1 id="history-title">Historial de pagos</h1>
-    </div>
-  </header>
+<app-page-header heading="Historial de pagos" />
 
-  @if (creditBalance() > 0) {
-    <p class="strong">Tienes {{ formatMoney(creditBalance()) }} a favor.</p>
+@switch (phase()) {
+  @case ('loading') {
+    <section class="all" aria-labelledby="history-loading-title">
+      <h2 id="history-loading-title" class="cdk-visually-hidden">Tus pagos</h2>
+      <ng-template #filtersSkeleton>
+        <app-list-filters-skeleton [views]="[]" [fields]="['Estado']" />
+      </ng-template>
+      <app-payment-history-table
+        [loading]="true"
+        [rows]="[]"
+        [sort]="sort()"
+        [skeletonBefore]="filtersSkeleton"
+      />
+    </section>
   }
-
-  @if (items().length > 0) {
-    <ul class="history">
-      @for (item of items(); track $index) {
-        @if (item.kind === 'PAYMENT' && item.payment; as p) {
-          <li>
-            <div class="history-head">
-              <span class="strong">{{ periodOf(p) }}</span>
-              <span [class]="'badge status-' + p.status">{{ statusLabels[p.status] }}</span>
-            </div>
-            <p class="muted">
-              Enviado el {{ formatDateTime(p.submittedAt) }} · declarado
-              {{ formatMoney(p.amount) }}
-              @if (p.verifiedAmount !== null) {
-                · verificado {{ formatMoney(p.verifiedAmount) }}
-              }
-              @if (p.creditApplied > 0) {
-                · crédito aplicado {{ formatMoney(p.creditApplied) }}
-              }
-            </p>
-            <ul class="proof-list">
-              @for (proof of p.proofs; track proof.id) {
-                <li>{{ proofText(proof) }}</li>
-              }
-            </ul>
-            @if (p.surplus; as surplus) {
-              <p>
-                Sobraron {{ formatMoney(surplus.amount) }}: {{ surplusTexts[surplus.outcome] }}.
-              </p>
-            }
-            @if (p.status === 'REJECTED') {
-              @if (p.rejectionReason; as reason) {
-                <p class="reason"><span class="strong">Motivo del rechazo</span> {{ reason }}</p>
-              }
-              <a
-                class="quipu-button quipu-button--secondary"
-                [routerLink]="['/guest/payments', p.id]"
-                >Corregir pago</a
-              >
-            } @else if (p.status === 'PENDING') {
-              <a
-                class="quipu-button quipu-button--tertiary"
-                [routerLink]="['/guest/payments', p.id]"
-                >Ver pago</a
-              >
-            }
-          </li>
-        } @else if (item.kind === 'REFUND' && item.refund; as r) {
-          <li>
-            <div class="history-head">
-              <span class="strong">{{ formatDate(r.date) }}</span>
-              <span class="badge">Devuelto</span>
-            </div>
-            <p class="muted">{{ formatMoney(r.amount) }} · {{ r.method }}</p>
-          </li>
-        }
-      }
-    </ul>
+  @case ('error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="retry()"
+    />
   }
-
-  @switch (state().kind) {
-    @case ('loading') {
-      @if (loadingMore()) {
-        <button class="quipu-button quipu-button--secondary more" type="button" disabled>
-          Cargando…
-        </button>
-      } @else {
-        <app-skeleton subject="tus pagos"
-          ><ng-template appSkeletonContent><app-skeleton-cards [action]="true" /></ng-template
-        ></app-skeleton>
-      }
+  @case ('ready') {
+    @if (credit(); as heading) {
+      <app-page-notice class="now" [heading]="heading"
+        ><a routerLink="/home">Ver estado de cuenta</a></app-page-notice
+      >
     }
-    @case ('error') {
-      <div class="quipu-alert" role="alert">
-        <p>{{ loadError() }}</p>
-        <button
-          class="quipu-button quipu-button--secondary"
-          type="button"
-          [disabled]="retrying()"
-          (click)="retry()"
+    <section class="all" aria-labelledby="history-title">
+      <h2 id="history-title" class="cdk-visually-hidden">Tus pagos</h2>
+      <app-list-filters
+        idPrefix="history"
+        [searchable]="false"
+        [count]="count()"
+        [filtered]="filtered()"
+        [phoneSorts]="phoneSorts"
+        [sortKey]="sort().key"
+        (clear)="clearFilters()"
+        (phoneSort)="sortOnPhone($event)"
+      >
+        <app-form-field fieldId="history-state" label="Estado">
+          <select
+            appFieldControl
+            class="quipu-input quipu-input--filter"
+            [formField]="filterForm.state"
+          >
+            @for (option of stateOptions; track option.value) {
+              <option [value]="option.value">{{ option.label }}</option>
+            }
+          </select>
+        </app-form-field>
+      </app-list-filters>
+
+      <app-list-results
+        [shown]="rows().length"
+        [loaded]="loadedCount()"
+        [filtered]="filtered()"
+        [noMatchHeading]="noMatchHeading"
+        [empty]="empty"
+        [errorText]="loadErrorText"
+        [listFailed]="listFailed()"
+        [moreFailed]="moreFailed()"
+        [retrying]="retrying()"
+        [hasMore]="nextCursor() !== null"
+        [loadingMore]="loadingMore()"
+        (retry)="retry()"
+        (clearFilters)="clearFilters()"
+        (more)="more()"
+      >
+        <a emptyAction class="quipu-button quipu-button--primary" routerLink="/guest/payments/new"
+          >Subir voucher</a
         >
-          {{ retrying() ? 'Cargando…' : 'Reintentar' }}
-        </button>
-      </div>
-    }
-    @case ('ready') {
-      @if (items().length === 0) {
-        <p class="empty">Aún no tienes pagos.</p>
-      }
-      @if (cursor()) {
-        <button type="button" class="quipu-button quipu-button--secondary more" (click)="more()">
-          Mostrar más
-        </button>
-      }
-    }
+        <app-payment-history-table [rows]="rows()" [sort]="sort()" (sortBy)="sortBy($event)" />
+      </app-list-results>
+    </section>
   }
-</section>
+}

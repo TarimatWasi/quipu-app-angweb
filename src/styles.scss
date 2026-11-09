@@ -899,6 +899,22 @@ fieldset.quipu-field > legend {
     flex-direction: row-reverse;
   }
 
+  // P-24 Fila desplegable: the detail of an open row, under it and across all the columns; it
+  // belongs to the row above, so it keeps no line of its own and its text wraps.
+  .quipu-detail-row {
+    border-top: 0;
+
+    &:hover {
+      background: transparent;
+    }
+
+    td {
+      padding-top: 0;
+      white-space: normal;
+      overflow: visible;
+    }
+  }
+
   // The last row, such as the totals of A5.2.
   tfoot tr {
     border-top: var(--quipu-franja) solid var(--quipu-piedra);

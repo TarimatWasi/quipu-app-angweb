@@ -6,6 +6,7 @@ import { TestBed } from '@angular/core/testing';
 import { fireEvent, within } from '@testing-library/dom';
 import { DataCardDirective } from './data-card.directive';
 import { DataCellDirective } from './data-cell.directive';
+import { DataDetailDirective } from './data-detail.directive';
 import { DataFooterDirective } from './data-footer.directive';
 import { ACTION_WIDTH, columnWidths, DataTableComponent } from './data-table.component';
 import type { DataColumn } from './data-table.component';
@@ -29,6 +30,7 @@ const COLUMNS: readonly DataColumn<Key>[] = [
   imports: [
     DataCardDirective,
     DataCellDirective,
+    DataDetailDirective,
     DataFooterDirective,
     DataTableComponent,
     SkeletonBlockComponent,
@@ -44,6 +46,7 @@ const COLUMNS: readonly DataColumn<Key>[] = [
       [rows]="rows()"
       [rowId]="rowId"
       [sort]="sort()"
+      [openRows]="open()"
       (sortBy)="pressed.set($event)"
     >
       @if (customSkeleton()) {
@@ -64,6 +67,9 @@ const COLUMNS: readonly DataColumn<Key>[] = [
           ><p>Tarjeta de {{ row.name }}</p></ng-template
         >
       }
+      <ng-template appDataDetail [appDataDetailRows]="rows()" let-row
+        ><p>Detalle de {{ row.name }}</p></ng-template
+      >
       <ng-template appDataFooter
         ><th scope="row">Total</th>
         <td>S/ 30.00</td>
@@ -82,6 +88,7 @@ class HostComponent {
   ]);
   readonly sort = signal<ListSort<Key> | null>({ key: 'amount', direction: 'desc' });
   readonly cards = signal(true);
+  readonly open = signal<readonly string[]>([]);
   readonly pressed = signal<Key | null>(null);
   readonly rowId = (row: Row): string => row.id;
 }
@@ -106,6 +113,20 @@ describe('DataTableComponent (P-08)', () => {
     expect(within(table).getByRole('link', { name: 'Ver 2' })).toBeTruthy();
     expect(within(table).getByRole('columnheader', { name: 'Acción' })).toBeTruthy();
     expect(table.querySelector('tfoot')?.textContent).toContain('S/ 30.00');
+  });
+
+  it('draws the detail of the open rows under them, across all the columns (P-24)', async () => {
+    const { fixture, host, root, ui } = await setup();
+    expect(ui.queryByText('Detalle de Luis')).toBeNull();
+
+    host.open.set(['b']);
+    await fixture.whenStable();
+
+    const detail = ui.getByText('Detalle de Luis').closest('td');
+    expect(detail?.getAttribute('colspan')).toBe('3');
+    expect(detail?.closest('tr')?.previousElementSibling?.textContent).toContain('Luis');
+    expect(ui.queryByText('Detalle de Ana')).toBeNull();
+    expect(root.querySelectorAll('.quipu-detail-row')).toHaveLength(1);
   });
 
   it('says the order with aria-sort and reports the header pressed', async () => {

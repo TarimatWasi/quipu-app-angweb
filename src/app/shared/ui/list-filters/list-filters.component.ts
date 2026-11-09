@@ -12,12 +12,14 @@ import { SearchFieldComponent } from '../search-field/search-field.component';
   imports: [SearchFieldComponent],
   template: `
     <div class="quipu-filters">
-      <app-search-field
-        class="quipu-search"
-        [fieldId]="idPrefix() + '-search'"
-        [placeholder]="placeholder()"
-        [(value)]="search"
-      />
+      @if (searchable()) {
+        <app-search-field
+          class="quipu-search"
+          [fieldId]="idPrefix() + '-search'"
+          [placeholder]="placeholder()"
+          [(value)]="search"
+        />
+      }
       <ng-content />
       @if (phoneSorts().length > 0) {
         <div class="quipu-field quipu-only-narrow">
@@ -56,6 +58,8 @@ export class ListFiltersComponent {
   /** Prefix of the ids of its fields, unique in the page («payments» → «payments-search»). */
   readonly idPrefix = input.required<string>();
   readonly placeholder = input('');
+  /** Whether «Buscar» is offered: a list whose rows have no name to look for (H4) leaves it out. */
+  readonly searchable = input(true);
   readonly search = model('');
   /** «Mostrando 4 de 4» or «Mostrando 20 de 20 cargados». */
   readonly count = input.required<string>();
