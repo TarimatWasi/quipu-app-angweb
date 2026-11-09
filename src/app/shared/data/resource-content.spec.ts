@@ -131,6 +131,26 @@ describe('ResourceContent (TAR-355)', () => {
     expect(content.data()).toBe('uno');
   });
 
+  it('forgets what it kept of an identity once another one is read, also on coming back', async () => {
+    const { id, content, settle, answer, fail } = setup();
+    await settle();
+    await answer('a viejo');
+    content.reload();
+    await settle();
+    await answer('a refrescado');
+
+    id.set('b');
+    await settle();
+    await answer('de b');
+    id.set('a');
+    await settle();
+    expect(content.state()).toEqual({ status: 'initial-loading' });
+
+    await fail('caído');
+    expect(content.data()).toBeNull();
+    expect(content.state()).toMatchObject({ status: 'initial-error', retrying: false });
+  });
+
   it('does not depend on being read: a refresh that fails keeps data nobody looked at', async () => {
     const { content, settle, answer, fail } = setup();
     await settle();

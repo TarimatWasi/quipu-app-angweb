@@ -1,4 +1,4 @@
-import { computed, signal } from '@angular/core';
+import { computed, effect, signal, untracked } from '@angular/core';
 import type { ResourceRef } from '@angular/core';
 import { contentSignals } from './async-content';
 import type { AsyncContent, RefreshState } from './async-content';
@@ -39,6 +39,9 @@ export class ResourceContent<T> {
 
   private readonly kept = computed<T | undefined>(() => {
     if (this.ref.hasValue()) return this.ref.value();
+    // `loading` is a read for other params (another identity, or the same one again after
+    // another): what a refresh kept no longer counts. A refresh is `reloading`.
+    if (this.ref.status() === 'loading') return undefined;
     const before = this.beforeRefresh();
     return before !== null && before.identity === this.identity() ? before.value : undefined;
   });
@@ -79,6 +82,14 @@ export class ResourceContent<T> {
   ) {
     this.identity = options.identity ?? NO_IDENTITY;
     this.messageOf = options.message;
+    // A read for other params drops the refresh snapshot for good, so a failure of that read is
+    // a first-load error and not a refresh of data from an earlier visit (A → B → A).
+    effect(() => {
+      if (this.ref.status() !== 'loading') return;
+      untracked(() => {
+        this.beforeRefresh.set(null);
+      });
+    });
   }
 
   /** Reads again keeping what is on screen (after a change, or a refresh asked by the person). */
