@@ -1,6 +1,6 @@
 import { ElementRef, Injector } from '@angular/core';
 import { FieldTree } from '@angular/forms/signals';
-import { bodyCodeOf, toBffError } from '@core/http/bff-error';
+import { bodyCodeOf, toBffError, toBffErrorWithGone } from '@core/http/bff-error';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
 import type { Refusals } from '@shared/forms/form-feedback';
 import { refusal } from '../model/finance-forms';
@@ -18,13 +18,15 @@ export function refusedField<Field extends string>(args: {
   readonly injector: Injector;
   /** The id of the general error, where the focus goes when no field is at fault. */
   readonly errorId: string;
+  /** What to say when the resource of the call no longer exists (RESOURCE_NOT_FOUND). */
+  readonly gone: string;
   readonly general: (message: string) => void;
 }): Refusals | undefined {
   const { error, fields } = args;
   const refused = refusal(bodyCodeOf(error), toBffError(error).field);
   focusFirstProblem(args.host, args.injector, args.errorId);
   if (refused === null || !(refused.field in fields)) {
-    args.general(toBffError(error).message);
+    args.general(toBffErrorWithGone(error, args.gone).message);
     return undefined;
   }
   return [{ fieldTree: fields[refused.field as Field], kind: 'server', message: refused.message }];

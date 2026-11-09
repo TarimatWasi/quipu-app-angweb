@@ -13,6 +13,7 @@ import {
   amountProblem,
   FINE_GUEST_HELP,
   FINE_INTRO,
+  GUEST_GONE_TEXT,
   guestOptions,
   guestProblem,
   MAX_TEXT_LENGTH,
@@ -187,6 +188,7 @@ export class FineDialogComponent {
       host: this.host,
       injector: this.injector,
       errorId: ERROR_ID,
+      gone: GUEST_GONE_TEXT,
       general: (message) => {
         this.general.set(message);
       },
