@@ -41,6 +41,8 @@ import {
   guestName,
   todayText,
 } from '../model/guest-texts';
+import { DOCUMENT_LOCKED_TEXT, documentProblem, goneText } from '../model/stay-document-failures';
+import { callFailure } from '@shared/forms/call-failure';
 import { GUEST_FORM_STYLES } from './guest-form.styles';
 import { ToastService } from '@shared/ui/toast/toast.service';
 
@@ -52,9 +54,6 @@ type LoadState =
   | { readonly kind: 'error'; readonly message: string };
 
 const GENERAL_ERROR_ID = 'document-form-error';
-
-/** RN-36, as the catalog words GUEST_DOCUMENT_LOCKED. */
-const LOCKED_TEXT = 'El documento solo se corrige antes de que el huésped active su acceso';
 
 const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map((value) => ({
   value,
@@ -92,7 +91,7 @@ export class DocumentFormComponent {
 
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly documentTypes = DOCUMENT_TYPES;
-  protected readonly lockedText = LOCKED_TEXT;
+  protected readonly lockedText = DOCUMENT_LOCKED_TEXT;
   protected readonly today = todayText();
   protected readonly describedBy = describedBy;
   protected guestId = '';
@@ -211,17 +210,14 @@ export class DocumentFormComponent {
     if (isConcurrentModification(error)) {
       return this.concurrent();
     }
-    const { message } = toBffErrorWithServerMessage(error);
     if (error instanceof HttpErrorResponse && error.status === 404) {
-      this.toasts.show(message);
+      this.toasts.show(goneText(callFailure(error)));
       return this.backToGuest();
     }
-    if (error instanceof HttpErrorResponse && (error.status === 400 || error.status === 409)) {
-      // GUEST_DOCUMENT_LOCKED, GUEST_DOCUMENT_TAKEN and VALIDATION_ERROR go under the document.
-      this.serverError.set(message);
-    } else {
-      this.generalError.set(message);
-    }
+    // GUEST_DOCUMENT_LOCKED, GUEST_DOCUMENT_TAKEN and VALIDATION_ERROR go under the document.
+    const problem = documentProblem(callFailure(error));
+    if (problem.place === 'document') this.serverError.set(problem.message);
+    else this.generalError.set(problem.message);
     focusFirstProblem(this.host, this.injector, GENERAL_ERROR_ID);
   }
 

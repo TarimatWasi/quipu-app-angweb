@@ -269,14 +269,14 @@ describe('DocumentFormComponent (A3.5 document of a pending guest, approved canv
       'El documento solo se corrige antes de que el huésped active su acceso',
       'documentNumber',
     ],
-    ['VALIDATION_ERROR', 'Tipo de documento no válido', 'documentType'],
-  ])('shows %s with the BFF message under the document', async (code, message, field) => {
+    ['VALIDATION_ERROR', 'Revisa el número de documento.', 'documentType'],
+  ])('shows %s with the catalog text under the document', async (code, message, field) => {
     const ui = await setup();
     await ui.type('45678912');
     await ui.click(ui.save());
     await ui.flush(
       await ui.expect1(isUpdate),
-      { code, message, field },
+      { code, message: 'texto del servidor', field },
       code === 'VALIDATION_ERROR' ? 400 : 409,
     );
 
