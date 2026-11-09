@@ -62,7 +62,7 @@ function generateAccess(guest: GuestRecord, body: Record<string, unknown>): Sche
   const mode = body['accessMode'];
   if (!ACCESS_MODES.has(mode)) return invalid('accessMode');
   refuseInactive(guest);
-  const access = accessGrant(guest, mode as Schemas['AccessMode'], guest.accountEmail);
+  const access = accessGrant(guest, mode as Schemas['AccessMode'], guest.email);
   if (guest.status === 'PENDING_ACTIVATION') {
     guest.accessExpiresAt = access.expiresAt;
   }
@@ -70,7 +70,7 @@ function generateAccess(guest: GuestRecord, body: Record<string, unknown>): Sche
   return access;
 }
 
-/** setGuestAccountEmail (RF-16, D-76): unique among the accounts, case-insensitive. */
+/** setGuestAccountEmail (RF-16, TAR-349): the one email, unique among the accounts, without a code. */
 function setAccountEmail(db: MockDb, guest: GuestRecord, body: Record<string, unknown>): void {
   const email = body['email'];
   if (typeof email !== 'string' || email.length > MAX_EMAIL_LENGTH || !EMAIL_SHAPE.test(email)) {
@@ -80,13 +80,12 @@ function setAccountEmail(db: MockDb, guest: GuestRecord, body: Record<string, un
   const wanted = email.toLowerCase();
   const taken =
     db.data.administrators.some((admin) => admin.email.toLowerCase() === wanted) ||
-    db.data.guests.some(
-      (other) => other.id !== guest.id && other.accountEmail?.toLowerCase() === wanted,
-    );
+    db.data.guests.some((other) => other.id !== guest.id && other.email?.toLowerCase() === wanted);
   if (taken) {
     raise(409, 'ACCOUNT_EMAIL_TAKEN', 'El correo ya está registrado', 'email');
   }
-  guest.accountEmail = email;
+  guest.email = email;
+  delete guest.emailVerification;
 }
 
 /** A3.2: the months of a guest, deactivating it, a new access (A3.4) and its account email. */

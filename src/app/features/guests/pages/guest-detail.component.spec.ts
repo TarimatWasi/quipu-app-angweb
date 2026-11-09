@@ -42,7 +42,11 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       ['Contacto de emergencia', 'Sin registrar'],
     ]);
     expect(
-      ui.page().getByText('Sus datos de contacto los cambia solo el huésped, desde Mis datos.'),
+      ui
+        .page()
+        .getByText(
+          'Sus datos de contacto los cambia el huésped desde Mis datos; el correo también puedes cambiarlo tú.',
+        ),
     ).toBeTruthy();
     expect(ui.facts('Contrato')).toEqual([
       ['Ambiente', 'Habitación 201'],
@@ -63,7 +67,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
     expect(ui.page().queryByRole('region', { name: 'Su registro' })).toBeNull();
     expect(ui.more()).toEqual([
       'Generar otro acceso si olvidó su contraseña',
-      'Cambiar correo de cuenta al que llega la recuperación de contraseña',
+      'Cambiar correo al que llega la recuperación de contraseña',
       'Ver documentos 2 documentos',
       'Desactivar huésped',
     ]);
@@ -262,7 +266,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
           onboardingProgress: 'NOT_STARTED',
           name: null,
           phone: null,
-          contactEmail: null,
+          email: null,
           contract: undefined,
           documentCount: 0,
           version: 3,
@@ -290,7 +294,7 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       ui.page().getByText('Su nombre y sus datos los completa el huésped al activar su acceso.'),
     ).toBeTruthy();
     expect(ui.more()).toEqual([
-      'Cambiar correo de cuenta al que llega la recuperación de contraseña',
+      'Cambiar correo al que llega la recuperación de contraseña',
       'Ver documentos no subió documentos',
       'Corregir documento solo hasta que active su acceso',
       'Desactivar huésped',

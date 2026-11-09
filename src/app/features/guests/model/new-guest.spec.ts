@@ -6,7 +6,6 @@ import {
   DOCUMENT_INVALID_TEXT,
   DOCUMENT_TAKEN_TEXT,
   EMPTY_NEW_GUEST,
-  GUEST_EMAIL_TAKEN_TEXT,
   inactiveGuestId,
   NETWORK_TEXT,
   newGuestFacts,
@@ -50,7 +49,7 @@ describe('A3.1 model', () => {
         ...EMPTY_NEW_GUEST,
         documentNumber: ' 70412233 ',
         phone: ' ',
-        contactEmail: '',
+        email: '',
       }),
     ).toStrictEqual({
       documentType: 'DNI',
@@ -64,7 +63,7 @@ describe('A3.1 model', () => {
         documentType: 'PASSPORT',
         documentNumber: 'PX-1',
         phone: ' +34 612 ',
-        contactEmail: ' ana@example.com ',
+        email: ' ana@example.com ',
         accessMode: 'TEMPORARY_PASSWORD',
       }),
     ).toStrictEqual({
@@ -72,7 +71,7 @@ describe('A3.1 model', () => {
       documentNumber: 'PX-1',
       type: 'TEMPORARY',
       phone: '+34 612',
-      contactEmail: 'ana@example.com',
+      email: 'ana@example.com',
       accessMode: 'TEMPORARY_PASSWORD',
     });
   });
@@ -119,11 +118,8 @@ describe('A3.1 model', () => {
     expect(createProblem(failureOf(409, { code: 'ACCOUNT_DOCUMENT_TAKEN' }))).toEqual(
       field('documentNumber', DOCUMENT_TAKEN_TEXT),
     );
-    expect(createProblem(failureOf(409, { code: 'GUEST_EMAIL_TAKEN' }))).toEqual(
-      field('contactEmail', GUEST_EMAIL_TAKEN_TEXT),
-    );
     expect(createProblem(failureOf(409, { code: 'ACCOUNT_EMAIL_TAKEN' }))).toEqual(
-      field('contactEmail', ACCOUNT_EMAIL_TAKEN_TEXT),
+      field('email', ACCOUNT_EMAIL_TAKEN_TEXT),
     );
     expect(
       createProblem(failureOf(400, { code: 'VALIDATION_ERROR', field: 'documentNumber' })),
@@ -131,9 +127,9 @@ describe('A3.1 model', () => {
     expect(createProblem(failureOf(400, { code: 'VALIDATION_ERROR', field: 'phone' }))).toEqual(
       field('phone', PHONE_TEXT),
     );
-    expect(
-      createProblem(failureOf(400, { code: 'VALIDATION_ERROR', field: 'contactEmail' })),
-    ).toEqual(field('contactEmail', EMAIL_TEXT));
+    expect(createProblem(failureOf(400, { code: 'VALIDATION_ERROR', field: 'email' }))).toEqual(
+      field('email', EMAIL_TEXT),
+    );
     expect(createProblem(failureOf(400, { code: 'VALIDATION_ERROR', field: 'type' }))).toEqual({
       place: 'general',
       message: UNEXPECTED_TEXT,

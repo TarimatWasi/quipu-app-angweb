@@ -21,7 +21,7 @@ function guestOf(fields: Record<string, unknown> = {}): GuestDetail {
     type: 'CONTRACT',
     hasLoginAccess: true,
     phone: '987 654 321',
-    contactEmail: 'luis@example.com',
+    email: 'luis@example.com',
     documentCount: 2,
     paymentHistory: [],
     status: 'ACTIVE',
@@ -84,7 +84,7 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
         onboardingProgress: 'NOT_STARTED',
         name: null,
         phone: null,
-        contactEmail: null,
+        email: null,
       }),
     );
     expect(plain(pending.after)).toEqual([
@@ -109,7 +109,7 @@ describe('A3.2 «Sus datos», «Contrato» and «Su registro»', () => {
       'Su nombre y sus datos los completa el huésped al activar su acceso.',
     );
     expect(dataNote(guestOf())).toBe(
-      'Sus datos de contacto los cambia solo el huésped, desde Mis datos.',
+      'Sus datos de contacto los cambia el huésped desde Mis datos; el correo también puedes cambiarlo tú.',
     );
   });
 
@@ -159,7 +159,7 @@ describe('A3.2 «Más acciones»', () => {
   it('offers an active guest a new access, the account email, its documents and deactivating', () => {
     expect(labels(moreActions({ guest: guestOf(), panelGenerates: false, owes: false }))).toEqual([
       ['generate-access', 'Generar otro acceso', 'si olvidó su contraseña'],
-      ['account-email', 'Cambiar correo de cuenta', 'al que llega la recuperación de contraseña'],
+      ['account-email', 'Cambiar correo', 'al que llega la recuperación de contraseña'],
       ['link', 'Ver documentos', '2 documentos'],
       ['deactivate', 'Desactivar huésped', null],
     ]);
@@ -170,7 +170,7 @@ describe('A3.2 «Más acciones»', () => {
     const actions = moreActions({ guest, panelGenerates: true, owes: false });
 
     expect(labels(actions)).toEqual([
-      ['account-email', 'Cambiar correo de cuenta', 'al que llega la recuperación de contraseña'],
+      ['account-email', 'Cambiar correo', 'al que llega la recuperación de contraseña'],
       ['link', 'Ver documentos', 'no subió documentos'],
       ['link', 'Corregir documento', 'solo hasta que active su acceso'],
       ['deactivate', 'Desactivar huésped', null],

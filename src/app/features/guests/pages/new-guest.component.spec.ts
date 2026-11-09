@@ -260,7 +260,7 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
       documentNumber: '70412233',
       type: 'CONTRACT',
       phone: '+51 987 654 321',
-      contactEmail: 'ana@example.com',
+      email: 'ana@example.com',
       accessMode: 'LINK',
     });
     await ui.answer(CREATED);
@@ -273,7 +273,7 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
       documentNumber: '70412233',
       type: 'CONTRACT',
       phone: '+51 987 654 321',
-      contactEmail: 'ana@example.com',
+      email: 'ana@example.com',
       access: CREATED.access,
       regenerated: false,
     });
@@ -292,12 +292,7 @@ describe('NewGuestComponent (A3.1 «Nuevo huésped»)', () => {
         'Ese documento ya pertenece a otro huésped o a una cuenta de administrador',
       ],
       [
-        { code: 'GUEST_EMAIL_TAKEN', field: 'contactEmail' },
-        'Correo',
-        'Ese correo ya está registrado para otro huésped',
-      ],
-      [
-        { code: 'ACCOUNT_EMAIL_TAKEN', field: 'contactEmail' },
+        { code: 'ACCOUNT_EMAIL_TAKEN', field: 'email' },
         'Correo',
         'Ese correo ya está registrado para otra cuenta',
       ],

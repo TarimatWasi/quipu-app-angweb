@@ -4,20 +4,24 @@ import { firstValueFrom } from 'rxjs';
 import { callFailure } from '@shared/forms/call-failure';
 import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import type { Refusals } from '@shared/forms/form-feedback';
+import { EmailChangeFieldComponent } from '@shared/forms/email-change-field.component';
 import { PersonalDataFieldsComponent } from '@shared/forms/personal-data-fields.component';
 import {
   EMPTY_PERSONAL_DATA,
   personalDataRules,
   saveProblem,
+  toPersonalData,
   toPersonalDataInput,
 } from '@shared/forms/personal-data';
 import type { PersonalData } from '@shared/forms/personal-data';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { ToastService } from '@shared/ui/toast/toast.service';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonFieldsComponent } from '@shared/ui/skeleton/skeleton-fields.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { OnboardingFrameComponent } from '../components/onboarding-frame.component';
+import { EMAIL_ADDED_TEXT, EMAIL_CHANGED_TEXT } from '@shared/forms/email-verification';
 import { DATA_AFTER, EMERGENCY_HINT } from '../model/onboarding';
 import { OnboardingPage } from './onboarding-page';
 import { ONBOARDING_STYLES } from './onboarding.styles';
@@ -27,11 +31,13 @@ const ERROR_ID = 'onboarding-data-error';
 /**
  * O1 «Tus datos» (CU-25, RN-33) on the canvas «Onboarding»: the personal data the guest keeps, the
  * same fields, help and checks as H5 (name and phone are required, the rest is not). Saving goes
- * to O2. A guest that comes back finds the step still empty: the BFF only returns the data once saved.
+ * to O2. The BFF always gives the data, with the email of the account (TAR-349), so the form starts
+ * from it; the email changes apart, verified with a code, and is not part of what is saved.
  */
 @Component({
   selector: 'app-onboarding-personal-data',
   imports: [
+    EmailChangeFieldComponent,
     FormRoot,
     LoadErrorComponent,
     OnboardingFrameComponent,
@@ -47,6 +53,7 @@ const ERROR_ID = 'onboarding-data-error';
 export class OnboardingPersonalDataComponent extends OnboardingPage {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
+  private readonly toasts = inject(ToastService);
 
   protected readonly errorId = ERROR_ID;
   protected readonly after = DATA_AFTER;
@@ -68,11 +75,40 @@ export class OnboardingPersonalDataComponent extends OnboardingPage {
   );
   protected readonly saving = computed(() => this.dataForm().submitting());
 
+  /** The email the guest has and the one waiting for its code; they change apart from the form. */
+  protected readonly email = signal<string | null>(null);
+  protected readonly pendingEmail = signal<string | null>(null);
+  protected readonly emailClient = this.api.emailVerification;
+  /** The form is filled once: a later read (a retry, a step out of order) keeps what is typed. */
+  private filled = false;
+
   /** The read starts with the page, not in a hook (Sonar S7059). */
   protected readonly started = this.load();
 
   constructor() {
     super('PERSONAL_DATA');
+  }
+
+  /** Reads the registration and, the first time, fills the form with what the BFF has. */
+  protected override async load(): Promise<void> {
+    await super.load();
+    const state = this.loaded.data();
+    if (state === null) return;
+    this.email.set(state.personalData.email ?? null);
+    this.pendingEmail.set(state.pendingEmail ?? null);
+    if (this.filled) return;
+    this.filled = true;
+    const { name, phone, emergencyContact } = state.personalData;
+    this.model.set(toPersonalData({ name, phone, emergencyContact: emergencyContact ?? null }));
+  }
+
+  /** The email changed with its code: it shows at once; nothing else of the form changes. */
+  protected emailChanged(email: string): void {
+    this.toasts.show(this.email() === null ? EMAIL_ADDED_TEXT : EMAIL_CHANGED_TEXT, {
+      tone: 'success',
+    });
+    this.email.set(email);
+    this.pendingEmail.set(null);
   }
 
   /** Runs when the form is valid; a failure comes back as errors, so the form stays editable. */

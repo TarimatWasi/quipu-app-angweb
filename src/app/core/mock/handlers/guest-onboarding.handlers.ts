@@ -1,22 +1,22 @@
 import type { components } from '@core/api/bff.generated';
-import { contactEmailError, phoneError } from '@shared/forms/contact-rules';
+import { phoneError } from '@shared/forms/contact-rules';
 import { CONSENT_TEXT, CONSENT_VERSION } from '../data/consent-text';
 import type { GuestRecord, MockDb } from '../data/mock-db';
 import { invalid, ok, raise } from '../mock-reply';
 import type { MockContext, MockRoute } from '../mock-types';
 import {
   documentRef,
-  emailTaken,
   emergencyOf,
   MAX_NAME_LENGTH,
   MAX_PHONE_LENGTH,
   text,
   uploadDocument,
 } from './guest-profile.handlers';
+import { pendingEmailOf } from './guest-email-state';
 
 type Schemas = components['schemas'];
 type Progress = Schemas['OnboardingProgress'];
-type PersonalData = Schemas['PersonalDataInput'];
+type PersonalData = Schemas['PersonalData'];
 
 // What the guest has done, in the order of RN-33. The documents step is optional but offered once.
 const ORDER: readonly Progress[] = [
@@ -26,10 +26,10 @@ const ORDER: readonly Progress[] = [
   'DOCUMENTS_DONE',
   'COMPLETED',
 ];
-const PERSONAL_DATA_FIELDS = new Set(['name', 'phone', 'contactEmail', 'emergencyContact']);
+const PERSONAL_DATA_FIELDS = new Set(['name', 'phone', 'emergencyContact']);
 
 /** The guest of the session, whatever its type: the onboarding is the same for both. */
-function sessionGuest(ctx: MockContext): GuestRecord {
+export function sessionGuest(ctx: MockContext): GuestRecord {
   const session = ctx.user()?.session;
   const { guestId } = ctx.requireGuest(session?.role === 'GUEST' ? session.guestType : 'CONTRACT');
   return ctx.db.guest(guestId) ?? raise(404, 'RESOURCE_NOT_FOUND', 'No encontramos lo que buscas.');
@@ -44,7 +44,7 @@ function reached(guest: GuestRecord, step: Progress): boolean {
 }
 
 /** Only while the guest is in onboarding; after that its data goes through the profile (RN-33). */
-function requireOpen(guest: GuestRecord): void {
+export function requireOpen(guest: GuestRecord): void {
   if (guest.status === 'ACTIVE') {
     raise(409, 'ONBOARDING_ALREADY_COMPLETED', 'El registro ya está completo.');
   }
@@ -62,7 +62,7 @@ function personalData(guest: GuestRecord): PersonalData {
   return {
     name: guest.name ?? '',
     phone: guest.phone ?? '',
-    ...(guest.contactEmail !== null && { contactEmail: guest.contactEmail }),
+    ...(guest.email !== null && { email: guest.email }),
     ...(guest.emergencyContact && { emergencyContact: guest.emergencyContact }),
   };
 }
@@ -80,27 +80,32 @@ function onboardingState(db: MockDb, guest: GuestRecord): Schemas['OnboardingSta
     };
   }
   const pending = { ...consent, accepted: false } as const;
+  const waiting = pendingEmailOf(guest);
+  const common = {
+    personalData: personalData(guest),
+    ...(waiting !== undefined && { pendingEmail: waiting }),
+    documents,
+    consent: pending,
+  };
   if (!reached(guest, 'PERSONAL_DATA_SAVED')) {
-    return { status: 'ONBOARDING', nextStep: 'PERSONAL_DATA', documents, consent: pending };
+    return { status: 'ONBOARDING', nextStep: 'PERSONAL_DATA', ...common };
   }
   return {
     status: 'ONBOARDING',
     nextStep: reached(guest, 'DOCUMENTS_DONE') ? 'CONSENT' : 'DOCUMENTS',
-    personalData: personalData(guest),
-    documents,
-    consent: pending,
+    ...common,
   };
 }
 
 function documentsPending(db: MockDb, guest: GuestRecord): Schemas['OnboardingDocumentsPending'] {
   const state = onboardingState(db, guest);
-  if (state.status !== 'ONBOARDING' || !('personalData' in state)) return raise(500, 'MOCK', '');
+  if (state.status !== 'ONBOARDING') return raise(500, 'MOCK', '');
   return { ...state, nextStep: 'DOCUMENTS' };
 }
 
 function consentPending(db: MockDb, guest: GuestRecord): Schemas['OnboardingConsentPending'] {
   const state = onboardingState(db, guest);
-  if (state.status !== 'ONBOARDING' || !('personalData' in state)) return raise(500, 'MOCK', '');
+  if (state.status !== 'ONBOARDING') return raise(500, 'MOCK', '');
   return { ...state, nextStep: 'CONSENT' };
 }
 
@@ -112,16 +117,10 @@ function savePersonalData(db: MockDb, guest: GuestRecord, body: unknown) {
   const name = text(fields, 'name', MAX_NAME_LENGTH) ?? invalid('name');
   const phone = text(fields, 'phone', MAX_PHONE_LENGTH) ?? invalid('phone');
   if (phoneError(phone) !== null) invalid('phone');
-  const email = text(fields, 'contactEmail', 200);
-  if (email !== undefined && contactEmailError(email) !== null) invalid('contactEmail');
   const emergency =
     fields['emergencyContact'] === undefined ? undefined : emergencyOf(fields['emergencyContact']);
-  if (email !== undefined && emailTaken(db, guest, email)) {
-    raise(409, 'GUEST_EMAIL_TAKEN', 'El correo ya está registrado', 'contactEmail');
-  }
   guest.name = name;
   guest.phone = phone;
-  guest.contactEmail = email ?? null;
   guest.emergencyContact = emergency;
   if (!reached(guest, 'PERSONAL_DATA_SAVED')) guest.onboardingProgress = 'PERSONAL_DATA_SAVED';
   guest.version += 1;

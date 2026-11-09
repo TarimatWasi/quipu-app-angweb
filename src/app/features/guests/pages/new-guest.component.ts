@@ -128,9 +128,9 @@ export class NewGuestComponent {
         const message = phoneError(field.value());
         return message === null ? undefined : { kind: 'phone', message };
       });
-      validate(path.contactEmail, (field) => {
+      validate(path.email, (field) => {
         const message = contactEmailError(field.value());
-        return message === null ? undefined : { kind: 'contactEmail', message };
+        return message === null ? undefined : { kind: 'email', message };
       });
     },
     {
@@ -150,7 +150,7 @@ export class NewGuestComponent {
   protected readonly facts = computed(() => newGuestFacts(this.model()));
   protected readonly numberError = computed(() => firstError(this.guestForm.documentNumber));
   protected readonly phoneError = computed(() => firstError(this.guestForm.phone));
-  protected readonly emailError = computed(() => firstError(this.guestForm.contactEmail));
+  protected readonly emailError = computed(() => firstError(this.guestForm.email));
   protected readonly saving = computed(() => this.guestForm().submitting());
 
   protected chooseType(type: GuestType): void {
@@ -192,7 +192,7 @@ export class NewGuestComponent {
       documentNumber: guest.documentNumber,
       type: guest.type,
       phone: input.phone ?? null,
-      contactEmail: input.contactEmail ?? null,
+      email: input.email ?? null,
       access,
       regenerated: false,
     });
@@ -258,7 +258,7 @@ export class NewGuestComponent {
     const fields: Record<NewGuestField, FieldTree<string>> = {
       documentNumber: this.guestForm.documentNumber,
       phone: this.guestForm.phone,
-      contactEmail: this.guestForm.contactEmail,
+      email: this.guestForm.email,
     };
     return fields[field];
   }

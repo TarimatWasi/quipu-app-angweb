@@ -1,6 +1,7 @@
 import type { components } from '@core/api/bff.generated';
-import { contactEmailError, phoneError } from '@shared/forms/contact-rules';
+import { phoneError } from '@shared/forms/contact-rules';
 import { guestSummary, signedDocument } from '../data/guest-views';
+import { pendingEmailOf } from './guest-email-state';
 import { nowInstant } from '../data/mock-dates';
 import { ID_KIND } from '../data/mock-db';
 import type { DocumentRecord, GuestRecord, MockDb } from '../data/mock-db';
@@ -16,10 +17,10 @@ export const DOCUMENTS_LIMIT = 5;
 export const MAX_NAME_LENGTH = 200;
 const MAX_RELATIONSHIP_LENGTH = 50;
 export const MAX_PHONE_LENGTH = 30;
-const PROFILE_FIELDS = new Set(['name', 'phone', 'contactEmail', 'emergencyContact']);
+const PROFILE_FIELDS = new Set(['name', 'phone', 'emergencyContact']);
 const EMERGENCY_FIELDS = new Set(['name', 'relationship', 'phone']);
 
-function ownGuest(ctx: MockContext, type: GuestType): GuestRecord {
+export function ownGuest(ctx: MockContext, type: GuestType): GuestRecord {
   const { guestId } = ctx.requireGuest(type);
   return ctx.db.guest(guestId) ?? raise(404, 'RESOURCE_NOT_FOUND', 'No encontramos lo que buscas.');
 }
@@ -35,16 +36,16 @@ export function documentRef(record: DocumentRecord): Schemas['GuestDocumentRef']
   };
 }
 
-/** getOwnProfile (H5, T3): the data, the account email and the documents without links. */
+/** getOwnProfile (H5, T3): the data, the email (and the one waiting) and the documents. */
 function ownProfile(db: MockDb, guest: GuestRecord): Schemas['OwnProfile'] {
   return {
     documentType: guest.documentType,
     documentNumber: guest.documentNumber,
     name: guest.name ?? '',
     phone: guest.phone,
-    contactEmail: guest.contactEmail,
+    email: guest.email,
+    pendingEmail: pendingEmailOf(guest) ?? null,
     emergencyContact: guest.emergencyContact ?? null,
-    accountEmail: guest.accountEmail,
     documents: db.documentsOf(guest.id).map(documentRef),
     documentsLimit: DOCUMENTS_LIMIT,
   };
@@ -85,14 +86,6 @@ export function emergencyOf(value: unknown): EmergencyContact {
   };
 }
 
-/** The email of another guest is taken, whatever its case (D-76). */
-export function emailTaken(db: MockDb, guest: GuestRecord, email: string): boolean {
-  const wanted = email.toLowerCase();
-  return db.data.guests.some(
-    (other) => other.id !== guest.id && other.contactEmail?.toLowerCase() === wanted,
-  );
-}
-
 /** updateOwnProfile (RN-17): only what is sent changes; an absent field keeps its value. */
 function updateProfile(db: MockDb, guest: GuestRecord, req: MockRequest): Schemas['GuestSummary'] {
   const body =
@@ -102,16 +95,10 @@ function updateProfile(db: MockDb, guest: GuestRecord, req: MockRequest): Schema
   const name = text(body, 'name', MAX_NAME_LENGTH);
   const phone = text(body, 'phone', MAX_PHONE_LENGTH);
   if (phone !== undefined && phoneError(phone) !== null) invalid('phone');
-  const email = text(body, 'contactEmail', 200);
-  if (email !== undefined && contactEmailError(email) !== null) invalid('contactEmail');
   const emergency =
     body['emergencyContact'] === undefined ? undefined : emergencyOf(body['emergencyContact']);
-  if (email !== undefined && emailTaken(db, guest, email)) {
-    raise(409, 'GUEST_EMAIL_TAKEN', 'El correo ya está registrado', 'contactEmail');
-  }
   if (name !== undefined) guest.name = name;
   if (phone !== undefined) guest.phone = phone;
-  if (email !== undefined) guest.contactEmail = email;
   if (emergency !== undefined) guest.emergencyContact = emergency;
   guest.version += 1;
   return guestSummary(db, guest);

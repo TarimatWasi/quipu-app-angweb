@@ -24,8 +24,10 @@ export interface GuestRecord {
   readonly type: 'CONTRACT' | 'TEMPORARY';
   status: Schemas['GuestStatus'];
   phone: string | null;
-  contactEmail: string | null;
-  accountEmail: string | null;
+  /** The one email of the guest, the one of its account (TAR-349). */
+  email: string | null;
+  /** The new email waiting for its code (TAR-349); absent when none was asked for. */
+  emailVerification?: EmailVerification;
   readonly hasLoginAccess: boolean;
   accessExpiresAt: string | null;
   deactivatedAt: string | null;
@@ -33,6 +35,16 @@ export interface GuestRecord {
   /** Where the onboarding goes (RN-33); by default none for a guest without a name, else all. */
   onboardingProgress?: Schemas['OnboardingProgress'];
   emergencyContact?: Schemas['EmergencyContact'];
+}
+
+/** A code sent to a new email: it changes only when the code comes back (TAR-349). */
+export interface EmailVerification {
+  readonly email: string;
+  readonly code: string;
+  /** Epoch ms: when it was sent (the 60 s between codes count from here) and when it expires. */
+  readonly sentAt: number;
+  readonly expiresAt: number;
+  attempts: number;
 }
 
 /** A stay without what is derived from its payment (`paymentStatus`, `paymentId`). */

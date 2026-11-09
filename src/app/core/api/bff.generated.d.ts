@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.23.0 (TarimatWasi/quipu-lib-contracts), spec sha256 d59b3c8db79197ab1f9bf697c0556a64f2d0eb234cd4cbdfab59a5f4d1c597f5.
+ * Generated from the BFF contract v0.24.0 (TarimatWasi/quipu-lib-contracts), spec sha256 148ba709e1147321b9cf091b79064462701bd50cbfe3daf0244635edea23423b.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -432,8 +432,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Set or change the account email of a guest, the one password recovery writes to (RF-16, D-76)
-         * @description The account email is the one `requestPasswordReset` writes to; the contact email of the guest (onboarding, profile) stays independent (D-33). The administrator sets it when the guest has none or changes it. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive.
+         * Set or change the one email of a guest, the one password recovery writes to (RF-16, TAR-349)
+         * @description The guest has one email, the one of its account, which `requestPasswordReset` writes to (TAR-349). The administrator sets it when the guest has none or changes it, without a verification code. Pending password-reset codes of the account stop working, and if the account had another email a notice is sent to it, best-effort. The guest must not be inactive.
          */
         put: operations["setGuestAccountEmail"];
         post?: never;
@@ -1003,8 +1003,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Own personal and contact data, the account email and the uploaded documents (H5, RN-17)
-         * @description What H5 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), the account email where the password recovery link goes (read-only: only the administration changes it, A3.9) and the documents uploaded during the onboarding or later (RN-37, `uploadOwnDocument`), without links: each one opens with `getOwnDocument` (TAR-241). Never cacheable.
+         * Own personal and contact data, the email and the uploaded documents (H5, RN-17)
+         * @description What H5 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), its one email, where the password recovery link goes, with the new one waiting for its code if any (TAR-349), and the documents uploaded during the onboarding or later (RN-37, `uploadOwnDocument`), without links: each one opens with `getOwnDocument` (TAR-241). Never cacheable.
          */
         get: operations["getOwnProfile"];
         put?: never;
@@ -1014,6 +1014,46 @@ export interface paths {
         head?: never;
         /** Edit own personal and contact data (CU-20, RN-17) */
         patch: operations["updateOwnProfile"];
+        trace?: never;
+    };
+    "/guest/email-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a code to a new email of the guest (TAR-349)
+         * @description For an active contract guest (H5); a guest still onboarding uses `requestOnboardingEmailVerification`. The code (6 digits) goes to the new email and lives 10 minutes; the current email stays until the code is confirmed. A new request replaces the pending one and its code, and waits 60 seconds since the last code was sent. Never cacheable.
+         */
+        post: operations["requestOwnEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/email-verification/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the code and make the pending email the guest's email (TAR-349)
+         * @description With the right code the pending email becomes the one email of the guest (the account email, where the password recovery goes): a pending password-reset code stops working, the sessions stay open, and the previous email, if any, receives a notice, best-effort. 5 wrong codes end the pending request.
+         */
+        post: operations["confirmOwnEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/guest/documents": {
@@ -1086,10 +1126,50 @@ export interface paths {
         get?: never;
         /**
          * Save the personal data step (RF-20, CU-25)
-         * @description Requires the password step to be done (RN-33). Only while the guest is in onboarding; afterwards the data is edited through the profile endpoint.
+         * @description Requires the password step to be done (RN-33). Only while the guest is in onboarding; afterwards the data is edited through the profile endpoint. The email is not part of this step: it changes only by verifying the new one (`requestOnboardingEmailVerification`, TAR-349).
          */
         put: operations["savePersonalData"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/email-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a code to a new email of the guest (TAR-349)
+         * @description During the onboarding (O1), for a guest of either type. The code (6 digits) goes to the new email and lives 10 minutes; the current email stays until the code is confirmed. A new request replaces the pending one and its code, and waits 60 seconds since the last code was sent. Never cacheable.
+         */
+        post: operations["requestOnboardingEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/onboarding/email-verification/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the code and make the pending email the guest's email (TAR-349)
+         * @description With the right code the pending email becomes the one email of the guest (the account email, where the password recovery goes): a pending password-reset code stops working, the sessions stay open, and the previous email, if any, receives a notice, best-effort. 5 wrong codes end the pending request.
+         */
+        post: operations["confirmOnboardingEmailVerification"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1225,8 +1305,8 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * Own personal and contact data, the account email and the uploaded documents (T3, RN-17)
-         * @description What T3 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), the account email where the password recovery link goes (read-only: only the administration changes it, A3.9) and the documents uploaded during the onboarding or later (RN-37, `uploadTemporaryOwnDocument`), without links: each one opens with `getTemporaryOwnDocument` (TAR-241). Never cacheable.
+         * Own personal and contact data, the email and the uploaded documents (T3, RN-17)
+         * @description What T3 «Mis datos» shows before editing: the document, the name and contact data the guest keeps (RN-17), its one email, where the password recovery link goes, with the new one waiting for its code if any (TAR-349), and the documents uploaded during the onboarding or later (RN-37, `uploadTemporaryOwnDocument`), without links: each one opens with `getTemporaryOwnDocument` (TAR-241). Never cacheable.
          */
         get: operations["getOwnProfileTemporary"];
         put?: never;
@@ -1236,6 +1316,46 @@ export interface paths {
         head?: never;
         /** Edit own personal and contact data (CU-23, RN-17) */
         patch: operations["updateOwnProfileTemporary"];
+        trace?: never;
+    };
+    "/temporary-guest/email-verification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a code to a new email of the guest (TAR-349)
+         * @description For an active temporary guest (T3); a guest still onboarding uses `requestOnboardingEmailVerification`. The code (6 digits) goes to the new email and lives 10 minutes; the current email stays until the code is confirmed. A new request replaces the pending one and its code, and waits 60 seconds since the last code was sent. Never cacheable.
+         */
+        post: operations["requestOwnTemporaryEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/email-verification/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm the code and make the pending email the guest's email (TAR-349)
+         * @description With the right code the pending email becomes the one email of the guest (the account email, where the password recovery goes): a pending password-reset code stops working, the sessions stay open, and the previous email, if any, receives a notice, best-effort. 5 wrong codes end the pending request.
+         */
+        post: operations["confirmOwnTemporaryEmailVerification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/temporary-guest/documents": {
@@ -1380,23 +1500,43 @@ export interface components {
             message: string;
             field: string;
         };
-        /** @description The email is already the account email of another account, administrator or guest (a guest contact email is not an account email, D-33) */
+        /** @description The email is already the email of another account, administrator or guest; a guest has one email, the one of its account (TAR-349) */
         AccountEmailTakenError: {
             /** @enum {string} */
             code: "ACCOUNT_EMAIL_TAKEN";
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
             /** @enum {string} */
-            field: "contactEmail" | "email";
+            field: "email";
         };
-        /** @description The contact email already belongs to another guest (D-33); the account email is independent */
-        GuestEmailTakenError: {
+        /** @description A refused email verification (TAR-349); `field` is the input to mark */
+        EmailVerificationError: {
             /** @enum {string} */
-            code: "GUEST_EMAIL_TAKEN";
+            code: "EMAIL_UNCHANGED" | "EMAIL_VERIFICATION_INVALID" | "EMAIL_VERIFICATION_EXPIRED";
             /** @description User-facing message, in Spanish, ready to display in the UI */
             message: string;
             /** @enum {string} */
-            field: "contactEmail";
+            field: "email" | "code";
+        };
+        /** @description Another code was asked for before 60 seconds since the last one (TAR-349) */
+        EmailVerificationCooldownError: {
+            /** @enum {string} */
+            code: "EMAIL_VERIFICATION_COOLDOWN";
+            /** @description User-facing message, in Spanish, ready to display in the UI */
+            message: string;
+            /** @enum {string} */
+            field: "email";
+            /** @description The same value as Retry-After, readable without exposing the header across origins */
+            retryAfterSeconds: number;
+        };
+        /** @description The new email of the guest; a code is sent there (TAR-349) */
+        EmailVerificationInput: {
+            /** Format: email */
+            email: string;
+        };
+        /** @description The six digits sent to the new email (TAR-349) */
+        EmailVerificationConfirmation: {
+            code: string;
         };
         /** @description The guest has a contract in force, so it cannot be deactivated (RN-12). Debt does not block it */
         GuestHasActiveContractError: {
@@ -1773,9 +1913,9 @@ export interface components {
             phone?: string;
             /**
              * Format: email
-             * @description Optional: if present the access (the link or the temporary password, depending on accessMode) is also sent by email (RN-19)
+             * @description Optional: the one email of the guest, the email of its account (D-77, TAR-349). If present the access (the link or the temporary password, depending on accessMode) is also sent there (RN-19)
              */
-            contactEmail?: string;
+            email?: string;
             accessMode: components["schemas"]["AccessMode"];
         };
         /** @description Answer of a registration that created the guest; it always carries the first access */
@@ -1838,15 +1978,21 @@ export interface components {
             documentType?: components["schemas"]["DocumentType"];
             documentNumber?: string;
         };
-        /** @description Personal data step of the onboarding (RN-33) */
+        /** @description Personal data step of the onboarding (RN-33). The email is not here; it changes only by verifying it (TAR-349) */
         PersonalDataInput: {
+            name: string;
+            phone: string;
+            emergencyContact?: components["schemas"]["EmergencyContact"];
+        };
+        /** @description The personal data as the onboarding shows them. Before the step is saved `name` and `phone` are empty and `email` is the one of the account, if any (TAR-349) */
+        PersonalData: {
             name: string;
             phone: string;
             /**
              * Format: email
-             * @description Optional contact email, independent of the account email used to recover the password (D-76, RF-16, A3.9)
+             * @description The one email of the guest, the email of its account; left out when it has none
              */
-            contactEmail?: string;
+            email?: string;
             emergencyContact?: components["schemas"]["EmergencyContact"];
         };
         /** @description The guest's own data for «Mis datos» (H5, T3) */
@@ -1855,29 +2001,30 @@ export interface components {
             documentNumber: string;
             name: string;
             phone: string | null;
-            /** Format: email */
-            contactEmail: string | null;
+            /**
+             * Format: email
+             * @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). It changes by verifying the new one (TAR-349). Null when it has none
+             */
+            email: string | null;
+            /**
+             * Format: email
+             * @description The new email waiting for its code, while the code can still be confirmed (TAR-349); null otherwise
+             */
+            pendingEmail: string | null;
             /** @description The fields of EmergencyContact, inline: an allOf with that schema would reject null (OAS 3.0.3). Null when the guest saved none (RN-29) */
             emergencyContact: {
                 name?: string;
                 relationship?: string;
                 phone?: string;
             } | null;
-            /**
-             * Format: email
-             * @description Where the password recovery link goes (RF-16); read-only for the guest, the administration changes it (A3.9). Null when it has none
-             */
-            accountEmail: string | null;
             documents: components["schemas"]["GuestDocumentRef"][];
             /** @description How many documents a guest may have (5, RN-37) */
             documentsLimit: number;
         };
-        /** @description The guest edits their own data; every field is optional and an absent field keeps its value (RN-17). The document, the contract and the stays are not editable here. */
+        /** @description The guest edits their own data; every field is optional and an absent field keeps its value (RN-17). The document, the contract, the stays and the email are not editable here: the email changes by verifying it (TAR-349). */
         ProfileUpdateInput: {
             name?: string;
             phone?: string;
-            /** Format: email */
-            contactEmail?: string;
             emergencyContact?: components["schemas"]["EmergencyContact"];
         };
         ConsentInput: {
@@ -1931,9 +2078,8 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             hasLoginAccess: boolean;
             phone?: string | null;
-            contactEmail?: string | null;
-            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
-            accountEmail?: string | null;
+            /** @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). The guest changes it by verifying the new one (TAR-349); the administration sets it with PUT …/account-email without a code (A3.9) */
+            email?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -1977,9 +2123,8 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             hasLoginAccess: boolean;
             phone?: string | null;
-            contactEmail?: string | null;
-            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
-            accountEmail?: string | null;
+            /** @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). The guest changes it by verifying the new one (TAR-349); the administration sets it with PUT …/account-email without a code (A3.9) */
+            email?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -2022,9 +2167,8 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             hasLoginAccess: boolean;
             phone: string;
-            contactEmail?: string | null;
-            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
-            accountEmail?: string | null;
+            /** @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). The guest changes it by verifying the new one (TAR-349); the administration sets it with PUT …/account-email without a code (A3.9) */
+            email?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -2067,9 +2211,8 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             hasLoginAccess: boolean;
             phone: string;
-            contactEmail?: string | null;
-            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
-            accountEmail?: string | null;
+            /** @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). The guest changes it by verifying the new one (TAR-349); the administration sets it with PUT …/account-email without a code (A3.9) */
+            email?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -2112,9 +2255,8 @@ export interface components {
             type: "CONTRACT" | "TEMPORARY";
             hasLoginAccess: boolean;
             phone?: string | null;
-            contactEmail?: string | null;
-            /** @description Email of the account, for the password recovery (A3.9, PUT …/account-email); independent of the contact email (D-76) */
-            accountEmail?: string | null;
+            /** @description The one email of the guest, the email of its account: where the password recovery goes (RF-16). The guest changes it by verifying the new one (TAR-349); the administration sets it with PUT …/account-email without a code (A3.9) */
+            email?: string | null;
             emergencyContact?: components["schemas"]["EmergencyContact"];
             /**
              * Format: date
@@ -2252,7 +2394,7 @@ export interface components {
         };
         /** @description Onboarding state. While the guest is in onboarding `nextStep` names the step to go to; once active there is no `nextStep` (RN-33, RN-36). */
         OnboardingState: components["schemas"]["OnboardingInProgress"] | components["schemas"]["OnboardingCompleted"];
-        /** @description Onboarding still open (the password is already chosen). Before the personal data step is saved the data is not there yet; from the documents step on it is always returned. */
+        /** @description Onboarding still open (the password is already chosen). The personal data are always returned: before the step is saved `name` and `phone` are empty and `email` is the one of the account (TAR-349). */
         OnboardingInProgress: components["schemas"]["OnboardingPersonalDataPending"] | components["schemas"]["OnboardingDocumentsPending"] | components["schemas"]["OnboardingConsentPending"];
         OnboardingPersonalDataPending: {
             /** @enum {string} */
@@ -2262,6 +2404,12 @@ export interface components {
              * @enum {string}
              */
             nextStep: "PERSONAL_DATA";
+            personalData: components["schemas"]["PersonalData"];
+            /**
+             * Format: email
+             * @description The new email waiting for its code, while the code can still be confirmed (TAR-349); left out when there is none
+             */
+            pendingEmail?: string;
             documents: components["schemas"]["GuestDocumentRef"][];
             consent: components["schemas"]["PendingConsentState"];
         };
@@ -2271,7 +2419,12 @@ export interface components {
             status: "ONBOARDING";
             /** @enum {string} */
             nextStep: "DOCUMENTS";
-            personalData: components["schemas"]["PersonalDataInput"];
+            personalData: components["schemas"]["PersonalData"];
+            /**
+             * Format: email
+             * @description The new email waiting for its code, while the code can still be confirmed (TAR-349); left out when there is none
+             */
+            pendingEmail?: string;
             documents: components["schemas"]["GuestDocumentRef"][];
             consent: components["schemas"]["PendingConsentState"];
         };
@@ -2281,14 +2434,24 @@ export interface components {
             status: "ONBOARDING";
             /** @enum {string} */
             nextStep: "CONSENT";
-            personalData: components["schemas"]["PersonalDataInput"];
+            personalData: components["schemas"]["PersonalData"];
+            /**
+             * Format: email
+             * @description The new email waiting for its code, while the code can still be confirmed (TAR-349); left out when there is none
+             */
+            pendingEmail?: string;
             documents: components["schemas"]["GuestDocumentRef"][];
             consent: components["schemas"]["PendingConsentState"];
         };
         OnboardingCompleted: {
             /** @enum {string} */
             status: "ACTIVE";
-            personalData: components["schemas"]["PersonalDataInput"];
+            personalData: components["schemas"]["PersonalData"];
+            /**
+             * Format: email
+             * @description The new email waiting for its code, while the code can still be confirmed (TAR-349); left out when there is none
+             */
+            pendingEmail?: string;
             documents: components["schemas"]["GuestDocumentRef"][];
             consent: components["schemas"]["AcceptedConsentState"];
         };
@@ -3464,13 +3627,33 @@ export interface components {
                 "application/json": components["schemas"]["OnboardingConflictError"];
             };
         };
-        /** @description The contact email already belongs to another guest (D-33). The `code` is always `GUEST_EMAIL_TAKEN` and `field` is `contactEmail` */
-        GuestEmailTaken: {
+        /** @description Invalid input (`VALIDATION_ERROR`, `UNKNOWN_FIELD`) or a refused verification (TAR-349): `EMAIL_UNCHANGED` (the email is already the guest's, case-insensitive, `field: email`; nothing is sent), `EMAIL_VERIFICATION_INVALID` (the code does not match, or nothing is pending, `field: code`) or `EMAIL_VERIFICATION_EXPIRED` (the code ran out of its 10 minutes or of its 5 attempts; request a new one, `field: code`) */
+        EmailVerificationRefused: {
             headers: {
                 [name: string]: unknown;
             };
             content: {
-                "application/json": components["schemas"]["GuestEmailTakenError"];
+                "application/json": components["schemas"]["EmailVerificationError"] | components["schemas"]["Error"];
+            };
+        };
+        /** @description `EMAIL_VERIFICATION_COOLDOWN`: a code was sent less than 60 seconds ago (TAR-349), or `RATE_LIMITED` by the address limit (SEC-01). The wait is in `Retry-After` and, for the cooldown, also in `retryAfterSeconds` */
+        EmailVerificationCooldown: {
+            headers: {
+                /** @description Seconds until the client may retry */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["EmailVerificationCooldownError"] | components["schemas"]["Error"];
+            };
+        };
+        /** @description `ACCOUNT_EMAIL_TAKEN`: the email, case-insensitive, already belongs to another account, administrator or guest (`field: email`) */
+        AccountEmailTaken: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AccountEmailTakenError"];
             };
         };
     };
@@ -4307,13 +4490,13 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
-            /** @description `GUEST_INACTIVE` (the document belongs to an inactive guest, RN-12, RN-18), `GUEST_DOCUMENT_TAKEN` (the document belongs to an administrator account, D-34e) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) or `ACCOUNT_EMAIL_TAKEN` (the contact email, case-insensitive, is already the account email of another account, administrator or guest; nothing is created, so the guest never ends up without an account email in silence, RF-02, D-77) */
+            /** @description `GUEST_INACTIVE` (the document belongs to an inactive guest, RN-12, RN-18), `GUEST_DOCUMENT_TAKEN` (the document belongs to an administrator account, D-34e) or `ACCOUNT_EMAIL_TAKEN` (the email, case-insensitive, is already the email of another account, administrator or guest, `field: email`; nothing is created, so the guest never ends up without its email in silence, RF-02, D-77, TAR-349) */
             409: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["GuestEmailTakenError"] | components["schemas"]["AccountEmailTakenError"];
+                    "application/json": components["schemas"]["GuestInactiveError"] | components["schemas"]["GuestDocumentTakenError"] | components["schemas"]["AccountEmailTakenError"];
                 };
             };
             429: components["responses"]["TooManyRequests"];
@@ -6100,7 +6283,68 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
-            409: components["responses"]["GuestEmailTaken"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    requestOwnEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationInput"];
+            };
+        };
+        responses: {
+            /** @description Code sent; the email is pending until its code is confirmed */
+            202: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
+            429: components["responses"]["EmailVerificationCooldown"];
+        };
+    };
+    confirmOwnEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationConfirmation"];
+            };
+        };
+        responses: {
+            /** @description Email changed */
+            204: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
             429: components["responses"]["TooManyRequests"];
         };
     };
@@ -6258,15 +6502,69 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["OnboardingAccessDenied"];
-            /** @description An onboarding-state conflict (`ONBOARDING_STEP_OUT_OF_ORDER`, `ONBOARDING_ALREADY_COMPLETED`, see the `OnboardingConflict` response) or `GUEST_EMAIL_TAKEN` (the contact email already belongs to another guest, D-33) */
-            409: {
+            409: components["responses"]["OnboardingConflict"];
+        };
+    };
+    requestOnboardingEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationInput"];
+            };
+        };
+        responses: {
+            /** @description Code sent; the email is pending until its code is confirmed */
+            202: {
                 headers: {
+                    "Cache-Control": "no-store";
                     [name: string]: unknown;
                 };
-                content: {
-                    "application/json": components["schemas"]["OnboardingConflictError"] | components["schemas"]["GuestEmailTakenError"];
-                };
+                content?: never;
             };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
+            429: components["responses"]["EmailVerificationCooldown"];
+        };
+    };
+    confirmOnboardingEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationConfirmation"];
+            };
+        };
+        responses: {
+            /** @description Email changed */
+            204: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["OnboardingAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     uploadOnboardingDocument: {
@@ -6625,7 +6923,68 @@ export interface operations {
             400: components["responses"]["ValidationFailed"];
             401: components["responses"]["NoSession"];
             403: components["responses"]["GuestAccessDenied"];
-            409: components["responses"]["GuestEmailTaken"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    requestOwnTemporaryEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationInput"];
+            };
+        };
+        responses: {
+            /** @description Code sent; the email is pending until its code is confirmed */
+            202: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
+            429: components["responses"]["EmailVerificationCooldown"];
+        };
+    };
+    confirmOwnTemporaryEmailVerification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailVerificationConfirmation"];
+            };
+        };
+        responses: {
+            /** @description Email changed */
+            204: {
+                headers: {
+                    "Cache-Control": "no-store";
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["EmailVerificationRefused"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            409: components["responses"]["AccountEmailTaken"];
             429: components["responses"]["TooManyRequests"];
         };
     };

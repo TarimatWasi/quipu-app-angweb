@@ -32,9 +32,9 @@ function profileOf(fields: Partial<OwnProfile> = {}): OwnProfile {
     documentNumber: '12345678',
     name: 'Ana Quispe',
     phone: '987 654 321',
-    contactEmail: 'ana@correo.pe',
+    email: 'ana@correo.pe',
+    pendingEmail: null,
     emergencyContact: { name: 'Rosa Mamani', relationship: 'Madre', phone: '+51 951 234 567' },
-    accountEmail: 'ana.quispe@correo.pe',
     documents: [DOCUMENT],
     documentsLimit: 5,
     ...fields,
@@ -64,6 +64,10 @@ async function setup(audience: Audience = 'CONTRACT', answers: Answers = {}) {
   const api = {
     profile: vi.fn<() => Observable<OwnProfile>>(() => answers.profile ?? of(profileOf())),
     update: vi.fn<(changes: object) => Observable<unknown>>(() => of({ id: 'g1' })),
+    emailVerification: {
+      request: vi.fn<(email: string) => Observable<unknown>>(() => of(null)),
+      confirm: vi.fn<(code: string) => Observable<unknown>>(() => of(null)),
+    },
     upload: vi.fn<(file: File) => Observable<OwnDocumentRef>>(() => of({ ...DOCUMENT, id: 'd2' })),
     document: vi.fn<(id: string) => Observable<OwnDocument>>(() =>
       of({ ...DOCUMENT, url: 'https://files.example/d1', urlExpiresAt: '2999-01-01T00:00:00Z' }),
@@ -140,7 +144,9 @@ describe('OwnProfileComponent (H5, guest with a contract)', () => {
     expect(ui.page().getByRole('heading', { level: 1 }).textContent).toBe('Mis datos');
     expect(ui.page().getByLabelText(/Nombre completo/)).toHaveProperty('value', 'Ana Quispe');
     expect(ui.page().getByLabelText(/Teléfono/)).toHaveProperty('value', '987 654 321');
-    expect(ui.page().getByLabelText(/Correo/)).toHaveProperty('value', 'ana@correo.pe');
+    // The email is shown, not edited: it changes with a code (TAR-349).
+    expect(ui.page().getByText('ana@correo.pe')).toBeTruthy();
+    expect(ui.page().getByRole('button', { name: 'Cambiar correo' })).toBeTruthy();
     expect(ui.page().getByLabelText('Parentesco')).toHaveProperty('value', 'Madre');
     const deal = ui.page().getByRole('region', { name: 'Tu contrato' });
     expect([...deal.querySelectorAll('app-fact-tile')].map((tile) => text(tile))).toEqual([
@@ -149,7 +155,6 @@ describe('OwnProfileComponent (H5, guest with a contract)', () => {
       'Contrato1 mar 2026 – 28 feb 2027',
       'Día de pago5 de cada mes',
       'DocumentoDNI 12345678',
-      'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)ana.quispe@correo.pe',
     ]);
     expect(ui.page().getByRole('link', { name: 'Ver mi contrato' }).getAttribute('href')).toBe(
       '/guest/contract',
@@ -166,7 +171,6 @@ describe('OwnProfileComponent (H5, guest with a contract)', () => {
     const deal = ui.page().getByRole('region', { name: 'Tu contrato' });
     expect([...deal.querySelectorAll('app-fact-tile dt')].map((term) => text(term))).toEqual([
       'Documento',
-      'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)',
     ]);
     expect(ui.page().queryByRole('link', { name: 'Ver mi contrato' })).toBeNull();
   });
@@ -202,28 +206,26 @@ describe('OwnProfileComponent (H5, guest with a contract)', () => {
 
     await ui.type(/Nombre completo/, '');
     await ui.type(/Teléfono/, '12');
-    await ui.type(/Correo/, 'no-es-correo');
     await ui.click(ui.save());
 
     expect(ui.page().getByText('Escribe tu nombre completo.')).toBeTruthy();
     expect(ui.page().getByText('Revisa el teléfono.')).toBeTruthy();
-    expect(ui.page().getByText('Escribe un correo válido.')).toBeTruthy();
     expect(ui.api.update).not.toHaveBeenCalled();
   });
 
-  it('puts a taken email under its field and a busy server above the buttons', async () => {
+  it('puts a refused phone under its field and a busy server above the buttons', async () => {
     const ui = await setup();
-    await ui.type(/Correo/, 'otro@correo.pe');
+    await ui.type(/Teléfono/, '912 345 678');
 
     ui.api.update.mockReturnValueOnce(
-      throwError(() => httpError(409, { code: 'GUEST_EMAIL_TAKEN', field: 'contactEmail' })),
+      throwError(() => httpError(400, { code: 'VALIDATION_ERROR', field: 'phone' })),
     );
     await ui.click(ui.save());
-    expect(ui.page().getByText('Ese correo ya está registrado para otro huésped')).toBeTruthy();
+    expect(ui.page().getByText('Revisa el teléfono.')).toBeTruthy();
     expect(ui.page().queryByRole('alert')).toBeNull();
 
     // What the BFF refused stays under the field until the guest changes it.
-    await ui.type(/Correo/, 'tercero@correo.pe');
+    await ui.type(/Teléfono/, '912 345 679');
     ui.api.update.mockReturnValueOnce(throwError(() => httpError(429, { code: 'RATE_LIMITED' })));
     await ui.click(ui.save());
     expect(ui.page().getByRole('alert').textContent).toContain('Demasiados intentos');
@@ -239,9 +241,9 @@ describe('OwnProfileComponent (H5, guest with a contract)', () => {
     expect(ui.page().queryByRole('button', { name: 'Cancelar' })).toBeNull();
   });
 
-  it('does not pretend to remove a saved email: it says so and calls nothing', async () => {
+  it('does not pretend to remove a saved emergency contact: it says so and calls nothing', async () => {
     const ui = await setup();
-    await ui.type(/Correo/, '');
+    await ui.type('Nombre', '');
 
     await ui.click(ui.save());
 
@@ -284,7 +286,6 @@ describe('OwnProfileComponent (T3, temporary guest)', () => {
       'AcordadoS/ 380.00',
       'Estadía20 – 31 oct',
       'DocumentoDNI 12345678',
-      'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)ana.quispe@correo.pe',
     ]);
     expect(ui.page().queryByRole('link', { name: 'Ver mi contrato' })).toBeNull();
   });
@@ -305,16 +306,17 @@ describe('OwnProfileComponent (T3, temporary guest)', () => {
     expect(text(deal)).toContain('AcordadoS/ 380.00');
   });
 
-  it('says there is no account email and how to get an access', async () => {
-    const ui = await setup('TEMPORARY', { profile: of(profileOf({ accountEmail: null })) });
+  it('offers «Agregar correo» without one, and the code of the email waiting for it', async () => {
+    const ui = await setup('TEMPORARY', {
+      profile: of(profileOf({ email: null, pendingEmail: 'ana@nuevo.pe' })),
+    });
 
+    expect(ui.page().getByText('Sin correo')).toBeTruthy();
+    expect(ui.page().getByRole('button', { name: 'Agregar correo' })).toBeTruthy();
     expect(
-      ui
-        .page()
-        .getByText(
-          'Sin correo: si olvidas tu contraseña, pídele a la administración un acceso nuevo',
-        ),
+      ui.page().getByText('Falta confirmar ana@nuevo.pe: escribe el código que te enviamos.'),
     ).toBeTruthy();
+    expect(ui.page().getByRole('button', { name: 'Escribir el código' })).toBeTruthy();
   });
 });
 

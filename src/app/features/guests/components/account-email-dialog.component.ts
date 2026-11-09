@@ -41,8 +41,8 @@ const LEAD_ID = 'account-email-lead';
 const ERROR_ID = 'account-email-error';
 
 /**
- * A3.2 «Correo de cuenta» (RF-16, D-76) on P-16: the email the password recovery writes to, apart
- * from the contact email the guest changes. It checks it before calling the BFF (FE-ANG-FRM-03); a
+ * A3.2 «Cambiar correo» (RF-16, TAR-349) on P-16: the one email of the guest, the one the password
+ * recovery writes to; the administration changes it without a code. It checks it before calling the BFF (FE-ANG-FRM-03); a
  * taken email goes under the field, anything else above the buttons. Answers true once saved.
  */
 @Component({
@@ -55,7 +55,7 @@ const ERROR_ID = 'account-email-error';
           <p [id]="leadId">{{ lead }}</p>
           <app-form-field
             fieldId="account-email"
-            label="Correo de cuenta"
+            label="Correo"
             [help]="help"
             [error]="emailError()"
           >
@@ -151,7 +151,7 @@ export class AccountEmailDialogComponent {
   }
 }
 
-/** Opens «Correo de cuenta» described by its lead; `afterClosed()` gives true once saved. */
+/** Opens «Cambiar correo» described by its lead; `afterClosed()` gives true once saved. */
 export function openAccountEmailDialog(
   dialog: MatDialog,
   data: AccountEmailData,

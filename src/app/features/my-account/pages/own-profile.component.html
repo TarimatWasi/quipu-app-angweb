@@ -84,7 +84,15 @@
         </aside>
 
         <form class="form" novalidate [formRoot]="profileForm">
-          <app-personal-data-fields [form]="profileForm" prefix="profile" />
+          <app-personal-data-fields [form]="profileForm" prefix="profile">
+            <app-email-change-field
+              emailField
+              [current]="email()"
+              [pending]="pendingEmail()"
+              [client]="emailClient"
+              (changed)="emailChanged()"
+            />
+          </app-personal-data-fields>
           @if (generalError(); as message) {
             <p class="quipu-alert" role="alert" tabindex="-1" [id]="errorId">{{ message }}</p>
           }

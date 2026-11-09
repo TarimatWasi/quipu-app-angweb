@@ -52,7 +52,7 @@ export function seedCaseGuests(): GuestRecord[] {
       name,
       type: 'CONTRACT',
       phone,
-      contactEmail: `${number}@example.com`,
+      email: `${number}@example.com`,
     });
   return [
     contractGuest(CASE_GUEST_IDS.openEnded, '70000021', 'Sofía Gutiérrez Mamani', '976 543 210'),

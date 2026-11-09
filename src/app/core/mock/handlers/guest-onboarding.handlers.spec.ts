@@ -53,7 +53,7 @@ describe('the onboarding of the simulated BFF (O1 to O3)', () => {
     }
   });
 
-  it('checks the personal data: name and phone are required, the email is not taken', async () => {
+  it('checks the personal data: name and phone are required, the email is not taken here', async () => {
     const mock = await starting();
 
     const noPhone = await mock.fail(
@@ -62,14 +62,15 @@ describe('the onboarding of the simulated BFF (O1 to O3)', () => {
     expect(noPhone.status).toBe(400);
     expect(noPhone.error).toEqual(expect.objectContaining({ field: 'phone' }));
 
-    const taken = await mock.fail(
+    // The email changes with its code (TAR-349): the step does not take it.
+    const withEmail = await mock.fail(
       mock.send('PUT', '/bff/guest/onboarding/personal-data', {
         ...data,
-        contactEmail: 'luis.huaman@example.com',
+        email: 'otro@example.com',
       }),
     );
-    expect(taken.status).toBe(409);
-    expect(catalogOf(taken)).toEqual(expect.objectContaining({ code: 'GUEST_EMAIL_TAKEN' }));
+    expect(withEmail.status).toBe(400);
+    expect(catalogOf(withEmail)).toEqual(expect.objectContaining({ code: 'VALIDATION_ERROR' }));
   });
 
   it('goes through the three steps and leaves the guest Active', async () => {

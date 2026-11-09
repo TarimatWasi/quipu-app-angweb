@@ -1,14 +1,7 @@
 import { maxLength, required, SchemaPathTree, validate } from '@angular/forms/signals';
 import { NETWORK_TEXT, RATE_LIMITED_TEXT } from '../text/error-text';
 import type { CallFailure } from './call-failure';
-import {
-  contactEmailError,
-  EMAIL_TEXT,
-  MAX_EMAIL_LENGTH,
-  MAX_PHONE_LENGTH,
-  PHONE_TEXT,
-  phoneError,
-} from './contact-rules';
+import { MAX_PHONE_LENGTH, PHONE_TEXT, phoneError } from './contact-rules';
 
 /** The emergency contact as the contract has it (EmergencyContact): every field is optional. */
 export interface EmergencyContact {
@@ -20,12 +13,12 @@ export interface EmergencyContact {
 /**
  * The personal and contact data a guest keeps (RN-17, RN-29): «Mis datos» of the guest with a
  * contract and of the temporary guest (H5, T3) and the personal data step of the onboarding (O1)
- * share the fields, the help, the checks and the body sent to the BFF.
+ * share the fields, the help, the checks and the body sent to the BFF. The email is not one of
+ * them: it changes only once verified with a code (TAR-349, app-email-change-field).
  */
 export interface PersonalData {
   name: string;
   phone: string;
-  contactEmail: string;
   emergencyName: string;
   emergencyRelationship: string;
   emergencyPhone: string;
@@ -34,7 +27,6 @@ export interface PersonalData {
 export const EMPTY_PERSONAL_DATA: Readonly<PersonalData> = {
   name: '',
   phone: '',
-  contactEmail: '',
   emergencyName: '',
   emergencyRelationship: '',
   emergencyPhone: '',
@@ -43,7 +35,6 @@ export const EMPTY_PERSONAL_DATA: Readonly<PersonalData> = {
 export const NAME_TEXT = 'Escribe tu nombre completo.';
 export const NAME_HELP = 'Como aparece en tu documento.';
 export const PHONE_HELP = 'Si es de otro país, empieza con su prefijo, por ejemplo +34.';
-export const EMAIL_HELP = 'Para que la administración pueda escribirte.';
 export const EMERGENCY_NAME_HELP = 'A quién llamamos si te pasa algo.';
 export const RELATIONSHIPS: readonly string[] = [
   'Madre',
@@ -63,7 +54,6 @@ const RELATIONSHIP_LONG_TEXT = `El parentesco admite hasta ${String(MAX_RELATION
 export const PERSONAL_DATA_FIELDS: Readonly<Record<string, keyof PersonalData>> = {
   name: 'name',
   phone: 'phone',
-  contactEmail: 'contactEmail',
   'emergencyContact.name': 'emergencyName',
   'emergencyContact.relationship': 'emergencyRelationship',
   'emergencyContact.phone': 'emergencyPhone',
@@ -80,11 +70,6 @@ export function personalDataRules(path: SchemaPathTree<PersonalData>): void {
       : undefined,
   );
   maxLength(path.phone, MAX_PHONE_LENGTH, { message: PHONE_TEXT });
-  maxLength(path.contactEmail, MAX_EMAIL_LENGTH, { message: EMAIL_TEXT });
-  validate(path.contactEmail, ({ value }) => {
-    const message = contactEmailError(value());
-    return message === null ? undefined : { kind: 'contactEmail', message };
-  });
   maxLength(path.emergencyName, MAX_NAME_LENGTH, { message: NAME_LONG_TEXT });
   maxLength(path.emergencyRelationship, MAX_RELATIONSHIP_LENGTH, {
     message: RELATIONSHIP_LONG_TEXT,
@@ -113,20 +98,17 @@ export function toEmergencyContact(data: PersonalData): EmergencyContact | null 
 export function toPersonalData(saved: {
   name: string;
   phone: string | null;
-  contactEmail: string | null;
   emergencyContact: EmergencyContact | null;
 }): PersonalData {
   return {
     name: saved.name,
     phone: saved.phone ?? '',
-    contactEmail: saved.contactEmail ?? '',
     emergencyName: saved.emergencyContact?.name ?? '',
     emergencyRelationship: saved.emergencyContact?.relationship ?? '',
     emergencyPhone: saved.emergencyContact?.phone ?? '',
   };
 }
 
-const GUEST_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otro huésped';
 const UNEXPECTED_SAVE_TEXT = 'No se pudieron guardar tus datos. Inténtalo de nuevo.';
 
 /** Where the answer of a failed save of the personal data goes (H5, T3 and O1). */
@@ -137,7 +119,6 @@ export type SaveProblem =
 const FIELD_PROBLEMS: Readonly<Record<string, SaveProblem>> = {
   name: { place: 'field', field: 'name', message: NAME_TEXT },
   phone: { place: 'field', field: 'phone', message: PHONE_TEXT },
-  contactEmail: { place: 'field', field: 'contactEmail', message: EMAIL_TEXT },
   'emergencyContact.name': { place: 'field', field: 'emergencyName', message: 'Revisa el nombre.' },
   'emergencyContact.relationship': {
     place: 'field',
@@ -150,9 +131,6 @@ const FIELD_PROBLEMS: Readonly<Record<string, SaveProblem>> = {
 export function saveProblem({ status, code, field }: CallFailure): SaveProblem {
   if (status === 0) return { place: 'general', message: NETWORK_TEXT };
   if (status === 429) return { place: 'general', message: RATE_LIMITED_TEXT };
-  if (status === 409 && code === 'GUEST_EMAIL_TAKEN') {
-    return { place: 'field', field: 'contactEmail', message: GUEST_EMAIL_TAKEN_TEXT };
-  }
   if (code === 'VALIDATION_ERROR' && field !== null) {
     return FIELD_PROBLEMS[field] ?? { place: 'general', message: UNEXPECTED_SAVE_TEXT };
   }
@@ -163,15 +141,12 @@ export function saveProblem({ status, code, field }: CallFailure): SaveProblem {
 export function toPersonalDataInput(data: PersonalData): {
   name: string;
   phone: string;
-  contactEmail?: string;
   emergencyContact?: EmergencyContact;
 } {
-  const contactEmail = data.contactEmail.trim();
   const emergencyContact = toEmergencyContact(data);
   return {
     name: data.name.trim(),
     phone: data.phone.trim(),
-    ...(contactEmail !== '' && { contactEmail }),
     ...(emergencyContact !== null && { emergencyContact }),
   };
 }

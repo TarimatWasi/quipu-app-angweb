@@ -25,7 +25,7 @@ export interface NewGuestModel {
   documentType: DocumentType;
   documentNumber: string;
   phone: string;
-  contactEmail: string;
+  email: string;
   accessMode: AccessMode;
 }
 
@@ -34,7 +34,7 @@ export const EMPTY_NEW_GUEST: NewGuestModel = {
   documentType: 'DNI',
   documentNumber: '',
   phone: '',
-  contactEmail: '',
+  email: '',
   accessMode: 'LINK',
 };
 
@@ -85,18 +85,19 @@ export const ACCESS_MODE_HELP: Readonly<Record<AccessMode, string>> = {
 
 export const PHONE_HELP =
   'Para abrir WhatsApp con el acceso ya escrito. Si es de otro país, empieza con su prefijo, por ejemplo +34.';
-export const EMAIL_HELP = 'Si lo escribes, también le enviamos el acceso por correo.';
+export const EMAIL_HELP =
+  'Si lo escribes, le enviamos el acceso por correo y será el de su cuenta.';
 
 /** The body of createGuest: trimmed, and without the optional fields left empty. */
 export function toGuestInput(model: NewGuestModel): GuestInput {
   const phone = model.phone.trim();
-  const contactEmail = model.contactEmail.trim();
+  const email = model.email.trim();
   return {
     documentType: model.documentType,
     documentNumber: model.documentNumber.trim(),
     type: model.type,
     ...(phone === '' ? {} : { phone }),
-    ...(contactEmail === '' ? {} : { contactEmail }),
+    ...(email === '' ? {} : { email }),
     accessMode: model.accessMode,
   };
 }
@@ -111,9 +112,9 @@ export interface Fact {
 export const MISSING_NUMBER_TEXT = 'Falta el número';
 
 /** How the guest will hear of its access: the channels it has, or the message the admin copies. */
-export function noticeChannels(phone: string, contactEmail: string): string {
+export function noticeChannels(phone: string, email: string): string {
   const hasPhone = phone.trim() !== '';
-  const hasEmail = contactEmail.trim() !== '';
+  const hasEmail = email.trim() !== '';
   if (hasPhone && hasEmail) return 'WhatsApp y correo';
   if (hasPhone) return 'WhatsApp';
   return hasEmail ? 'Correo' : 'El mensaje que copies';
@@ -135,7 +136,7 @@ export function newGuestFacts(model: NewGuestModel): readonly Fact[] {
     { label: 'Acceso', value: ACCESS_MODE_LABELS[model.accessMode], wide: false },
     {
       label: 'Se le avisa por',
-      value: noticeChannels(model.phone, model.contactEmail),
+      value: noticeChannels(model.phone, model.email),
       wide: true,
     },
   ];
@@ -144,13 +145,12 @@ export function newGuestFacts(model: NewGuestModel): readonly Fact[] {
 // The failures of createGuest, worded for this screen (QP-ANGWEB-BFF-02: never the server's text).
 export const DOCUMENT_TAKEN_TEXT =
   'Ese documento ya pertenece a otro huésped o a una cuenta de administrador';
-export const GUEST_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otro huésped';
 export const ACCOUNT_EMAIL_TAKEN_TEXT = 'Ese correo ya está registrado para otra cuenta';
 export const DOCUMENT_INVALID_TEXT = 'Revisa el número de documento.';
 export const UNEXPECTED_TEXT = 'No se pudo crear el huésped. Inténtalo de nuevo.';
 
 /** The fields of A3.1 a server error can point at. */
-export type NewGuestField = 'documentNumber' | 'phone' | 'contactEmail';
+export type NewGuestField = 'documentNumber' | 'phone' | 'email';
 
 export type CreateProblem =
   | { readonly place: 'field'; readonly field: NewGuestField; readonly message: string }
@@ -165,18 +165,14 @@ const CODE_PROBLEMS = new Map<string, CreateProblem>([
     'ACCOUNT_DOCUMENT_TAKEN',
     { place: 'field', field: 'documentNumber', message: DOCUMENT_TAKEN_TEXT },
   ],
-  ['GUEST_EMAIL_TAKEN', { place: 'field', field: 'contactEmail', message: GUEST_EMAIL_TAKEN_TEXT }],
-  [
-    'ACCOUNT_EMAIL_TAKEN',
-    { place: 'field', field: 'contactEmail', message: ACCOUNT_EMAIL_TAKEN_TEXT },
-  ],
+  ['ACCOUNT_EMAIL_TAKEN', { place: 'field', field: 'email', message: ACCOUNT_EMAIL_TAKEN_TEXT }],
   ['RATE_LIMITED', { place: 'general', message: RATE_LIMITED_TEXT }],
 ]);
 
 const VALIDATION_PROBLEMS = new Map<string, CreateProblem>([
   ['documentNumber', { place: 'field', field: 'documentNumber', message: DOCUMENT_INVALID_TEXT }],
   ['phone', { place: 'field', field: 'phone', message: PHONE_TEXT }],
-  ['contactEmail', { place: 'field', field: 'contactEmail', message: EMAIL_TEXT }],
+  ['email', { place: 'field', field: 'email', message: EMAIL_TEXT }],
 ]);
 
 /** Where a failure of createGuest goes, decided by `code` and `field` (QP-ANGWEB-BFF-02). */
