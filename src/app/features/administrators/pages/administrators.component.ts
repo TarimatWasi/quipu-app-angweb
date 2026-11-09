@@ -7,7 +7,6 @@ import {
   computed,
   ElementRef,
   inject,
-  linkedSignal,
   signal,
   viewChild,
 } from '@angular/core';
@@ -37,6 +36,7 @@ import {
   ROOM_HELP_TEXT,
 } from '../model/administrator-texts';
 import { ToastService } from '@shared/ui/toast/toast.service';
+import { ResourceContent } from '@shared/data/resource-content';
 
 type View = 'loading' | 'error' | 'ready';
 
@@ -69,7 +69,8 @@ export class AdministratorsComponent {
   private readonly dialog = inject(MatDialog);
 
   protected readonly list = this.administrators.list();
-  private readonly retried = signal(false);
+  /** The list keeps what it had while it is read again, also when that read fails (TAR-355). */
+  private readonly content = new ResourceContent(this.list, { message: () => LOAD_ERROR_TEXT });
   /** Set by a creation: once the list is read again, the focus may have to leave «Nuevo». */
   private readonly checkFocus = signal(false);
   private readonly countElement = viewChild<ElementRef<HTMLElement>>('countLine');
@@ -81,19 +82,15 @@ export class AdministratorsComponent {
   /** The email of an administrator just created whose link could not be sent; null otherwise. */
   protected readonly unsentEmail = signal<string | null>(null);
 
-  private readonly lastList = linkedSignal<
-    readonly AdministratorSummary[] | undefined,
-    readonly AdministratorSummary[] | undefined
-  >({
-    source: () => (this.list.hasValue() ? this.list.value() : undefined),
-    computation: (value, previous) => value ?? previous?.value,
-  });
-  private readonly loaded = computed(() => this.lastList() ?? NO_ADMINISTRATORS);
+  private readonly loaded = computed(() => this.content.data() ?? NO_ADMINISTRATORS);
+  /** A read that failed, kept while «Reintentar» asks again. */
+  protected readonly failed = computed(() => this.content.error() !== undefined);
+  protected readonly retrying = computed(() => this.failed() && this.list.isLoading());
   /** Only the first read shows the skeleton; «Reintentar» keeps the notice while it reads again. */
-  protected readonly retrying = computed(() => this.retried() && this.list.isLoading());
   protected readonly view = computed<View>(() => {
-    if (this.lastList() !== undefined) return 'ready';
-    return this.list.error() !== undefined || this.retrying() ? 'error' : 'loading';
+    const status = this.content.state().status;
+    if (status === 'ready') return 'ready';
+    return status === 'initial-error' ? 'error' : 'loading';
   });
   protected readonly counts = computed(() => countsOf(this.loaded()));
   protected readonly rows = computed(() => {
@@ -120,9 +117,7 @@ export class AdministratorsComponent {
   }
 
   protected retry(): void {
-    if (this.list.isLoading()) return;
-    this.retried.set(true);
-    this.list.reload();
+    this.content.retry();
   }
 
   protected openNew(): void {
@@ -152,16 +147,14 @@ export class AdministratorsComponent {
       .afterClosed()
       .subscribe((done) => {
         if (done !== true) return;
-        this.retried.set(false);
-        this.list.reload();
+        this.content.reload();
         this.toasts.show(texts.done, { tone: 'success' });
       });
   }
 
   /** The toast, or the yellow notice that stays when the link could not be emailed. */
   private created({ email, emailSent }: NewAdministratorResult): void {
-    this.retried.set(false);
-    this.list.reload();
+    this.content.reload();
     this.checkFocus.set(true);
     if (emailSent) {
       this.unsentEmail.set(null);

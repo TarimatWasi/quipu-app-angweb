@@ -1,8 +1,9 @@
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
-import { AsyncContentState } from '@shared/data/async-content';
+import { Component, computed, inject } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { catchError, forkJoin, map, of } from 'rxjs';
+import { ResourceContent } from '@shared/data/resource-content';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
@@ -69,17 +70,29 @@ export class OwnContractComponent {
   private readonly contracts = inject(OwnContractService);
   private readonly payments = inject(GuestPaymentsService);
   private readonly toasts = inject(ToastService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly title = CONTRACT_TITLE;
   protected readonly loadErrorText = LOAD_CONTRACT_TEXT;
   protected readonly noContractTitle = NO_CONTRACT_TITLE;
   protected readonly noContractText = NO_CONTRACT_TEXT;
 
-  private readonly loaded = new AsyncContentState<ContractData>();
+  /** The read starts with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10). */
+  private readonly read = rxResource<ContractData, undefined>({
+    stream: () =>
+      forkJoin({
+        contracts: this.contracts.get(),
+        // The account only adds what is still owed and when the first payment is due: without
+        // it the contract still reads, so its failure does not fail the page.
+        periods: this.payments.accountStatus().pipe(catchError(() => of<PeriodStatus[]>([]))),
+      }).pipe(map(({ contracts, periods }) => ({ contracts, periods, loadedAt: Date.now() }))),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_CONTRACT_TEXT });
   protected readonly view = this.loaded.state;
   /** The guest never had a contract (404): an empty state, not an error. */
-  protected readonly none = signal(false);
+  protected readonly none = computed(() => {
+    const error = this.loaded.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
   protected readonly retrying = this.loaded.retrying;
   protected readonly refreshing = this.loaded.refreshing;
   protected readonly refreshError = this.loaded.refreshError;
@@ -94,23 +107,8 @@ export class OwnContractComponent {
     };
   });
 
-  constructor() {
-    // Leaving the screen: no late answer may load any more.
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-  }
-
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    void this.load();
-    return true;
-  }
-
   protected reload(): void {
-    void this.load();
+    this.loaded.reload();
   }
 
   /**
@@ -133,25 +131,5 @@ export class OwnContractComponent {
     }
     this.toasts.show(LINK_EXPIRED_TEXT);
     this.reload();
-  }
-
-  private async load(): Promise<void> {
-    const request = this.loaded.begin();
-    if (request === null) return;
-    try {
-      const { contracts, periods } = await firstValueFrom(
-        forkJoin({
-          contracts: this.contracts.get(),
-          // The account only adds what is still owed and when the first payment is due: without
-          // it the contract still reads, so its failure does not fail the page.
-          periods: this.payments.accountStatus().pipe(catchError(() => of<PeriodStatus[]>([]))),
-        }),
-      );
-      this.none.set(false);
-      this.loaded.succeed(request, { contracts, periods, loadedAt: Date.now() });
-    } catch (error: unknown) {
-      const missing = error instanceof HttpErrorResponse && error.status === 404;
-      if (this.loaded.fail(request, LOAD_CONTRACT_TEXT)) this.none.set(missing);
-    }
   }
 }
