@@ -91,3 +91,96 @@ form {
   gap: 1.5rem;
   max-width: var(--quipu-columna-formulario);
 }
+
+.main {
+  display: grid;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+// The canvas puts the form first and the summary beside it; on a phone the summary comes first.
+@media (min-width: 900.02px) {
+  .summary {
+    order: 2;
+  }
+}
+
+.sent {
+  padding: 1.75rem;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-verde-fondo);
+  color: var(--quipu-verde-texto);
+  font-size: 1.0625rem;
+  line-height: 1.5;
+}
+
+.sent p {
+  margin: 0;
+}
+
+.sent-title {
+  font: var(--mat-sys-headline-medium);
+  color: var(--quipu-tinta);
+}
+
+.sent p + p {
+  margin-top: 0.625rem;
+}
+
+.sent a {
+  margin-top: 1.25rem;
+}
+
+.review,
+.status,
+.entries {
+  display: grid;
+  gap: 0.875rem;
+  min-width: 0;
+}
+
+.status {
+  padding: 1.25rem;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-estado-revision-fondo);
+  color: var(--quipu-estado-revision-texto);
+  justify-items: start;
+}
+
+.status p {
+  margin: 0;
+  font: var(--mat-sys-body-large);
+  line-height: 1.5;
+}
+
+.entries {
+  gap: var(--quipu-franja);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entries li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.375rem 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+}
+
+.entries .total {
+  background: var(--quipu-piedra-oscura);
+}
+
+.amount {
+  font-size: 1.125rem;
+  font-weight: var(--quipu-peso-fuerte);
+  font-variant-numeric: tabular-nums;
+}
+
+.review > a {
+  justify-self: start;
+}

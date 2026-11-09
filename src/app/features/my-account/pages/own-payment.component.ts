@@ -36,13 +36,15 @@ import {
 } from '../data/temporary-guest-payments.service';
 import { proofField, serializeProofs } from '@shared/payments/proof-fields';
 import { focusFirstProblem } from '@shared/forms/form-feedback';
-import { coveredAmountText, creditAppliedText } from '@shared/payments/credit-texts';
 import {
   balanceOf,
   formatMoney,
   formatPeriod,
   formatStay,
   hasRejectedPayment,
+  limaDayOf,
+  longDay,
+  monthName,
   PERIOD_STATUS_LABELS,
   periodLabel,
   takesNewPayment,
@@ -57,17 +59,21 @@ import { FileFieldComponent } from '@shared/ui/file-field/file-field.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
+import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
+import { OwnPaymentSummaryComponent } from '../components/own-payment-summary.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 import { StatusBadgeComponent } from '@shared/ui/status-badge/status-badge.component';
 import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import {
+  HOME_NAMES,
   LoadState,
+  paymentSummary,
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
   OwnPaymentMode,
-  SENT_TEXT,
+  sentText,
 } from '../model/own-payment';
 
 const GENERAL_ERROR_ID = 'own-payment-error';
@@ -101,6 +107,8 @@ function idOf(id: string | null): string | null {
     FieldControlDirective,
     FormFieldComponent,
     LoadErrorComponent,
+    FormSummaryLayoutComponent,
+    OwnPaymentSummaryComponent,
     PageHeaderComponent,
     PageNoticeComponent,
     StatusBadgeComponent,
@@ -130,8 +138,6 @@ export class OwnPaymentComponent {
   protected readonly proofLimitText = OWN_PROOF_LIMIT_TEXT;
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly formatMoney = formatMoney;
-  protected readonly creditAppliedText = creditAppliedText;
-  protected readonly coveredAmountText = coveredAmountText;
   protected readonly periodLabel = periodLabel;
   protected readonly statusLabels = PERIOD_STATUS_LABELS;
   protected readonly paymentStatusLabels = PAYMENT_STATUS_LABELS;
@@ -212,7 +218,7 @@ export class OwnPaymentComponent {
 
   /** Whether the proofs form is on screen. */
   protected readonly showForm = computed(() => {
-    if (this.state().kind !== 'ready') return false;
+    if (this.state().kind !== 'ready' || this.sent()) return false;
     switch (this.mode()) {
       case 'correct':
         return true;
@@ -252,15 +258,34 @@ export class OwnPaymentComponent {
   protected readonly proofsError = computed(() => this.serverErrors()['proofs'] ?? null);
   protected readonly atProofLimit = this.proofDrafts.atLimit;
 
+  protected readonly homeName = HOME_NAMES[this.audience];
+  /** The payment went: the screen says so and leads back, instead of leaving. */
+  protected readonly sent = signal(false);
+  protected readonly sentText = computed(() =>
+    sentText(this.audience, monthName(this.payment()?.period ?? this.selected()?.period ?? '')),
+  );
+  protected readonly summary = computed(() =>
+    paymentSummary({
+      audience: this.audience,
+      period: this.selected(),
+      stay: this.stay(),
+      payment: this.payment(),
+    }),
+  );
+  /** «Tu pago de octubre no se aprobó.» / «Tu pago de la estadía no se aprobó.» over the form to correct. */
+  protected readonly rejectedHeading = computed(() => {
+    const month = monthName(this.payment()?.period ?? '');
+    return this.audience === 'CONTRACT' && month !== null
+      ? `Tu pago de ${month} no se aprobó.`
+      : 'Tu pago de la estadía no se aprobó.';
+  });
+
   protected readonly title = computed(() => {
     switch (this.mode()) {
       case 'new':
-        return this.audience === 'CONTRACT' ? 'Subir pago' : 'Subir pago de la estadía';
-      case 'correct': {
-        const payment = this.payment();
-        const label = payment ? this.labelOf(payment) : '';
-        return label ? `Corregir pago de ${label}` : 'Corregir pago';
-      }
+        return 'Subir voucher';
+      case 'correct':
+        return 'Corregir pago';
       case 'read':
         return 'Tu pago';
     }
@@ -289,7 +314,27 @@ export class OwnPaymentComponent {
   }
 
   protected proofKindLabel(proof: GuestProof): string {
-    return proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo';
+    return proof.kind === 'VOUCHER' ? 'Voucher' : 'Efectivo, sin voucher';
+  }
+
+  /** The line under a proof: its file and means, what the administration verified or that it confirms it. */
+  protected proofDetail(proof: GuestProof): string {
+    const parts: string[] = [];
+    if (proof.kind === 'CASH') parts.push('Lo confirma la administración');
+    if (proof.file) parts.push(proof.file.name);
+    if (proof.method) parts.push(proof.method);
+    if (proof.verifiedAmount !== null)
+      parts.push(`verificado ${formatMoney(proof.verifiedAmount)}`);
+    return parts.join(' · ');
+  }
+
+  /** What the review of the payment says: when it went and what comes next. */
+  protected readText(payment: GuestPayment): string {
+    if (payment.status === 'APPROVED') return 'La administración aprobó este pago.';
+    const day = limaDayOf(payment.submittedAt);
+    const sent =
+      day === null ? 'Enviaste este pago' : `Enviaste este pago el ${longDay(day, new Date())}`;
+    return `${sent} y la administración lo está revisando. No puedes enviar otro mientras tanto; si no se aprueba, te diremos por qué y podrás corregirlo aquí.`;
   }
 
   protected choosePeriod(target: EventTarget | null): void {
@@ -322,8 +367,7 @@ export class OwnPaymentComponent {
       if (!this.destroyRef.destroyed) this.busy.set(false);
     }
     if (this.destroyRef.destroyed) return;
-    this.toasts.show(SENT_TEXT);
-    await this.router.navigateByUrl(HOME);
+    this.sent.set(true);
   }
 
   /** The call that sends the payment, or null when the form still has a problem to fix. */
@@ -361,11 +405,11 @@ export class OwnPaymentComponent {
       const ref = openPaymentNoticeDialog(this.dialog, {
         title: notice.title,
         message: notice.text,
-        actions: [{ label: 'Entendido', value: 'ok' }],
+        actions: [{ label: `Ver ${HOME_NAMES[this.audience]}`, value: 'home' }],
       });
       await firstValueFrom(ref.afterClosed());
-      // What the guest can pay or correct changed: show it as it is now.
-      if (notice.afterClose === 'reload' && !this.destroyRef.destroyed) await this.load();
+      // What the guest can pay or correct changed: the account shows it as it is now.
+      if (!this.destroyRef.destroyed) await this.router.navigateByUrl(HOME);
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
