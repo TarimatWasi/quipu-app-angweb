@@ -438,7 +438,7 @@ describe('routes', () => {
       expect(heading()).toBe('Esta página no es para tu cuenta');
     });
 
-    it('shows the panels of my-account inside the home of dashboard, at /home', async () => {
+    it('shows the page of my-account inside the home of dashboard, at /home', async () => {
       const { harness, router, signIn, text } = await setup();
       await signIn(false, 'GUEST', 'TEMPORARY');
 
@@ -457,8 +457,8 @@ describe('routes', () => {
       expect(router.url).toBe('/home');
       await vi.waitFor(() => {
         harness.detectChanges();
-        expect(text()).toContain('Inicio');
-        expect(text()).toContain('Subir pago');
+        expect(text()).toContain('Estado de pago');
+        expect(text()).toContain('Subir voucher');
       });
     });
 

@@ -1,0 +1,67 @@
+<app-page-header [heading]="title" />
+
+@switch (view().status) {
+  @case ('initial-loading') {
+    <app-skeleton subject="tu estado de cuenta"
+      ><ng-template appSkeletonContent>
+        <div class="stack">
+          <app-now-panel headingId="account-now-loading" [loading]="true" />
+          <app-period-payments [loading]="true" [rows]="[]" [heading]="monthsHeading" />
+        </div> </ng-template
+    ></app-skeleton>
+  }
+  @case ('initial-error') {
+    <app-load-error
+      class="state"
+      [message]="loadErrorText"
+      [retrying]="retrying()"
+      (retry)="reload()"
+    />
+  }
+  @case ('ready') {
+    @if (refreshError(); as message) {
+      <app-load-error
+        class="state"
+        [message]="message"
+        [retrying]="refreshing()"
+        (retry)="reload()"
+      />
+    }
+    <div class="stack">
+      @if (rejected(); as alert) {
+        <app-page-notice tone="error" [heading]="alert.heading">{{ alert.reason }}</app-page-notice>
+      }
+      @if (credit(); as notice) {
+        <app-page-notice [tone]="notice.tone" [heading]="notice.heading">{{
+          notice.text
+        }}</app-page-notice>
+      }
+      <app-now-panel
+        headingId="account-now"
+        [figure]="now().figure"
+        [label]="now().label"
+        [text]="now().text"
+        [urgent]="now().urgent"
+      >
+        @if (now().action; as action) {
+          <a
+            class="quipu-button quipu-button--primary"
+            [routerLink]="action.link"
+            [queryParams]="action.query"
+            >{{ action.label }}</a
+          >
+        }
+      </app-now-panel>
+      <app-period-payments
+        [heading]="monthsHeading"
+        [rows]="rows()"
+        [showReasons]="true"
+        [emptyHeading]="emptyHeading"
+        [emptyText]="emptyText"
+      />
+      <p class="link">
+        <a routerLink="/guest/payments">{{ historyText }}</a>
+      </p>
+    </div>
+  }
+}

@@ -45,18 +45,7 @@ describe('HomeComponent', () => {
     TestBed.inject(HttpTestingController).verify();
   });
 
-  it('greets a guest by name and shows the role in Spanish', async () => {
-    const { ui } = await setup({
-      role: 'GUEST',
-      name: 'guest@example.test',
-      mustChangePassword: false,
-    });
-
-    expect(ui.getByText('guest@example.test')).toBeTruthy();
-    expect(ui.getByText('Huésped')).toBeTruthy();
-  });
-
-  it('leaves the place of the guest panels to the router (they come from my-account)', async () => {
+  it('leaves the whole page of a guest to the router: its title and day come from my-account', async () => {
     const { fixture } = await setup({
       role: 'GUEST',
       guestType: 'CONTRACT',
