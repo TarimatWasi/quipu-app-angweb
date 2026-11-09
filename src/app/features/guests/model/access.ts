@@ -112,15 +112,15 @@ export interface EmailNotice {
 }
 
 /** The yellow notice when the access also went, or could not go, by email; null without an email. */
-export function emailNotice(contactEmail: string | null, emailSent: boolean): EmailNotice | null {
-  if (contactEmail === null) return null;
+export function emailNotice(email: string | null, emailSent: boolean): EmailNotice | null {
+  if (email === null) return null;
   return emailSent
     ? {
-        heading: `También se envió por correo a ${contactEmail}.`,
+        heading: `También se envió por correo a ${email}.`,
         text: 'Si no le llega, compártelo por WhatsApp o copia el mensaje.',
       }
     : {
-        heading: `No se pudo enviar el correo a ${contactEmail}.`,
+        heading: `No se pudo enviar el correo a ${email}.`,
         text: 'Compártelo de otra forma: copia el mensaje y envíaselo.',
       };
 }

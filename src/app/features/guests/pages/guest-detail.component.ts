@@ -343,7 +343,7 @@ export class GuestDetailComponent {
       type: guest.type,
       phone: guest.phone?.trim() ? guest.phone.trim() : null,
       // The access also goes to the account email, if it has one (RF-16).
-      contactEmail: guest.accountEmail ?? null,
+      email: guest.email ?? null,
       access,
       regenerated: true,
     });
@@ -355,7 +355,7 @@ export class GuestDetailComponent {
     if (guest === null) return;
     this.track(
       openAccountEmailDialog(this.dialog, {
-        current: guest.accountEmail ?? null,
+        current: guest.email ?? null,
         save: (email) => this.guests.setAccountEmail(guest.id, email),
       }),
     )

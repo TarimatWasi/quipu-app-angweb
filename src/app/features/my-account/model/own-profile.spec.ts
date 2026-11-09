@@ -22,7 +22,6 @@ const failure = (status: number, code: string | null = null, field: string | nul
 const SAVED: PersonalData = {
   name: 'Ana Quispe',
   phone: '987 654 321',
-  contactEmail: 'ana@correo.pe',
   emergencyName: 'Rosa Mamani',
   emergencyRelationship: 'Madre',
   emergencyPhone: '+51 951 234 567',
@@ -32,7 +31,6 @@ const edited = (fields: Partial<PersonalData>): PersonalData => ({ ...SAVED, ...
 const IDENTITY = {
   documentType: 'DNI',
   documentNumber: '12345678',
-  accountEmail: 'ana@correo.pe',
 } as const;
 
 const CONTRACT = {
@@ -56,7 +54,6 @@ describe('H5 and T3 what the administration keeps, read only', () => {
       { label: 'Contrato', value: '1 mar 2026 – 28 feb 2027', wide: true },
       { label: 'Día de pago', value: '5 de cada mes', wide: false },
       { label: 'Documento', value: 'DNI 12345678', wide: true },
-      expect.objectContaining({ value: 'ana@correo.pe', wide: true }),
     ]);
   });
 
@@ -66,18 +63,8 @@ describe('H5 and T3 what the administration keeps, read only', () => {
 
     expect(open.facts[2]?.value).toBe('1 mar 2026 – sin fecha de fin');
     expect(none.contractLink).toBe(false);
-    expect(none.facts.map((fact) => fact.label)).toEqual([
-      'Documento',
-      'Correo de tu cuenta (para recuperar tu contraseña; lo cambia la administración)',
-    ]);
-  });
-
-  it('says there is no account email and how to get an access', () => {
-    const deal = contractDeal({ ...IDENTITY, accountEmail: null }, null);
-
-    expect(deal.facts.at(-1)?.value).toBe(
-      'Sin correo: si olvidas tu contraseña, pídele a la administración un acceso nuevo',
-    );
+    // The email is no longer here: the guest changes it with a code (TAR-349).
+    expect(none.facts.map((fact) => fact.label)).toEqual(['Documento']);
   });
 
   it('lists the stay of the temporary guest, with the environment only when it is known', () => {
@@ -98,7 +85,7 @@ describe('H5 and T3 what the administration keeps, read only', () => {
       value: 'Cabaña C1',
       wide: false,
     });
-    expect(stayDeal(IDENTITY, null).facts).toHaveLength(2);
+    expect(stayDeal(IDENTITY, null).facts).toHaveLength(1);
   });
 });
 
@@ -128,11 +115,8 @@ describe('H5 and T3 saving the data', () => {
     expect(toProfileUpdate(edited({ phone: ' 912 345 678 ' }), SAVED)).toEqual({
       phone: '912 345 678',
     });
-    expect(
-      toProfileUpdate(edited({ name: 'Ana M. Quispe', contactEmail: 'a@b.pe' }), SAVED),
-    ).toEqual({
+    expect(toProfileUpdate(edited({ name: 'Ana M. Quispe' }), SAVED)).toEqual({
       name: 'Ana M. Quispe',
-      contactEmail: 'a@b.pe',
     });
     expect(toProfileUpdate(SAVED, SAVED)).toBeNull();
   });
@@ -148,11 +132,10 @@ describe('H5 and T3 saving the data', () => {
   });
 
   it('notices when something saved was emptied, which the BFF cannot do', () => {
-    expect(clearsSaved(edited({ contactEmail: '  ' }), SAVED)).toBe(true);
-    expect(clearsSaved(edited({ emergencyName: '' }), SAVED)).toBe(true);
+    expect(clearsSaved(edited({ emergencyName: '  ' }), SAVED)).toBe(true);
     expect(clearsSaved(edited({ phone: '912 345 678' }), SAVED)).toBe(false);
-    expect(clearsSaved({ ...SAVED, contactEmail: '' }, { ...SAVED, contactEmail: '' })).toBe(false);
-    // Something emptied is not sent: the rest of the change still is.
-    expect(toProfileUpdate(edited({ contactEmail: '' }), SAVED)).toBeNull();
+    expect(clearsSaved({ ...SAVED, emergencyName: '' }, { ...SAVED, emergencyName: '' })).toBe(
+      false,
+    );
   });
 });

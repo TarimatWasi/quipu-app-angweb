@@ -5,13 +5,7 @@ import type { ChoiceOption } from '@shared/ui/choice-group/choice-group.componen
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { firstError } from './form-feedback';
-import {
-  EMAIL_HELP,
-  EMERGENCY_NAME_HELP,
-  NAME_HELP,
-  PHONE_HELP,
-  RELATIONSHIPS,
-} from './personal-data';
+import { EMERGENCY_NAME_HELP, NAME_HELP, PHONE_HELP, RELATIONSHIPS } from './personal-data';
 import type { PersonalData } from './personal-data';
 
 const KIN_OPTIONS: readonly ChoiceOption[] = RELATIONSHIPS.map((value) => ({
@@ -21,7 +15,8 @@ const KIN_OPTIONS: readonly ChoiceOption[] = RELATIONSHIPS.map((value) => ({
 
 /**
  * The fields of the personal data of a guest (H5, T3, O1) on the P-14 form: contact data and the
- * optional emergency contact, each with its help and the error under it. The rules and the
+ * optional emergency contact, each with its help and the error under it. The email goes in the
+ * `[emailField]` slot (app-email-change-field): it is not edited with the form (TAR-349). The rules and the
  * submission stay with the form that owns it (`personalDataRules`); this only draws the fields.
  */
 @Component({
@@ -62,22 +57,7 @@ const KIN_OPTIONS: readonly ChoiceOption[] = RELATIONSHIPS.map((value) => ({
             [formField]="form().phone"
           />
         </app-form-field>
-        <app-form-field
-          [fieldId]="prefix() + '-email'"
-          label="Correo"
-          [optional]="true"
-          [help]="emailHelp"
-          [error]="emailError()"
-        >
-          <input
-            appFieldControl
-            class="quipu-input"
-            type="email"
-            inputmode="email"
-            autocomplete="email"
-            [formField]="form().contactEmail"
-          />
-        </app-form-field>
+        <ng-content select="[emailField]" />
       </div>
     </section>
 
@@ -182,13 +162,11 @@ export class PersonalDataFieldsComponent {
 
   protected readonly nameHelp = NAME_HELP;
   protected readonly phoneHelp = PHONE_HELP;
-  protected readonly emailHelp = EMAIL_HELP;
   protected readonly emergencyHelp = EMERGENCY_NAME_HELP;
   protected readonly kinOptions = KIN_OPTIONS;
 
   protected readonly nameError = computed(() => firstError(this.form().name));
   protected readonly phoneError = computed(() => firstError(this.form().phone));
-  protected readonly emailError = computed(() => firstError(this.form().contactEmail));
   protected readonly emergencyNameError = computed(() => firstError(this.form().emergencyName));
   protected readonly relationshipError = computed(() =>
     firstError(this.form().emergencyRelationship),

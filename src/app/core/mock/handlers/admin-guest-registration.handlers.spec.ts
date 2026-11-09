@@ -59,7 +59,7 @@ describe('guest registration in the simulated BFF (A3.1)', () => {
     const sent = await mock.send<Schemas['GuestCreated']>('POST', '/bff/admin/guests', {
       ...NEW_GUEST,
       accessMode: 'TEMPORARY_PASSWORD',
-      contactEmail: 'nuevo@example.com',
+      email: 'nuevo@example.com',
     });
     if (sent.access.mode !== 'TEMPORARY_PASSWORD') throw new Error('expected a password');
     expect(sent.access.shareMessage).toContain(sent.access.temporaryPassword);
@@ -68,7 +68,7 @@ describe('guest registration in the simulated BFF (A3.1)', () => {
     const unsent = await mock.send<Schemas['GuestCreated']>('POST', '/bff/admin/guests', {
       ...NEW_GUEST,
       documentNumber: '71234568',
-      contactEmail: 'nuevo-sin-envio@example.com',
+      email: 'nuevo-sin-envio@example.com',
     });
     expect(unsent.access.emailSent).toBe(false);
   });
@@ -113,18 +113,12 @@ describe('guest registration in the simulated BFF (A3.1)', () => {
       field: 'documentNumber',
     });
 
-    const guestEmail = await create({ contactEmail: 'MARIA.CCAHUANA@example.com' });
+    // One email per account (TAR-349): another guest's, any case, is taken like any account's.
+    const guestEmail = await create({ email: 'MARIA.CCAHUANA@example.com' });
     expect(catalogOf(guestEmail)).toEqual({
-      code: 'GUEST_EMAIL_TAKEN',
-      message: SOME_TEXT,
-      field: 'contactEmail',
-    });
-
-    const accountEmail = await create({ contactEmail: 'ana.torres@example.com' });
-    expect(catalogOf(accountEmail)).toEqual({
       code: 'ACCOUNT_EMAIL_TAKEN',
       message: SOME_TEXT,
-      field: 'contactEmail',
+      field: 'email',
     });
   });
 
@@ -142,7 +136,7 @@ describe('guest registration in the simulated BFF (A3.1)', () => {
       'documentNumber',
     ]);
     expect(await fieldOf({ phone: '12345' })).toEqual([400, 'phone']);
-    expect(await fieldOf({ contactEmail: 'no-es-correo' })).toEqual([400, 'contactEmail']);
+    expect(await fieldOf({ email: 'no-es-correo' })).toEqual([400, 'email']);
     expect(await fieldOf({ type: 'OTRO' })).toEqual([400, 'type']);
     expect(await fieldOf({ accessMode: 'SMS' })).toEqual([400, 'accessMode']);
   });

@@ -98,20 +98,26 @@ describe('O1 «Tus datos»', () => {
     expect(auth.onboardingAdvanced).toHaveBeenCalledWith('DOCUMENTS', 'Sonia Ccama Flores');
   });
 
-  it('puts an email already taken under its field', async () => {
-    const api = fakeApi(toPersonalData);
-    api.savePersonalData.mockReturnValue(
-      throwError(() => httpError(409, { code: 'GUEST_EMAIL_TAKEN', message: 'x' })),
-    );
-    const { type, submit, router } = await setup(api);
+  it('starts from what the BFF has and shows the email of the account, not as a field', async () => {
+    const api = fakeApi({
+      ...toPersonalData,
+      personalData: { name: 'Sonia Ccama', phone: '984 112 730', email: 'sonia@correo.pe' },
+    });
+    const { field } = await setup(api);
 
-    await type('Nombre completo', 'Sonia');
-    await type('Teléfono', '984 112 730');
-    await type('Correo (opcional)', 'ana@correo.pe');
-    await submit();
+    expect(field('Nombre completo').value).toBe('Sonia Ccama');
+    expect(field('Teléfono').value).toBe('984 112 730');
+    expect(screen.getByText('sonia@correo.pe')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Cambiar correo' })).toBeTruthy();
+  });
 
-    expect(screen.getByText('Ese correo ya está registrado para otro huésped')).toBeTruthy();
-    expect(router.url).toBe('/onboarding/personal-data');
+  it('says which email waits for its code', async () => {
+    const { settle } = await setup(fakeApi({ ...toPersonalData, pendingEmail: 'sonia@nuevo.pe' }));
+    await settle();
+
+    expect(
+      screen.getByText('Falta confirmar sonia@nuevo.pe: escribe el código que te enviamos.'),
+    ).toBeTruthy();
   });
 
   it('says that the registration is already complete and goes home', async () => {

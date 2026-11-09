@@ -4,6 +4,7 @@ import { Observable } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { BFF_BASE_URL } from '@core/config/bff-base-url';
 import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
+import type { EmailVerificationClient } from '@shared/forms/email-verification';
 
 // Every type comes from the contract (TAR-23).
 export type OnboardingState = components['schemas']['OnboardingState'];
@@ -29,12 +30,22 @@ export class OnboardingService {
     return this.http.get<OnboardingState>(this.base);
   }
 
-  /** O1: name and phone are required; the contact email and the emergency contact are not. */
+  /** O1: name and phone are required; the emergency contact is not. The email is not sent here. */
   savePersonalData(data: PersonalDataInput): Observable<OnboardingDocumentsPending> {
     return this.csrf.protect(() =>
       this.http.put<OnboardingDocumentsPending>(`${this.base}/personal-data`, data),
     );
   }
+
+  /** O1 «Cambiar correo» (TAR-349): the path of the onboarding, for both kinds of guest. */
+  readonly emailVerification: EmailVerificationClient = {
+    request: (email) =>
+      this.csrf.protect(() => this.http.post<null>(`${this.base}/email-verification`, { email })),
+    confirm: (code) =>
+      this.csrf.protect(() =>
+        this.http.post<null>(`${this.base}/email-verification/confirm`, { code }),
+      ),
+  };
 
   /** O2: one file per call (multipart); the guest cannot delete or replace it later (RN-37). */
   uploadDocument(file: File): Observable<OnboardingDocument> {

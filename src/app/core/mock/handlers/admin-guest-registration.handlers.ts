@@ -51,9 +51,9 @@ function guestInputOf(body: Record<string, unknown>): GuestInput {
     'phone',
     (value) => value.length <= MAX_PHONE_LENGTH && PHONE_SHAPE.test(value),
   );
-  const contactEmail = optionalText(
+  const email = optionalText(
     body,
-    'contactEmail',
+    'email',
     (value) => value.length <= MAX_EMAIL_LENGTH && EMAIL_SHAPE.test(value),
   );
   return {
@@ -62,7 +62,7 @@ function guestInputOf(body: Record<string, unknown>): GuestInput {
     type: type as GuestInput['type'],
     accessMode: accessMode as GuestInput['accessMode'],
     ...(phone === null ? {} : { phone }),
-    ...(contactEmail === null ? {} : { contactEmail }),
+    ...(email === null ? {} : { email }),
   };
 }
 
@@ -97,19 +97,16 @@ function administratorDocument(db: MockDb, input: GuestInput): boolean {
   );
 }
 
-/** GUEST_EMAIL_TAKEN before ACCOUNT_EMAIL_TAKEN, both case-insensitive (D-33, D-77). */
+/** The email is the one of the account: unique among all of them, case-insensitive (TAR-349). */
 function checkEmail(db: MockDb, email: string | undefined): void {
   if (email === undefined) return;
   const wanted = email.toLowerCase();
-  if (db.data.guests.some((guest) => guest.contactEmail?.toLowerCase() === wanted)) {
-    raise(409, 'GUEST_EMAIL_TAKEN', 'El correo ya está registrado', 'contactEmail');
-  }
   const accounts = [
     ...db.data.administrators.map((record) => record.email),
-    ...db.data.guests.map((guest) => guest.accountEmail),
+    ...db.data.guests.map((guest) => guest.email),
   ];
   if (accounts.some((account) => account?.toLowerCase() === wanted)) {
-    raise(409, 'ACCOUNT_EMAIL_TAKEN', 'El correo ya está registrado', 'contactEmail');
+    raise(409, 'ACCOUNT_EMAIL_TAKEN', 'El correo ya está registrado', 'email');
   }
 }
 
@@ -139,7 +136,7 @@ function createGuest(db: MockDb, body: Record<string, unknown>) {
   if (administratorDocument(db, input)) {
     raise(409, 'GUEST_DOCUMENT_TAKEN', 'El documento ya está registrado', 'documentNumber');
   }
-  checkEmail(db, input.contactEmail);
+  checkEmail(db, input.email);
   const guest: GuestRecord = {
     id: db.newId(ID_KIND.guest),
     version: 1,
@@ -149,14 +146,13 @@ function createGuest(db: MockDb, body: Record<string, unknown>) {
     type: input.type,
     status: 'PENDING_ACTIVATION',
     phone: input.phone ?? null,
-    contactEmail: input.contactEmail ?? null,
-    accountEmail: null,
+    email: input.email ?? null,
     hasLoginAccess: false,
     accessExpiresAt: null,
     deactivatedAt: null,
     documentCount: 0,
   };
-  const access = accessGrant(guest, input.accessMode, input.contactEmail);
+  const access = accessGrant(guest, input.accessMode, input.email);
   db.data.guests.push({ ...guest, accessExpiresAt: access.expiresAt });
   const created: Schemas['GuestCreated'] = {
     guest: { ...nonInactive(guest), name: null, status: 'PENDING_ACTIVATION' },

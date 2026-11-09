@@ -15,6 +15,8 @@ import { catchError, firstValueFrom, map, Observable, of } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { callFailure } from '@shared/forms/call-failure';
 import { AsyncContentState } from '@shared/data/async-content';
+import { EmailChangeFieldComponent } from '@shared/forms/email-change-field.component';
+import { EMAIL_ADDED_TEXT, EMAIL_CHANGED_TEXT } from '@shared/forms/email-verification';
 import { focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { PersonalDataFieldsComponent } from '@shared/forms/personal-data-fields.component';
 import { personalDataRules, saveProblem, toPersonalData } from '@shared/forms/personal-data';
@@ -79,6 +81,7 @@ const ERROR_ID = 'own-profile-error';
 @Component({
   selector: 'app-own-profile',
   imports: [
+    EmailChangeFieldComponent,
     FactTileComponent,
     FormRoot,
     LoadErrorComponent,
@@ -134,7 +137,6 @@ export class OwnProfileComponent {
     toPersonalData({
       name: '',
       phone: null,
-      contactEmail: null,
       emergencyContact: null,
     }),
   );
@@ -169,6 +171,11 @@ export class OwnProfileComponent {
     toDocumentRows(this.loaded.data()?.profile.documents ?? [], new Date()),
   );
   protected readonly limit = computed(() => this.loaded.data()?.profile.documentsLimit ?? 5);
+  protected readonly email = computed(() => this.loaded.data()?.profile.email ?? null);
+  protected readonly pendingEmail = computed(
+    () => this.loaded.data()?.profile.pendingEmail ?? null,
+  );
+  protected readonly emailClient = this.api.emailVerification;
 
   // The document waiting to be sent.
   protected readonly chosen = signal<File | null>(null);
@@ -204,6 +211,13 @@ export class OwnProfileComponent {
   protected changePassword(event: Event): void {
     const opener = event.currentTarget instanceof HTMLElement ? event.currentTarget : undefined;
     void this.changePasswordAction?.(opener);
+  }
+
+  /** The email changed with its code: say so and read it again, keeping what is being typed. */
+  protected async emailChanged(): Promise<void> {
+    const had = this.email() !== null;
+    this.toasts.show(had ? EMAIL_CHANGED_TEXT : EMAIL_ADDED_TEXT, { tone: 'success' });
+    await this.load(false);
   }
 
   protected pick(file: File | null): void {

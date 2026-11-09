@@ -18,7 +18,7 @@ function handoff(overrides: Partial<AccessHandoff> = {}, minutesLeft = 30): Acce
     documentNumber: '70412233',
     type: 'CONTRACT',
     phone: null,
-    contactEmail: null,
+    email: null,
     access: {
       mode: 'LINK',
       activationUrl: 'https://quipu.example/activate#token=abc',
@@ -205,7 +205,7 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
     const ui = await setup(
       handoff({
         phone: '987 654 321',
-        contactEmail: 'ana@example.com',
+        email: 'ana@example.com',
         access: { ...handoff().access, emailSent: true },
       }),
     );
@@ -234,7 +234,7 @@ describe('AccessComponent (A3.7 «Acceso generado»)', () => {
   });
 
   it('says when the email could not be sent', async () => {
-    const ui = await setup(handoff({ contactEmail: 'ana@example.com' }));
+    const ui = await setup(handoff({ email: 'ana@example.com' }));
 
     const unsent = ui.page().getByText('No se pudo enviar el correo a ana@example.com.');
     expect(unsent.tagName).toBe('STRONG');

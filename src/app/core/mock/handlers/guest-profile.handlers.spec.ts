@@ -69,30 +69,12 @@ describe.each(paths)('the own profile of %s in the simulated BFF', (_who, key, b
     expect(await bad({ document: 'x' })).toEqual(invalid('body'));
     expect(await bad({ name: '  ' })).toEqual(invalid('name'));
     expect(await bad({ phone: '12' })).toEqual(invalid('phone'));
-    expect(await bad({ contactEmail: 'no-es-correo' })).toEqual(invalid('contactEmail'));
+    // The email is not changed here any more: it goes through its code (TAR-349).
+    expect(await bad({ email: 'ana@correo.pe' })).toEqual(invalid('body'));
     expect(await bad({ emergencyContact: { phone: '12' } })).toEqual(
       invalid('emergencyContact.phone'),
     );
     expect(await bad({ emergencyContact: { otro: 'x' } })).toEqual(invalid('emergencyContact'));
-  });
-
-  it('says 409 when the email is already the contact email of another guest', async () => {
-    const mock = await signedIn(key);
-    const own = key === 'contract-guest' ? GUEST_IDS.luis : GUEST_IDS.ana;
-    const other = mock.bff.db.data.guests.find(
-      (guest) => guest.id !== own && guest.contactEmail !== null,
-    );
-    if (other?.contactEmail == null) throw new Error('expected a guest with a contact email');
-
-    const error = await mock.fail(
-      mock.send('PATCH', `${base}/profile`, { contactEmail: other.contactEmail.toUpperCase() }),
-    );
-
-    expect(catalogOf(error)).toEqual({
-      code: 'GUEST_EMAIL_TAKEN',
-      message: SOME_TEXT,
-      field: 'contactEmail',
-    });
   });
 
   it('uploads a document that then shows in the profile, and opens it with a link', async () => {

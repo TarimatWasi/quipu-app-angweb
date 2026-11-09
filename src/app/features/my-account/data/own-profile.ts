@@ -3,6 +3,7 @@ import { inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
+import type { EmailVerificationClient } from '@shared/forms/email-verification';
 
 // Every type comes from the contract (TAR-23).
 export type OwnProfile = components['schemas']['OwnProfile'];
@@ -22,7 +23,7 @@ export abstract class OwnProfileClient {
   /** `…/bff/guest` or `…/bff/temporary-guest`. */
   protected abstract readonly base: string;
 
-  /** The data, the account email and the documents without links (never cacheable). */
+  /** The data, the email (and the one waiting for its code) and the documents without links. */
   profile(): Observable<OwnProfile> {
     return this.http.get<OwnProfile>(`${this.base}/profile`);
   }
@@ -31,6 +32,16 @@ export abstract class OwnProfileClient {
   update(changes: ProfileUpdate): Observable<OwnSummary> {
     return this.csrf.protect(() => this.http.patch<OwnSummary>(`${this.base}/profile`, changes));
   }
+
+  /** «Cambiar correo» (TAR-349): a code to the new address, then the code changes the email. */
+  readonly emailVerification: EmailVerificationClient = {
+    request: (email) =>
+      this.csrf.protect(() => this.http.post<null>(`${this.base}/email-verification`, { email })),
+    confirm: (code) =>
+      this.csrf.protect(() =>
+        this.http.post<null>(`${this.base}/email-verification/confirm`, { code }),
+      ),
+  };
 
   /** Uploads one document (multipart); it cannot be deleted or replaced by the guest (RN-37). */
   upload(file: File): Observable<OwnDocumentRef> {

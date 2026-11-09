@@ -120,7 +120,7 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       documentNumber: '70412233',
       type: 'CONTRACT',
       phone: '987 654 321',
-      contactEmail: 'luis@example.com',
+      email: 'luis@example.com',
       access: GRANT,
       regenerated: true,
     });
@@ -151,9 +151,9 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
 
   it('checks the account email, says a taken one under the field and saves it', async () => {
     const ui = await setup();
-    await ui.click(ui.page().getByRole('button', { name: 'Cambiar correo de cuenta' }));
-    const dialog = within(screen.getByRole('dialog', { name: 'Correo de cuenta' }));
-    const field = dialog.getByLabelText<HTMLInputElement>('Correo de cuenta');
+    await ui.click(ui.page().getByRole('button', { name: /^Cambiar correo/ }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Cambiar correo' }));
+    const field = dialog.getByLabelText<HTMLInputElement>('Correo');
     expect(field.value).toBe('luis@example.com');
     const errorOf = () =>
       (field.getAttribute('aria-describedby') ?? '')
@@ -164,7 +164,7 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
 
     fireEvent.input(field, { target: { value: '' } });
     await ui.click(dialog.getByRole('button', { name: 'Guardar correo' }));
-    expect(errorOf()).toBe('Escribe el correo de cuenta.');
+    expect(errorOf()).toBe('Escribe el correo.');
     fireEvent.input(field, { target: { value: 'no-es-correo' } });
     await ui.click(dialog.getByRole('button', { name: 'Guardar correo' }));
     expect(errorOf()).toBe('Escribe un correo válido.');
@@ -184,7 +184,7 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
     await ui.click(dialog.getByRole('button', { name: 'Guardar correo' }));
     expect(ui.service.setAccountEmail).toHaveBeenLastCalledWith('g1', 'nueva@example.com');
     await vi.waitFor(() => {
-      expect(ui.toast()).toBe('Correo de cuenta guardado.');
+      expect(ui.toast()).toBe('Correo guardado.');
     });
     expect(screen.queryByRole('dialog')).toBeNull();
   });

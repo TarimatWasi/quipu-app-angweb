@@ -27,6 +27,7 @@ export const DATA: PersonalDataInput = { name: 'Sonia Ccama Flores', phone: '984
 export const toPersonalData: OnboardingState = {
   status: 'ONBOARDING',
   nextStep: 'PERSONAL_DATA',
+  personalData: { name: '', phone: '', email: 'sonia@correo.pe' },
   documents: [],
   consent: { ...CONSENT, accepted: false },
 };
@@ -67,6 +68,10 @@ export interface Api {
   uploadDocument: ReturnType<typeof vi.fn<(file: File) => Observable<OnboardingDocument>>>;
   finishDocuments: ReturnType<typeof vi.fn<() => Observable<OnboardingConsentPending>>>;
   acceptConsent: ReturnType<typeof vi.fn<(version: string) => Observable<OnboardingCompleted>>>;
+  emailVerification: {
+    request: ReturnType<typeof vi.fn<(email: string) => Observable<unknown>>>;
+    confirm: ReturnType<typeof vi.fn<(code: string) => Observable<unknown>>>;
+  };
 }
 
 /** The service as the page sees it: every call answers well unless the test says otherwise. */
@@ -77,6 +82,7 @@ export function fakeApi(state: OnboardingState): Api {
     uploadDocument: vi.fn(() => of(document('d1'))),
     finishDocuments: vi.fn(() => of(toConsent)),
     acceptConsent: vi.fn(() => of(completed)),
+    emailVerification: { request: vi.fn(() => of(null)), confirm: vi.fn(() => of(null)) },
   };
 }
 

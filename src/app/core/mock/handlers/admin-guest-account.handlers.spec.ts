@@ -166,7 +166,7 @@ describe('the actions of A3.2 in the simulated BFF', () => {
     const url = `/bff/admin/guests/${GUEST_IDS.jorge}/account-email`;
 
     await mock.send('PUT', url, { email: 'jorge.quispe@example.com' });
-    expect((await detail(mock, GUEST_IDS.jorge)).accountEmail).toBe('jorge.quispe@example.com');
+    expect((await detail(mock, GUEST_IDS.jorge)).email).toBe('jorge.quispe@example.com');
 
     const taken = await mock.fail(mock.send('PUT', url, { email: 'LUIS.HUAMAN@example.com' }));
     expect(taken.status).toBe(409);

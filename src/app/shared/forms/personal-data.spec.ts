@@ -49,15 +49,12 @@ describe('the personal data of a guest', () => {
     });
   });
 
-  it('checks the phone, the email and the emergency phone when they are filled in', () => {
-    expect(errorsOf({ phone: '12', contactEmail: 'no-es-correo', emergencyPhone: '12' })).toEqual({
+  it('checks the phone and the emergency phone when they are filled in', () => {
+    expect(errorsOf({ phone: '12', emergencyPhone: '12' })).toEqual({
       phone: 'Revisa el teléfono.',
-      contactEmail: 'Escribe un correo válido.',
       emergencyPhone: 'Revisa el teléfono.',
     });
-    expect(errorsOf({ contactEmail: 'ana@correo.pe', emergencyPhone: '+51 951 234 567' })).toEqual(
-      {},
-    );
+    expect(errorsOf({ emergencyPhone: '+51 951 234 567' })).toEqual({});
   });
 
   it('keeps the texts within the limits of the columns', () => {
@@ -83,20 +80,19 @@ describe('the personal data of a guest', () => {
   });
 
   it('fills the form from what is saved, empty where the BFF has nothing', () => {
-    expect(
-      toPersonalData({ name: 'Ana', phone: null, contactEmail: null, emergencyContact: null }),
-    ).toEqual({ ...EMPTY_PERSONAL_DATA, name: 'Ana' });
+    expect(toPersonalData({ name: 'Ana', phone: null, emergencyContact: null })).toEqual({
+      ...EMPTY_PERSONAL_DATA,
+      name: 'Ana',
+    });
     expect(
       toPersonalData({
         name: 'Ana',
         phone: '987 654 321',
-        contactEmail: 'ana@correo.pe',
         emergencyContact: { name: 'Rosa', relationship: 'Madre', phone: '+51 951 234 567' },
       }),
     ).toEqual({
       name: 'Ana',
       phone: '987 654 321',
-      contactEmail: 'ana@correo.pe',
       emergencyName: 'Rosa',
       emergencyRelationship: 'Madre',
       emergencyPhone: '+51 951 234 567',
@@ -113,14 +109,12 @@ describe('the personal data of a guest', () => {
     expect(
       toPersonalDataInput({
         ...VALID,
-        contactEmail: ' ana@correo.pe ',
         emergencyName: 'Rosa',
         emergencyRelationship: ' ',
       }),
     ).toEqual({
       name: 'Ana Quispe',
       phone: '987 654 321',
-      contactEmail: 'ana@correo.pe',
       emergencyContact: { name: 'Rosa' },
     });
   });
@@ -135,11 +129,6 @@ describe('the personal data of a guest', () => {
       place: 'field',
       field: 'emergencyRelationship',
       message: 'Revisa el parentesco.',
-    });
-    expect(saveProblem(failure(409, 'GUEST_EMAIL_TAKEN', 'contactEmail'))).toEqual({
-      place: 'field',
-      field: 'contactEmail',
-      message: 'Ese correo ya está registrado para otro huésped',
     });
     expect(saveProblem(failure(429, 'RATE_LIMITED')).place).toBe('general');
     expect(saveProblem(failure(0)).message).toContain('No se pudo conectar');
