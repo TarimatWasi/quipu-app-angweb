@@ -1,15 +1,7 @@
 import { ListFilterState } from '@shared/lists/list-page';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
-import {
-  Component,
-  computed,
-  DestroyRef,
-  ElementRef,
-  inject,
-  OnInit,
-  viewChild,
-} from '@angular/core';
+import { Component, computed, DestroyRef, ElementRef, inject, viewChild } from '@angular/core';
 import { FormField } from '@angular/forms/signals';
 import { firstValueFrom } from 'rxjs';
 import { AsyncContentState } from '@shared/data/async-content';
@@ -79,10 +71,7 @@ interface HomeData {
   templateUrl: './admin-home.component.html',
   styles: ADMIN_HOME_STYLES,
 })
-export class AdminHomeComponent
-  extends ListFilterState<ChargeFilters, ChargeSortKey>
-  implements OnInit
-{
+export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSortKey> {
   private readonly service = inject(AdminDashboardService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -128,8 +117,12 @@ export class AdminHomeComponent
     });
   }
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     void this.load();
+    return true;
   }
 
   protected reload(): void {

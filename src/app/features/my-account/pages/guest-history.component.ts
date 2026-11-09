@@ -2,7 +2,7 @@ import { LatestRequest } from '@shared/data/latest-request';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -41,7 +41,7 @@ const SURPLUS_TEXTS: Readonly<Record<NonNullable<GuestPayment['surplus']>['outco
   templateUrl: './guest-history.component.html',
   styles: [PAYMENT_PAGE_STYLES, OWN_PAYMENT_STYLES],
 })
-export class GuestHistoryComponent implements OnInit {
+export class GuestHistoryComponent {
   private readonly payments = inject(GuestPaymentsService);
 
   protected readonly formatMoney = formatMoney;
@@ -64,8 +64,12 @@ export class GuestHistoryComponent implements OnInit {
 
   private readonly request = new LatestRequest();
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     void this.load();
+    return true;
   }
 
   protected more(): void {

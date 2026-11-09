@@ -112,6 +112,12 @@ const violations = [
     "import { NgClass } from '@angular/common';\nexport const a = NgClass;",
     'FE-ANG-TPL-02',
   ],
+  // FE-ANG-CMP-10: a page does not load in ngOnInit.
+  [
+    'src/app/features/f/pages/a.component.ts',
+    'export class A {\n  ngOnInit(): void {\n    void this.load();\n  }\n}',
+    'FE-ANG-CMP-10',
+  ],
   // Imports.
   [
     'src/app/a.ts',
@@ -364,6 +370,12 @@ const controls = [
   ['src/app/features/f/pages/a.ts', "import { x } from '../components/x';\nexport const a = x;"],
   ['src/app/layout/a.ts', "import { x } from '@shared/x';\nexport const a = x;"],
   ['src/app/a.spec.ts', "export const a = 'https://example.org';"],
+  // The shared kit keeps its lifecycle hooks; a feature may start its read from a field.
+  ['src/app/shared/ui/a.ts', 'export class A {\n  ngOnInit(): void {\n    this.start();\n  }\n}'],
+  [
+    'src/app/features/f/pages/a.component.ts',
+    'export class A {\n  protected readonly started = this.start();\n  private start(): true {\n    return true;\n  }\n}',
+  ],
   // Package paths that merely contain a folder name are not folder imports.
   ['src/app/shared/a.ts', "import { x } from '@angular/core/testing';\nexport const a = x;"],
   ['src/app/shared/a.ts', "import { x } from '@angular/core/rxjs-interop';\nexport const a = x;"],

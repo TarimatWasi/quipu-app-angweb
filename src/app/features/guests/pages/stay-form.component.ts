@@ -17,7 +17,6 @@ import {
   ElementRef,
   inject,
   Injector,
-  OnInit,
   signal,
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
@@ -84,7 +83,7 @@ const GENERAL_ERROR_ID = 'stay-form-error';
   templateUrl: './stay-form.component.html',
   styles: [GUEST_PAGE_STYLES, GUEST_FORM_STYLES],
 })
-export class StayFormComponent implements OnInit {
+export class StayFormComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly environments = inject(AdminEnvironmentsService);
   private readonly route = inject(ActivatedRoute);
@@ -225,12 +224,16 @@ export class StayFormComponent implements OnInit {
   private readonly stayRequest = new LatestRequest();
   private readonly freeRequest = new LatestRequest();
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     const params = this.route.snapshot.paramMap;
     this.guestId = params.get('id') ?? '';
     this.stayId = params.get('stayId');
     void this.loadGuest();
     if (this.stayId !== null) void this.loadStay(this.stayId);
+    return true;
   }
 
   protected typedStart(target: EventTarget | null): void {

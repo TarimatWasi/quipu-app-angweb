@@ -5,7 +5,7 @@ import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.d
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -86,7 +86,7 @@ import {
   templateUrl: './guest-detail.component.html',
   styles: GUEST_DETAIL_STYLES,
 })
-export class GuestDetailComponent implements OnInit {
+export class GuestDetailComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly handoff = inject(AccessHandoffService);
   private readonly route = inject(ActivatedRoute);
@@ -183,13 +183,17 @@ export class GuestDetailComponent implements OnInit {
     });
   }
 
-  ngOnInit(): void {
+  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  protected readonly started = this.start();
+
+  private start(): true {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id') ?? '';
       // The dialogs of the guest left behind go with it.
       if (id !== this.currentId) this.closeDialogs();
       void this.load(id);
     });
+    return true;
   }
 
   protected retry(): void {
