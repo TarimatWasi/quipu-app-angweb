@@ -1,5 +1,5 @@
 import { ProofsEditor } from '@shared/payments/proofs-editor';
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
 import { ProofAmountFieldComponent } from '@shared/payments/proof-amount-field.component';
 import { ProofMethodFieldComponent } from '@shared/payments/proof-method-field.component';
@@ -20,7 +20,8 @@ import {
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, Observable } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { firstValueFrom, map, Observable, tap } from 'rxjs';
 import type { GuestType } from '@core/auth/auth.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { GuestPaymentsService, PeriodStatus } from '../data/guest-payments.service';
@@ -149,10 +150,6 @@ export class OwnPaymentComponent {
   protected readonly periodStatusTones = PERIOD_STATUS_TONES;
   protected readonly home = HOME;
 
-  protected readonly retrying = signal(false);
-  protected readonly refreshing = signal(false);
-  protected readonly refreshError = signal<string | null>(null);
-  protected readonly state = signal<LoadState>({ kind: 'loading' });
   /** The months of the guest with a contract (H3, first payment). */
   protected readonly periods = signal<readonly PeriodStatus[]>([]);
   /** The stay of the temporary guest (T2, first payment). */
@@ -296,15 +293,41 @@ export class OwnPaymentComponent {
   });
 
   private readonly destroyRef = inject(DestroyRef);
-  // Moves with every load, so a late answer of a previous load is ignored.
-  private readonly loadRequest = new LatestRequest();
 
-  // The page loads when it is created, not from a lifecycle hook or the constructor.
-  protected readonly started = this.load();
+  /**
+   * What the page reads with it (FE-ANG-CMP-10): the own payment by id, the stay of a temporary
+   * guest or the months of the contract. Each answer fills what the page shows.
+   */
+  private readonly read = rxResource<true, undefined>({
+    stream: () => this.reading().pipe(map((): true => true)),
+  });
+  private readonly content = new ResourceContent(this.read, {
+    message: (error) => toBffErrorWithServerMessage(error).message,
+  });
+  protected readonly retrying = this.content.retrying;
+  protected readonly refreshing = this.content.refreshing;
+  /** A 404 is not a refresh that failed: what was asked is gone and the page says so instead. */
+  private readonly gone = computed(() => {
+    const error = this.content.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
+  protected readonly refreshError = computed(() =>
+    this.gone() ? null : this.content.refreshError(),
+  );
+  protected readonly state = computed<LoadState>(() => {
+    const state = this.content.state();
+    if (state.status === 'initial-loading') return { kind: 'loading' };
+    const error = this.content.error();
+    if (this.gone() && error !== undefined && !this.refreshing() && !this.retrying()) {
+      return { kind: 'not-found', message: toBffErrorWithServerMessage(error).message };
+    }
+    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
+    return { kind: 'ready' };
+  });
 
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
-    void this.load();
+    this.load();
   }
 
   protected labelOf(payment: GuestPayment): string {
@@ -443,69 +466,47 @@ export class OwnPaymentComponent {
       : null;
   }
 
-  private async load(): Promise<void> {
-    const request = this.loadRequest.begin();
-    const refreshing = this.state().kind === 'ready';
-    this.refreshing.set(refreshing);
-    const isRetry = this.state().kind === 'error';
-    this.retrying.set(isRetry);
-    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
-    try {
-      const current = () => this.loadRequest.isCurrent(request);
-      if (this.paymentId !== null) {
-        await this.loadPayment(this.paymentId, current);
-      } else if (this.audience === 'TEMPORARY') {
-        await this.loadStay(current);
-      } else {
-        await this.loadPeriods(current);
-      }
-      if (current()) {
-        this.refreshError.set(null);
-        this.state.set({ kind: 'ready' });
-      }
-    } catch (error: unknown) {
-      if (this.loadRequest.isCurrent(request)) this.failLoad(error, refreshing);
-    } finally {
-      if (this.loadRequest.isCurrent(request)) this.endLoad();
+  /** Reads again what the page shows, keeping it on screen meanwhile. */
+  private load(): void {
+    this.content.reload();
+  }
+
+  private reading(): Observable<unknown> {
+    if (this.paymentId !== null) return this.readPayment(this.paymentId);
+    if (this.audience === 'TEMPORARY') {
+      return this.temporaryPayments.paymentStatus().pipe(
+        tap((stay) => {
+          this.stay.set(stay);
+        }),
+      );
     }
-  }
-
-  /** A failed refresh keeps the form and says so; any other failure replaces it. */
-  private failLoad(error: unknown, refreshing: boolean): void {
-    const { message } = toBffErrorWithServerMessage(error);
-    const notFound = error instanceof HttpErrorResponse && error.status === 404;
-    if (refreshing && !notFound) this.refreshError.set(message);
-    else this.state.set({ kind: notFound ? 'not-found' : 'error', message });
-  }
-
-  private endLoad(): void {
-    this.retrying.set(false);
-    this.refreshing.set(false);
+    return this.readPeriods();
   }
 
   /** The own payment by id; a rejected one fills the form with the proofs it was sent with. */
-  private async loadPayment(id: string, current: () => boolean): Promise<void> {
-    const payment = await firstValueFrom(this.api().get(id));
-    if (!current()) return;
-    this.payment.set(payment);
-    this.submitted.set(false);
-    const kept = payment.status === 'REJECTED' ? payment.proofs.slice(0, MAX_PROOFS) : [];
-    this.proofDrafts.reset(kept);
-  }
-
-  private async loadStay(current: () => boolean): Promise<void> {
-    const stay = await firstValueFrom(this.temporaryPayments.paymentStatus());
-    if (current()) this.stay.set(stay);
+  private readPayment(id: string): Observable<unknown> {
+    return this.api()
+      .get(id)
+      .pipe(
+        tap((payment) => {
+          this.payment.set(payment);
+          this.submitted.set(false);
+          const kept = payment.status === 'REJECTED' ? payment.proofs.slice(0, MAX_PROOFS) : [];
+          this.proofDrafts.reset(kept);
+        }),
+      );
   }
 
   /** The months of the contract; a month chosen that no longer takes a payment is dropped. */
-  private async loadPeriods(current: () => boolean): Promise<void> {
-    const periods = await firstValueFrom(this.guestPayments.accountStatus());
-    if (!current()) return;
-    this.periods.set(periods);
-    if (!this.options().some((option) => option.period === this.periodChoice())) {
-      this.periodChoice.set('');
-    }
+  private readPeriods(): Observable<unknown> {
+    return this.guestPayments.accountStatus().pipe(
+      tap((periods) => {
+        this.periods.set(periods);
+        if (!this.options().some((option) => option.period === this.periodChoice())) {
+          this.periodChoice.set('');
+        }
+      }),
+    );
   }
 
   private clearServer(...fields: string[]): void {
