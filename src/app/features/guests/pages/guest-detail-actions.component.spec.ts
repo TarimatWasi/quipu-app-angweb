@@ -213,13 +213,15 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       ui.service.get.mockReturnValue(throwError(() => httpError(503)));
       await ui.click(within(ui.panel()).getByRole('button', { name: 'Reactivar huésped' }));
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       expect(squash(ui.page().getByRole('alert').textContent)).toContain(
         'No se pudo cargar el huésped',
       );
 
       vi.advanceTimersByTime(60_000);
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       expect(squash(ui.page().getByRole('alert').textContent)).toContain(
         'No se pudo cargar el huésped',
       );
@@ -347,7 +349,8 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       ui.service.reactivate.mockReturnValueOnce(reactivation);
       await ui.click(within(ui.panel()).getByRole('button', { name: 'Reactivar huésped' }));
       await ui.router.navigateByUrl('/admin/guests/g2');
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       expect(ui.page().getByRole('heading', { level: 1, name: 'Ana Torres' })).toBeTruthy();
       ui.service.get.mockClear();
       return { ui, reactivation };
@@ -358,9 +361,11 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
 
       reactivation.next({ id: 'g1', status: 'ACTIVE' });
       reactivation.complete();
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
 
       expect(ui.service.get).not.toHaveBeenCalled();
       expect(ui.router.url).toBe('/admin/guests/g2');
@@ -376,7 +381,8 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
         httpError(409, { code: 'GUEST_HAS_PENDING_DEBT', periods: ['2026-10'], debts: [] }),
       );
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
 
       expect(screen.queryByRole('alertdialog')).toBeNull();
       expect(ui.toast()).toBe('');
@@ -392,14 +398,16 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
       ui.service.reactivate.mockReturnValueOnce(reactivation);
       await ui.click(within(ui.panel()).getByRole('button', { name: 'Reactivar huésped' }));
       await ui.router.navigateByUrl('/admin/guests');
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       ui.service.get.mockClear();
 
       reactivation.error(
         httpError(409, { code: 'GUEST_HAS_PENDING_DEBT', periods: ['2026-10'], debts: [] }),
       );
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
 
       expect(screen.queryByRole('alertdialog')).toBeNull();
       expect(ui.service.get).not.toHaveBeenCalled();
@@ -416,13 +424,15 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
         within(screen.getByRole('alertdialog')).getByRole('button', { name: 'Desactivar huésped' }),
       );
       await ui.router.navigateByUrl('/admin/guests/g2');
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       ui.service.get.mockClear();
 
       deactivation.next(null);
       deactivation.complete();
       await new Promise((resolve) => setTimeout(resolve, 0));
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
 
       expect(ui.service.get).not.toHaveBeenCalled();
       expect(ui.toast()).toBe('');
