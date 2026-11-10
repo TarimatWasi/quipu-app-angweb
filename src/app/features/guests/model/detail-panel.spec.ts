@@ -284,6 +284,24 @@ describe('A3.2 «Lo que toca ahora»', () => {
     });
   });
 
+  it('9. a contract that ended is not «aún no tiene»: it says when, with the way to load another (TAR-361)', () => {
+    const expired = guestOf({ contract: { ...contractOf('EXPIRED'), endDate: '2026-08-31' } });
+    expect(panel({ guest: expired })).toMatchObject({
+      figure: 'Sin contrato',
+      text: 'Su contrato venció el 31 ago 2026: carga uno nuevo para seguir cobrándole.',
+      action: { kind: 'link', label: 'Cargar contrato', query: { guestId: expired.id } },
+    });
+
+    const ended = guestOf({
+      contract: { ...contractOf('TERMINATED'), terminatedAt: '2026-10-15' },
+    });
+    expect(panel({ guest: ended })).toMatchObject({
+      figure: 'Sin contrato',
+      text: 'Su contrato se finalizó el 15 oct 2026: carga uno nuevo para seguir cobrándole.',
+      action: { kind: 'link', label: 'Cargar contrato' },
+    });
+  });
+
   it('10. up to date: nothing to do, with the last month or stay it paid', () => {
     const periods = [period('2026-09', 'PAID'), period('2026-10', 'PAID')];
 
