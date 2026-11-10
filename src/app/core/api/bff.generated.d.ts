@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.24.0 (TarimatWasi/quipu-lib-contracts), spec sha256 148ba709e1147321b9cf091b79064462701bd50cbfe3daf0244635edea23423b.
+ * Generated from the BFF contract v0.25.0 (TarimatWasi/quipu-lib-contracts), spec sha256 cbfe175ac13d0c687a1012deda782a6ce0eb04d9f1695941165fd5a5d5872de9.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -50,8 +50,31 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Log out */
+        /**
+         * Log out
+         * @description Closes this session on the server (TAR-228): its refresh token stops working and its access token is refused from then on, even before its 15 minutes end. The session is found by the refresh token, so logout also works once the access token has expired. Other sessions of the account stay open.
+         */
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Renew the session with the refresh token (TAR-228)
+         * @description Needs only the `refreshToken` cookie and the CSRF pair, not a live access token. On success it rotates the refresh token and issues a new access token for the same session: ids masked in this session stay valid. Within 30 seconds of a rotation the previous refresh token answers 204 without Set-Cookie, so concurrent tabs keep the cookies another tab just received. Rate limited per client.
+         */
+        post: operations["refreshSession"];
         delete?: never;
         options?: never;
         head?: never;
@@ -106,7 +129,7 @@ export interface paths {
         put?: never;
         /**
          * Change password — mandatory on first login (RF-12)
-         * @description `currentPassword` is optional only while the session still has the password change pending (first login with a temporary password) and required otherwise (A0.6, any administrator or guest from the account menu). On success the response sets a fresh `sessionToken` cookie without the pending mark, and every other session of the account stops being valid (decided 2026-11-01). A new password equal to the current (or temporary) one is rejected. Rate limited per session user.
+         * @description `currentPassword` is optional only while the session still has the password change pending (first login with a temporary password) and required otherwise (A0.6, any administrator or guest from the account menu). On success the response sets fresh `sessionToken` and `refreshToken` cookies without the pending mark for this same session, and every other session of the account is closed, refresh tokens included (decided 2026-11-01, TAR-228). A new password equal to the current (or temporary) one is rejected. Rate limited per session user.
          */
         post: operations["changePassword"];
         delete?: never;
@@ -3720,7 +3743,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Session started — HttpOnly JWT cookie issued (SameSite=Lax; Secure) */
+            /** @description Session started — sets the `sessionToken` (access, 15 minutes) and `refreshToken` HttpOnly cookies (SameSite=Lax; Secure; TAR-228) */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3756,7 +3779,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description Session closed, cookie invalidated */
+            /** @description Session closed; both session cookies and the CSRF cookie expired */
             204: {
                 headers: {
                     [name: string]: unknown;
@@ -3765,6 +3788,38 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["CsrfInvalid"];
+        };
+    };
+    refreshSession: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Session renewed: Set-Cookie replaces `sessionToken` and `refreshToken` (no Set-Cookie inside the 30 second race window) */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description `AUTH_NO_SESSION`: the refresh token is missing, unknown, expired (7 days without use or 30 days after the login) or revoked; it was already rotated (the session is closed); or the account changed its password or role or was deactivated. The client logs in again */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Error"];
+                };
+            };
+            403: components["responses"]["CsrfInvalid"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getCurrentUser: {
@@ -3809,7 +3864,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Access activated — HttpOnly JWT cookie issued. Always a guest session with the password already set: the guest goes on to the onboarding (never back to the password step) or, if it was already active (administrator-assisted recovery), straight to the home */
+            /** @description Access activated — sets the `sessionToken` and `refreshToken` cookies, as login does (TAR-228). Always a guest session with the password already set: the guest goes on to the onboarding (never back to the password step) or, if it was already active (administrator-assisted recovery), straight to the home */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -3852,7 +3907,7 @@ export interface operations {
             };
         };
         responses: {
-            /** @description Password updated; Set-Cookie replaces the session */
+            /** @description Password updated; Set-Cookie replaces both session cookies */
             204: {
                 headers: {
                     [name: string]: unknown;
