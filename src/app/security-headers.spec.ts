@@ -34,7 +34,7 @@ const COMMON = [
 ];
 
 describe('cabeceras de seguridad del frontend (SEC-03 a SEC-06)', () => {
-  it('Vercel declara HSTS, nosniff, DENY y una CSP sin orígenes ajenos', async () => {
+  it('Vercel declara HSTS, nosniff, DENY y una CSP sin scripts inseguros', async () => {
     const headers = await vercelHeaders();
 
     expect(headers.get('Strict-Transport-Security')).toMatch(/^max-age=\d{7,}$/);
@@ -43,10 +43,42 @@ describe('cabeceras de seguridad del frontend (SEC-03 a SEC-06)', () => {
     const csp = headers.get('Content-Security-Policy') ?? '';
     expect(csp).toContain("default-src 'self'");
     expect(csp).toContain("frame-ancestors 'none'");
-    expect(csp).not.toMatch(/https?:\/\//);
     expect(csp).not.toContain("script-src 'self' 'unsafe-inline'");
     expect(csp).not.toContain("'unsafe-eval'");
   });
+
+  it.each([
+    ['Vercel', vercelHeaders],
+    ['nginx', nginxHeaders],
+  ] as const)(
+    '%s only permits external images from the private R2 bucket (TAR-368)',
+    async (_, read) => {
+      const headers = await read();
+      const directives = Object.fromEntries(
+        (headers.get('Content-Security-Policy') ?? '')
+          .split(';')
+          .map((part) => part.trim().split(/\s+/))
+          .filter(([name]) => name)
+          .map(([name, ...sources]) => [name ?? '', sources] as const),
+      );
+
+      expect(directives).toEqual({
+        'default-src': ["'self'"],
+        'script-src': ["'self'", "'sha256-LMY6wYoFV9I4wWzxaq1N/dTpl4iurQktw706UCHK3vM='"],
+        'style-src': ["'self'", "'unsafe-inline'"],
+        'img-src': [
+          "'self'",
+          'data:',
+          'https://4ca6efbd39f625307579e00c4720ecc9.r2.cloudflarestorage.com/quipu-files/',
+        ],
+        'font-src': ["'self'", 'data:'],
+        'connect-src': ["'self'"],
+        'frame-ancestors': ["'none'"],
+        'base-uri': ["'self'"],
+        'form-action': ["'self'"],
+      });
+    },
+  );
 
   it.each(COMMON)('nginx y Vercel declaran %s con el mismo valor', async (key) => {
     const [vercel, nginx] = await Promise.all([vercelHeaders(), nginxHeaders()]);
