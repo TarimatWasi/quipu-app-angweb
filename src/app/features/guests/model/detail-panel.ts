@@ -265,6 +265,21 @@ function reviewPanel(guest: GuestDetail, waiting: readonly Charge[], now: Date):
 export const NO_CONTRACT_TEXT =
   'Su cuenta está activa, pero aún no tiene contrato: cárgalo para empezar a cobrarle.';
 
+/**
+ * Why a guest with a contract type has none in force: it never had one, or its last one ended
+ * (TAR-361; the BFF sends the last contract when all ended, with the rule of H2).
+ */
+function noContractText(contract: GuestDetail['contract']): string {
+  const next = ': carga uno nuevo para seguir cobrándole.';
+  if (contract?.status === 'EXPIRED' && contract.endDate) {
+    return `Su contrato venció el ${formatDate(contract.endDate)}${next}`;
+  }
+  if (contract?.status === 'TERMINATED' && contract.terminatedAt) {
+    return `Su contrato se finalizó el ${formatDate(contract.terminatedAt)}${next}`;
+  }
+  return NO_CONTRACT_TEXT;
+}
+
 /** 9 and 10: nothing owed nor waiting. */
 function quietPanel(guest: GuestDetail, charges: readonly Charge[]): DetailPanel {
   if (guest.type === 'CONTRACT' && guest.contract?.status !== 'ACTIVE') {
@@ -273,7 +288,7 @@ function quietPanel(guest: GuestDetail, charges: readonly Charge[]): DetailPanel
       alarm: false,
       label: '',
       badge: null,
-      text: NO_CONTRACT_TEXT,
+      text: noContractText(guest.contract),
       action: {
         kind: 'link',
         label: 'Cargar contrato',
