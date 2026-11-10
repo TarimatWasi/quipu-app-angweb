@@ -51,7 +51,7 @@ describe('cabeceras de seguridad del frontend (SEC-03 a SEC-06)', () => {
     ['Vercel', vercelHeaders],
     ['nginx', nginxHeaders],
   ] as const)(
-    '%s only permits external images from the private R2 bucket (TAR-368)',
+    '%s only permits external images from the private R2 voucher prefix (TAR-368)',
     async (_, read) => {
       const headers = await read();
       const directives = Object.fromEntries(
@@ -69,7 +69,7 @@ describe('cabeceras de seguridad del frontend (SEC-03 a SEC-06)', () => {
         'img-src': [
           "'self'",
           'data:',
-          'https://4ca6efbd39f625307579e00c4720ecc9.r2.cloudflarestorage.com/quipu-files/',
+          'https://4ca6efbd39f625307579e00c4720ecc9.r2.cloudflarestorage.com/quipu-files/vouchers/',
         ],
         'font-src': ["'self'", 'data:'],
         'connect-src': ["'self'"],
