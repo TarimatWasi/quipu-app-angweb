@@ -1,4 +1,4 @@
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
@@ -21,7 +21,8 @@ import {
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { firstValueFrom, tap } from 'rxjs';
 import { AdminEnvironmentsService, Environment } from '../data/admin-environments.service';
 import { AdminGuestsService, GuestDetail, Stay } from '@core/api/clients/admin-guests.service';
 import { bodyCodeOf, toBffError, toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -98,22 +99,81 @@ export class StayFormComponent {
   protected readonly generalErrorId = GENERAL_ERROR_ID;
   protected readonly today = todayText();
   protected readonly describedBy = describedBy;
-  protected guestId = '';
+  protected readonly guestId = this.route.snapshot.paramMap.get('id') ?? '';
   /** The stay being corrected, or null when a new one is registered. */
-  protected stayId: string | null = null;
+  protected readonly stayId = this.route.snapshot.paramMap.get('stayId');
 
-  protected readonly guest = signal<GuestDetail | null>(null);
-  protected readonly retrying = signal(false);
-  protected readonly refreshing = signal(false);
-  protected readonly refreshError = signal<string | null>(null);
-  protected readonly freeRetrying = signal(false);
-  protected readonly state = signal<LoadState>({ kind: 'ready' });
-  protected readonly loaded = signal<Stay | null>(null);
   protected readonly draft = signal<Draft>(EMPTY_DRAFT);
-  protected readonly free = signal<readonly Environment[]>([]);
   /** The environment ENVIRONMENT_OCCUPIED rejected for the dates typed; cleared when they change. */
   private readonly rejected = signal<string | null>(null);
-  protected readonly freeState = signal<LoadState>({ kind: 'idle' });
+
+  /** The guest names the screen and the side panel; without it the form still works. */
+  private readonly guestRead = rxResource<GuestDetail, undefined>({
+    stream: () => this.guests.get(this.guestId),
+  });
+  protected readonly guest = computed(() =>
+    this.guestRead.hasValue() ? this.guestRead.value() : null,
+  );
+
+  /** The stay to correct with its current `version`; its answer starts the form from it. */
+  private readonly stayRead = rxResource<Stay | null, string | undefined>({
+    params: () => this.stayId ?? undefined,
+    stream: ({ params: stayId }) =>
+      this.guests.findStay(this.guestId, stayId).pipe(
+        tap((stay) => {
+          const before = this.freeDates();
+          this.rejected.set(null);
+          this.draft.set(stay ? draftOf(stay) : EMPTY_DRAFT);
+          // The same dates ask nothing by themselves: the free environments are asked again.
+          if (stay && sameDates(before, this.freeDates())) this.askFreeAgain();
+        }),
+      ),
+  });
+  private readonly stay = new ResourceContent(this.stayRead, {
+    message: (error) => toBffErrorWithServerMessage(error).message,
+  });
+  protected readonly retrying = this.stay.retrying;
+  protected readonly refreshing = this.stay.refreshing;
+  protected readonly refreshError = this.stay.refreshProblem;
+  /** A new stay has nothing to load: its form is ready at once. A stay not found is gone too. */
+  protected readonly state = computed<LoadState>(() => {
+    if (this.stayId === null) return { kind: 'ready' };
+    const page = this.stay.page();
+    return page.kind === 'ready' && this.stay.data() === null ? { kind: 'not-found' } : page;
+  });
+  protected readonly loaded = computed(() => this.stay.data());
+
+  /**
+   * Every free environment for the dates typed, all pages, read again when they change; nothing
+   * while they are not valid. An environment no longer offered is unselected once they arrive.
+   */
+  private readonly freeDates = computed(
+    () => (this.datesReady() ? datesOf(this.draft()) : undefined),
+    { equal: sameDates },
+  );
+  private readonly freeRead = rxResource<readonly Environment[], FreeDates | undefined>({
+    params: () => this.freeDates(),
+    stream: ({ params: { start, end } }) =>
+      this.environments.allFree(start, end).pipe(
+        tap((free) => {
+          this.free.set(free);
+          this.keepChoiceIfOffered();
+        }),
+      ),
+  });
+  private readonly freeContent = new ResourceContent(this.freeRead, {
+    message: (error) => toBffErrorWithServerMessage(error).message,
+  });
+  /** The free environments of the last dates read: they stay while other dates are checked. */
+  protected readonly free = signal<readonly Environment[]>([]);
+  protected readonly freeRetrying = this.freeContent.retrying;
+  protected readonly freeState = computed<LoadState>(() => {
+    if (this.freeRead.status() === 'idle') return { kind: 'idle' };
+    const state = this.freeContent.state();
+    if (state.status === 'initial-loading') return { kind: 'loading' };
+    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
+    return { kind: 'ready' };
+  });
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
@@ -221,22 +281,7 @@ export class StayFormComponent {
     return this.submitted() && (amount === null || amount <= 0) ? AMOUNT_TEXT : null;
   });
 
-  // Each one moves with every load, so a late answer for previous dates or a stay is ignored.
   private readonly destroyRef = inject(DestroyRef);
-  private readonly stayRequest = new LatestRequest();
-  private readonly freeRequest = new LatestRequest();
-
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    const params = this.route.snapshot.paramMap;
-    this.guestId = params.get('id') ?? '';
-    this.stayId = params.get('stayId');
-    void this.loadGuest();
-    if (this.stayId !== null) void this.loadStay(this.stayId);
-    return true;
-  }
 
   protected typedStart(target: EventTarget | null): void {
     this.rejected.set(null);
@@ -260,14 +305,13 @@ export class StayFormComponent {
 
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
-    if (this.stayId !== null) void this.loadStay(this.stayId);
+    if (this.stayId !== null) this.loadStay();
   }
 
   protected retryFree(): void {
     if (this.freeRetrying() || this.freeState().kind === 'loading') return;
     if (!this.datesReady()) return;
-    this.freeRetrying.set(true);
-    void this.loadFree();
+    this.freeContent.retry();
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -378,7 +422,7 @@ export class StayFormComponent {
     const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
     if (!this.destroyRef.destroyed && choice === 'reload' && this.stayId !== null) {
-      await this.loadStay(this.stayId);
+      this.loadStay();
     }
   }
 
@@ -395,7 +439,7 @@ export class StayFormComponent {
       return;
     }
     // The environment was taken meanwhile: show the ones still free and go choose another.
-    this.refreshFree();
+    this.askFreeAgain();
     afterNextRender(
       () => {
         this.host.nativeElement.querySelector<HTMLElement>('#stay-environment')?.focus();
@@ -408,86 +452,24 @@ export class StayFormComponent {
     await this.router.navigate(['/admin/guests', this.guestId]);
   }
 
-  /** The guest names the screen and the side panel; without it the form still works. */
-  private async loadGuest(): Promise<void> {
-    try {
-      const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (!this.destroyRef.destroyed) this.guest.set(guest);
-    } catch {
-      // "Volver al huésped" and "—" stand in for the name; the save says what is wrong.
-    }
-  }
-
-  /** Loads the stay to correct with its current `version` and starts the form from it. */
-  private async loadStay(stayId: string): Promise<void> {
-    const request = this.stayRequest.begin();
-    const refreshing = this.state().kind === 'ready' && this.loaded() !== null;
-    this.refreshing.set(refreshing);
-    const isRetry = this.state().kind === 'error';
-    this.retrying.set(isRetry);
-    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
+  /** Reads the stay again with its current `version`; what the BFF refused before is forgotten. */
+  private loadStay(): void {
     this.submitted.set(false);
     this.serverErrors.set({});
     this.generalError.set(null);
-    try {
-      const stay = await firstValueFrom(this.guests.findStay(this.guestId, stayId));
-      if (!this.stayRequest.isCurrent(request)) return;
-      this.refreshError.set(null);
-      this.loaded.set(stay);
-      this.rejected.set(null);
-      this.draft.set(stay ? draftOf(stay) : EMPTY_DRAFT);
-      this.state.set(stay ? { kind: 'ready' } : { kind: 'not-found' });
-      if (stay) this.refreshFree();
-    } catch (error: unknown) {
-      if (this.stayRequest.isCurrent(request)) this.failLoad(error, refreshing);
-    } finally {
-      if (this.stayRequest.isCurrent(request)) this.endLoad();
-    }
+    this.stay.reload();
   }
 
-  /** A failed refresh keeps the form and says so; any other failure replaces it. */
-  private failLoad(error: unknown, refreshing: boolean): void {
-    const { message } = toBffErrorWithServerMessage(error);
-    const notFound = error instanceof HttpErrorResponse && error.status === 404;
-    if (refreshing && !notFound) this.refreshError.set(message);
-    else this.state.set(notFound ? { kind: 'not-found' } : { kind: 'error', message });
-  }
-
-  private endLoad(): void {
-    this.retrying.set(false);
-    this.refreshing.set(false);
-  }
-
-  /** Asks the environments free for the dates typed, or clears them while the dates are not valid. */
+  /** The dates changed: the free environments follow them; while they are not valid, none is offered. */
   private refreshFree(): void {
-    this.freeRetrying.set(false);
-    if (this.datesReady()) {
-      void this.loadFree();
-      return;
-    }
-    this.freeRequest.cancel();
+    if (this.datesReady()) return;
     this.free.set([]);
-    this.freeState.set({ kind: 'idle' });
     this.keepChoiceIfOffered();
   }
 
-  /** Every free environment for the dates, all pages; the choice is checked once all are in. */
-  private async loadFree(): Promise<void> {
-    const request = this.freeRequest.begin();
-    const { start, end } = this.draft();
-    if (!this.freeRetrying()) this.freeState.set({ kind: 'loading' });
-    try {
-      const free = await firstValueFrom(this.environments.allFree(start, end));
-      if (!this.freeRequest.isCurrent(request)) return;
-      this.free.set(free);
-      this.freeState.set({ kind: 'ready' });
-      this.keepChoiceIfOffered();
-    } catch (error: unknown) {
-      if (!this.freeRequest.isCurrent(request)) return;
-      this.freeState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
-    } finally {
-      if (this.freeRequest.isCurrent(request)) this.freeRetrying.set(false);
-    }
+  /** The same dates, asked again (the BFF said an environment was taken, or the stay was reread). */
+  private askFreeAgain(): void {
+    if (this.datesReady()) this.freeRead.reload();
   }
 
   /** An environment no longer offered for the dates is unselected. */
@@ -497,6 +479,19 @@ export class StayFormComponent {
       this.draft.update((draft) => ({ ...draft, environmentId: '' }));
     }
   }
+}
+
+interface FreeDates {
+  readonly start: string;
+  readonly end: string;
+}
+
+function datesOf({ start, end }: Draft): FreeDates {
+  return { start, end };
+}
+
+function sameDates(a: FreeDates | undefined, b: FreeDates | undefined): boolean {
+  return a?.start === b?.start && a?.end === b?.end;
 }
 
 function valueOf(target: EventTarget | null): string {

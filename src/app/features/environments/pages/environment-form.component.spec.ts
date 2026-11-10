@@ -46,7 +46,8 @@ async function setup(path: string, loaded: Observable<Environment> = of(environm
   await router.navigateByUrl(path);
   const settle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await harness.fixture.whenStable();
+    // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+    TestBed.tick();
   };
   await settle();
   const page = () => within(harness.routeNativeElement ?? document.body);
@@ -200,6 +201,30 @@ describe('A2.4 «Editar ambiente»', () => {
       expect(page().getByLabelText<HTMLInputElement>('Código').value).toBe('109-B');
     });
     expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it('says so over the form when reloading after a conflict fails, and asks again (Codex en #187)', async () => {
+    const { api, page, type, save, click, settle } = await setup(path);
+    api.update.mockReturnValueOnce(throwError(conflict));
+    await type('Código', '109-A');
+    await click(save());
+    const dialog = within(await screen.findByRole('alertdialog', { name: 'El ambiente cambió' }));
+    api.get.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500 })));
+    await click(dialog.getByRole('button', { name: 'Volver a cargar' }));
+    await settle();
+
+    await vi.waitFor(() => {
+      expect(page().getByRole('button', { name: 'Reintentar' })).toBeTruthy();
+    });
+    expect(page().getByLabelText<HTMLInputElement>('Código')).toBeTruthy();
+    expect(save().hasAttribute('disabled')).toBe(true);
+
+    api.get.mockReturnValue(of(environmentOf({ code: '109-B', version: 4 })));
+    await click(page().getByRole('button', { name: 'Reintentar' }));
+    await settle();
+    await vi.waitFor(() => {
+      expect(page().getByLabelText<HTMLInputElement>('Código').value).toBe('109-B');
+    });
   });
 
   it('goes back to A2 with a toast when it does not exist any more', async () => {

@@ -36,7 +36,8 @@ async function setup(session: {
   http.expectOne(isLogin).flush(session);
   await login;
   const fixture = TestBed.createComponent(HomeComponent);
-  await fixture.whenStable();
+  // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+  TestBed.tick();
   return { auth, fixture, http, ui: within(fixture.nativeElement as HTMLElement) };
 }
 

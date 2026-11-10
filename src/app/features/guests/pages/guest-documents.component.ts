@@ -1,14 +1,14 @@
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, RouterLink } from '@angular/router';
-import { firstValueFrom, forkJoin } from 'rxjs';
+import { forkJoin, map } from 'rxjs';
 import { AdminGuestDocumentsService } from '@core/api/clients/admin-guest-documents.service';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
 import type { GuestDetail } from '@core/api/clients/admin-guests.service';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { LoadErrorComponent } from '@shared/ui/load-error/load-error.component';
@@ -98,9 +98,35 @@ export class GuestDocumentsComponent {
   protected readonly whoNote = DOCUMENTS_WHO_NOTE;
   protected readonly loadErrorText = LOAD_DOCUMENTS_TEXT;
 
-  private readonly loaded = new AsyncContentState<DocumentsData>();
+  private readonly currentId = signal('');
+  /** The guest, its documents and their actions, read again for another guest (the :id). */
+  private readonly read = rxResource<DocumentsData, string | undefined>({
+    params: () => this.currentId() || undefined,
+    stream: ({ params: id }) =>
+      forkJoin({
+        guest: this.guests.get(id),
+        documents: this.documents.list(id),
+        actions: this.documents.allActions(id),
+      }).pipe(
+        map(({ guest, documents, actions }) => {
+          const now = new Date();
+          return {
+            guest,
+            documents: documents.map((document) => toDocumentRow(document, now)),
+            actions: actions.map((action) => toActionRow(action, now)),
+          };
+        }),
+      ),
+  });
+  private readonly loaded = new ResourceContent(this.read, {
+    message: () => LOAD_DOCUMENTS_TEXT,
+    identity: this.currentId,
+  });
   protected readonly view = this.loaded.state;
-  protected readonly notFound = signal(false);
+  protected readonly notFound = computed(() => {
+    const error = this.loaded.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
   protected readonly retrying = this.loaded.retrying;
   protected readonly refreshing = this.loaded.refreshing;
   protected readonly refreshError = this.loaded.refreshError;
@@ -120,18 +146,16 @@ export class GuestDocumentsComponent {
     return data === null ? 'el huésped' : guestName(data.guest);
   });
 
-  private readonly currentId = signal('');
   private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
 
   constructor() {
     this.destroyRef.onDestroy(() => {
-      // Leaving the screen: no late answer may load or open a dialog any more.
-      this.loaded.dispose();
+      // Leaving the screen: no dialog of this guest stays open.
       this.closeDialogs();
     });
   }
 
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
+  /** The address names the guest from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
   protected readonly started = this.start();
 
   private start(): true {
@@ -140,13 +164,12 @@ export class GuestDocumentsComponent {
       // The dialogs of the guest left behind go with it.
       if (id !== this.currentId()) this.closeDialogs();
       this.currentId.set(id);
-      void this.load(true);
     });
     return true;
   }
 
   protected reload(): void {
-    void this.load(false);
+    this.loaded.reload();
   }
 
   /** «Abrir» with a link that already expired: it asks for a new one instead of a dead page. */
@@ -154,7 +177,7 @@ export class GuestDocumentsComponent {
     if (!isLinkExpired(row, new Date())) return;
     event.preventDefault();
     this.toasts.show(LINK_EXPIRED_TEXT);
-    void this.load(false);
+    this.reload();
   }
 
   protected act(kind: ActionKind, row: DocumentRow): void {
@@ -179,44 +202,18 @@ export class GuestDocumentsComponent {
       if (guestId !== this.currentId()) return;
       // The document is gone: back to the list, which no longer shows it (SRS 17, RESOURCE_NOT_FOUND).
       if (done !== true) {
-        if (gone) void this.load(false);
+        if (gone) this.reload();
         return;
       }
       this.toasts.show(kind === 'delete' ? DOCUMENT_DELETED_TEXT : DOCUMENT_REPLACED_TEXT, {
         tone: 'success',
       });
-      void this.load(false);
+      this.reload();
     });
   }
 
   private closeDialogs(): void {
     for (const ref of this.dialogs) ref.close();
     this.dialogs.clear();
-  }
-
-  /** `fresh` starts a new initial load (another guest); otherwise the data stays while it loads. */
-  private async load(fresh: boolean): Promise<void> {
-    const id = this.currentId();
-    const request = this.loaded.begin(fresh);
-    if (request === null) return;
-    if (fresh) this.notFound.set(false);
-    try {
-      const { guest, documents, actions } = await firstValueFrom(
-        forkJoin({
-          guest: this.guests.get(id),
-          documents: this.documents.list(id),
-          actions: this.documents.allActions(id),
-        }),
-      );
-      const now = new Date();
-      this.loaded.succeed(request, {
-        guest,
-        documents: documents.map((document) => toDocumentRow(document, now)),
-        actions: actions.map((action) => toActionRow(action, now)),
-      });
-    } catch (error: unknown) {
-      const missing = error instanceof HttpErrorResponse && error.status === 404;
-      if (this.loaded.fail(request, LOAD_DOCUMENTS_TEXT)) this.notFound.set(missing);
-    }
   }
 }

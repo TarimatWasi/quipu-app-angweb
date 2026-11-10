@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -149,6 +150,29 @@ describe('ResourceContent (TAR-355)', () => {
     await fail('caído');
     expect(content.data()).toBeNull();
     expect(content.state()).toMatchObject({ status: 'initial-error', retrying: false });
+  });
+
+  it('says a record that is gone (404) as a page, and any other failed refresh as a problem', async () => {
+    const { content, settle, answer, reads } = setup();
+    await settle();
+    expect(content.page()).toEqual({ kind: 'loading' });
+    await answer('uno');
+    expect(content.page()).toEqual({ kind: 'ready' });
+
+    content.reload();
+    await settle();
+    reads.at(-1)?.error(new HttpErrorResponse({ status: 500, statusText: 'x' }));
+    await settle();
+    expect(content.page()).toEqual({ kind: 'ready' });
+    expect(content.refreshProblem()).toMatch(/^No se pudo: /);
+
+    content.reload();
+    await settle();
+    reads.at(-1)?.error(new HttpErrorResponse({ status: 404, statusText: 'x' }));
+    await settle();
+    expect(content.notFound()).toBe(true);
+    expect(content.refreshProblem()).toBeNull();
+    expect(content.page()).toMatchObject({ kind: 'not-found' });
   });
 
   it('does not depend on being read: a refresh that fails keeps data nobody looked at', async () => {

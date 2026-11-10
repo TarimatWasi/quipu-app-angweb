@@ -1,5 +1,12 @@
 <app-page-header [heading]="title()" [backLink]="['/admin/environments']" backTo="Ambientes" />
 
+<app-refresh-error
+  [message]="refreshError()"
+  [refreshing]="refreshing()"
+  [progress]="true"
+  (retry)="reload()"
+/>
+
 @switch (phase()) {
   @case ('initial-loading') {
     <app-skeleton subject="el ambiente"
@@ -89,7 +96,7 @@
           <button
             class="quipu-button quipu-button--primary"
             type="submit"
-            [disabled]="saving() || reason() !== null"
+            [disabled]="saving() || reason() !== null || refreshing() || refreshError() !== null"
             [attr.aria-describedby]="reason() === null ? null : 'save-help'"
           >
             {{ saveLabel() }}

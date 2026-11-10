@@ -92,9 +92,6 @@ export class OnboardingDocumentsComponent extends OnboardingPage {
     })),
   );
 
-  /** The read starts with the page, not in a hook (Sonar S7059). */
-  protected readonly started = this.load();
-
   constructor() {
     super('DOCUMENTS');
   }

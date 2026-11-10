@@ -221,7 +221,8 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('02:00');
 
       vi.advanceTimersByTime(3 * 60_000);
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
 
       expect(squash(ui.panel().querySelector('.figure')?.textContent)).toBe('Vencido');
     } finally {
@@ -247,11 +248,13 @@ describe('GuestDetailComponent (A3.2 «Detalle del huésped»)', () => {
       expect(figure()).toBe('05:00');
 
       vi.advanceTimersByTime(1_000);
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       expect(figure()).toBe('04:59');
 
       vi.advanceTimersByTime(59_000);
-      await ui.harness.fixture.whenStable();
+      // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+      TestBed.tick();
       expect(figure()).toBe('04:00');
     } finally {
       vi.useRealTimers();

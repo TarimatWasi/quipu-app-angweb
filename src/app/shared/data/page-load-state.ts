@@ -7,7 +7,7 @@ export interface PageRequest<Q> {
 
 /**
  * Bookkeeping of a PAGED list read with a cursor ("Mostrar más"): first page versus more, with a
- * query that can change. For a single value (a summary, a detail) use `AsyncContentState`. Pages
+ * query that can change. For a single value (a summary, a detail) use `ResourceContent`. Pages
  * retain their data, transport and filter semantics.
  */
 export class PageLoadState<Q> {

@@ -1,10 +1,11 @@
 import { ListFilterState } from '@shared/lists/list-page';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
-import { Component, computed, DestroyRef, ElementRef, inject, viewChild } from '@angular/core';
+import { Component, computed, ElementRef, inject, viewChild } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { FormField } from '@angular/forms/signals';
-import { firstValueFrom } from 'rxjs';
-import { AsyncContentState } from '@shared/data/async-content';
+import { map } from 'rxjs';
+import { ResourceContent } from '@shared/data/resource-content';
 import { formatPeriod } from '@shared/payments/payment-format';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
@@ -73,7 +74,6 @@ interface HomeData {
 })
 export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSortKey> {
   private readonly service = inject(AdminDashboardService);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly title = formatPeriod(limaMonth(new Date()));
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
@@ -81,7 +81,12 @@ export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSor
   protected readonly firstSteps = FIRST_STEPS;
   protected readonly phoneSorts = PHONE_SORTS;
 
-  private readonly loaded = new AsyncContentState<HomeData>();
+  /** The read starts with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10). */
+  private readonly read = rxResource<HomeData, undefined>({
+    stream: () =>
+      this.service.get().pipe(map((dashboard) => ({ dashboard, loadedAt: new Date() }))),
+  });
+  private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_ERROR_TEXT });
   protected readonly view = this.loaded.state;
   protected readonly retrying = this.loaded.retrying;
   protected readonly refreshing = this.loaded.refreshing;
@@ -112,21 +117,10 @@ export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSor
 
   constructor() {
     super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
-    this.destroyRef.onDestroy(() => {
-      this.loaded.dispose();
-    });
-  }
-
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    void this.load();
-    return true;
   }
 
   protected reload(): void {
-    void this.load();
+    this.loaded.reload();
   }
 
   protected chooseState(key: string | null): void {
@@ -137,16 +131,5 @@ export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSor
   protected showOverdue(): void {
     this.filters.set({ ...NO_FILTERS, state: 'OVERDUE' });
     this.chargesTitle()?.nativeElement.focus();
-  }
-
-  private async load(): Promise<void> {
-    const request = this.loaded.begin();
-    if (request === null) return;
-    try {
-      const dashboard = await firstValueFrom(this.service.get());
-      this.loaded.succeed(request, { dashboard, loadedAt: new Date() });
-    } catch {
-      this.loaded.fail(request, LOAD_ERROR_TEXT);
-    }
   }
 }

@@ -103,9 +103,6 @@ export class OnboardingConsentComponent extends OnboardingPage {
     consentEnding(this.auth.session()?.guestType === 'TEMPORARY'),
   );
 
-  /** The read starts with the page, not in a hook (Sonar S7059). */
-  protected readonly started = this.load();
-
   constructor() {
     super('CONSENT');
   }
@@ -129,13 +126,13 @@ export class OnboardingConsentComponent extends OnboardingPage {
       this.toasts.show(COMPLETED_TEXT, { tone: 'success' });
       await this.finishRegistration();
     } catch (error: unknown) {
-      await this.failed(error);
+      this.failed(error);
     } finally {
       this.sending.set(false);
     }
   }
 
-  private async failed(error: unknown): Promise<void> {
+  private failed(error: unknown): void {
     const failure = callFailure(error);
     if (this.handled(failure)) return;
     const found = consentProblem(failure);
@@ -145,7 +142,7 @@ export class OnboardingConsentComponent extends OnboardingPage {
       // The text changed: it is read again and the box clears itself, so the guest accepts what it read.
       this.acceptedVersion.set(null);
       this.changed.set(true);
-      await this.load();
+      this.reload();
     } else {
       this.problem.set(found.message);
     }

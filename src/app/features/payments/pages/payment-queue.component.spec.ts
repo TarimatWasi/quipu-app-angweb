@@ -10,7 +10,9 @@ import { PaymentQueueComponent } from './payment-queue.component';
 // The component awaits the BFF's answer as a promise: let it land before the view is checked.
 async function settle(harness: RouterTestingHarness) {
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await harness.fixture.whenStable();
+  // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+  TestBed.tick();
+  harness.detectChanges();
 }
 
 const isQueue = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/admin/payments');

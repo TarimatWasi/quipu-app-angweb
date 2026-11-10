@@ -1,11 +1,11 @@
 import { ListFilterState } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { FormField } from '@angular/forms/signals';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -79,7 +79,13 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
   private readonly items = signal<readonly PaymentQueueItem[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
   private readonly pageLoad = new PageLoadState<PaymentStatus>();
-  private readonly summary = new AsyncContentState<QueueSummary>();
+  /** The panel is a help over the list: without it the queue still works. */
+  private readonly summaryRead = rxResource<QueueSummary, undefined>({
+    stream: () => this.payments.queueSummary(),
+  });
+  private readonly summary = new ResourceContent(this.summaryRead, {
+    message: () => 'No se pudo cargar el resumen de pagos.',
+  });
   protected readonly summaryState = this.summary.state;
 
   protected readonly loading = this.pageLoad.loading;
@@ -113,7 +119,6 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
     super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.destroyRef.onDestroy(() => {
       this.pageLoad.invalidate();
-      this.summary.dispose();
     });
     // The address decides the view (?vista=), also when only it changes on this same page.
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
@@ -126,7 +131,6 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
       this.sort.set(DEFAULT_SORT);
       void this.load();
     });
-    void this.loadSummary();
   }
 
   protected choose(view: QueueView): void {
@@ -151,16 +155,8 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
     }
   }
 
-  /** The panel is a help over the list: without it the queue still works. */
-  protected async loadSummary(): Promise<void> {
-    const request = this.summary.begin();
-    if (request === null) return;
-    try {
-      const summary = await firstValueFrom(this.payments.queueSummary());
-      this.summary.succeed(request, summary);
-    } catch {
-      this.summary.fail(request, 'No se pudo cargar el resumen de pagos.');
-    }
+  protected loadSummary(): void {
+    this.summary.reload();
   }
 
   private async load(after?: string, retrying = false): Promise<void> {

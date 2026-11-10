@@ -18,8 +18,10 @@ import {
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink, UrlTree } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { catchError, firstValueFrom, of, tap } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
+import type { GuestDetail } from '@core/api/clients/admin-guests.service';
 import { AdminPaymentsService, DirectPayment, PayablePeriod } from '../data/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { proofField, serializeProofs } from '@shared/payments/proof-fields';
@@ -36,7 +38,6 @@ import { SearchFieldComponent } from '@shared/ui/search-field/search-field.compo
 import {
   FUTURE_DATE_TEXT,
   GUEST_TEXT,
-  GuestText,
   guestLabel,
   guestText,
   LoadState,
@@ -64,6 +65,12 @@ const GUESTS_SHOWN = 6;
  * (vouchers or cash), registered and approved at once. The guest comes chosen when the page opens
  * with `?guestId=` (A3.2, A4.2); otherwise it is chosen here. Ids are opaque and travel as they came.
  */
+/** Which guest the periods are asked for, and which time. */
+interface PeriodsAsk {
+  readonly id: string;
+  readonly round: number;
+}
+
 @Component({
   selector: 'app-direct-payment',
   imports: [
@@ -108,7 +115,6 @@ export class DirectPaymentComponent {
 
   /** The guest that came in the address, or null when it is chosen on this page. */
   protected readonly preselected: string | null;
-  protected readonly preselectedGuest = signal<GuestText | null>(null);
   protected readonly guestOptions = signal<
     readonly { id: string; label: string; name: string; detail: string }[]
   >([]);
@@ -216,10 +222,52 @@ export class DirectPaymentComponent {
   });
   protected readonly atProofLimit = this.proofDrafts.atLimit;
 
-  // Moves with every load of the periods, so a late answer for a previous guest is ignored.
   private readonly destroyRef = inject(DestroyRef);
-  private readonly periodsRequest = new LatestRequest();
+  // The list of guests is read by pages with a cursor («Mostrar más»): it keeps its own count of
+  // the read that still counts (D-94, the exception of the paged lists).
   private readonly guestsRequest = new LatestRequest();
+
+  /** The name of the guest that came preselected (A3.2, A4.2): only a help, its periods say if it exists. */
+  private readonly preselectedRead = rxResource<GuestDetail, string | undefined>({
+    params: () => this.preselected ?? undefined,
+    stream: ({ params: id }) => this.guests.get(id),
+  });
+  protected readonly preselectedGuest = computed(() =>
+    this.preselectedRead.hasValue() ? guestText(this.preselectedRead.value()) : null,
+  );
+
+  /** Moves with every ask of the periods: each one starts afresh, even for the same guest. */
+  private readonly periodsRound = signal(0);
+  /**
+   * The periods the chosen guest can pay, read again for another guest or when asked; the answer
+   * for a guest left behind is cancelled with it. The answer fills the periods and their state.
+   */
+  private readonly periodsRead = rxResource<unknown, PeriodsAsk | undefined>({
+    params: () => {
+      const id = this.guestId();
+      return id === '' ? undefined : { id, round: this.periodsRound() };
+    },
+    stream: ({ params: { id } }) =>
+      this.payments.payablePeriods(id).pipe(
+        tap((periods) => {
+          this.periods.set(periods);
+          if (!this.options().some((option) => option.key === this.periodChoice())) {
+            this.periodChoice.set('');
+          }
+          this.periodsState.set({ kind: 'ready' });
+          this.periodsRetrying.set(false);
+        }),
+        catchError((error: unknown) => {
+          this.periodChoice.set('');
+          this.periodsState.set({
+            kind: 'error',
+            message: toBffErrorWithServerMessage(error).message,
+          });
+          this.periodsRetrying.set(false);
+          return of(null);
+        }),
+      ),
+  });
   private failedGuestsAfter: string | undefined;
   /** Where to go back when the guest came preselected (A3.2, A4.2); A5 otherwise. */
   private readonly origin: UrlTree | null;
@@ -236,8 +284,7 @@ export class DirectPaymentComponent {
       void this.loadGuests();
     } else {
       this.guestId.set(this.preselected);
-      void this.loadPreselected(this.preselected);
-      void this.loadPeriods(this.preselected);
+      this.loadPeriods();
     }
   }
 
@@ -258,7 +305,8 @@ export class DirectPaymentComponent {
 
   protected retryPeriods(): void {
     if (this.periodsRetrying() || this.periodsState().kind === 'loading') return;
-    void this.loadPeriods(this.guestId());
+    if (this.periodsRead.isLoading()) return;
+    this.loadPeriods();
   }
 
   protected pickGuest(id: string): void {
@@ -278,11 +326,10 @@ export class DirectPaymentComponent {
     this.periodChoice.set('');
     this.clearServer('guestId', 'period');
     if (id === '') {
-      this.periodsRequest.cancel();
       this.periods.set([]);
       this.periodsState.set({ kind: 'idle' });
     } else {
-      void this.loadPeriods(id);
+      this.loadPeriods();
     }
   }
 
@@ -365,7 +412,7 @@ export class DirectPaymentComponent {
       });
       await firstValueFrom(ref.afterClosed());
       // What the guest can pay changed: show it as it is now.
-      if (!this.destroyRef.destroyed) await this.loadPeriods(this.guestId());
+      if (!this.destroyRef.destroyed) this.loadPeriods();
       return;
     }
     const notFound = error instanceof HttpErrorResponse && error.status === 404;
@@ -425,38 +472,13 @@ export class DirectPaymentComponent {
     }
   }
 
-  private async loadPreselected(id: string): Promise<void> {
-    try {
-      const guest = await firstValueFrom(this.guests.get(id));
-      if (this.destroyRef.destroyed) return;
-      this.preselectedGuest.set(guestText(guest));
-    } catch {
-      // The periods say whether the guest exists; the label is only a help.
-      if (!this.destroyRef.destroyed) this.preselectedGuest.set(null);
-    }
-  }
-
-  private async loadPeriods(guestId: string): Promise<void> {
-    const request = this.periodsRequest.begin();
+  /** Asks the periods of the guest chosen afresh: empty and loading, or the error while retrying. */
+  private loadPeriods(): void {
     this.periods.set([]);
     const isRetry = this.periodsState().kind === 'error';
     this.periodsRetrying.set(isRetry);
     if (!isRetry) this.periodsState.set({ kind: 'loading' });
-    try {
-      const periods = await firstValueFrom(this.payments.payablePeriods(guestId));
-      if (!this.periodsRequest.isCurrent(request)) return;
-      this.periods.set(periods);
-      if (!this.options().some((option) => option.key === this.periodChoice())) {
-        this.periodChoice.set('');
-      }
-      this.periodsState.set({ kind: 'ready' });
-    } catch (error: unknown) {
-      if (!this.periodsRequest.isCurrent(request)) return;
-      this.periodChoice.set('');
-      this.periodsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
-    } finally {
-      if (this.periodsRequest.isCurrent(request)) this.periodsRetrying.set(false);
-    }
+    this.periodsRound.update((round) => round + 1);
   }
 
   private clearServer(...fields: string[]): void {

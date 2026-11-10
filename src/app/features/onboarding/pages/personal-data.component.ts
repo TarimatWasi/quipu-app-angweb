@@ -23,6 +23,7 @@ import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { OnboardingFrameComponent } from '../components/onboarding-frame.component';
 import { EMAIL_ADDED_TEXT, EMAIL_CHANGED_TEXT } from '@shared/forms/email-verification';
 import { DATA_AFTER, EMERGENCY_HINT } from '../model/onboarding';
+import type { OnboardingInProgress } from '../data/onboarding.service';
 import { OnboardingPage } from './onboarding-page';
 import { ONBOARDING_STYLES } from './onboarding.styles';
 
@@ -82,18 +83,12 @@ export class OnboardingPersonalDataComponent extends OnboardingPage {
   /** The form is filled once: a later read (a retry, a step out of order) keeps what is typed. */
   private filled = false;
 
-  /** The read starts with the page, not in a hook (Sonar S7059). */
-  protected readonly started = this.load();
-
   constructor() {
     super('PERSONAL_DATA');
   }
 
-  /** Reads the registration and, the first time, fills the form with what the BFF has. */
-  protected override async load(): Promise<void> {
-    await super.load();
-    const state = this.loaded.data();
-    if (state === null) return;
+  /** Each read says the email; the first one also fills the form with what the BFF has. */
+  protected override arrived(state: OnboardingInProgress): void {
     this.email.set(state.personalData.email ?? null);
     this.pendingEmail.set(state.pendingEmail ?? null);
     if (this.filled) return;

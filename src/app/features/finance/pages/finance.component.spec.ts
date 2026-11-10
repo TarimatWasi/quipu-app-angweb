@@ -29,7 +29,8 @@ async function setup(scenario: MockScenario = 'normal') {
   await harness.navigateByUrl('/admin/finance');
   const settle = async () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
-    await harness.fixture.whenStable();
+    // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+    TestBed.tick();
   };
   await settle();
   const page = () => within(harness.routeNativeElement ?? document.body);

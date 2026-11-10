@@ -1,4 +1,4 @@
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
@@ -19,10 +19,12 @@ import {
 } from '@angular/core';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
+import { rxResource } from '@angular/core/rxjs-interop';
+import { firstValueFrom, tap } from 'rxjs';
 import {
   AdminGuestsService,
   DocumentType,
+  GuestDetail,
   GuestUpdate,
   PendingGuestDetail,
 } from '@core/api/clients/admin-guests.service';
@@ -54,6 +56,11 @@ type LoadState =
   | { readonly kind: 'error'; readonly message: string };
 
 const GENERAL_ERROR_ID = 'document-form-error';
+
+/** Only a guest that has not activated its account has a document that can be corrected. */
+function isPending(guest: GuestDetail): guest is PendingGuestDetail {
+  return guest.status === 'PENDING_ACTIVATION';
+}
 
 const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map((value) => ({
   value,
@@ -94,17 +101,45 @@ export class DocumentFormComponent {
   protected readonly lockedText = DOCUMENT_LOCKED_TEXT;
   protected readonly today = todayText();
   protected readonly describedBy = describedBy;
-  protected guestId = '';
+  protected readonly guestId = this.route.snapshot.paramMap.get('id') ?? '';
 
-  protected readonly retrying = signal(false);
-  protected readonly refreshing = signal(false);
-  protected readonly refreshError = signal<string | null>(null);
-  protected readonly state = signal<LoadState>({ kind: 'loading' });
-  protected readonly loaded = signal<PendingGuestDetail | null>(null);
   /** The name the back link uses, kept when the guest turns out to be no longer pending. */
   protected readonly who = signal<string | null>(null);
   protected readonly documentType = signal<DocumentType>('DNI');
   protected readonly documentNumber = signal('');
+
+  /**
+   * The guest with its current `version`, read with the page (FE-ANG-CMP-10); its answer starts
+   * the form from its document. A guest that is no longer pending is shown as locked.
+   */
+  private readonly read = rxResource<GuestDetail, undefined>({
+    stream: () =>
+      this.guests.get(this.guestId).pipe(
+        tap((guest) => {
+          this.who.set(guestName(guest));
+          if (!isPending(guest)) return;
+          this.documentType.set(guest.documentType);
+          this.documentNumber.set(guest.documentNumber);
+        }),
+      ),
+  });
+  private readonly content = new ResourceContent(this.read, {
+    message: (error) => toBffErrorWithServerMessage(error).message,
+  });
+  protected readonly retrying = this.content.retrying;
+  protected readonly refreshing = this.content.refreshing;
+  protected readonly refreshError = this.content.refreshProblem;
+  /** A guest that is no longer pending is shown as locked. */
+  protected readonly state = computed<LoadState>(() => {
+    const page = this.content.page();
+    if (page.kind !== 'ready') return page;
+    const guest = this.content.data();
+    return guest !== null && isPending(guest) ? page : { kind: 'locked' };
+  });
+  protected readonly loaded = computed<PendingGuestDetail | null>(() => {
+    const guest = this.content.data();
+    return guest !== null && isPending(guest) ? guest : null;
+  });
   protected readonly submitted = signal(false);
   protected readonly busy = signal(false);
   protected readonly generalError = signal<string | null>(null);
@@ -153,16 +188,6 @@ export class DocumentFormComponent {
   });
 
   private readonly destroyRef = inject(DestroyRef);
-  private readonly request = new LatestRequest();
-
-  /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
-  protected readonly started = this.start();
-
-  private start(): true {
-    this.guestId = this.route.snapshot.paramMap.get('id') ?? '';
-    void this.load();
-    return true;
-  }
 
   protected chooseType(type: DocumentType): void {
     this.documentType.set(type);
@@ -176,7 +201,7 @@ export class DocumentFormComponent {
 
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
-    void this.load();
+    this.load();
   }
 
   protected async submit(event: Event): Promise<void> {
@@ -226,7 +251,7 @@ export class DocumentFormComponent {
     const ref = openConcurrentModificationDialog(this.dialog, { backLabel: 'Cerrar' });
     const choice = await firstValueFrom(ref.afterClosed());
     if (!this.destroyRef.destroyed && choice === 'reload') {
-      await this.load();
+      this.load();
     }
   }
 
@@ -234,48 +259,11 @@ export class DocumentFormComponent {
     await this.router.navigate(['/admin/guests', this.guestId]);
   }
 
-  /** Loads the guest with its current `version` and starts the form from its document. */
-  private async load(): Promise<void> {
-    const request = this.request.begin();
-    const refreshing = this.state().kind === 'ready';
-    this.refreshing.set(refreshing);
-    const isRetry = this.state().kind === 'error';
-    this.retrying.set(isRetry);
-    if (!isRetry && !refreshing) this.state.set({ kind: 'loading' });
+  /** Reads the guest again with its current `version`; what the BFF refused before is forgotten. */
+  private load(): void {
     this.submitted.set(false);
     this.serverError.set(null);
     this.generalError.set(null);
-    try {
-      const guest = await firstValueFrom(this.guests.get(this.guestId));
-      if (!this.request.isCurrent(request)) return;
-      this.refreshError.set(null);
-      this.who.set(guestName(guest));
-      if (guest.status !== 'PENDING_ACTIVATION') {
-        this.loaded.set(null);
-        this.state.set({ kind: 'locked' });
-        return;
-      }
-      this.loaded.set(guest);
-      this.documentType.set(guest.documentType);
-      this.documentNumber.set(guest.documentNumber);
-      this.state.set({ kind: 'ready' });
-    } catch (error: unknown) {
-      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
-    } finally {
-      if (this.request.isCurrent(request)) this.endLoad();
-    }
-  }
-
-  /** A failed refresh keeps the form and says so; any other failure replaces it. */
-  private failLoad(error: unknown, refreshing: boolean): void {
-    const { message } = toBffErrorWithServerMessage(error);
-    const notFound = error instanceof HttpErrorResponse && error.status === 404;
-    if (refreshing && !notFound) this.refreshError.set(message);
-    else this.state.set(notFound ? { kind: 'not-found' } : { kind: 'error', message });
-  }
-
-  private endLoad(): void {
-    this.retrying.set(false);
-    this.refreshing.set(false);
+    this.content.reload();
   }
 }

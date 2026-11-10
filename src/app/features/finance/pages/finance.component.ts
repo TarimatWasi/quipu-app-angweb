@@ -2,11 +2,12 @@ import { toBffErrorWithGone } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
-import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
+import { Component, computed, DestroyRef, inject, signal, untracked } from '@angular/core';
+import { rxResource } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { firstValueFrom, map, Observable } from 'rxjs';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
-import { AsyncContentState } from '@shared/data/async-content';
+import { ResourceContent } from '@shared/data/resource-content';
 import { PagedList } from '@shared/data/paged-list';
 import type { Paged } from '@shared/data/paged-list';
 import { limaDay } from '@shared/payments/payment-format';
@@ -128,8 +129,24 @@ export class FinanceComponent {
   protected readonly tab = signal<Tab>('EXP');
   protected readonly sort = signal<MovementSort>(DEFAULT_SORT);
 
-  private readonly summary = new AsyncContentState<Summary>();
-  private readonly credits = signal<readonly PendingCredit[]>([]);
+  /**
+   * The balance of the month shown. Another month is a refresh, not a new identity: the figures of
+   * the previous one stay until the new ones arrive, so the month is read untracked and changing it
+   * reloads.
+   */
+  private readonly summaryRead = rxResource<Summary, undefined>({
+    stream: () => this.service.summary(untracked(this.month)),
+  });
+  private readonly summary = new ResourceContent(this.summaryRead, {
+    message: () => LOAD_ERROR_TEXT,
+  });
+  /** The credit that waits for a refund does not depend on the month; if it fails the panel is left out. */
+  private readonly creditsRead = rxResource<readonly PendingCredit[], undefined>({
+    stream: () => this.service.pendingCredits(),
+  });
+  private readonly credits = computed(() =>
+    this.creditsRead.hasValue() ? this.creditsRead.value() : [],
+  );
   private readonly total = signal(0);
   private readonly list = new PagedList<Key, Movement, MovementPage>(
     (key, after) => this.movements(key, after),
@@ -173,11 +190,8 @@ export class FinanceComponent {
 
   private start(): true {
     inject(DestroyRef).onDestroy(() => {
-      this.summary.dispose();
       this.list.dispose();
     });
-    void this.loadSummary(true);
-    void this.loadCredits();
     this.list.reload(this.key());
     return true;
   }
@@ -191,15 +205,15 @@ export class FinanceComponent {
   }
 
   protected reload(): void {
-    void this.loadSummary(this.summary.data() === null);
-    void this.loadCredits();
+    this.summary.reload();
+    this.creditsRead.reload();
     this.list.retry(this.key());
   }
 
   protected chooseMonth(month: string): void {
     if (month === this.month()) return;
     this.month.set(month);
-    void this.loadSummary(false);
+    this.summary.reload();
     this.list.switchTo(this.key());
   }
 
@@ -265,31 +279,11 @@ export class FinanceComponent {
     }
   }
 
-  private async loadSummary(initial: boolean): Promise<void> {
-    const request = this.summary.begin(initial);
-    if (request === null) return;
-    try {
-      const summary = await firstValueFrom(this.service.summary(this.month()));
-      this.summary.succeed(request, summary);
-    } catch {
-      this.summary.fail(request, LOAD_ERROR_TEXT);
-    }
-  }
-
-  /** The credit that waits for a refund does not depend on the month; if it fails the panel is left out. */
-  private async loadCredits(): Promise<void> {
-    try {
-      this.credits.set(await firstValueFrom(this.service.pendingCredits()));
-    } catch {
-      this.credits.set([]);
-    }
-  }
-
   /** After a change: the balance, the list and what waits for a refund are read again. */
   private refresh(message: string, tone: 'success' | null = 'success'): void {
     this.toasts.show(message, { tone });
-    void this.loadSummary(false);
-    void this.loadCredits();
+    this.summary.reload();
+    this.creditsRead.reload();
     this.list.reload(this.key());
   }
 
@@ -342,7 +336,7 @@ export class FinanceComponent {
       backLabel: 'Volver a Finanzas',
     });
     await firstValueFrom(ref.afterClosed(), { defaultValue: undefined });
-    void this.loadSummary(false);
+    this.summary.reload();
     this.list.reload(this.key());
   }
 

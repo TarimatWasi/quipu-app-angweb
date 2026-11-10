@@ -1,4 +1,4 @@
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
@@ -6,10 +6,10 @@ import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.compo
 import { SkeletonCardsComponent } from '@shared/ui/skeleton/skeleton-cards.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, of } from 'rxjs';
+import { catchError, firstValueFrom, forkJoin, map, of, switchMap, tap, throwError } from 'rxjs';
 import { AdminGuestsService } from '@core/api/clients/admin-guests.service';
 import type {
   AccessGrant,
@@ -64,6 +64,13 @@ import {
  * of the administrator: deactivate (A3.3), a new access (A3.4, handed to A3.7 in memory), the
  * account email, reactivate (A3.6, with its debt first) and the stays of A3.5. Ids are opaque.
  */
+/** What the page reads at once: the guest and what its panel needs. */
+interface Loaded {
+  readonly guest: GuestDetail;
+  readonly periods: readonly PeriodStatus[];
+  readonly stays: readonly Stay[];
+}
+
 @Component({
   selector: 'app-guest-detail',
   imports: [
@@ -95,17 +102,57 @@ export class GuestDetailComponent {
   private readonly destroyRef = inject(DestroyRef);
 
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
-  protected readonly state = signal<LoadState>('loading');
-  protected readonly guest = signal<GuestDetail | null>(null);
-  private readonly periods = signal<readonly PeriodStatus[]>([]);
-  private readonly stays = signal<readonly Stay[]>([]);
+  private readonly currentId = signal('');
   private readonly now = signal(new Date());
   /** Reactivated from this page: an expired access then says it expired while inactive. */
   private readonly reactivated = signal(false);
   protected readonly busy = signal(false);
-  protected readonly retrying = signal(false);
-  protected readonly refreshing = signal(false);
-  protected readonly refreshError = signal<string | null>(null);
+  /** The guest as soon as it arrives, while what its panel needs is still being read. */
+  private readonly arriving = signal<GuestDetail | null>(null);
+  /** Who waits for the read in course to be over (a reactivation words its notice with it). */
+  private waiting: (() => void)[] = [];
+  /**
+   * The guest of the address and what its panel needs (its months or its stays), read again for
+   * another guest; the read of the guest left behind is cancelled with it.
+   */
+  private readonly read = rxResource<Loaded, string | undefined>({
+    params: () => this.currentId() || undefined,
+    stream: ({ params: id }) =>
+      this.guests.get(id).pipe(
+        tap((guest) => {
+          this.arriving.set(guest);
+        }),
+        switchMap((guest) => {
+          const kind = chargesKind(guest);
+          return forkJoin({
+            periods: kind === 'periods' ? this.guests.accountStatus(id) : of<PeriodStatus[]>([]),
+            stays: kind === 'stays' ? this.guests.allStays(id) : of<Stay[]>([]),
+          }).pipe(map(({ periods, stays }) => ({ guest, periods, stays })));
+        }),
+        tap(({ guest }) => {
+          this.shown(guest);
+          this.over();
+        }),
+        catchError((error: unknown) => {
+          this.arriving.set(null);
+          this.over();
+          return throwError(() => error);
+        }),
+      ),
+  });
+  private readonly content = new ResourceContent(this.read, {
+    message: () => LOAD_ERROR_TEXT,
+    identity: this.currentId,
+  });
+  protected readonly retrying = this.content.retrying;
+  protected readonly refreshing = this.content.refreshing;
+  protected readonly refreshError = computed(() =>
+    this.content.refreshProblem() === null ? null : this.loadErrorText,
+  );
+  protected readonly state = computed<LoadState>(() => this.content.page().kind);
+  protected readonly guest = computed(() => this.content.data()?.guest ?? this.arriving());
+  private readonly periods = computed(() => this.content.data()?.periods ?? []);
+  private readonly stays = computed(() => this.content.data()?.stays ?? []);
   private readonly toasts = inject(ToastService);
 
   protected readonly title = computed(() => {
@@ -125,10 +172,10 @@ export class GuestDetailComponent {
     return { guest, panel, left: leftColumn(guest, this.periods()) };
   });
   protected readonly periodRows = computed(() =>
-    this.periods().map((item) => toPeriodRow(item, this.currentId)),
+    this.periods().map((item) => toPeriodRow(item, this.currentId())),
   );
   protected readonly stayRows = computed(() =>
-    this.stays().map((stay) => toStayRow(stay, this.currentId)),
+    this.stays().map((stay) => toStayRow(stay, this.currentId())),
   );
   protected readonly blocked = computed(() =>
     this.guest()?.type === 'TEMPORARY'
@@ -151,10 +198,7 @@ export class GuestDetailComponent {
     });
   });
 
-  private currentId = '';
   private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
-  // Moves with every load, so a late answer for a previous guest is ignored.
-  private readonly request = new LatestRequest();
   /**
    * A3.7 asked for «Generar otro acceso»: it opens once the guest is loaded. Read while the page is
    * created, when the navigation that brings it is still the current one.
@@ -178,7 +222,6 @@ export class GuestDetailComponent {
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
       // Leaving the screen: no late answer may load, open a dialog or navigate any more.
-      this.request.cancel();
       this.closeDialogs();
     });
   }
@@ -190,16 +233,16 @@ export class GuestDetailComponent {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id') ?? '';
       // The dialogs of the guest left behind go with it.
-      if (id !== this.currentId) this.closeDialogs();
-      void this.load(id);
+      if (id !== this.currentId()) this.closeDialogs();
+      this.reset();
+      this.currentId.set(id);
     });
     return true;
   }
 
   protected retry(): void {
     if (this.retrying() || this.refreshing()) return;
-    this.retrying.set(true);
-    void this.load(this.currentId, true);
+    this.content.retry();
   }
 
   protected onPanelAction(action: PanelAction): void {
@@ -225,67 +268,23 @@ export class GuestDetailComponent {
     }
   }
 
-  /** Loads the guest and what its panel needs; `quiet` keeps the page on screen meanwhile. */
-  private async load(id: string, quiet = false): Promise<void> {
-    const request = this.request.begin();
-    const refreshing = quiet && this.state() === 'ready';
-    this.refreshing.set(refreshing);
-    this.currentId = id;
-    if (!quiet) {
-      this.refreshError.set(null);
-      this.retrying.set(false);
-      this.reset();
-    }
-    try {
-      const guest = await firstValueFrom(this.guests.get(id));
-      if (!this.request.isCurrent(request)) return;
-      this.guest.set(guest);
-      const kind = chargesKind(guest);
-      const [periods, stays] = await Promise.all([
-        firstValueFrom(kind === 'periods' ? this.guests.accountStatus(id) : of([])),
-        firstValueFrom(kind === 'stays' ? this.guests.allStays(id) : of<Stay[]>([])),
-      ]);
-      if (!this.request.isCurrent(request)) return;
-      this.show(guest, periods, stays);
-    } catch (error: unknown) {
-      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
-    } finally {
-      if (this.request.isCurrent(request)) this.endLoad();
-    }
-  }
-
-  /** A failed refresh keeps the page and says so; any other failure replaces it. */
-  private failLoad(error: unknown, refreshing: boolean): void {
-    const notFound = error instanceof HttpErrorResponse && error.status === 404;
-    if (refreshing && !notFound) {
-      this.refreshError.set(this.loadErrorText);
-      return;
-    }
-    this.state.set(notFound ? 'not-found' : 'error');
-    if (!notFound) this.guest.set(null);
-  }
-
-  private endLoad(): void {
-    this.retrying.set(false);
-    this.refreshing.set(false);
-  }
-
+  /** Another guest: nothing of the previous one counts (what was reactivated, a write in course). */
   private reset(): void {
-    this.state.set('loading');
-    this.guest.set(null);
-    this.periods.set([]);
-    this.stays.set([]);
+    this.arriving.set(null);
     this.reactivated.set(false);
     this.busy.set(false);
   }
 
-  private show(guest: GuestDetail, periods: readonly PeriodStatus[], stays: readonly Stay[]): void {
+  /** The read in course is over, well or not: who waited for it goes on. */
+  private over(): void {
+    const waiting = this.waiting;
+    this.waiting = [];
+    for (const resolve of waiting) resolve();
+  }
+
+  /** The guest and its panel are on screen: «Generar otro acceso» asked by A3.7 opens now. */
+  private shown(guest: GuestDetail): void {
     this.now.set(new Date());
-    this.guest.set(guest);
-    this.periods.set(periods);
-    this.stays.set(stays);
-    this.state.set('ready');
-    this.refreshError.set(null);
     if (this.accessAsked) {
       this.accessAsked = false;
       if (guest.status !== 'INACTIVE') this.openAccess();
@@ -298,7 +297,7 @@ export class GuestDetailComponent {
    * dialogs or navigate.
    */
   private showing(id: string): boolean {
-    return !this.destroyRef.destroyed && id === this.currentId;
+    return !this.destroyRef.destroyed && id === this.currentId();
   }
 
   /** Keeps a dialog of this guest, so it closes when the page moves to another one. */
@@ -363,7 +362,7 @@ export class GuestDetailComponent {
       .subscribe((saved) => {
         if (saved !== true || !this.showing(guest.id)) return;
         this.say(EMAIL_SAVED_TEXT);
-        void this.load(guest.id, true);
+        this.content.reload();
       });
   }
 
@@ -382,7 +381,7 @@ export class GuestDetailComponent {
       .subscribe((done) => {
         if (done !== true || !this.showing(guest.id)) return;
         this.say(DEACTIVATED_TEXT);
-        void this.load(guest.id, true);
+        this.content.reload();
       });
   }
 
@@ -395,7 +394,10 @@ export class GuestDetailComponent {
       const summary = await firstValueFrom(this.guests.reactivate(guest.id));
       if (!this.showing(guest.id)) return;
       this.reactivated.set(true);
-      await this.load(guest.id, true);
+      await new Promise<void>((resolve) => {
+        this.waiting.push(resolve);
+        this.content.reload();
+      });
       if (!this.showing(guest.id)) return;
       const expiresAt = this.guest()?.accessExpiresAt ?? null;
       const expired =
