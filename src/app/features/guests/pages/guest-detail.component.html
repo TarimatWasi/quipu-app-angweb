@@ -18,7 +18,10 @@
             [canRegister]="false"
           />
         } @else {
-          <app-period-payments [loading]="true" [rows]="[]" />
+          <div class="charges">
+            <app-period-payments [loading]="true" [rows]="[]" />
+            <app-guest-payments [loading]="true" [rows]="[]" />
+          </div>
         }
         <aside aria-label="Datos del huésped"><app-guest-facts [guest]="known" /></aside>
       </div>
@@ -67,7 +70,20 @@
       <div class="layout" [class.single]="v.left === 'none'">
         @switch (v.left) {
           @case ('periods') {
-            <app-period-payments [rows]="periodRows()" />
+            <div class="charges">
+              <app-period-payments [rows]="periodRows()" />
+              <app-guest-payments
+                [loading]="paymentsLoading()"
+                [rows]="paymentRows()"
+                [listFailed]="paymentsFailed()"
+                [moreFailed]="paymentsMoreFailed()"
+                [retrying]="paymentsRetrying()"
+                [hasMore]="paymentsHasMore()"
+                [loadingMore]="paymentsLoadingMore()"
+                (retry)="retryPayments()"
+                (more)="morePayments()"
+              />
+            </div>
           }
           @case ('stays') {
             <app-guest-stays

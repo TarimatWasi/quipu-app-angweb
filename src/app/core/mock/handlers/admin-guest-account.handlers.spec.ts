@@ -42,6 +42,31 @@ describe('the actions of A3.2 in the simulated BFF', () => {
     expect((await mock.fail(months(mock, 'nadie'))).status).toBe(404);
   });
 
+  it('answers the payments of a guest, the last sent first, page by page', async () => {
+    const mock = await admin();
+    type Page = Schemas['PagedPayments'];
+    const all = await mock.get<Page>(`/bff/admin/guests/${GUEST_IDS.luis}/payments`);
+
+    expect(all.content.length).toBeGreaterThan(1);
+    expect(all.content.every((payment) => payment.guestId === GUEST_IDS.luis)).toBe(true);
+    const sent = all.content.map((payment) => payment.submittedAt);
+    expect(sent).toEqual([...sent].sort().reverse());
+    expect(all.content.map((payment) => payment.status)).toEqual(
+      expect.arrayContaining(['PENDING', 'REJECTED']),
+    );
+    const url = `/bff/admin/guests/${GUEST_IDS.luis}/payments`;
+    const first = await mock.get<Page>(url, { limit: 1 });
+    expect(first.content).toEqual(all.content.slice(0, 1));
+    expect(first.nextCursor).toEqual(expect.any(String));
+    const next = await mock.get<Page>(url, { limit: 1, after: first.nextCursor ?? '' });
+    expect(next.content).toEqual(all.content.slice(1, 2));
+    expect(await mock.get<Page>(`/bff/admin/guests/${GUEST_IDS.noContract}/payments`)).toEqual({
+      content: [],
+      nextCursor: null,
+    });
+    expect((await mock.fail(mock.get(`/bff/admin/guests/nadie/payments`))).status).toBe(404);
+  });
+
   it('lists the months of every contract and discounts the credit only once', async () => {
     const mock = await admin();
     const db = mock.bff.db;

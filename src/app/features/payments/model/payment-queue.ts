@@ -1,6 +1,7 @@
 import { loadErrorText, noMatchHeading } from '@shared/text/list-text';
 import type { StatusTone } from '@shared/ui/status-badge/status-badge.component';
 import type { PeriodFields } from '@shared/payments/payment-format';
+import { PAYMENT_ACTIONS, PAYMENT_BADGES } from '@shared/payments/payment-status';
 import {
   daysAgo,
   formatDateTime,
@@ -157,20 +158,6 @@ export function visiblePayments(
     .sort(compareQueue(sort));
 }
 
-const BADGES: Readonly<
-  Record<PaymentStatus, { readonly label: string; readonly tone: StatusTone }>
-> = {
-  PENDING: { label: 'Pendiente de revisión', tone: 'review' },
-  APPROVED: { label: 'Aprobado', tone: 'paid' },
-  REJECTED: { label: 'Rechazado', tone: 'rejected' },
-};
-
-const ACTIONS: Readonly<Record<PaymentStatus, string>> = {
-  PENDING: 'Revisar pago',
-  APPROVED: 'Ver pago',
-  REJECTED: 'Corregir pago',
-};
-
 const RESOLVED_BY: Readonly<Record<PaymentStatus, string>> = {
   PENDING: '',
   APPROVED: 'Aprobado por',
@@ -225,10 +212,10 @@ export function toQueueRow(item: PaymentQueueItem, now: Date): QueueRow {
     reason:
       item.status === 'REJECTED' && item.rejectionReason ? `Motivo: ${item.rejectionReason}` : null,
     proofs: proofsSummary(item.voucherCount, item.hasCash),
-    badge: BADGES[item.status],
+    badge: PAYMENT_BADGES[item.status],
     resolvedBy: reviewer ? `${RESOLVED_BY[item.status]} ${reviewer}` : null,
-    action: ACTIONS[item.status],
-    actionName: `${ACTIONS[item.status]} de ${item.guestName ?? item.documentNumber}`,
+    action: PAYMENT_ACTIONS[item.status],
+    actionName: `${PAYMENT_ACTIONS[item.status]} de ${item.guestName ?? item.documentNumber}`,
     primary: item.status !== 'APPROVED',
   };
 }

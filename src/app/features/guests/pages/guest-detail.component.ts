@@ -1,3 +1,4 @@
+import { PagedList } from '@shared/data/paged-list';
 import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { NowPanelComponent } from '@shared/ui/now-panel/now-panel.component';
@@ -26,11 +27,15 @@ import { openDeactivateGuestDialog } from '../components/deactivate-guest-dialog
 import { DetailNowPanelComponent } from '../components/detail-now-panel.component';
 import { openGenerateAccessDialog } from '../components/generate-access-dialog.component';
 import { GuestFactsComponent } from '../components/guest-facts.component';
+import { GuestPaymentsComponent } from '../components/guest-payments.component';
 import { GuestStaysComponent } from '../components/guest-stays.component';
 import { MoreActionsComponent } from '../components/more-actions.component';
 import { openPendingDebtDialog } from '../components/pending-debt-dialog.component';
 import { PeriodPaymentsComponent } from '@shared/payments/period-payments.component';
 import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-handoff.service';
+import { GuestPaymentsService } from '../data/guest-payments.service';
+import type { GuestPaymentsPage, PaymentSummary } from '../data/guest-payments.service';
+import { toGuestPaymentRow } from '../model/guest-payments';
 import {
   DEACTIVATED_TEXT,
   DETAIL_DEBT_TEXT,
@@ -82,6 +87,7 @@ interface Loaded {
     DetailNowPanelComponent,
     EmptyStateComponent,
     GuestFactsComponent,
+    GuestPaymentsComponent,
     GuestStaysComponent,
     LoadErrorComponent,
     MoreActionsComponent,
@@ -96,6 +102,7 @@ interface Loaded {
 export class GuestDetailComponent {
   private readonly guests = inject(AdminGuestsService);
   private readonly handoff = inject(AccessHandoffService);
+  private readonly guestPayments = inject(GuestPaymentsService);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly dialog = inject(MatDialog);
@@ -109,6 +116,15 @@ export class GuestDetailComponent {
   protected readonly busy = signal(false);
   /** The guest as soon as it arrives, while what its panel needs is still being read. */
   private readonly arriving = signal<GuestDetail | null>(null);
+  /**
+   * «Historial de pagos» (RF-10) of a guest with a contract: its own paged read, started with the
+   * months, so the page does not wait for it and «Mostrar más» does not read the page again.
+   */
+  private readonly payments = new PagedList<string, PaymentSummary, GuestPaymentsPage>(
+    (id, after) => this.guestPayments.page(id, after),
+  );
+  /** Whose history `payments` holds: the same guest refreshes it, another one starts it empty. */
+  private paymentsOf: string | null = null;
   /** Who waits for the read in course to be over (a reactivation words its notice with it). */
   private waiting: (() => void)[] = [];
   /**
@@ -124,6 +140,7 @@ export class GuestDetailComponent {
         }),
         switchMap((guest) => {
           const kind = chargesKind(guest);
+          if (kind === 'periods') this.readPayments(id);
           return forkJoin({
             periods: kind === 'periods' ? this.guests.accountStatus(id) : of<PeriodStatus[]>([]),
             stays: kind === 'stays' ? this.guests.allStays(id) : of<Stay[]>([]),
@@ -154,6 +171,13 @@ export class GuestDetailComponent {
   private readonly periods = computed(() => this.content.data()?.periods ?? []);
   private readonly stays = computed(() => this.content.data()?.stays ?? []);
   private readonly toasts = inject(ToastService);
+  protected readonly paymentRows = computed(() => this.payments.items().map(toGuestPaymentRow));
+  protected readonly paymentsLoading = computed(() => this.payments.phase() === 'loading');
+  protected readonly paymentsFailed = this.payments.firstFailed;
+  protected readonly paymentsMoreFailed = this.payments.moreFailed;
+  protected readonly paymentsRetrying = this.payments.retrying;
+  protected readonly paymentsLoadingMore = this.payments.loadingMore;
+  protected readonly paymentsHasMore = computed(() => this.payments.nextCursor() !== null);
 
   protected readonly title = computed(() => {
     const guest = this.guest();
@@ -221,6 +245,7 @@ export class GuestDetailComponent {
     }, ACCESS_CLOCK_MS);
     this.destroyRef.onDestroy(() => {
       clearInterval(clock);
+      this.payments.dispose();
       // Leaving the screen: no late answer may load, open a dialog or navigate any more.
       this.closeDialogs();
     });
@@ -243,6 +268,24 @@ export class GuestDetailComponent {
   protected retry(): void {
     if (this.retrying() || this.refreshing()) return;
     this.content.retry();
+  }
+
+  protected retryPayments(): void {
+    this.payments.retry(this.currentId());
+  }
+
+  protected morePayments(): void {
+    this.payments.more(this.currentId());
+  }
+
+  /** The history of `id`: read again for the same guest (what is shown stays), from empty for another. */
+  private readPayments(id: string): void {
+    if (this.paymentsOf === id) {
+      this.payments.reload(id);
+      return;
+    }
+    this.paymentsOf = id;
+    this.payments.switchTo(id);
   }
 
   protected onPanelAction(action: PanelAction): void {
