@@ -39,6 +39,11 @@ export interface MockContext {
   user(): DemoUser | null;
   signIn(user: DemoUser): void;
   signOut(): void;
+  /**
+   * POST /auth/refresh (TAR-228, TAR-364): renews an expired access token while the refresh token
+   * lives. False when there is no session to renew; the session is then closed.
+   */
+  renewSession(): boolean;
   markPasswordChanged(): void;
   passwordChanged(): boolean;
   /** The administrator of the session; otherwise it throws the 401 or 403 of the contract. */

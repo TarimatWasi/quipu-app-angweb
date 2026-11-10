@@ -81,3 +81,59 @@ describe('change of password from the account menu in the simulated BFF (A0.6)',
     expect(none.status).toBe(401);
   });
 });
+
+describe('the refresh of the session in the simulated BFF (TAR-228, TAR-364)', () => {
+  afterEach(() => {
+    resetMockSettings();
+  });
+
+  const ME = '/bff/auth/me';
+  const REFRESH = '/bff/auth/refresh';
+
+  it('answers 401 to every call with an expired access until the refresh renews it', async () => {
+    const mock = setUpMockBff();
+    await mock.signIn('admin');
+    mock.bff.expire('access-expired');
+
+    expect((await mock.fail(mock.get(ME))).status).toBe(401);
+    expect((await mock.fail(mock.get('/bff/admin/guests'))).status).toBe(401);
+    expect(await mock.send('POST', REFRESH, null)).toBeNull();
+
+    expect(mock.bff.sessionState()).toBe('live');
+    expect(await mock.get(ME)).toEqual(expect.objectContaining({ role: 'ADMIN' }));
+  });
+
+  it('refuses the refresh of an expired session and closes it', async () => {
+    const mock = setUpMockBff();
+    await mock.signIn('contract-guest');
+    mock.bff.expire('expired');
+
+    const refused = await mock.fail(mock.send('POST', REFRESH, null));
+
+    expect(refused.status).toBe(401);
+    expect(catalogOf(refused)).toEqual({ message: SOME_TEXT, code: 'AUTH_NO_SESSION' });
+    expect(mock.bff.user()).toBeNull();
+    // A new sign-in starts a live session.
+    await mock.signIn('contract-guest');
+    expect(mock.bff.sessionState()).toBe('live');
+  });
+
+  it('refuses the refresh without a session, and expiring nothing does nothing', async () => {
+    const mock = setUpMockBff();
+    mock.bff.expire('access-expired');
+
+    expect(mock.bff.sessionState()).toBe('live');
+    expect((await mock.fail(mock.send('POST', REFRESH, null))).status).toBe(401);
+  });
+
+  it('still lets an expired session sign in again or log out', async () => {
+    const mock = setUpMockBff();
+    await mock.signIn('admin');
+    mock.bff.expire('expired');
+
+    expect(await mock.send('POST', '/bff/auth/logout', null)).toBeNull();
+    expect(mock.bff.user()).toBeNull();
+    await mock.signIn('admin');
+    expect(await mock.get(ME)).toEqual(expect.objectContaining({ role: 'ADMIN' }));
+  });
+});

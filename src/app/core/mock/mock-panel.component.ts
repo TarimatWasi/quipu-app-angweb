@@ -7,6 +7,7 @@ import { firstValueFrom } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { DEMO_CLAVE, DEMO_USERS, isDemoUserKey } from './data/demo-users';
 import { MockBff } from './mock-bff';
+import type { MockSessionState } from './mock-bff';
 import { isMockScenario, MOCK_SCENARIOS } from './mock-scenarios';
 
 /** Reloads the page, so every screen asks the simulated BFF again. */
@@ -20,8 +21,15 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
   },
 });
 
+const SESSION_TEXTS: Readonly<Record<MockSessionState, string>> = {
+  live: 'La sesión está vigente.',
+  'access-expired': 'El acceso venció: la próxima llamada recibe un 401 y la app lo renueva sola.',
+  expired: 'La sesión venció: la próxima llamada lleva al inicio de sesión.',
+};
+
 /**
- * The floating panel of the `mock` profile: the demo role and the scenario of the simulated BFF.
+ * The floating panel of the `mock` profile: the demo role, the scenario of the simulated BFF and
+ * the expiry of the session (TAR-364).
  * A role changes without reloading the page (the session lives in memory, so it works even when
  * the browser blocks the storage); a scenario reloads it when the choice could be kept.
  */
@@ -61,6 +69,18 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
               }
             </select>
             <p class="hint">Clave de las cuentas demo: {{ clave }}</p>
+          </fieldset>
+          <fieldset class="session">
+            <legend>Sesión</legend>
+            <div class="actions">
+              <button type="button" [disabled]="role() === ''" (click)="expire('access-expired')">
+                Vencer el acceso
+              </button>
+              <button type="button" [disabled]="role() === ''" (click)="expire('expired')">
+                Vencer la sesión
+              </button>
+            </div>
+            <p class="hint" aria-live="polite">{{ sessionText() }}</p>
           </fieldset>
           <app-mock-controls
             [active]="current() === 'normal'"
@@ -115,6 +135,14 @@ export const MOCK_RELOAD = new InjectionToken<() => void>('MOCK_RELOAD', {
     .hint {
       margin: 0.5rem 0 0;
     }
+    .session {
+      margin-top: 0.75rem;
+    }
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
   `,
 })
 export class MockPanelComponent {
@@ -135,6 +163,14 @@ export class MockPanelComponent {
   protected readonly role = computed(() => this.bff.sessionUser()?.key ?? '');
   protected readonly current = signal(this.bff.scenario());
   protected readonly scenarioLabel = computed(() => MOCK_SCENARIOS[this.current()]);
+  protected readonly sessionText = computed(() =>
+    this.role() === '' ? 'Sin sesión.' : SESSION_TEXTS[this.bff.sessionState()],
+  );
+
+  /** Expires the access token or the whole session, to try the refresh of TAR-360 (TAR-364). */
+  protected expire(state: Exclude<MockSessionState, 'live'>): void {
+    this.bff.expire(state);
+  }
 
   protected reloadPage(): void {
     this.reload();

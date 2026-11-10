@@ -44,6 +44,19 @@ export interface MockCall {
 }
 
 const NO_SESSION = 'No hay una sesión activa.';
+/** The calls that answer their own 401 or renew the session: an expired access does not stop them. */
+const OWN_AUTH = new Set([
+  '/bff/auth/login',
+  '/bff/auth/csrf',
+  '/bff/auth/refresh',
+  '/bff/auth/logout',
+]);
+
+/**
+ * What is left of the session (TAR-364): the access token lives 15 minutes and the refresh token
+ * renews it (TAR-228). The panel makes either expire to try the refresh of TAR-360.
+ */
+export type MockSessionState = 'live' | 'access-expired' | 'expired';
 const FORBIDDEN = 'No tienes permiso para esta acción.';
 
 /**
@@ -61,6 +74,9 @@ export class MockBff implements MockContext {
   // the storage still keeps the session for as long as the page is open.
   private readonly currentUser = signal<DemoUser | null>(this.storedUser());
   private changedPassword = readMockSetting('quipu-mock:password') === 'changed';
+  private readonly sessionStateValue = signal<MockSessionState>('live');
+  /** Whether the session works, needs a refresh or is over; it lasts until the next sign-in. */
+  readonly sessionState = this.sessionStateValue.asReadonly();
 
   /** The demo user of the session, as a signal: the panel shows the role in force. */
   readonly sessionUser = this.currentUser.asReadonly();
@@ -101,6 +117,7 @@ export class MockBff implements MockContext {
 
   signIn(user: DemoUser): void {
     this.currentUser.set(user);
+    this.sessionStateValue.set('live');
     this.changedPassword = false;
     writeMockSetting('quipu-mock:role', user.key);
     writeMockSetting('quipu-mock:password', null);
@@ -108,9 +125,27 @@ export class MockBff implements MockContext {
 
   signOut(): void {
     this.currentUser.set(null);
+    this.sessionStateValue.set('live');
     this.changedPassword = false;
     writeMockSetting('quipu-mock:role', null);
     writeMockSetting('quipu-mock:password', null);
+  }
+
+  /**
+   * The access token expires (`access-expired`): the next call answers 401 and the refresh renews
+   * it. Or the whole session does (`expired`): the refresh answers 401 too and the app logs out.
+   */
+  expire(state: Exclude<MockSessionState, 'live'>): void {
+    if (this.user() !== null) this.sessionStateValue.set(state);
+  }
+
+  renewSession(): boolean {
+    if (this.user() === null || this.sessionStateValue() === 'expired') {
+      this.signOut();
+      return false;
+    }
+    this.sessionStateValue.set('live');
+    return true;
   }
 
   markPasswordChanged(): void {
@@ -145,6 +180,9 @@ export class MockBff implements MockContext {
     const resolved = this.registry.resolve(call.method, call.path);
     if (resolved === null) {
       return failure(404, 'RESOURCE_NOT_FOUND', 'Esta ruta no está simulada en el perfil mock.');
+    }
+    if (this.sessionStateValue() !== 'live' && !OWN_AUTH.has(call.path)) {
+      return failure(401, 'AUTH_NO_SESSION', NO_SESSION);
     }
     const forced = this.scenarioReply(call, resolved);
     if (forced !== null) {

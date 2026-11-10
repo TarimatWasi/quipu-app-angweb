@@ -136,6 +136,34 @@ describe('MockPanelComponent', () => {
     expect(roles.value).toBe('');
   });
 
+  it('expires the access or the whole session of the role in force (TAR-364)', async () => {
+    await renderPanel();
+    const access = screen.getByRole<HTMLButtonElement>('button', { name: 'Vencer el acceso' });
+    const session = screen.getByRole<HTMLButtonElement>('button', { name: 'Vencer la sesión' });
+    expect([access.disabled, session.disabled]).toEqual([true, true]);
+    expect(screen.getByText('Sin sesión.')).toBeTruthy();
+    const bff = TestBed.inject(MockBff);
+    bff.signIn(DEMO_USERS.admin);
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(screen.getByText('La sesión está vigente.')).toBeTruthy();
+
+    access.click();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(bff.sessionState()).toBe('access-expired');
+    expect(
+      screen.getByText(
+        'El acceso venció: la próxima llamada recibe un 401 y la app lo renueva sola.',
+      ),
+    ).toBeTruthy();
+
+    session.click();
+    await TestBed.inject(ApplicationRef).whenStable();
+    expect(bff.sessionState()).toBe('expired');
+    expect(
+      screen.getByText('La sesión venció: la próxima llamada lleva al inicio de sesión.'),
+    ).toBeTruthy();
+  });
+
   it('keeps the chosen scenario and reloads the page', async () => {
     const reload = await renderPanel();
     choose('Escenario', 'load-error');
