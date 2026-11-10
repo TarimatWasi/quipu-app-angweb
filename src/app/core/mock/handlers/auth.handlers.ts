@@ -78,7 +78,7 @@ function checkAdminName(name: unknown): void {
   }
 }
 
-/** Sign-in with the demo accounts (any other document or password is rejected), /me, logout. */
+/** Sign-in with the demo accounts (any other document or password is rejected), /me, refresh, logout. */
 export const AUTH_ROUTES: readonly MockRoute[] = [
   {
     key: 'POST /bff/auth/login',
@@ -113,6 +113,14 @@ export const AUTH_ROUTES: readonly MockRoute[] = [
         ? failure(401, 'AUTH_NO_SESSION', 'No hay una sesión activa.')
         : ok(session);
     },
+  },
+  {
+    // TAR-228: 204 renews the session (new cookies); 401 when there is none to renew.
+    key: 'POST /bff/auth/refresh',
+    handler: (_req, ctx) =>
+      ctx.renewSession()
+        ? noContent()
+        : failure(401, 'AUTH_NO_SESSION', 'No hay una sesión activa.'),
   },
   {
     key: 'POST /bff/auth/logout',
