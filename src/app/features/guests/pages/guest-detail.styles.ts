@@ -31,6 +31,13 @@ export const GUEST_DETAIL_STYLES = `
     display: grid;
     gap: 1rem;
   }
+  .charges {
+    display: grid;
+    gap: 2.5rem;
+  }
+  .charges > * {
+    min-width: 0;
+  }
   .blocked h2 {
     margin: 0;
   }

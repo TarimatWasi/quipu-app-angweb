@@ -14,6 +14,8 @@ import type {
   PeriodStatus,
   Stay,
 } from '@core/api/clients/admin-guests.service';
+import { GuestPaymentsService } from '../data/guest-payments.service';
+import type { GuestPaymentsPage, PaymentSummary } from '../data/guest-payments.service';
 import { GuestDetailComponent } from './guest-detail.component';
 import { ToastService } from '@shared/ui/toast/toast.service';
 
@@ -136,7 +138,33 @@ export const GRANT: AccessGrant = {
   shareMessage: 'Entra con K7-q2x9m',
 };
 
+/** One payment of the history of A3.2 (PaymentSummary), approved unless told otherwise. */
+export function paymentOf(fields: Partial<PaymentSummary> = {}): PaymentSummary {
+  return {
+    id: 'p1',
+    guestId: 'g1',
+    contractId: 'c1',
+    stayId: null,
+    period: '2026-09',
+    amount: 800,
+    verifiedAmount: 800,
+    status: 'APPROVED',
+    rejectionReason: null,
+    proofCount: 1,
+    voucherCount: 1,
+    hasCash: false,
+    reviewedAt: '2026-09-06T15:00:00Z',
+    submittedAt: '2026-09-05T15:00:00Z',
+    createdAt: '2026-09-05T15:00:00Z',
+    ...fields,
+  } as PaymentSummary;
+}
+
+export const NO_PAYMENTS: GuestPaymentsPage = { content: [], nextCursor: null };
+
 interface Answers {
+  /** The pages of «Historial de pagos», by the cursor asked (null is the first page). */
+  payments?: (after: string | null) => Observable<GuestPaymentsPage>;
   detail?: Observable<GuestDetail>;
   months?: PeriodStatus[];
   stays?: Stay[];
@@ -166,24 +194,40 @@ export function serviceOf(answers: Answers) {
   };
 }
 
+export function paymentsServiceOf(answers: Answers) {
+  return {
+    page: vi.fn<(id: string, after?: string | null) => Observable<GuestPaymentsPage>>(
+      (_id, after = null) => answers.payments?.(after) ?? of(NO_PAYMENTS),
+    ),
+  };
+}
+
+/** The routes A3.2 links to and the doubles of its two services. */
+function providersOf(
+  service: ReturnType<typeof serviceOf>,
+  paymentsService: ReturnType<typeof paymentsServiceOf>,
+) {
+  return [
+    provideRouter([
+      { path: 'admin/guests', children: [] },
+      { path: 'admin/guests/:id', component: GuestDetailComponent },
+      { path: 'admin/guests/:id/access', children: [] },
+      { path: 'admin/guests/:id/document', children: [] },
+      { path: 'admin/guests/:id/stays/new', children: [] },
+      { path: 'admin/guests/:id/stays/:stayId', children: [] },
+      { path: 'admin/payments/new', children: [] },
+      { path: 'admin/payments/:id', children: [] },
+    ]),
+    { provide: AdminGuestsService, useValue: service },
+    { provide: GuestPaymentsService, useValue: paymentsService },
+    { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
+  ];
+}
+
 export async function setup(answers: Answers = {}) {
   const service = serviceOf(answers);
-  TestBed.configureTestingModule({
-    providers: [
-      provideRouter([
-        { path: 'admin/guests', children: [] },
-        { path: 'admin/guests/:id', component: GuestDetailComponent },
-        { path: 'admin/guests/:id/access', children: [] },
-        { path: 'admin/guests/:id/document', children: [] },
-        { path: 'admin/guests/:id/stays/new', children: [] },
-        { path: 'admin/guests/:id/stays/:stayId', children: [] },
-        { path: 'admin/payments/new', children: [] },
-        { path: 'admin/payments/:id', children: [] },
-      ]),
-      { provide: AdminGuestsService, useValue: service },
-      { provide: MATERIAL_ANIMATIONS, useValue: { animationsDisabled: true } },
-    ],
-  });
+  const paymentsService = paymentsServiceOf(answers);
+  TestBed.configureTestingModule({ providers: providersOf(service, paymentsService) });
   const harness = await RouterTestingHarness.create();
   const router = TestBed.inject(Router);
   await router.navigateByUrl('/admin/guests/g1', { state: answers.state });
@@ -207,5 +251,17 @@ export async function setup(answers: Answers = {}) {
     [...page().getByRole('region', { name: 'Más acciones' }).querySelectorAll('li')].map((li) =>
       words(li),
     );
-  return { harness, service, router, root, page, click, panel, toast, facts, more };
+  return {
+    harness,
+    service,
+    paymentsService,
+    router,
+    root,
+    page,
+    click,
+    panel,
+    toast,
+    facts,
+    more,
+  };
 }

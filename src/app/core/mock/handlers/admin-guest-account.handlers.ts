@@ -3,7 +3,8 @@ import { accessGrant } from '../data/access-grants';
 import { guestPeriods, periodStatus } from '../data/account-views';
 import { nowInstant } from '../data/mock-dates';
 import type { GuestRecord, MockDb } from '../data/mock-db';
-import { invalid, MockFailure, noContent, notFound, ok, raise } from '../mock-reply';
+import { paymentSummary } from '../data/payment-views';
+import { invalid, MockFailure, noContent, notFound, ok, paginate, raise } from '../mock-reply';
 import type { MockRequest, MockRoute } from '../mock-types';
 
 type Schemas = components['schemas'];
@@ -36,6 +37,14 @@ function refuseInactive(guest: GuestRecord): void {
 /** Every month of every contract of the guest, the credit discounted once (RF-06, RN-38). */
 function accountStatus(db: MockDb, guest: GuestRecord): Schemas['PeriodStatus'][] {
   return guestPeriods(db, guest.id).map(periodStatus);
+}
+
+/** listGuestPaymentsByAdmin (RF-10): every payment of the guest, the last sent first. */
+function payments(db: MockDb, guest: GuestRecord): Schemas['PaymentSummary'][] {
+  return db.data.payments
+    .filter((payment) => payment.guestId === guest.id)
+    .sort((a, b) => b.submittedAt.localeCompare(a.submittedAt))
+    .map((payment) => paymentSummary(db, payment));
 }
 
 /** deactivateGuest (RN-12): refused while a contract is in force; a debt does not block it. */
@@ -88,13 +97,20 @@ function setAccountEmail(db: MockDb, guest: GuestRecord, body: Record<string, un
   delete guest.emailVerification;
 }
 
-/** A3.2: the months of a guest, deactivating it, a new access (A3.4) and its account email. */
+/** A3.2: the months and the payments of a guest, deactivating it, a new access (A3.4) and its account email. */
 export const ADMIN_GUEST_ACCOUNT_ROUTES: readonly MockRoute[] = [
   {
     key: 'GET /bff/admin/guests/{id}/account-status',
     handler: (req, ctx) => {
       ctx.requireAdmin();
       return ok(accountStatus(ctx.db, guestOf(ctx.db, req)));
+    },
+  },
+  {
+    key: 'GET /bff/admin/guests/{id}/payments',
+    handler: (req, ctx) => {
+      ctx.requireAdmin();
+      return ok(paginate(payments(ctx.db, guestOf(ctx.db, req)), req.query));
     },
   },
   {
