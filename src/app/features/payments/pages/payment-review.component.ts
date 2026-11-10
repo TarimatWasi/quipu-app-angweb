@@ -120,21 +120,10 @@ export class PaymentReviewComponent {
   protected readonly payment = this.content.data;
   protected readonly retrying = this.content.retrying;
   protected readonly refreshing = this.content.refreshing;
-  /** A 404 is not a refresh that failed: the payment is gone and the page says so instead. */
-  private readonly gone = computed(() => {
-    const error = this.content.error();
-    return error instanceof HttpErrorResponse && error.status === 404;
-  });
   protected readonly refreshError = computed(() =>
-    this.gone() || this.content.refreshError() === null ? null : this.loadErrorText,
+    this.content.refreshProblem() === null ? null : this.loadErrorText,
   );
-  protected readonly state = computed<LoadState>(() => {
-    const state = this.content.state();
-    if (state.status === 'initial-loading') return { kind: 'loading' };
-    if (this.gone() && !this.refreshing() && !this.retrying()) return { kind: 'not-found' };
-    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
-    return { kind: 'ready' };
-  });
+  protected readonly state = computed<LoadState>(() => this.content.page());
   protected readonly blocked = computed(
     () => this.busy() || this.refreshing() || this.refreshError() !== null,
   );

@@ -69,7 +69,6 @@ import { openPaymentNoticeDialog } from '@shared/payments/payment-notice-dialog.
 import { ToastService } from '@shared/ui/toast/toast.service';
 import {
   HOME_NAMES,
-  LoadState,
   paymentSummary,
   NOTICES,
   OWN_PROOF_LIMIT_TEXT,
@@ -306,24 +305,8 @@ export class OwnPaymentComponent {
   });
   protected readonly retrying = this.content.retrying;
   protected readonly refreshing = this.content.refreshing;
-  /** A 404 is not a refresh that failed: what was asked is gone and the page says so instead. */
-  private readonly gone = computed(() => {
-    const error = this.content.error();
-    return error instanceof HttpErrorResponse && error.status === 404;
-  });
-  protected readonly refreshError = computed(() =>
-    this.gone() ? null : this.content.refreshError(),
-  );
-  protected readonly state = computed<LoadState>(() => {
-    const state = this.content.state();
-    if (state.status === 'initial-loading') return { kind: 'loading' };
-    const error = this.content.error();
-    if (this.gone() && error !== undefined && !this.refreshing() && !this.retrying()) {
-      return { kind: 'not-found', message: toBffErrorWithServerMessage(error).message };
-    }
-    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
-    return { kind: 'ready' };
-  });
+  protected readonly refreshError = this.content.refreshProblem;
+  protected readonly state = this.content.page;
 
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;

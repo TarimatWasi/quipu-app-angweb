@@ -134,20 +134,12 @@ export class StayFormComponent {
   });
   protected readonly retrying = this.stay.retrying;
   protected readonly refreshing = this.stay.refreshing;
-  /** A 404 is not a refresh that failed: the stay is gone and the page says so instead. */
-  private readonly gone = computed(() => {
-    const error = this.stay.error();
-    return error instanceof HttpErrorResponse && error.status === 404;
-  });
-  protected readonly refreshError = computed(() => (this.gone() ? null : this.stay.refreshError()));
-  /** A new stay has nothing to load: its form is ready at once. */
+  protected readonly refreshError = this.stay.refreshProblem;
+  /** A new stay has nothing to load: its form is ready at once. A stay not found is gone too. */
   protected readonly state = computed<LoadState>(() => {
     if (this.stayId === null) return { kind: 'ready' };
-    const state = this.stay.state();
-    if (state.status === 'initial-loading') return { kind: 'loading' };
-    if (this.gone() && !this.refreshing() && !this.retrying()) return { kind: 'not-found' };
-    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
-    return state.data === null ? { kind: 'not-found' } : { kind: 'ready' };
+    const page = this.stay.page();
+    return page.kind === 'ready' && this.stay.data() === null ? { kind: 'not-found' } : page;
   });
   protected readonly loaded = computed(() => this.stay.data());
 

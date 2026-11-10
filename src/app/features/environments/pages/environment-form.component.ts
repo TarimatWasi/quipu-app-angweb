@@ -10,6 +10,7 @@ import { toBffErrorWithServerMessage } from '@core/http/bff-error';
 import { isConcurrentModification, withVersion } from '@core/http/concurrent-modification';
 import { openConcurrentModificationDialog } from '@shared/concurrent-modification/concurrent-modification-dialog.component';
 import { ResourceContent } from '@shared/data/resource-content';
+import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { firstError, focusFirstProblem, focusWhenInvalid } from '@shared/forms/form-feedback';
 import { FactTileComponent } from '@shared/ui/fact-tile/fact-tile.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
@@ -54,6 +55,7 @@ const GENERAL_ERROR_ID = 'environment-form-error';
 @Component({
   selector: 'app-environment-form',
   imports: [
+    RefreshErrorComponent,
     FactTileComponent,
     FieldControlDirective,
     FormField,
@@ -121,6 +123,9 @@ export class EnvironmentFormComponent {
   );
   protected readonly view = this.loaded.state;
   protected readonly retrying = this.loaded.retrying;
+  /** «Volver a cargar» after a conflict keeps the form; a failure of that read says so over it. */
+  protected readonly refreshing = this.loaded.refreshing;
+  protected readonly refreshError = this.loaded.refreshProblem;
   protected readonly generalError = signal<string | null>(null);
   protected readonly draft = signal<EnvironmentDraft>(EMPTY);
 

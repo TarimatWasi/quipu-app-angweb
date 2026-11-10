@@ -1,3 +1,4 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { computed, effect, signal, untracked } from '@angular/core';
 import type { ResourceRef } from '@angular/core';
 import { contentSignals } from './async-content';
@@ -21,6 +22,16 @@ interface Kept<V> {
 }
 
 const NO_IDENTITY = (): null => null;
+
+/**
+ * What a page whose record may be gone shows (a guest, a payment, a stay): it loads, it failed
+ * with its message, the record is not there (404), or it is on screen.
+ */
+export type PageLoad =
+  | { readonly kind: 'loading' }
+  | { readonly kind: 'ready' }
+  | { readonly kind: 'not-found'; readonly message: string }
+  | { readonly kind: 'error'; readonly message: string };
 
 /**
  * The state of ONE read made with a resource (`rxResource`, `httpResource`), said as
@@ -75,6 +86,27 @@ export class ResourceContent<T> {
   readonly retrying = this.signals.retrying;
   readonly refreshing = this.signals.refreshing;
   readonly refreshError = this.signals.refreshError;
+
+  /** The record read is gone (404): not a failure to retry, but a page that says so. */
+  readonly notFound = computed(() => {
+    const error = this.failure();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
+
+  /** A refresh that failed for any reason but a 404, which replaces the page instead. */
+  readonly refreshProblem = computed(() => (this.notFound() ? null : this.refreshError()));
+
+  /** {@link state} as a page whose record may be gone says it (see {@link PageLoad}). */
+  readonly page = computed<PageLoad>(() => {
+    const state = this.state();
+    if (state.status === 'initial-loading') return { kind: 'loading' };
+    const error = this.failure();
+    if (error !== undefined && this.notFound() && !this.ref.isLoading()) {
+      return { kind: 'not-found', message: this.messageOf(error) };
+    }
+    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
+    return { kind: 'ready' };
+  });
 
   constructor(
     private readonly ref: ResourceRef<T | undefined>,

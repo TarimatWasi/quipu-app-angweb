@@ -93,12 +93,6 @@ export const NOTICES: Readonly<Record<GuestType, Readonly<Partial<Record<string,
   TEMPORARY: noticesOf('TEMPORARY'),
 };
 
-export type LoadState =
-  | { readonly kind: 'loading' }
-  | { readonly kind: 'ready' }
-  | { readonly kind: 'not-found'; readonly message: string }
-  | { readonly kind: 'error'; readonly message: string };
-
 /** What the page is for: a first payment, the correction of a rejected one or reading one. */
 export type OwnPaymentMode = 'new' | 'correct' | 'read';
 

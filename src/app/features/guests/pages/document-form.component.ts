@@ -128,20 +128,13 @@ export class DocumentFormComponent {
   });
   protected readonly retrying = this.content.retrying;
   protected readonly refreshing = this.content.refreshing;
-  /** A 404 is not a refresh that failed: the guest is gone and the page says so instead. */
-  private readonly gone = computed(() => {
-    const error = this.content.error();
-    return error instanceof HttpErrorResponse && error.status === 404;
-  });
-  protected readonly refreshError = computed(() =>
-    this.gone() ? null : this.content.refreshError(),
-  );
+  protected readonly refreshError = this.content.refreshProblem;
+  /** A guest that is no longer pending is shown as locked. */
   protected readonly state = computed<LoadState>(() => {
-    const state = this.content.state();
-    if (state.status === 'initial-loading') return { kind: 'loading' };
-    if (this.gone() && !this.refreshing() && !this.retrying()) return { kind: 'not-found' };
-    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
-    return isPending(state.data) ? { kind: 'ready' } : { kind: 'locked' };
+    const page = this.content.page();
+    if (page.kind !== 'ready') return page;
+    const guest = this.content.data();
+    return guest !== null && isPending(guest) ? page : { kind: 'locked' };
   });
   protected readonly loaded = computed<PendingGuestDetail | null>(() => {
     const guest = this.content.data();

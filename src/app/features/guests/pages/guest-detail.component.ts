@@ -146,20 +146,10 @@ export class GuestDetailComponent {
   });
   protected readonly retrying = this.content.retrying;
   protected readonly refreshing = this.content.refreshing;
-  /** A 404 is not a refresh that failed: the guest is gone and the page says so instead. */
-  private readonly gone = computed(() => {
-    const error = this.content.error();
-    return error instanceof HttpErrorResponse && error.status === 404;
-  });
   protected readonly refreshError = computed(() =>
-    this.gone() || this.content.refreshError() === null ? null : this.loadErrorText,
+    this.content.refreshProblem() === null ? null : this.loadErrorText,
   );
-  protected readonly state = computed<LoadState>(() => {
-    const status = this.content.state().status;
-    if (status === 'initial-loading') return 'loading';
-    if (this.gone() && !this.refreshing() && !this.retrying()) return 'not-found';
-    return status === 'initial-error' ? 'error' : 'ready';
-  });
+  protected readonly state = computed<LoadState>(() => this.content.page().kind);
   protected readonly guest = computed(() => this.content.data()?.guest ?? this.arriving());
   private readonly periods = computed(() => this.content.data()?.periods ?? []);
   private readonly stays = computed(() => this.content.data()?.stays ?? []);
