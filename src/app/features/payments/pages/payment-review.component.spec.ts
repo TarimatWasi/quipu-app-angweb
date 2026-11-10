@@ -68,7 +68,9 @@ function payment(overrides: Partial<PaymentDetail> = {}): PaymentDetail {
 
 async function settle(harness: RouterTestingHarness) {
   await new Promise((resolve) => setTimeout(resolve, 0));
-  await harness.fixture.whenStable();
+  // A resource keeps the app unstable while it reads: tick instead of waiting for it.
+  TestBed.tick();
+  harness.detectChanges();
 }
 
 async function setup(detail: PaymentDetail = payment(), query = '') {
@@ -589,7 +591,9 @@ describe('PaymentReviewComponent (A5.2)', () => {
     await flush(await expect1(detailUrl('pay_2')), payment({ id: 'pay_2' }));
     await click(page().getByRole('button', { name: 'Aprobar pago' }));
     const secondPatch = await expect1((req) => req.method === 'PATCH');
-    await flush(oldRefresh, payment({ status: 'APPROVED' }));
+    // The read of the previous payment is cancelled with it (a resource does): if it were still
+    // open, its late answer must not unlock the new one either.
+    if (!oldRefresh.cancelled) await flush(oldRefresh, payment({ status: 'APPROVED' }));
 
     expect(page().getByRole<HTMLButtonElement>('button', { name: 'Aprobar pago' }).disabled).toBe(
       true,

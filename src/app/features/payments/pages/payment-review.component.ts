@@ -1,4 +1,4 @@
-import { LatestRequest } from '@shared/data/latest-request';
+import { ResourceContent } from '@shared/data/resource-content';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { SkeletonFactsComponent } from '@shared/ui/skeleton/skeleton-facts.component';
@@ -14,10 +14,10 @@ import {
   Injector,
   signal,
 } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { MatDialog } from '@angular/material/dialog';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
-import { firstValueFrom, Observable } from 'rxjs';
+import { firstValueFrom, Observable, tap } from 'rxjs';
 import { AdminPaymentsService } from '../data/admin-payments.service';
 import type { PaymentDetail } from '../data/admin-payments.service';
 import { toBffErrorWithServerMessage } from '@core/http/bff-error';
@@ -92,13 +92,49 @@ export class PaymentReviewComponent {
 
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
-  protected readonly payment = signal<PaymentDetail | null>(null);
-  protected readonly state = signal<LoadState>({ kind: 'loading' });
   protected readonly amounts = signal<Readonly<Record<string, string>>>({});
   protected readonly busy = signal(false);
-  protected readonly retrying = signal(false);
-  protected readonly refreshing = signal(false);
-  protected readonly refreshError = signal<string | null>(null);
+
+  private readonly currentId = signal('');
+  /** Whether the next answer keeps the amounts being typed (only after a correction). */
+  private keepDrafts = false;
+  /**
+   * The payment of the address, read again for another one (history, «Revisar el siguiente»); a
+   * late answer of the previous one is cancelled with it. Its answer sets the amounts to verify.
+   */
+  private readonly read = rxResource<PaymentDetail, string | undefined>({
+    params: () => this.currentId() || undefined,
+    stream: ({ params: id }) =>
+      this.payments.get(id).pipe(
+        tap((payment) => {
+          const keep = this.keepDrafts;
+          this.keepDrafts = false;
+          this.amounts.update((current) => amountTexts(payment.proofs, keep ? current : {}));
+        }),
+      ),
+  });
+  private readonly content = new ResourceContent(this.read, {
+    message: (error) => toBffErrorWithServerMessage(error).message,
+    identity: this.currentId,
+  });
+  protected readonly payment = this.content.data;
+  protected readonly retrying = this.content.retrying;
+  protected readonly refreshing = this.content.refreshing;
+  /** A 404 is not a refresh that failed: the payment is gone and the page says so instead. */
+  private readonly gone = computed(() => {
+    const error = this.content.error();
+    return error instanceof HttpErrorResponse && error.status === 404;
+  });
+  protected readonly refreshError = computed(() =>
+    this.gone() || this.content.refreshError() === null ? null : this.loadErrorText,
+  );
+  protected readonly state = computed<LoadState>(() => {
+    const state = this.content.state();
+    if (state.status === 'initial-loading') return { kind: 'loading' };
+    if (this.gone() && !this.refreshing() && !this.retrying()) return { kind: 'not-found' };
+    if (state.status === 'initial-error') return { kind: 'error', message: state.message };
+    return { kind: 'ready' };
+  });
   protected readonly blocked = computed(
     () => this.busy() || this.refreshing() || this.refreshError() !== null,
   );
@@ -179,9 +215,6 @@ export class PaymentReviewComponent {
 
   /** The view of A5 the payment was opened from, so "Volver a Pagos" returns to it. */
   protected readonly backQuery: Readonly<Record<string, string>>;
-  private currentId = '';
-  // Moves with every load, so a late answer for a previous payment is ignored.
-  private readonly request = new LatestRequest();
   // Moves each time another payment opens in this same component (history, "Revisar el siguiente"):
   // a write or a dialog of the previous payment must not act on the new one.
   private visit = 0;
@@ -193,7 +226,6 @@ export class PaymentReviewComponent {
     // Leaving the page counts as another visit too: late answers of this one are ignored.
     inject(DestroyRef).onDestroy(() => {
       this.visit++;
-      this.request.cancel();
     });
     route.paramMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       this.visit++;
@@ -201,7 +233,8 @@ export class PaymentReviewComponent {
       this.outcome.set(null);
       this.noneLeft.set(false);
       this.actionError.set(null);
-      void this.load(params.get('id') ?? '');
+      this.amounts.set({});
+      this.currentId.set(params.get('id') ?? '');
     });
   }
 
@@ -274,8 +307,7 @@ export class PaymentReviewComponent {
 
   protected retry(): void {
     if (this.retrying() || this.refreshing()) return;
-    this.retrying.set(true);
-    void this.load(this.currentId, true);
+    this.content.retry();
   }
 
   private async resolve(call: Observable<unknown>, outcome: Outcome): Promise<void> {
@@ -338,7 +370,7 @@ export class PaymentReviewComponent {
     const choice = await firstValueFrom(ref.afterClosed());
     if (visit !== this.visit) return;
     if (choice === 'reload') {
-      await this.load(this.currentId, true);
+      this.reload();
     } else if (choice === 'back') {
       await this.router.navigate(['/admin/payments'], { queryParams: this.backQuery });
     }
@@ -370,60 +402,15 @@ export class PaymentReviewComponent {
    * (`keepDrafts`); after a decision the amounts are the ones the BFF saved.
    */
   private async refresh(keepDrafts = false): Promise<void> {
-    const visit = this.visit;
-    this.busy.set(true);
-    try {
-      await this.load(this.currentId, true, keepDrafts);
-    } finally {
-      if (visit === this.visit) this.busy.set(false);
-    }
+    // `refreshing` blocks every write from now until the new detail arrives (see `blocked`).
+    this.reload(keepDrafts);
+    await Promise.resolve();
   }
 
-  /** Loads the payment; `quiet` keeps the page on screen while it reloads. */
-  private async load(id: string, quiet = false, keepDrafts = false): Promise<void> {
-    const request = this.request.begin();
-    const refreshing = quiet && this.payment() !== null;
-    this.refreshing.set(refreshing);
-    this.currentId = id;
-    if (!quiet) {
-      this.refreshError.set(null);
-      this.retrying.set(false);
-      this.state.set({ kind: 'loading' });
-      this.payment.set(null);
-      this.amounts.set({});
-    }
-    try {
-      const payment = await firstValueFrom(this.payments.get(id));
-      if (!this.request.isCurrent(request)) return;
-      this.amounts.update((current) => amountTexts(payment.proofs, keepDrafts ? current : {}));
-      this.payment.set(payment);
-      this.refreshError.set(null);
-      this.state.set({ kind: 'ready' });
-    } catch (error: unknown) {
-      if (this.request.isCurrent(request)) this.failLoad(error, refreshing);
-    } finally {
-      if (this.request.isCurrent(request)) this.endLoad();
-    }
-  }
-
-  /** A failed refresh keeps the page and says so; any other failure replaces it. */
-  private failLoad(error: unknown, refreshing: boolean): void {
-    const notFound = error instanceof HttpErrorResponse && error.status === 404;
-    if (refreshing && !notFound) {
-      this.refreshError.set(this.loadErrorText);
-      return;
-    }
-    this.payment.set(null);
-    this.state.set(
-      notFound
-        ? { kind: 'not-found' }
-        : { kind: 'error', message: toBffErrorWithServerMessage(error).message },
-    );
-  }
-
-  private endLoad(): void {
-    this.retrying.set(false);
-    this.refreshing.set(false);
+  /** Reads the payment again keeping the page on screen. */
+  private reload(keepDrafts = false): void {
+    this.keepDrafts = keepDrafts;
+    this.content.reload();
   }
 
   private focus(selector: string): void {
