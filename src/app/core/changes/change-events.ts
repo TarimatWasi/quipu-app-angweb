@@ -22,7 +22,8 @@ export type ChangePayload = Omit<components['schemas']['AdminChange'], 'invalida
 export type ReadyPayload = components['schemas']['ChangeReady'];
 export type ClosingPayload = components['schemas']['ChangeClosing'];
 
-const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}';
+// MaskSession ids keep UUID grouping but their masked bits do not encode an RFC version/variant.
+const UUID = '[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}';
 const ADMIN_STATIC = new Set([
   'admin.dashboard',
   'admin.payments.queue',

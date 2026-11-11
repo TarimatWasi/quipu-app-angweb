@@ -39,4 +39,20 @@ describe('SSE contract messages (QP-SPRMONO-SSE-04)', () => {
     expect(parseChange(payload(['admin.dashboard']), 'GUEST')).toBeNull();
     expect(parseChange('{', 'GUEST')).toBeNull();
   });
+  it('accepts opaque masked ids without imposing RFC version or variant bits', () => {
+    const masked = '00000000-0000-f000-c000-000000000001';
+    const adminKeys = [
+      'admin.payments.queue',
+      `admin.payment:${masked}`,
+      `admin.guest:${masked}`,
+      `admin.environment:${masked}`,
+    ];
+    expect(parseChange(payload(adminKeys), 'ADMIN')?.invalidate).toEqual(adminKeys);
+    const guestKeys = ['guest.home', `guest.payment:${masked}`];
+    expect(parseChange(payload(guestKeys), 'GUEST')?.invalidate).toEqual(guestKeys);
+    expect(parseChange(payload([`guest.payment:${masked}x`]), 'GUEST')).toBeNull();
+    expect(
+      parseChange(payload([`admin.payment:${masked.replace('f000', 'zzzz')}`]), 'ADMIN'),
+    ).toBeNull();
+  });
 });
