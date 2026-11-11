@@ -498,12 +498,11 @@ export class DirectPaymentComponent {
         name: guestText(guest).name,
         detail: guestText(guest).detail,
       }));
+      const keepChosen =
+        preserve && chosen !== null && !options.some((option) => option.id === chosen.id);
+      const firstPage = keepChosen ? [chosen, ...options] : options;
       this.guestOptions.update((current) =>
-        after === undefined
-          ? preserve && chosen !== null && !options.some((option) => option.id === chosen.id)
-            ? [chosen, ...options]
-            : options
-          : [...current, ...options],
+        after === undefined ? firstPage : [...current, ...options],
       );
       this.guestsCursor.set(page.nextCursor);
       this.failedGuestsAfter = undefined;

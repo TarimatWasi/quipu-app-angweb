@@ -48,10 +48,12 @@ function key(value: unknown, role: ChangeRole): value is ChangeKey {
   if (role === 'ADMIN') {
     return (
       ADMIN_STATIC.has(value) ||
-      new RegExp(`^admin\\.(?:payment|guest|environment):${UUID}$`, 'i').test(value)
+      new RegExp(String.raw`^admin\.(?:payment|guest|environment):${UUID}$`, 'i').test(value)
     );
   }
-  return GUEST_STATIC.has(value) || new RegExp(`^guest\\.payment:${UUID}$`, 'i').test(value);
+  return (
+    GUEST_STATIC.has(value) || new RegExp(String.raw`^guest\.payment:${UUID}$`, 'i').test(value)
+  );
 }
 
 function invalidations(value: unknown, role: ChangeRole): value is ChangePayload['invalidate'] {
