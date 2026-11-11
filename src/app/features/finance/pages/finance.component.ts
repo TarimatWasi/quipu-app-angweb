@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { toBffErrorWithGone } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
@@ -187,6 +188,16 @@ export class FinanceComponent {
 
   /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
   protected readonly started = this.start();
+
+  protected readonly changesStarted = watchChanges({
+    keys: ['admin.finance', 'admin.credits', 'admin.refunds'],
+    reload: () => {
+      this.summary.reload();
+      this.creditsRead.reload();
+      this.list.reload(this.key());
+    },
+    busy: () => this.summaryRead.isLoading() || this.creditsRead.isLoading() || this.list.loading(),
+  });
 
   private start(): true {
     inject(DestroyRef).onDestroy(() => {

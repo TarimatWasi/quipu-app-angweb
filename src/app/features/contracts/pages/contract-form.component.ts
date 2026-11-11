@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { FieldTree, form, FormField, FormRoot, validate } from '@angular/forms/signals';
@@ -89,6 +91,7 @@ interface Choices {
 @Component({
   selector: 'app-contract-form',
   imports: [
+    ChangesNoticeComponent,
     FactTileComponent,
     FieldControlDirective,
     FileFieldComponent,
@@ -227,6 +230,24 @@ export class ContractFormComponent {
   );
   protected readonly note = computed(() => sideNote(this.guestLabel(), this.environmentLabel()));
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () => [
+      'admin.guests',
+      'admin.environments',
+      'admin.contracts',
+      ...(this.guestId ? [`admin.guest:${this.guestId}` as const] : []),
+    ],
+    reload: () => {
+      this.loaded.reload();
+    },
+    busy: () => this.choicesRead.isLoading() || this.saving(),
+    defer: () => this.contractForm().dirty() || this.file() !== null,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
   /** The message to show under a field: what is wrong once touched, or what the BFF refused. */
   protected error(name: keyof ContractFields): string | null {
     return firstError(this.contractForm[name]);
@@ -345,5 +366,9 @@ export class ContractFormComponent {
   // The explicit type breaks the circular inference between the form and its submit action.
   private field(name: keyof ContractFields): FieldTree<string> {
     return this.contractForm[name];
+  }
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.reload();
   }
 }

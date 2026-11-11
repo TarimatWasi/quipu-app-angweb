@@ -1,6 +1,7 @@
 import { ListFilterState } from '@shared/lists/list-page';
 import { countText } from '@shared/text/list-text';
 import { ResourceContent } from '@shared/data/resource-content';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { PageLoadState } from '@shared/data/page-load-state';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
@@ -120,6 +121,14 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
     this.destroyRef.onDestroy(() => {
       this.pageLoad.invalidate();
     });
+    watchChanges({
+      keys: ['admin.payments.queue', 'admin.dashboard'],
+      reload: () => {
+        this.summary.reload();
+        void this.load(undefined, false, true);
+      },
+      busy: () => this.pageLoad.loading() || this.summaryRead.isLoading(),
+    });
     // The address decides the view (?vista=), also when only it changes on this same page.
     this.route.queryParamMap.pipe(takeUntilDestroyed()).subscribe((params) => {
       const view = QUEUE_VIEWS.find((v) => v.param === params.get('vista')) ?? QUEUE_VIEWS[0];
@@ -159,17 +168,20 @@ export class PaymentQueueComponent extends ListFilterState<QueueFilters, SortKey
     this.summary.reload();
   }
 
-  private async load(after?: string, retrying = false): Promise<void> {
+  private async load(after?: string, retrying = false, preserve = false): Promise<void> {
     const status = this.view().status;
-    if (after === undefined) {
+    if (after === undefined && !preserve) {
       this.items.set([]);
       this.nextCursor.set(null);
     }
+    if (after === undefined && preserve) this.nextCursor.set(null);
     const sequence = this.pageLoad.begin({ query: status, after: after ?? null }, retrying);
     try {
       const page = await firstValueFrom(this.payments.list(status, after));
       if (!this.pageLoad.succeed(sequence)) return;
-      this.items.update((items) => [...items, ...page.content]);
+      this.items.update((items) =>
+        after === undefined ? [...page.content] : [...items, ...page.content],
+      );
       this.nextCursor.set(page.nextCursor);
     } catch {
       this.pageLoad.fail(sequence);

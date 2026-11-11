@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { ResourceContent } from '@shared/data/resource-content';
 import { SkeletonContentDirective } from '@shared/ui/skeleton/skeleton-content.directive';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
@@ -65,6 +67,7 @@ import { ToastService } from '@shared/ui/toast/toast.service';
 @Component({
   selector: 'app-payment-review',
   imports: [
+    ChangesNoticeComponent,
     SkeletonFieldsComponent,
     SkeletonFactsComponent,
     SkeletonBlockComponent,
@@ -92,6 +95,7 @@ export class PaymentReviewComponent {
 
   protected readonly maxProofs = MAX_PROOFS;
   protected readonly loadErrorText = LOAD_ERROR_TEXT;
+  private readonly amountsEdited = signal(false);
   protected readonly amounts = signal<Readonly<Record<string, string>>>({});
   protected readonly busy = signal(false);
 
@@ -208,6 +212,19 @@ export class PaymentReviewComponent {
   // a write or a dialog of the previous payment must not act on the new one.
   private visit = 0;
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () => [`admin.payment:${this.currentId()}`],
+    reload: () => {
+      this.content.reload();
+    },
+    busy: () => this.read.isLoading() || this.busy(),
+    defer: () => this.amountsEdited() || this.dialog.openDialogs.length > 0,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
   constructor() {
     const route = inject(ActivatedRoute);
     const view = route.snapshot.queryParamMap.get('vista');
@@ -222,12 +239,15 @@ export class PaymentReviewComponent {
       this.outcome.set(null);
       this.noneLeft.set(false);
       this.actionError.set(null);
+      this.amountsEdited.set(false);
+      this.changesStale.set(false);
       this.amounts.set({});
       this.currentId.set(params.get('id') ?? '');
     });
   }
 
   protected typed({ id, text }: TypedAmount): void {
+    this.amountsEdited.set(true);
     this.amounts.update((texts) => ({ ...texts, [id]: text }));
   }
 
@@ -292,6 +312,12 @@ export class PaymentReviewComponent {
     } finally {
       if (visit === this.visit) this.busy.set(false);
     }
+  }
+
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.amountsEdited.set(false);
+    void this.refresh();
   }
 
   protected retry(): void {
@@ -398,6 +424,8 @@ export class PaymentReviewComponent {
 
   /** Reads the payment again keeping the page on screen. */
   private reload(keepDrafts = false): void {
+    this.changesStale.set(false);
+    if (!keepDrafts) this.amountsEdited.set(false);
     this.keepDrafts = keepDrafts;
     this.content.reload();
   }

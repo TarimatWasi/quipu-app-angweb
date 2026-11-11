@@ -201,6 +201,19 @@ export class AuthService {
     );
   }
 
+  /** Rechecks an already restored session without hiding a definitive 401 from stream recovery. */
+  verifySession(): Observable<Session | null> {
+    const epoch = this.epoch;
+    return this.http.get<unknown>(`${this.bffBaseUrl}/bff/auth/me`).pipe(
+      timeout({ first: this.timing.timeoutMs }),
+      map(toSession),
+      tap((session) => {
+        if (this.epoch === epoch) this.current.set(session);
+      }),
+      map(() => this.current()),
+    );
+  }
+
   /**
    * Resolves once the session of a page reload has been restored. The first caller asks the BFF;
    * the others share its answer. Nothing is asked after a login or a logout in this tab, nor after

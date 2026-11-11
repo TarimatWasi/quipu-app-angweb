@@ -1,3 +1,7 @@
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
+
 <section class="page" [attr.aria-label]="title()">
   <app-page-header [heading]="title()" [backLink]="home" [backTo]="homeName" />
   @if (refreshError(); as message) {

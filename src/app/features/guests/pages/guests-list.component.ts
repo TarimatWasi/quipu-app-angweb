@@ -49,6 +49,7 @@ import {
 import type { PanelCounts } from '../model/guest-list-texts';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 
 /** One read of the BFF: the first page of a query (`after` null) or the one after a cursor. */
 type PageRequest = CursorPageRequest<GuestQuery>;
@@ -140,6 +141,13 @@ export class GuestsListComponent extends ListFilterState<GuestFilters, SortKey> 
     super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     inject(DestroyRef).onDestroy(() => {
       this.pageLoad.invalidate();
+    });
+    watchChanges({
+      keys: ['admin.guests'],
+      reload: () => {
+        this.read({ query: this.query(), after: null });
+      },
+      busy: () => this.pageLoad.loading(),
     });
     // switchMap: a new view or filter drops the answer of the previous one.
     this.requests

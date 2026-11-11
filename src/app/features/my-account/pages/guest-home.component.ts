@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
@@ -80,6 +81,14 @@ export class GuestHomeComponent {
   protected readonly credit = computed(() =>
     creditNotice(this.creditRead.hasValue() ? this.creditRead.value() : null, this.periods()),
   );
+
+  protected readonly changesStarted = watchChanges({
+    keys: ['guest.home'],
+    reload: () => {
+      this.reload();
+    },
+    busy: () => this.read.isLoading() || this.creditRead.isLoading(),
+  });
 
   protected reload(): void {
     this.loaded.reload();

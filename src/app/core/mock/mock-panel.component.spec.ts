@@ -1,3 +1,4 @@
+import { CHANGES_ENABLED } from '@core/changes/change-stream.service';
 import {
   HttpClient,
   HttpErrorResponse,
@@ -198,8 +199,8 @@ describe('withMockBff', () => {
     const config = withMockBff({
       providers: [{ provide: MOCK_LATENCY, useValue: { normalMs: 0, slowMs: 0 } }],
     });
-    expect(config.providers).toHaveLength(3);
     TestBed.configureTestingModule({ providers: config.providers });
+    expect(TestBed.inject(CHANGES_ENABLED)).toBe(false);
     const error: unknown = await firstValueFrom(
       TestBed.inject(HttpClient).get('/bff/auth/me'),
     ).catch((failure: unknown) => failure);

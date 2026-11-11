@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { ProofsEditor } from '@shared/payments/proofs-editor';
 import { ResourceContent } from '@shared/data/resource-content';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
@@ -96,6 +98,7 @@ function idOf(id: string | null): string | null {
 @Component({
   selector: 'app-own-payment',
   imports: [
+    ChangesNoticeComponent,
     ProofKindChoiceComponent,
     ProofAmountFieldComponent,
     ProofMethodFieldComponent,
@@ -308,6 +311,36 @@ export class OwnPaymentComponent {
   protected readonly refreshError = this.content.refreshProblem;
   protected readonly state = this.content.page;
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () =>
+      this.paymentId !== null
+        ? [`guest.payment:${this.paymentId}`]
+        : [this.audience === 'TEMPORARY' ? 'guest.stay' : 'guest.home'],
+    reload: () => {
+      this.content.reload();
+    },
+    busy: () => this.read.isLoading() || this.busy(),
+    defer: () =>
+      this.showForm() &&
+      (this.periodChoice() !== '' ||
+        this.proofs().some(
+          (proof) =>
+            proof.amount !== '' ||
+            proof.file !== null ||
+            proof.method !== '' ||
+            proof.kind === 'CASH',
+        )),
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.load();
+  }
+
   protected retry(): void {
     if (this.retrying() || this.refreshing() || this.state().kind === 'loading') return;
     this.load();
@@ -451,6 +484,7 @@ export class OwnPaymentComponent {
 
   /** Reads again what the page shows, keeping it on screen meanwhile. */
   private load(): void {
+    this.changesStale.set(false);
     this.content.reload();
   }
 

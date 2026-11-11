@@ -1,3 +1,6 @@
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 <app-page-header [heading]="title()" [backLink]="['/admin/environments']" backTo="Ambientes" />
 
 <app-refresh-error

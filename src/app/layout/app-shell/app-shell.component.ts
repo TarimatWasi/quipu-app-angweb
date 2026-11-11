@@ -4,6 +4,7 @@ import {
   Component,
   computed,
   DestroyRef,
+  effect,
   ElementRef,
   inject,
   Injector,
@@ -20,6 +21,8 @@ import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } fro
 import { CHANGE_PASSWORD_ACTION } from '@shared/ui/account-actions/change-password-action';
 import type { ChangePasswordAction } from '@shared/ui/account-actions/change-password-action';
 import { ToastService } from '@shared/ui/toast/toast.service';
+import { ChangeStreamService } from '@core/changes/change-stream.service';
+import { PageNoticeComponent } from '@shared/ui/page-notice/page-notice.component';
 
 /**
  * Key of the route data that tells the shell its pages belong to no section (A0.7, a page that
@@ -55,7 +58,14 @@ function changePasswordAction(): ChangePasswordAction {
 
 @Component({
   selector: 'app-shell',
-  imports: [EmblemComponent, NgTemplateOutlet, RouterLink, RouterOutlet, ToastComponent],
+  imports: [
+    EmblemComponent,
+    NgTemplateOutlet,
+    RouterLink,
+    RouterOutlet,
+    ToastComponent,
+    PageNoticeComponent,
+  ],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
   providers: [{ provide: CHANGE_PASSWORD_ACTION, useFactory: changePasswordAction }],
@@ -66,6 +76,7 @@ function changePasswordAction(): ChangePasswordAction {
 })
 export class AppShellComponent {
   private readonly auth = inject(AuthService);
+  private readonly changeStream = inject(ChangeStreamService);
   private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly injector = inject(Injector);
@@ -92,6 +103,22 @@ export class AppShellComponent {
   protected readonly panelOpen = signal(false);
   protected readonly leaving = signal(false);
   protected readonly toasts = inject(ToastService);
+  protected readonly streamRetryRequired = this.changeStream.retryRequired;
+
+  protected readonly changesEffect = effect(() => {
+    const session = this.auth.session();
+    if (session && session.guestStatus !== 'ONBOARDING') {
+      this.changeStream.start();
+    } else {
+      this.changeStream.stop();
+    }
+  });
+
+  constructor() {
+    this.destroyRef.onDestroy(() => {
+      this.changeStream.stop();
+    });
+  }
 
   protected current(entry: NavEntry): boolean {
     return !this.sectionless && isCurrent(entry, this.url());
@@ -99,6 +126,10 @@ export class AppShellComponent {
 
   protected toggleAccount(): void {
     this.accountOpen.update((open) => !open);
+  }
+
+  protected retryChanges(): void {
+    this.changeStream.retry();
   }
 
   protected togglePanel(): void {
@@ -169,10 +200,12 @@ export class AppShellComponent {
   protected async leave(): Promise<void> {
     if (this.leaving()) return;
     this.leaving.set(true);
+    this.changeStream.stop();
     try {
       await firstValueFrom(this.auth.logout());
       await this.router.navigateByUrl('/login?signedOut=1');
     } catch (error: unknown) {
+      if (this.auth.isAuthenticated()) this.changeStream.start();
       this.toasts.show(toBffError(error).message);
     } finally {
       this.leaving.set(false);

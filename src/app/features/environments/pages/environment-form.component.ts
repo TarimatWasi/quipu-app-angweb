@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { ENVIRONMENT_TYPE_LABELS } from '@shared/text/environment-text';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, ElementRef, inject, Injector, signal } from '@angular/core';
@@ -55,6 +57,7 @@ const GENERAL_ERROR_ID = 'environment-form-error';
 @Component({
   selector: 'app-environment-form',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     FactTileComponent,
     FieldControlDirective,
@@ -171,6 +174,19 @@ export class EnvironmentFormComponent {
     return this.saving() ? 'Creando…' : 'Crear ambiente';
   });
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () => (this.id ? [`admin.environment:${this.id}`] : []),
+    reload: () => {
+      this.loaded.reload();
+    },
+    busy: () => this.read.isLoading() || this.saving(),
+    defer: () => this.envForm().dirty(),
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
   protected chooseType(type: EnvironmentType): void {
     this.draft.update((draft) => ({ ...draft, type }));
   }
@@ -237,5 +253,9 @@ export class EnvironmentFormComponent {
   // The explicit type breaks the circular inference between the form and its submit action.
   private codeField(): FieldTree<string> {
     return this.envForm.code;
+  }
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.reload();
   }
 }

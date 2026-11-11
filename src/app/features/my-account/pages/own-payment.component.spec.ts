@@ -1,3 +1,4 @@
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -238,6 +239,23 @@ describe('OwnPaymentComponent (H3, T2)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('keeps the chosen month, typed amount and voucher when a signal invalidates an edited form', async () => {
+    const ui = await newContractPayment('/guest/payments/new?period=2026-11');
+    const file = voucherFile();
+    await ui.pick(ui.proof(1).getByLabelText('Archivo del voucher'), file);
+    await ui.type(ui.proof(1).getByLabelText('Monto de este voucher'), '300');
+    TestBed.inject(ChangeResourcesService).changed(['guest.home']);
+    await settle(ui.harness);
+    ui.http.expectNone(isStatus);
+    expect(ui.page().getByLabelText<HTMLSelectElement>('Mes').value).toBe('2026-11');
+    expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto de este voucher').value).toBe('300');
+    expect(ui.proof(1).getByText('voucher.pdf')).toBeTruthy();
+    expect(ui.page().getByText(/Conservamos lo que estás editando/)).toBeTruthy();
+    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.flush(await ui.expect1(isStatus), PERIODS);
+    expect(ui.proof(1).getByText('voucher.pdf')).toBeTruthy();
   });
 
   it('keeps a load error and prevents duplicate retries without replacing it by a skeleton', async () => {
