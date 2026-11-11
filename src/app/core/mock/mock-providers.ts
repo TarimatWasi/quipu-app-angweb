@@ -1,3 +1,4 @@
+import { CHANGES_ENABLED } from '@core/changes/change-stream.service';
 import { DOCUMENT } from '@angular/common';
 import { provideHttpClient, withInterceptors } from '@angular/common/http';
 import {
@@ -38,6 +39,7 @@ export function withMockBff(config: ApplicationConfig): ApplicationConfig {
     ...config,
     providers: [
       ...config.providers,
+      { provide: CHANGES_ENABLED, useValue: false },
       provideHttpClient(withInterceptors([mockBffInterceptor])),
       provideAppInitializer(mountMockPanel),
     ],

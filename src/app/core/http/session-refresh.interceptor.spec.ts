@@ -127,4 +127,26 @@ describe('sessionRefreshInterceptor (TAR-360)', () => {
 
     await expect(answer).resolves.toEqual({ role: 'ADMIN' });
   });
+  it.each([0, 429, 503])(
+    'propagates transient refresh failure %s instead of the original 401',
+    async (status) => {
+      const { http, controller } = setup();
+      const answer = firstValueFrom(http.get(GUESTS)).catch((error: unknown) => error);
+      controller.expectOne(GUESTS).flush(null, unauthorized);
+      await settle();
+      const refresh = controller.expectOne(REFRESH);
+      if (status === 0) refresh.error(new ProgressEvent('error'));
+      else refresh.flush(null, { status, statusText: 'Transient failure' });
+      await expect(answer).resolves.toMatchObject({ status });
+      controller.expectNone(GUESTS);
+      // A later explicit request can ask for a fresh renewal.
+      const next = firstValueFrom(http.get(GUESTS));
+      controller.expectOne(GUESTS).flush(null, unauthorized);
+      await settle();
+      controller.expectOne(REFRESH).flush(null, { status: 204, statusText: 'No Content' });
+      await settle();
+      controller.expectOne(GUESTS).flush([]);
+      await expect(next).resolves.toEqual([]);
+    },
+  );
 });

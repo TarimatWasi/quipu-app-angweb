@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
 import { rxResource } from '@angular/core/rxjs-interop';
@@ -96,6 +97,14 @@ export class TemporaryHomeComponent {
   protected readonly refund = computed(() => {
     const stay = this.stay();
     return stay ? refundNotice(stay) : null;
+  });
+
+  protected readonly changesStarted = watchChanges({
+    keys: ['guest.stay'],
+    reload: () => {
+      this.reload();
+    },
+    busy: () => this.read.isLoading(),
   });
 
   protected reload(): void {

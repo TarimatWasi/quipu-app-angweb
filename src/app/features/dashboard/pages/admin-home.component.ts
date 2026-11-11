@@ -6,6 +6,7 @@ import { rxResource } from '@angular/core/rxjs-interop';
 import { FormField } from '@angular/forms/signals';
 import { map } from 'rxjs';
 import { ResourceContent } from '@shared/data/resource-content';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { formatPeriod } from '@shared/payments/payment-format';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
@@ -117,6 +118,13 @@ export class AdminHomeComponent extends ListFilterState<ChargeFilters, ChargeSor
 
   constructor() {
     super({ noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
+    watchChanges({
+      keys: ['admin.dashboard'],
+      reload: () => {
+        this.loaded.reload();
+      },
+      busy: () => this.read.isLoading(),
+    });
   }
 
   protected reload(): void {

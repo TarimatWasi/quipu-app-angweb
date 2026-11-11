@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { toBffError } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
@@ -151,6 +152,14 @@ export class ContractDetailComponent {
         contract.environmentCode,
       ).toLowerCase(),
     };
+  });
+
+  protected readonly changesStarted = watchChanges({
+    keys: ['admin.contracts'],
+    reload: () => {
+      this.reload();
+    },
+    busy: () => this.read.isLoading(),
   });
 
   protected reload(): void {

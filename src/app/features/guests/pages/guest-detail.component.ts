@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { PagedList } from '@shared/data/paged-list';
 import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
@@ -229,6 +230,14 @@ export class GuestDetailComponent {
    */
   private accessAsked =
     this.router.currentNavigation()?.extras.state?.[GENERATE_ACCESS_STATE] === true;
+
+  protected readonly changesStarted = watchChanges({
+    keys: () => [`admin.guest:${this.currentId()}`],
+    reload: () => {
+      this.content.reload();
+    },
+    busy: () => this.read.isLoading() || this.payments.loading() || this.busy(),
+  });
 
   constructor() {
     // The time left of an access follows the clock while the page is open: every second while the

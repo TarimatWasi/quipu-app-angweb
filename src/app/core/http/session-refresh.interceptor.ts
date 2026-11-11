@@ -45,7 +45,11 @@ export class SessionRefresh {
       take(1),
       map(() => true),
       defaultIfEmpty(false),
-      catchError(() => of(false)),
+      catchError((error: unknown) =>
+        error instanceof HttpErrorResponse && error.status === 401
+          ? of(false)
+          : throwError(() => error),
+      ),
       finalize(() => {
         this.inFlight = null;
       }),

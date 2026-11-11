@@ -1,3 +1,7 @@
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
+
 <app-page-header
   heading="Revisar pago"
   backLink="/admin/payments"

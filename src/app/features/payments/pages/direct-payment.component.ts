@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { ProofsEditor } from '@shared/payments/proofs-editor';
 import { LatestRequest } from '@shared/data/latest-request';
 import { ProofKindChoiceComponent } from '@shared/payments/proof-kind-choice.component';
@@ -74,6 +76,7 @@ interface PeriodsAsk {
 @Component({
   selector: 'app-direct-payment',
   imports: [
+    ChangesNoticeComponent,
     ProofKindChoiceComponent,
     ProofAmountFieldComponent,
     ProofMethodFieldComponent,
@@ -272,6 +275,36 @@ export class DirectPaymentComponent {
   /** Where to go back when the guest came preselected (A3.2, A4.2); A5 otherwise. */
   private readonly origin: UrlTree | null;
 
+  private readonly pickerLoading = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () => [...(this.guestId() ? [`admin.guest:${this.guestId()}` as const] : [])],
+    reload: () => {
+      this.loadPeriods();
+    },
+    busy: () => this.periodsRead.isLoading(),
+    defer: () =>
+      this.periodChoice() !== '' ||
+      this.proofs().some(
+        (proof) =>
+          proof.amount !== '' ||
+          proof.file !== null ||
+          proof.method !== '' ||
+          proof.kind === 'CASH',
+      ),
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected readonly changesStale = signal(false);
+  protected readonly pickerChangesStarted = watchChanges({
+    keys: () => (this.preselected === null ? ['admin.guests'] : []),
+    reload: () => {
+      void this.loadGuests(undefined, true);
+    },
+    busy: this.pickerLoading,
+  });
+
   constructor() {
     const route = inject(ActivatedRoute);
     const fromAddress = route.snapshot.queryParamMap.get('guestId');
@@ -294,7 +327,12 @@ export class DirectPaymentComponent {
 
   protected moreGuests(): void {
     const cursor = this.guestsCursor();
-    if (cursor !== null && this.guestsState().kind !== 'loading' && !this.guestsRetrying())
+    if (
+      !this.pickerLoading() &&
+      cursor !== null &&
+      this.guestsState().kind !== 'loading' &&
+      !this.guestsRetrying()
+    )
       void this.loadGuests(cursor);
   }
 
@@ -443,11 +481,14 @@ export class DirectPaymentComponent {
     await this.router.navigateByUrl(this.origin ?? '/admin/payments');
   }
 
-  private async loadGuests(after?: string): Promise<void> {
+  private async loadGuests(after?: string, preserve = false): Promise<void> {
+    const chosen = this.chosenGuest();
+    if (after === undefined) this.guestsCursor.set(null);
+    this.pickerLoading.set(true);
     const request = this.guestsRequest.begin();
     const isRetry = this.guestsState().kind === 'error';
     this.guestsRetrying.set(isRetry);
-    if (!isRetry) this.guestsState.set({ kind: 'loading' });
+    if (!isRetry && !preserve) this.guestsState.set({ kind: 'loading' });
     try {
       const page = await firstValueFrom(this.guests.list(after));
       if (!this.guestsRequest.isCurrent(request)) return;
@@ -458,7 +499,11 @@ export class DirectPaymentComponent {
         detail: guestText(guest).detail,
       }));
       this.guestOptions.update((current) =>
-        after === undefined ? options : [...current, ...options],
+        after === undefined
+          ? preserve && chosen !== null && !options.some((option) => option.id === chosen.id)
+            ? [chosen, ...options]
+            : options
+          : [...current, ...options],
       );
       this.guestsCursor.set(page.nextCursor);
       this.failedGuestsAfter = undefined;
@@ -468,7 +513,10 @@ export class DirectPaymentComponent {
       this.failedGuestsAfter = after;
       this.guestsState.set({ kind: 'error', message: toBffErrorWithServerMessage(error).message });
     } finally {
-      if (this.guestsRequest.isCurrent(request)) this.guestsRetrying.set(false);
+      if (this.guestsRequest.isCurrent(request)) {
+        this.guestsRetrying.set(false);
+        this.pickerLoading.set(false);
+      }
     }
   }
 
@@ -483,5 +531,9 @@ export class DirectPaymentComponent {
 
   private clearServer(...fields: string[]): void {
     this.fieldErrors.clear(...fields);
+  }
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.loadPeriods();
   }
 }

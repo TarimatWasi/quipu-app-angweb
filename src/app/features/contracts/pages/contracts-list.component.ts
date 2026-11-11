@@ -7,6 +7,7 @@ import { RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import type { Observable } from 'rxjs';
 import type { PageRequest } from '@shared/data/page-load-state';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { FieldControlDirective } from '@shared/ui/form-field/field-control.directive';
 import { FormFieldComponent } from '@shared/ui/form-field/form-field.component';
 import { ListFiltersComponent } from '@shared/ui/list-filters/list-filters.component';
@@ -99,6 +100,13 @@ export class ContractsListComponent extends PagedListPage<
   constructor() {
     super('ACTIVE', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.start();
+    watchChanges({
+      keys: ['admin.contracts'],
+      reload: () => {
+        this.list.reload(this.view());
+      },
+      busy: () => this.list.loading(),
+    });
   }
 
   protected fetchPage(status: ContractStatus, after: string | null): Observable<ContractPage> {

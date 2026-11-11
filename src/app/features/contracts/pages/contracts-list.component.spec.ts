@@ -1,3 +1,4 @@
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
@@ -209,5 +210,33 @@ describe('A4 «Contratos»', () => {
     await click(view().getByRole('button', { name: 'Reintentar' }));
 
     expect(view().getByRole('table', { name: 'Contratos' })).toBeTruthy();
+  });
+  it('resets pagination on invalidation, keeps filters, and queues a signal arriving during a read', async () => {
+    const ui = await setup(() => of(page([LUCIA], 'cursor')));
+    ui.api.list.mockReturnValueOnce(of(page([SOFIA])));
+    await ui.click(ui.view().getByRole('button', { name: 'Mostrar más' }));
+    const search = ui.view().getByLabelText<HTMLInputElement>('Buscar');
+    fireEvent.input(search, { target: { value: 'Lucía' } });
+    await ui.settle();
+    const fresh = new Subject<ContractPage>();
+    ui.api.list.mockReturnValueOnce(fresh);
+    const changes = TestBed.inject(ChangeResourcesService);
+    changes.changed(['admin.contracts']);
+    TestBed.tick();
+    expect(ui.api.list).toHaveBeenLastCalledWith('ACTIVE', undefined);
+    expect(search.value).toBe('Lucía');
+    expect(ui.guests()).toEqual(['Lucía Paredes']);
+    const count = ui.api.list.mock.calls.length;
+    changes.changed(['admin.contracts']);
+    changes.changed(['admin.contracts']);
+    TestBed.tick();
+    expect(ui.api.list).toHaveBeenCalledTimes(count);
+    ui.api.list.mockReturnValueOnce(of(page([LUCIA])));
+    fresh.next(page([LUCIA]));
+    fresh.complete();
+    await ui.settle();
+    expect(ui.api.list).toHaveBeenCalledTimes(count + 1);
+    expect(ui.api.list).toHaveBeenLastCalledWith('ACTIVE', undefined);
+    expect(search.value).toBe('Lucía');
   });
 });

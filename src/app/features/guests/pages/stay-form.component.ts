@@ -1,3 +1,5 @@
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
@@ -73,6 +75,7 @@ const GENERAL_ERROR_ID = 'stay-form-error';
 @Component({
   selector: 'app-stay-form',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     FormSummaryLayoutComponent,
     GuestFormHeaderComponent,
@@ -283,6 +286,19 @@ export class StayFormComponent {
 
   private readonly destroyRef = inject(DestroyRef);
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: [`admin.guest:${this.guestId}`, 'admin.environments'],
+    reload: () => {
+      this.freeContent.reload();
+    },
+    busy: () => this.stayRead.isLoading() || this.freeRead.isLoading() || this.busy(),
+    defer: () => Object.values(this.draft()).some((value) => value !== ''),
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
   protected typedStart(target: EventTarget | null): void {
     this.rejected.set(null);
     this.update({ start: valueOf(target) }, 'dates');
@@ -478,6 +494,11 @@ export class StayFormComponent {
     if (chosen !== '' && !this.options().some((option) => option.id === chosen)) {
       this.draft.update((draft) => ({ ...draft, environmentId: '' }));
     }
+  }
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    if (this.stayId !== null) this.loadStay();
+    else this.askFreeAgain();
   }
 }
 

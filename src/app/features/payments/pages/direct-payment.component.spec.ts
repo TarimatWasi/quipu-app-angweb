@@ -1,3 +1,4 @@
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -180,6 +181,29 @@ describe('DirectPaymentComponent (A5.1)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('refreshes the guest picker from its first page without losing the selected guest or proofs', async () => {
+    const ui = await setup();
+    await chooseGuest(ui, 'g2', [STAY]);
+    await cash(ui, '321');
+    TestBed.inject(ChangeResourcesService).changed(['admin.guests']);
+    await settle(ui.harness);
+    const request = await ui.expect1(isGuests);
+    expect(request.request.params.has('after')).toBe(false);
+    expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto recibido').value).toBe('321');
+    // The selected guest may have been on a later page: keep that selection while replacing page one.
+    await ui.flush(request, {
+      content: [GUESTS[0]],
+      nextCursor: null,
+      pendingActivationCount: 0,
+      onboardingCount: 0,
+    });
+    expect(ui.page().getByRole('link', { name: 'Luis Mamani' }).getAttribute('href')).toBe(
+      '/admin/guests/g2',
+    );
+    expect(ui.proof(1).getByLabelText<HTMLInputElement>('Monto recibido').value).toBe('321');
+    ui.http.expectNone(isPeriods('g2'));
   });
 
   it('lists every guest to choose from and asks for one before sending anything', async () => {

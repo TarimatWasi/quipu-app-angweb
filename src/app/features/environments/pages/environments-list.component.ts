@@ -1,4 +1,5 @@
 import { PagedListPage } from '@shared/lists/list-page';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { countText } from '@shared/text/list-text';
 import { ListFiltersSkeletonComponent } from '@shared/ui/list-filters/list-filters-skeleton.component';
 import { Component, computed, inject, signal } from '@angular/core';
@@ -110,6 +111,13 @@ export class EnvironmentsListComponent extends PagedListPage<
   constructor() {
     super('ACTIVE', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.start();
+    watchChanges({
+      keys: ['admin.environments'],
+      reload: () => {
+        this.list.reload(this.view());
+      },
+      busy: () => this.list.loading(),
+    });
   }
 
   protected fetchPage(

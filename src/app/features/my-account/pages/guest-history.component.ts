@@ -1,4 +1,5 @@
 import { PagedListPage } from '@shared/lists/list-page';
+import { watchChanges } from '@core/changes/change-resources.service';
 import { countText } from '@shared/text/list-text';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormField } from '@angular/forms/signals';
@@ -80,6 +81,13 @@ export class GuestHistoryComponent extends PagedListPage<
   constructor() {
     super('ALL', { noFilters: NO_FILTERS, defaultSort: DEFAULT_SORT, phoneSorts: PHONE_SORTS });
     this.start();
+    watchChanges({
+      keys: ['guest.payments'],
+      reload: () => {
+        this.list.reload(this.view());
+      },
+      busy: () => this.list.loading(),
+    });
   }
 
   protected fetchPage(_view: 'ALL', after: string | null): Observable<GuestHistoryPage> {

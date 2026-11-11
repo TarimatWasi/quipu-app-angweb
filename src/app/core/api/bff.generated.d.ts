@@ -1,9 +1,49 @@
 /**
- * Generated from the BFF contract v0.25.0 (TarimatWasi/quipu-lib-contracts), spec sha256 cbfe175ac13d0c687a1012deda782a6ce0eb04d9f1695941165fd5a5d5872de9.
+ * Generated from the BFF contract v0.26.0 (TarimatWasi/quipu-lib-contracts), spec sha256 34218bd12c33d4034d2cd878287dc444fb63531b5a761f902a25936bc032502b.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
 export interface paths {
+    "/admin/changes/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream admin resource invalidations (TAR-370)
+         * @description ADR-SSE-01 (TAR-369/TAR-370). UTF-8 SSE byte stream, not a JSON document/array. A blank line terminates a frame. Named events carry JSON data; the media-type x-sse-events map selects its component schema. The first event is ready after subscription registration. Always synchronize visible authorized resources after ready/reconnection, even when epoch/version did not change. Preserve dirty drafts/files; mark edited forms stale instead of rebuilding them. Keep invalidations received during a GET for a subsequent grouped reload. Restart lists from the first page, preserving filters/month. ALL affects mounted, authorized resources only; no background GET fanout or toast per event. No durable delivery, replay, id field or Last-Event-ID recovery. Version gaps do not prove lost changes or order HTTP responses. Server-selected recipients only: no user/session/resource selectors. Resource ids are masked for the receiving session, never the actor. Cookies, role, session/account security version, edge gate and origin are checked before opening. This safe GET does not require CSRF. Idle heartbeats are comments every 20 seconds, with no database query or version increment. Initially four streams per account, 64 globally; one connection per visible browser tab shared by mounted resources. Each frame is at most 8192 UTF-8 bytes; excessive keys/bytes collapse to ALL rather than truncating a frame. Lifetime is min(access-token expiry, opening + 15 minutes). Logout, revocation and security-version changes close affected streams. closing is best-effort; disconnects may happen without it. On access-token-expired or session-updated, close the old EventSource and check/renew through the shared HttpClient refresh path before reopening. session-updated preserves the current sid after password change; other sessions are revoked. session-revoked ends the session. max-duration/server-shutdown may retry. EventSource bypasses HttpClient interceptors and cannot inspect status/headers: close it on error before controlled recovery. A successful /auth/me probe does not prove permission to open this stream. After five consecutive attempts without ready, stop automatic attempts and require an explicit user retry; reset that budget only after ready, not merely the HTTP open event. Network/5xx preserves the session, with capped exponential backoff/jitter (1 to 30 seconds); definitive auth/refresh rejection ends it. A 403 must not create a refresh loop. Respect Retry-After when observable; otherwise wait at least 30 seconds if connection-limit rejection cannot be distinguished. Close when hidden/logout and synchronize on return. Once HTTP 200 is committed, no new status or JSON error replaces the stream: close it, optionally with closing. Existing GETs remain the source of truth. No inbox, polling, bus or scheduler is introduced. Administrators only receive keys they are authorized to query. Initial producers are payments/contracts. Expenses, fines, stays, profiles, environments and passage of time do not independently guarantee invalidations in this adoption.
+         */
+        get: operations["streamAdminChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/changes/stream": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Stream guest resource invalidations (TAR-370)
+         * @description ADR-SSE-01 (TAR-369/TAR-370). UTF-8 SSE byte stream, not a JSON document/array. A blank line terminates a frame. Named events carry JSON data; the media-type x-sse-events map selects its component schema. The first event is ready after subscription registration. Always synchronize visible authorized resources after ready/reconnection, even when epoch/version did not change. Preserve dirty drafts/files; mark edited forms stale instead of rebuilding them. Keep invalidations received during a GET for a subsequent grouped reload. Restart lists from the first page, preserving filters/month. ALL affects mounted, authorized resources only; no background GET fanout or toast per event. No durable delivery, replay, id field or Last-Event-ID recovery. Version gaps do not prove lost changes or order HTTP responses. Server-selected recipients only: no user/session/resource selectors. Resource ids are masked for the receiving session, never the actor. Cookies, role, session/account security version, edge gate and origin are checked before opening. This safe GET does not require CSRF. Idle heartbeats are comments every 20 seconds, with no database query or version increment. Initially four streams per account, 64 globally; one connection per visible browser tab shared by mounted resources. Each frame is at most 8192 UTF-8 bytes; excessive keys/bytes collapse to ALL rather than truncating a frame. Lifetime is min(access-token expiry, opening + 15 minutes). Logout, revocation and security-version changes close affected streams. closing is best-effort; disconnects may happen without it. On access-token-expired or session-updated, close the old EventSource and check/renew through the shared HttpClient refresh path before reopening. session-updated preserves the current sid after password change; other sessions are revoked. session-revoked ends the session. max-duration/server-shutdown may retry. EventSource bypasses HttpClient interceptors and cannot inspect status/headers: close it on error before controlled recovery. A successful /auth/me probe does not prove permission to open this stream. After five consecutive attempts without ready, stop automatic attempts and require an explicit user retry; reset that budget only after ready, not merely the HTTP open event. Network/5xx preserves the session, with capped exponential backoff/jitter (1 to 30 seconds); definitive auth/refresh rejection ends it. A 403 must not create a refresh loop. Respect Retry-After when observable; otherwise wait at least 30 seconds if connection-limit rejection cannot be distinguished. Close when hidden/logout and synchronize on return. Once HTTP 200 is committed, no new status or JSON error replaces the stream: close it, optionally with closing. Existing GETs remain the source of truth. No inbox, polling, bus or scheduler is introduced. Both CONTRACT and TEMPORARY guests use this endpoint. guest.stay is the temporary guest payment-status resource; guest.payment:<id> uses the own detail route for either guest type. A session required to change its temporary password cannot open the stream.
+         */
+        get: operations["streamGuestChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/csrf": {
         parameters: {
             query?: never;
@@ -1425,6 +1465,71 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Format: uuid
+         * @description Random process epoch; changes on restart or before safe-counter exhaustion. Not a session id, database version or durable cursor.
+         */
+        ChangeEpoch: string;
+        /** @description JavaScript-safe process-wide publication counter. Each recipient sees a monotonic subsequence within an epoch; gaps are allowed. Never order HTTP responses or infer lost events from it. No disconnected-user map or replay is required. */
+        ChangeVersion: number;
+        /**
+         * @example {
+         *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
+         *       "version": 0
+         *     }
+         */
+        ChangeReady: {
+            epoch: components["schemas"]["ChangeEpoch"];
+            version: components["schemas"]["ChangeVersion"];
+        };
+        /** @description ADR-SSE-01 administrative groups. admin.guest:<id> groups visible guest detail, history, account-status, payable-periods and stays. admin.contracts groups contract lists/details. admin.environments includes availability filtered by freeFrom/freeTo. admin.environment:<id> groups detail/account-status, the latter only if mounted (no current frontend consumer). No entity data in keys; permission still applies. */
+        AdminChangeKey: ("admin.dashboard" | "admin.payments.queue" | "admin.guests" | "admin.contracts" | "admin.environments" | "admin.finance" | "admin.credits" | "admin.refunds") | string;
+        /**
+         * @example {
+         *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
+         *       "version": 2,
+         *       "invalidate": [
+         *         "admin.dashboard",
+         *         "admin.payments.queue"
+         *       ]
+         *     }
+         */
+        AdminChange: {
+            epoch: components["schemas"]["ChangeEpoch"];
+            version: components["schemas"]["ChangeVersion"];
+            /** @description Distinct resource keys or literal ALL, never an array containing ALL. Over 64 keys or 8192 UTF-8 frame bytes collapses to ALL. Reload mounted authorized resources only; preserve dirty forms/files. */
+            invalidate: "ALL" | components["schemas"]["AdminChangeKey"][];
+        };
+        /** @description ADR-SSE-01 own groups. guest.home groups account-status and credit; guest.payments is paginated history; guest.contract is /guest/contract (singular); guest.stay is /temporary-guest/payment-status. guest.payment:<id> is the own payment detail for either guest type. */
+        GuestChangeKey: ("guest.home" | "guest.payments" | "guest.contract" | "guest.stay") | string;
+        /**
+         * @example {
+         *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
+         *       "version": 2,
+         *       "invalidate": [
+         *         "guest.home",
+         *         "guest.payments"
+         *       ]
+         *     }
+         */
+        GuestChange: {
+            epoch: components["schemas"]["ChangeEpoch"];
+            version: components["schemas"]["ChangeVersion"];
+            /** @description Distinct resource keys or literal ALL, never an array containing ALL. Over 64 keys or 8192 UTF-8 frame bytes collapses to ALL. Reload mounted authorized resources only; preserve dirty forms/files. */
+            invalidate: "ALL" | components["schemas"]["GuestChangeKey"][];
+        };
+        /**
+         * @example {
+         *       "reason": "access-token-expired"
+         *     }
+         */
+        ChangeClosing: {
+            /**
+             * @description Expiry/session-updated requires session check/renewal before reopening; revoked ends the session. Other reasons may retry with backoff. Absence of closing does not identify a disconnect's cause.
+             * @enum {string}
+             */
+            reason: "access-token-expired" | "session-updated" | "session-revoked" | "max-duration" | "server-shutdown";
+        };
         /**
          * @example {
          *       "code": "AUTH_CSRF_INVALID",
@@ -3400,6 +3505,87 @@ export interface components {
         };
     };
     responses: {
+        /** @description Authorized admin invalidations. Ready is first; changed contains only this role's keys. Headers below apply to HTTP 200, not JSON errors sent before opening. Flush complete frames without compression or proxy buffering. Tests must parse UTF-8 SSE framing, including CRLF and split chunks, join data lines, ignore comments, JSON-parse data and validate it against the event's x-sse-events dataSchema below. Generic OpenAPI validation of the response string is insufficient. Also assert ready-first, role isolation, frame byte limit, heartbeat behavior, nondecreasing versions and closure/lifecycle rules. */
+        AdminChangeStream: {
+            headers: {
+                /** @description Do not cache or transform this private stream */
+                "Cache-Control": "no-store, no-transform";
+                /** @description Disable buffering in proxies that support this header */
+                "X-Accel-Buffering": "no";
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example event: ready
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":0}
+                 *
+                 *     : heartbeat
+                 *
+                 *     event: changed
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":2,"invalidate":["admin.dashboard","admin.payments.queue"]}
+                 *
+                 *     event: changed
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":5,"invalidate":"ALL"}
+                 *
+                 *     event: closing
+                 *     data: {"reason":"access-token-expired"}
+                 */
+                "text/event-stream": string;
+            };
+        };
+        /** @description Authorized guest invalidations. Ready is first; changed contains only this role's keys. Headers below apply to HTTP 200, not JSON errors sent before opening. Flush complete frames without compression or proxy buffering. Tests must parse UTF-8 SSE framing, including CRLF and split chunks, join data lines, ignore comments, JSON-parse data and validate it against the event's x-sse-events dataSchema below. Generic OpenAPI validation of the response string is insufficient. Also assert ready-first, role isolation, frame byte limit, heartbeat behavior, nondecreasing versions and closure/lifecycle rules. */
+        GuestChangeStream: {
+            headers: {
+                /** @description Do not cache or transform this private stream */
+                "Cache-Control": "no-store, no-transform";
+                /** @description Disable buffering in proxies that support this header */
+                "X-Accel-Buffering": "no";
+                [name: string]: unknown;
+            };
+            content: {
+                /**
+                 * @example event: ready
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":0}
+                 *
+                 *     : heartbeat
+                 *
+                 *     event: changed
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":2,"invalidate":["guest.home","guest.payments"]}
+                 *
+                 *     event: changed
+                 *     data: {"epoch":"f18a40da-6ddf-4ab4-a75b-f4ad8de2d615","version":5,"invalidate":"ALL"}
+                 *
+                 *     event: closing
+                 *     data: {"reason":"access-token-expired"}
+                 */
+                "text/event-stream": string;
+            };
+        };
+        /** @description Before opening only. AUTH_FORBIDDEN for wrong role, forbidden origin or failed edge gate; AUTH_PASSWORD_CHANGE_REQUIRED when the session must change its temporary password. Do not refresh-loop on a 403. */
+        ChangeStreamForbidden: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    code: "AUTH_FORBIDDEN" | "AUTH_PASSWORD_CHANGE_REQUIRED";
+                    /** @description User-facing message in Spanish */
+                    message: string;
+                };
+            };
+        };
+        /** @description Before opening only. RATE_LIMITED for existing request limits or the stream/account/global cap. Connection caps use Retry-After 30 seconds; existing request-limit windows may differ. EventSource cannot inspect status/headers; controlled recovery must avoid reconnect storms and preserve the session. */
+        ChangeStreamLimited: {
+            headers: {
+                /** @description Seconds until another connection may be attempted */
+                "Retry-After": number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description AUTH_CSRF_INVALID when the CSRF cookie/header pair is missing or invalid. This check can reject the request before authentication or business validation; a valid token does not replace authorization. */
         CsrfInvalid: {
             headers: {
@@ -3700,6 +3886,36 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    streamAdminChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["AdminChangeStream"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["ChangeStreamForbidden"];
+            429: components["responses"]["ChangeStreamLimited"];
+        };
+    };
+    streamGuestChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: components["responses"]["GuestChangeStream"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["ChangeStreamForbidden"];
+            429: components["responses"]["ChangeStreamLimited"];
+        };
+    };
     getCsrfToken: {
         parameters: {
             query?: never;

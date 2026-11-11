@@ -1,3 +1,6 @@
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 <app-guest-form-header
   [guestId]="guestId"
   [heading]="stayId === null ? 'Registrar estadía' : 'Corregir estadía'"

@@ -23,6 +23,7 @@ export class PagedList<Q, T, P extends Paged<T> = Paged<T>> {
   readonly items = this.loaded.asReadonly();
   readonly nextCursor = signal<string | null>(null);
   readonly phase = this.load.phase;
+  readonly loading = this.load.loading;
   readonly retrying = this.load.retrying;
   readonly loadingMore = this.load.loadingMore;
   readonly firstFailed = this.load.firstFailed;

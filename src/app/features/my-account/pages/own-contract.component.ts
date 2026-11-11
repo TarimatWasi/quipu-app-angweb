@@ -1,3 +1,4 @@
+import { watchChanges } from '@core/changes/change-resources.service';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, inject } from '@angular/core';
@@ -105,6 +106,14 @@ export class OwnContractComponent {
       current: currentBlock(current, next, context),
       next: next === null ? null : nextBlock(next, current, context),
     };
+  });
+
+  protected readonly changesStarted = watchChanges({
+    keys: ['guest.contract', 'guest.home'],
+    reload: () => {
+      this.reload();
+    },
+    busy: () => this.read.isLoading(),
   });
 
   protected reload(): void {

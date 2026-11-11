@@ -1,3 +1,4 @@
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { HttpRequest, provideHttpClient } from '@angular/common/http';
 import {
   HttpTestingController,
@@ -109,6 +110,23 @@ describe('PaymentReviewComponent (A5.2)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('marks a typed review stale without overwriting verified amounts, then allows an explicit reload', async () => {
+    const ui = await setup(payment());
+    const amount = ui.page().getByLabelText<HTMLInputElement>(/Monto verificado del comprobante 1/);
+    fireEvent.input(amount, { target: { value: '321' } });
+    await settle(ui.harness);
+    TestBed.inject(ChangeResourcesService).changed([`admin.payment:${ID}`]);
+    await settle(ui.harness);
+    ui.http.expectNone(detailUrl(ID));
+    expect(amount.value).toBe('321');
+    expect(ui.page().getByText(/Conservamos lo que estás editando/)).toBeTruthy();
+    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.flush(await ui.expect1(detailUrl(ID)), payment());
+    expect(
+      ui.page().getByLabelText<HTMLInputElement>(/Monto verificado del comprobante 1/).value,
+    ).toBe('350');
   });
 
   it('shows what is paid and each proof, with its signed link opened safely', async () => {

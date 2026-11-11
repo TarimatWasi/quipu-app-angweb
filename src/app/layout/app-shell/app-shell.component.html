@@ -140,7 +140,22 @@
     </div>
   </div>
 }
-<main class="content"><router-outlet /></main>
+<main class="content">
+  @if (streamRetryRequired()) {
+    <app-page-notice heading="No se pudo mantener la actualización en vivo.">
+      <span>La información visible puede estar desactualizada.</span>
+      <button
+        class="quipu-button quipu-button--tertiary"
+        noticeAction
+        type="button"
+        (click)="retryChanges()"
+      >
+        Reintentar
+      </button>
+    </app-page-notice>
+  }
+  <router-outlet />
+</main>
 <app-toast
   [message]="toasts.current()?.text ?? null"
   [tone]="toasts.current()?.tone ?? null"
