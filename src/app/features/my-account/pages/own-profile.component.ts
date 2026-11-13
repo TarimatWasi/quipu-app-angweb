@@ -123,16 +123,20 @@ export class OwnProfileComponent {
   private resetForm = true;
   /** The read starts with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10). */
   private readonly read = rxResource<ProfileData, undefined>({
-    stream: () =>
-      forkJoin({
+    stream: () => {
+      const draft = this.model();
+      return forkJoin({
         profile: this.api.profile(),
         contract: this.contractOf(),
         stay: this.stayOf(),
       }).pipe(
         tap(({ profile }) => {
-          if (this.resetForm) this.model.set(toPersonalData(profile));
+          if (!this.resetForm) return;
+          if (this.model() === draft) this.model.set(toPersonalData(profile));
+          else this.changesStale.set(true);
         }),
-      ),
+      );
+    },
   });
   private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_PROFILE_TEXT });
   protected readonly view = this.loaded.state;
@@ -315,6 +319,7 @@ export class OwnProfileComponent {
 
   /** `resetForm` fills the form with what is saved; an upload keeps what the guest is typing. */
   private load(resetForm: boolean): void {
+    if (resetForm) this.changesStale.set(false);
     this.resetForm = resetForm;
     this.loaded.reload();
   }

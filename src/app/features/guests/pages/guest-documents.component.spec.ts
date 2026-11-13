@@ -134,6 +134,10 @@ type Ui = Awaited<ReturnType<typeof setup>>;
 const png = (name = 'nuevo.png') => new File(['x'], name, { type: 'image/png' });
 
 describe('GuestDocumentsComponent (A3.8)', () => {
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+  });
+
   it('refreshes document metadata on a guest signal without replacing an open action draft', async () => {
     const ui = await setup();
     TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
@@ -147,9 +151,6 @@ describe('GuestDocumentsComponent (A3.8)', () => {
     expect(ui.documents.list).toHaveBeenCalledTimes(2);
     expect(ui.dialog().getAllByText('seleccionado.png').length).toBeGreaterThan(0);
     expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
-  });
-  afterEach(() => {
-    TestBed.inject(MatDialog).closeAll();
   });
 
   it('shows the documents, the evidence and who they belong to', async () => {

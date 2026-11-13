@@ -100,6 +100,11 @@ async function setup(guest: object = pending(), status = 200) {
 }
 
 describe('DocumentFormComponent (A3.5 document of a pending guest, approved canvas)', () => {
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
   it('preserves an edited document on external changes and reloads only on explicit choice', async () => {
     const ui = await setup(pending());
     await ui.type('70419999');
@@ -110,10 +115,6 @@ describe('DocumentFormComponent (A3.5 document of a pending guest, approved canv
     await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
     await ui.flush(await ui.expect1(isGuest), pending({ documentNumber: '70418888', version: 4 }));
     expect(ui.page().getByLabelText(NUMBER)).toHaveProperty('value', '70418888');
-  });
-  afterEach(() => {
-    TestBed.inject(MatDialog).closeAll();
-    TestBed.inject(HttpTestingController).verify();
   });
 
   it('keeps the initial error visible while retrying without drawing another skeleton', async () => {

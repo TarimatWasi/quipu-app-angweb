@@ -178,6 +178,11 @@ async function fillAndSave(ui: Ui) {
 }
 
 describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+    TestBed.inject(HttpTestingController).verify();
+  });
+
   it('refreshes the current stay version while clean and preserves a later draft', async () => {
     const ui = await correctReady();
     TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
@@ -195,10 +200,6 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
     ui.http.expectNone(isStays);
     expect(ui.page().getByLabelText(AMOUNT)).toHaveProperty('value', '480');
     expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
-  });
-  afterEach(() => {
-    TestBed.inject(MatDialog).closeAll();
-    TestBed.inject(HttpTestingController).verify();
   });
 
   it('shows the header, the help of each field and what is going to be registered', async () => {

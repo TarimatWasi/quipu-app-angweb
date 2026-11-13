@@ -7,6 +7,10 @@ import { AccessHandoffService, GENERATE_ACCESS_STATE } from '../data/access-hand
 import { squash, words, httpError, guestOf, month, GRANT, setup } from './guest-detail.testing';
 
 describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)', () => {
+  afterEach(() => {
+    TestBed.inject(MatDialog).closeAll();
+  });
+
   it('preserves the account email dialog draft when its guest changes', async () => {
     const ui = await setup();
     await ui.click(ui.page().getByRole('button', { name: /^Cambiar correo/ }));
@@ -19,9 +23,6 @@ describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)'
     expect(field.value).toBe('borrador@example.test');
     expect(ui.service.get).toHaveBeenCalledTimes(calls);
     expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
-  });
-  afterEach(() => {
-    TestBed.inject(MatDialog).closeAll();
   });
 
   const noContract = () => of(guestOf({ contract: undefined }));

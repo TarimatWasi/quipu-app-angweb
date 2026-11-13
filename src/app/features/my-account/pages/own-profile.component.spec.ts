@@ -4,7 +4,7 @@ import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import type { components } from '@core/api/bff.generated';
 import { CHANGE_PASSWORD_ACTION } from '@shared/ui/account-actions/change-password-action';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -140,6 +140,24 @@ async function setup(audience: Audience = 'CONTRACT', answers: Answers = {}) {
 const pdf = (name = 'constancia.pdf') => new File(['x'], name, { type: 'application/pdf' });
 
 describe('OwnProfileComponent (H5, guest with a contract)', () => {
+  it('preserves edits and a file selected after an SSE profile refresh has started', async () => {
+    const ui = await setup();
+    const answer = new Subject<OwnProfile>();
+    ui.api.profile.mockReturnValue(answer);
+    TestBed.inject(ChangeResourcesService).changed(['guest.profile']);
+    await ui.settle();
+    await ui.type(/Nombre completo/, 'Escrito durante la carga');
+    await ui.pick(pdf('durante-la-carga.pdf'));
+    answer.next(profileOf({ name: 'Nombre externo' }));
+    answer.complete();
+    await ui.settle();
+    expect(ui.page().getByLabelText(/Nombre completo/)).toHaveProperty(
+      'value',
+      'Escrito durante la carga',
+    );
+    expect(ui.page().getAllByText('durante-la-carga.pdf').length).toBeGreaterThan(0);
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
+  });
   it.each(['CONTRACT', 'TEMPORARY'] as const)(
     'refreshes %s profile metadata on an own profile signal',
     async (audience) => {

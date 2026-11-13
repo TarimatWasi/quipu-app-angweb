@@ -78,7 +78,7 @@ describe('A6 «Finanzas»', () => {
     );
     expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
     await ui.click(form.getByRole('button', { name: 'Cancelar' }));
-    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.click(await ui.page().findByRole('button', { name: 'Volver a cargar' }));
     await ui.settle();
     expect(ui.page().queryByText('Hay cambios en la información de esta pantalla.')).toBeNull();
   });
