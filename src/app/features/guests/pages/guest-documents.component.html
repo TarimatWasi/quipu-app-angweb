@@ -1,5 +1,8 @@
 <app-page-header [heading]="title" [backLink]="backLink()" [backTo]="backTo()" />
 
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 @switch (view().status) {
   @case ('initial-loading') {
     <app-skeleton subject="los documentos"

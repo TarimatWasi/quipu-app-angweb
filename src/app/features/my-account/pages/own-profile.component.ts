@@ -30,6 +30,8 @@ import { toDocumentRows, uploadProblem } from '@shared/text/file-text';
 import type { OwnDocumentRow } from '@shared/text/file-text';
 import { OwnDocumentsComponent } from '../components/own-documents.component';
 import { GuestProfileService } from '../data/guest-profile.service';
+import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { OwnContractService } from '../data/own-contract.service';
 import type { OwnProfile, OwnProfileClient } from '../data/own-profile';
 import { TemporaryGuestPaymentsService } from '../data/temporary-guest-payments.service';
@@ -74,6 +76,7 @@ const ERROR_ID = 'own-profile-error';
 @Component({
   selector: 'app-own-profile',
   imports: [
+    ChangesNoticeComponent,
     EmailChangeFieldComponent,
     FactTileComponent,
     FormRoot,
@@ -120,16 +123,20 @@ export class OwnProfileComponent {
   private resetForm = true;
   /** The read starts with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10). */
   private readonly read = rxResource<ProfileData, undefined>({
-    stream: () =>
-      forkJoin({
+    stream: () => {
+      const draft = this.model();
+      return forkJoin({
         profile: this.api.profile(),
         contract: this.contractOf(),
         stay: this.stayOf(),
       }).pipe(
         tap(({ profile }) => {
-          if (this.resetForm) this.model.set(toPersonalData(profile));
+          if (!this.resetForm) return;
+          if (this.model() === draft) this.model.set(toPersonalData(profile));
+          else this.changesStale.set(true);
         }),
-      ),
+      );
+    },
   });
   private readonly loaded = new ResourceContent(this.read, { message: () => LOAD_PROFILE_TEXT });
   protected readonly view = this.loaded.state;
@@ -189,6 +196,26 @@ export class OwnProfileComponent {
   protected readonly chosen = signal<File | null>(null);
   protected readonly fileError = signal<string | null>(null);
   protected readonly uploading = signal(false);
+
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: ['guest.profile', 'guest.contract', 'guest.stay'],
+    reload: () => {
+      this.load(true);
+    },
+    busy: () => this.read.isLoading() || this.saving() || this.uploading(),
+    defer: () => this.dirty() || this.chosen() !== null,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.chosen.set(null);
+    this.fileError.set(null);
+    this.load(true);
+  }
 
   protected reload(): void {
     this.load(true);
@@ -292,6 +319,7 @@ export class OwnProfileComponent {
 
   /** `resetForm` fills the form with what is saved; an upload keeps what the guest is typing. */
   private load(resetForm: boolean): void {
+    if (resetForm) this.changesStale.set(false);
     this.resetForm = resetForm;
     this.loaded.reload();
   }

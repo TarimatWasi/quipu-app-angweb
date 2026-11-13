@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { MatDialog } from '@angular/material/dialog';
 import { provideRouter, Router } from '@angular/router';
@@ -135,6 +136,21 @@ const png = (name = 'nuevo.png') => new File(['x'], name, { type: 'image/png' })
 describe('GuestDocumentsComponent (A3.8)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
+  });
+
+  it('refreshes document metadata on a guest signal without replacing an open action draft', async () => {
+    const ui = await setup();
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    await settle(ui.harness);
+    await settle(ui.harness);
+    expect(ui.documents.list).toHaveBeenCalledTimes(2);
+    await ui.click(present(ui.page().getAllByRole('button', { name: /^Reemplazar/ })[0]));
+    await ui.pick(png('seleccionado.png'));
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    await settle(ui.harness);
+    expect(ui.documents.list).toHaveBeenCalledTimes(2);
+    expect(ui.dialog().getAllByText('seleccionado.png').length).toBeGreaterThan(0);
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
   });
 
   it('shows the documents, the evidence and who they belong to', async () => {

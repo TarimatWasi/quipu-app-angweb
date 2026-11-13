@@ -11,6 +11,9 @@
   [progress]="true"
   (retry)="retry()"
 />
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 @switch (state().kind) {
   @case ('loading') {
     <app-skeleton subject="el documento"

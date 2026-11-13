@@ -290,10 +290,15 @@ export class StayFormComponent {
   protected readonly changesStarted = watchChanges({
     keys: [`admin.guest:${this.guestId}`, 'admin.environments'],
     reload: () => {
+      this.guestRead.reload();
+      if (this.stayId !== null) this.loadStay();
       this.freeContent.reload();
     },
     busy: () => this.stayRead.isLoading() || this.freeRead.isLoading() || this.busy(),
-    defer: () => Object.values(this.draft()).some((value) => value !== ''),
+    defer: () =>
+      this.stayId !== null
+        ? this.dirty()
+        : Object.values(this.draft()).some((value) => value !== ''),
     stale: () => {
       this.changesStale.set(true);
     },
@@ -497,6 +502,7 @@ export class StayFormComponent {
   }
   protected reloadChanges(): void {
     this.changesStale.set(false);
+    this.guestRead.reload();
     if (this.stayId !== null) this.loadStay();
     else this.askFreeAgain();
   }

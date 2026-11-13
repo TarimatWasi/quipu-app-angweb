@@ -1,4 +1,7 @@
 <app-page-header [heading]="title()" backLink="/admin/guests" backTo="Huéspedes" />
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 
 <app-refresh-error
   [message]="refreshError()"

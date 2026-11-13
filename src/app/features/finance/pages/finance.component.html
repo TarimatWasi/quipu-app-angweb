@@ -1,4 +1,7 @@
 <app-page-header heading="Finanzas" />
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 
 @switch (phase()) {
   @case ('initial-loading') {

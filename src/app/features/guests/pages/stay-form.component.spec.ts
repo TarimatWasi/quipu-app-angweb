@@ -5,6 +5,7 @@ import {
   TestRequest,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
@@ -180,6 +181,25 @@ describe('StayFormComponent (A3.5 stays, approved canvas)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  it('refreshes the current stay version while clean and preserves a later draft', async () => {
+    const ui = await correctReady();
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    await settle(ui.harness);
+    await ui.flush(await ui.expect1(isGuest), GUEST);
+    await ui.flush(await ui.expect1(isStays), {
+      content: [stayOf({ agreedAmount: 460, version: 5 })],
+      nextCursor: null,
+    });
+    await ui.flush(await ui.expect1(isEnvironments), FREE);
+    expect(ui.page().getByLabelText(AMOUNT)).toHaveProperty('value', '460.00');
+    await ui.type(AMOUNT, '480');
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    await settle(ui.harness);
+    ui.http.expectNone(isStays);
+    expect(ui.page().getByLabelText(AMOUNT)).toHaveProperty('value', '480');
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
   });
 
   it('shows the header, the help of each field and what is going to be registered', async () => {

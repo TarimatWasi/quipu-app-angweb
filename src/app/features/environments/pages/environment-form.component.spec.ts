@@ -1,10 +1,11 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
-import { Observable, of, throwError } from 'rxjs';
+import { Observable, of, Subject, throwError } from 'rxjs';
 import { ToastService } from '@shared/ui/toast/toast.service';
 import { AdminEnvironmentsService } from '../data/admin-environments.service';
 import type { EnvironmentChanges } from '../data/admin-environments.service';
@@ -151,6 +152,25 @@ describe('A2.1 «Nuevo ambiente»', () => {
 });
 
 describe('A2.4 «Editar ambiente»', () => {
+  it('makes the form inert during an SSE refresh so late edits cannot be overwritten', async () => {
+    const ui = await setup('/admin/environments/e1/edit');
+    const answer = new Subject<Environment>();
+    ui.api.get.mockReturnValue(answer);
+    TestBed.inject(ChangeResourcesService).changed(['admin.environment:e1']);
+    await ui.settle();
+    expect(ui.page().getByRole('form', { name: 'Datos del ambiente' })).toHaveProperty(
+      'inert',
+      true,
+    );
+    answer.next(environmentOf({ code: '110' }));
+    answer.complete();
+    await ui.settle();
+    expect(ui.page().getByLabelText('Código')).toHaveProperty('value', '110');
+    expect(ui.page().getByRole('form', { name: 'Datos del ambiente' })).toHaveProperty(
+      'inert',
+      false,
+    );
+  });
   const path = '/admin/environments/e1/edit';
 
   it('shows how it is today, and nothing to save until something changes', async () => {

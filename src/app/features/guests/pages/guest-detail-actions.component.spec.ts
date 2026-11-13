@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { MatDialog } from '@angular/material/dialog';
 import { fireEvent, screen, within } from '@testing-library/dom';
 import { of, Subject, throwError } from 'rxjs';
@@ -8,6 +9,20 @@ import { squash, words, httpError, guestOf, month, GRANT, setup } from './guest-
 describe('GuestDetailComponent actions (A3.3, A3.4, A3.6 and the account email)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
+  });
+
+  it('preserves the account email dialog draft when its guest changes', async () => {
+    const ui = await setup();
+    await ui.click(ui.page().getByRole('button', { name: /^Cambiar correo/ }));
+    const dialog = within(screen.getByRole('dialog', { name: 'Cambiar correo' }));
+    const field = dialog.getByLabelText<HTMLInputElement>('Correo');
+    fireEvent.input(field, { target: { value: 'borrador@example.test' } });
+    const calls = ui.service.get.mock.calls.length;
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    TestBed.tick();
+    expect(field.value).toBe('borrador@example.test');
+    expect(ui.service.get).toHaveBeenCalledTimes(calls);
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
   });
 
   const noContract = () => of(guestOf({ contract: undefined }));

@@ -1,4 +1,6 @@
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
+import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
 import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -70,6 +72,7 @@ function facts(guest: GuestDetail, count: number): Fact[] {
 @Component({
   selector: 'app-guest-documents',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     DocumentActionsListComponent,
     EmptyStateComponent,
@@ -148,6 +151,24 @@ export class GuestDocumentsComponent {
 
   private readonly dialogs = new Set<MatDialogRef<unknown, unknown>>();
 
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: () => (this.currentId() ? [`admin.guest:${this.currentId()}`] : []),
+    reload: () => {
+      this.reload();
+    },
+    busy: () => this.read.isLoading(),
+    defer: () => this.dialogs.size > 0,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected reloadChanges(): void {
+    this.closeDialogs();
+    this.reload();
+  }
+
   constructor() {
     this.destroyRef.onDestroy(() => {
       // Leaving the screen: no dialog of this guest stays open.
@@ -162,13 +183,17 @@ export class GuestDocumentsComponent {
     this.route.paramMap.pipe(takeUntilDestroyed(this.destroyRef)).subscribe((params) => {
       const id = params.get('id') ?? '';
       // The dialogs of the guest left behind go with it.
-      if (id !== this.currentId()) this.closeDialogs();
+      if (id !== this.currentId()) {
+        this.closeDialogs();
+        this.changesStale.set(false);
+      }
       this.currentId.set(id);
     });
     return true;
   }
 
   protected reload(): void {
+    this.changesStale.set(false);
     this.loaded.reload();
   }
 

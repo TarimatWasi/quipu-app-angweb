@@ -48,8 +48,9 @@ describe('SSE contract messages (QP-SPRMONO-SSE-04)', () => {
       `admin.environment:${masked}`,
     ];
     expect(parseChange(payload(adminKeys), 'ADMIN')?.invalidate).toEqual(adminKeys);
-    const guestKeys = ['guest.home', `guest.payment:${masked}`];
+    const guestKeys = ['guest.home', 'guest.profile', `guest.payment:${masked}`];
     expect(parseChange(payload(guestKeys), 'GUEST')?.invalidate).toEqual(guestKeys);
+    expect(parseChange(payload(['guest.profile']), 'ADMIN')).toBeNull();
     expect(parseChange(payload([`guest.payment:${masked}x`]), 'GUEST')).toBeNull();
     expect(
       parseChange(payload([`admin.payment:${masked.replace('f000', 'zzzz')}`]), 'ADMIN'),

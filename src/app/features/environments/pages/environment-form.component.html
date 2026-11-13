@@ -58,7 +58,13 @@
         }
       </aside>
 
-      <form class="form" novalidate aria-labelledby="form-title" [formRoot]="envForm">
+      <form
+        class="form"
+        novalidate
+        aria-labelledby="form-title"
+        [formRoot]="envForm"
+        [inert]="refreshing() || refreshError() !== null"
+      >
         <h2 id="form-title">Datos del ambiente</h2>
         <div class="fields">
           <app-form-field

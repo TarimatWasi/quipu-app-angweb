@@ -1,4 +1,5 @@
 import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { toBffErrorWithGone } from '@core/http/bff-error';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { countText } from '@shared/text/list-text';
@@ -95,6 +96,7 @@ const keyOf = (tab: Tab, month: string): Key => `${tab}|${month}`;
 @Component({
   selector: 'app-finance',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     FactTileComponent,
     FieldControlDirective,
@@ -189,6 +191,7 @@ export class FinanceComponent {
   /** The reads start with the page, from a field: not in `ngOnInit` (FE-ANG-CMP-10) nor in the constructor. */
   protected readonly started = this.start();
 
+  protected readonly changesStale = signal(false);
   protected readonly changesStarted = watchChanges({
     keys: ['admin.finance', 'admin.credits', 'admin.refunds'],
     reload: () => {
@@ -197,7 +200,19 @@ export class FinanceComponent {
       this.list.reload(this.key());
     },
     busy: () => this.summaryRead.isLoading() || this.creditsRead.isLoading() || this.list.loading(),
+    defer: () => this.dialog.openDialogs.length > 0,
+    stale: () => {
+      this.changesStale.set(true);
+    },
   });
+
+  protected reloadChanges(): void {
+    this.dialog.closeAll();
+    this.changesStale.set(false);
+    this.summary.reload();
+    this.creditsRead.reload();
+    this.list.reload(this.key());
+  }
 
   private start(): true {
     inject(DestroyRef).onDestroy(() => {
