@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, screen, within } from '@testing-library/dom';
@@ -64,6 +65,23 @@ afterEach(() => {
 });
 
 describe('A6 «Finanzas»', () => {
+  it('keeps an open expense draft when finance data changes', async () => {
+    const ui = await setup();
+    await ui.click(ui.page().getByRole('button', { name: 'Nuevo egreso' }));
+    const form = await ui.dialog('Nuevo egreso');
+    await ui.type(form, 'Descripción (opcional)', 'Mi borrador de egreso');
+    TestBed.inject(ChangeResourcesService).changed(['admin.finance']);
+    await ui.settle();
+    expect(form.getByLabelText('Descripción (opcional)')).toHaveProperty(
+      'value',
+      'Mi borrador de egreso',
+    );
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
+    await ui.click(form.getByRole('button', { name: 'Cancelar' }));
+    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.settle();
+    expect(ui.page().queryByText('Hay cambios en la información de esta pantalla.')).toBeNull();
+  });
   it('says what waits to be refunded, the balance of the month and its expenses, the biggest first', async () => {
     const { page, titles } = await setup();
 

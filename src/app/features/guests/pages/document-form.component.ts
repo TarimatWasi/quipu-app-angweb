@@ -1,4 +1,6 @@
 import { ResourceContent } from '@shared/data/resource-content';
+import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
 import { FormSummaryLayoutComponent } from '@shared/forms/form-summary-layout.component';
 import { GuestFormHeaderComponent } from '../components/guest-form-header.component';
@@ -74,6 +76,7 @@ const DOCUMENT_TYPES = (Object.keys(DOCUMENT_TYPE_CHIPS) as DocumentType[]).map(
 @Component({
   selector: 'app-document-form',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     FormSummaryLayoutComponent,
     GuestFormHeaderComponent,
@@ -188,6 +191,24 @@ export class DocumentFormComponent {
   });
 
   private readonly destroyRef = inject(DestroyRef);
+
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: [`admin.guest:${this.guestId}`],
+    reload: () => {
+      this.load();
+    },
+    busy: () => this.read.isLoading() || this.busy(),
+    defer: () => Object.keys(this.changes()).length > 0,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.load();
+  }
 
   protected chooseType(type: DocumentType): void {
     this.documentType.set(type);

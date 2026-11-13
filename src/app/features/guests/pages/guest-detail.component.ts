@@ -1,4 +1,5 @@
 import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { PagedList } from '@shared/data/paged-list';
 import { ResourceContent } from '@shared/data/resource-content';
 import { RefreshErrorComponent } from '@shared/ui/refresh-error/refresh-error.component';
@@ -80,6 +81,7 @@ interface Loaded {
 @Component({
   selector: 'app-guest-detail',
   imports: [
+    ChangesNoticeComponent,
     RefreshErrorComponent,
     NowPanelComponent,
     SkeletonCardsComponent,
@@ -231,13 +233,24 @@ export class GuestDetailComponent {
   private accessAsked =
     this.router.currentNavigation()?.extras.state?.[GENERATE_ACCESS_STATE] === true;
 
+  protected readonly changesStale = signal(false);
   protected readonly changesStarted = watchChanges({
     keys: () => [`admin.guest:${this.currentId()}`],
     reload: () => {
       this.content.reload();
     },
     busy: () => this.read.isLoading() || this.payments.loading() || this.busy(),
+    defer: () => this.dialogs.size > 0,
+    stale: () => {
+      this.changesStale.set(true);
+    },
   });
+
+  protected reloadChanges(): void {
+    this.closeDialogs();
+    this.changesStale.set(false);
+    this.content.reload();
+  }
 
   constructor() {
     // The time left of an access follows the clock while the page is open: every second while the
@@ -322,6 +335,7 @@ export class GuestDetailComponent {
 
   /** Another guest: nothing of the previous one counts (what was reactivated, a write in course). */
   private reset(): void {
+    this.changesStale.set(false);
     this.arriving.set(null);
     this.reactivated.set(false);
     this.busy.set(false);

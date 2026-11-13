@@ -1,4 +1,7 @@
 <app-page-header [heading]="title" />
+@if (changesStale()) {
+  <app-changes-notice (reload)="reloadChanges()" />
+}
 
 @switch (view().status) {
   @case ('initial-loading') {

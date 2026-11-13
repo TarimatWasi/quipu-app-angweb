@@ -30,6 +30,8 @@ import { toDocumentRows, uploadProblem } from '@shared/text/file-text';
 import type { OwnDocumentRow } from '@shared/text/file-text';
 import { OwnDocumentsComponent } from '../components/own-documents.component';
 import { GuestProfileService } from '../data/guest-profile.service';
+import { watchChanges } from '@core/changes/change-resources.service';
+import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { OwnContractService } from '../data/own-contract.service';
 import type { OwnProfile, OwnProfileClient } from '../data/own-profile';
 import { TemporaryGuestPaymentsService } from '../data/temporary-guest-payments.service';
@@ -74,6 +76,7 @@ const ERROR_ID = 'own-profile-error';
 @Component({
   selector: 'app-own-profile',
   imports: [
+    ChangesNoticeComponent,
     EmailChangeFieldComponent,
     FactTileComponent,
     FormRoot,
@@ -189,6 +192,26 @@ export class OwnProfileComponent {
   protected readonly chosen = signal<File | null>(null);
   protected readonly fileError = signal<string | null>(null);
   protected readonly uploading = signal(false);
+
+  protected readonly changesStale = signal(false);
+  protected readonly changesStarted = watchChanges({
+    keys: ['guest.profile', 'guest.contract', 'guest.stay'],
+    reload: () => {
+      this.load(true);
+    },
+    busy: () => this.read.isLoading() || this.saving() || this.uploading(),
+    defer: () => this.dirty() || this.chosen() !== null,
+    stale: () => {
+      this.changesStale.set(true);
+    },
+  });
+
+  protected reloadChanges(): void {
+    this.changesStale.set(false);
+    this.chosen.set(null);
+    this.fileError.set(null);
+    this.load(true);
+  }
 
   protected reload(): void {
     this.load(true);

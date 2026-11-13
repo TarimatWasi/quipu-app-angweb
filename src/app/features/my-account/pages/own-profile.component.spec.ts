@@ -1,5 +1,6 @@
 import { HttpErrorResponse } from '@angular/common/http';
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { provideRouter, Router } from '@angular/router';
 import { RouterTestingHarness } from '@angular/router/testing';
 import { fireEvent, within } from '@testing-library/dom';
@@ -139,6 +140,38 @@ async function setup(audience: Audience = 'CONTRACT', answers: Answers = {}) {
 const pdf = (name = 'constancia.pdf') => new File(['x'], name, { type: 'application/pdf' });
 
 describe('OwnProfileComponent (H5, guest with a contract)', () => {
+  it.each(['CONTRACT', 'TEMPORARY'] as const)(
+    'refreshes %s profile metadata on an own profile signal',
+    async (audience) => {
+      const ui = await setup(audience);
+      ui.api.profile.mockReturnValue(of(profileOf({ name: 'Nombre actualizado' })));
+      TestBed.inject(ChangeResourcesService).changed(['guest.profile']);
+      await ui.settle();
+      await ui.settle();
+      expect(ui.page().getByLabelText(/Nombre completo/)).toHaveProperty(
+        'value',
+        'Nombre actualizado',
+      );
+    },
+  );
+
+  it('preserves contact drafts and the selected document until explicitly reloaded', async () => {
+    const ui = await setup();
+    await ui.type(/Nombre completo/, 'Mi borrador');
+    await ui.pick(pdf('borrador.pdf'));
+    const calls = ui.api.profile.mock.calls.length;
+    ui.api.profile.mockReturnValue(of(profileOf({ name: 'Cambio externo' })));
+    TestBed.inject(ChangeResourcesService).changed(['guest.profile']);
+    await ui.settle();
+    expect(ui.api.profile).toHaveBeenCalledTimes(calls);
+    expect(ui.page().getByLabelText(/Nombre completo/)).toHaveProperty('value', 'Mi borrador');
+    expect(ui.page().getAllByText('borrador.pdf').length).toBeGreaterThan(0);
+    expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
+    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.settle();
+    expect(ui.page().getByLabelText(/Nombre completo/)).toHaveProperty('value', 'Cambio externo');
+    expect(ui.page().queryByText('borrador.pdf')).toBeNull();
+  });
   it('shows the data in the form, what the administration keeps and the documents', async () => {
     const ui = await setup();
 

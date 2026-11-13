@@ -14,7 +14,12 @@ export type AdminChangeKey =
   | `admin.guest:${string}`
   | `admin.environment:${string}`;
 export type GuestChangeKey =
-  'guest.home' | 'guest.payments' | 'guest.contract' | 'guest.stay' | `guest.payment:${string}`;
+  | 'guest.home'
+  | 'guest.payments'
+  | 'guest.contract'
+  | 'guest.stay'
+  | 'guest.profile'
+  | `guest.payment:${string}`;
 export type ChangeKey = AdminChangeKey | GuestChangeKey;
 export type ChangePayload = Omit<components['schemas']['AdminChange'], 'invalidate'> & {
   readonly invalidate: 'ALL' | readonly ChangeKey[];
@@ -34,7 +39,13 @@ const ADMIN_STATIC = new Set([
   'admin.credits',
   'admin.refunds',
 ]);
-const GUEST_STATIC = new Set(['guest.home', 'guest.payments', 'guest.contract', 'guest.stay']);
+const GUEST_STATIC = new Set([
+  'guest.home',
+  'guest.payments',
+  'guest.contract',
+  'guest.stay',
+  'guest.profile',
+]);
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

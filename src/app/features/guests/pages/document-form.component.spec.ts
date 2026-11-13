@@ -5,6 +5,7 @@ import {
   TestRequest,
 } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
+import { ChangeResourcesService } from '@core/changes/change-resources.service';
 import { MatDialog } from '@angular/material/dialog';
 import { MATERIAL_ANIMATIONS } from '@angular/material/core';
 import { provideRouter, Router } from '@angular/router';
@@ -99,6 +100,17 @@ async function setup(guest: object = pending(), status = 200) {
 }
 
 describe('DocumentFormComponent (A3.5 document of a pending guest, approved canvas)', () => {
+  it('preserves an edited document on external changes and reloads only on explicit choice', async () => {
+    const ui = await setup(pending());
+    await ui.type('70419999');
+    TestBed.inject(ChangeResourcesService).changed(['admin.guest:g1']);
+    TestBed.tick();
+    expect(ui.page().getByLabelText(NUMBER)).toHaveProperty('value', '70419999');
+    ui.http.expectNone(isGuest);
+    await ui.click(ui.page().getByRole('button', { name: 'Volver a cargar' }));
+    await ui.flush(await ui.expect1(isGuest), pending({ documentNumber: '70418888', version: 4 }));
+    expect(ui.page().getByLabelText(NUMBER)).toHaveProperty('value', '70418888');
+  });
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
