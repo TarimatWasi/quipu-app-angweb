@@ -42,6 +42,7 @@ function temporaryGuestLink(target: Target): string | null {
     case 'PAYMENT':
       return `/temporary-guest/payment/${escaped(target.id)}`;
     case 'GUEST':
+    case 'REFUND':
       return '/home';
     default:
       return null;
@@ -61,7 +62,8 @@ const LINKS: Readonly<Record<NotificationAudience, (target: Target) => string | 
  *   guest (`target.guestId`, only with DOCUMENT) with that document marked (`?document=`).
  * - guest with a contract: its payment, its contract, and for a REFUND its home, where its credit
  *   is (GET /guest/credit is read by the home). A FINE opens nothing.
- * - temporary guest: its payment, and GUEST its payment status (T1, at /home).
+ * - temporary guest: its payment, and GUEST or REFUND its payment status (T1, at /home), which
+ *   shows the surplus of the stay and its refund (StayPaymentStatus.surplus; v0.30.1 documents it).
  * - an unknown kind (target.kind is extensible), or `target: null`, opens nothing.
  */
 export function notificationLink(

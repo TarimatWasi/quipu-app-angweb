@@ -21,11 +21,12 @@ describe('notificationLink (contract v0.30.0)', () => {
     expect(notificationLink('CONTRACT', { kind: 'FINE', id: ID })).toBeNull();
   });
 
-  it('opens the payment and the payment status of the temporary guest', () => {
+  it('opens the payment and the payment status (with its refund) of the temporary guest', () => {
     expect(notificationLink('TEMPORARY', { kind: 'PAYMENT', id: ID })).toBe(
       `/temporary-guest/payment/${ID}`,
     );
     expect(notificationLink('TEMPORARY', { kind: 'GUEST', id: ID })).toBe('/home');
+    expect(notificationLink('TEMPORARY', { kind: 'REFUND', id: ID })).toBe('/home');
     expect(notificationLink('TEMPORARY', { kind: 'CONTRACT', id: ID })).toBeNull();
   });
 
