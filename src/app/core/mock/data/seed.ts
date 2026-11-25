@@ -11,6 +11,7 @@ import {
   seedCasePayments,
 } from './seed-contract-cases';
 import { seedContracts, seedEnvironments, seedGuests } from './seed-people';
+import { seedNotifications } from './seed-notifications';
 
 /**
  * A fresh copy of the data for a scenario. «Vacío» keeps the environments and the guests (the demo
@@ -35,6 +36,7 @@ export function seedDb(scenario: MockScenario): MockDb {
       documentActions: [],
       expenses: [],
       fines: [],
+      notifications: [],
     });
   }
   const refunds = seedRefunds();
@@ -54,5 +56,6 @@ export function seedDb(scenario: MockScenario): MockDb {
     documentActions: seedDocumentActions(documents),
     expenses: seedExpenses(),
     fines: seedFines(),
+    notifications: seedNotifications(payments),
   });
 }

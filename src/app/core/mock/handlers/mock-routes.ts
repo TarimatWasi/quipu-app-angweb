@@ -13,6 +13,7 @@ import { GUEST_EMAIL_ROUTES } from './guest-email.handlers';
 import { GUEST_ONBOARDING_ROUTES } from './guest-onboarding.handlers';
 import { GUEST_PROFILE_ROUTES } from './guest-profile.handlers';
 import { GUEST_ROUTES } from './guest.handlers';
+import { NOTIFICATION_ROUTES } from './notifications.handlers';
 
 /**
  * Every route of the simulated BFF. A new screen adds its own `<area>.handlers.ts` next to these,
@@ -33,4 +34,5 @@ export const MOCK_ROUTES: readonly MockRoute[] = [
   ...GUEST_PROFILE_ROUTES,
   ...GUEST_ONBOARDING_ROUTES,
   ...GUEST_EMAIL_ROUTES,
+  ...NOTIFICATION_ROUTES,
 ];

@@ -16,6 +16,7 @@ import { readProofsUpload } from '../mock-multipart';
 import { invalid, notFound, ok, paginate, raise } from '../mock-reply';
 import type { GuestType, MockContext, MockRequest, MockRoute } from '../mock-types';
 import { checkTargetFree, createPayment, proofsFrom } from './payment-actions';
+import { notify } from './notifications.handlers';
 
 type Schemas = components['schemas'];
 
@@ -37,6 +38,7 @@ async function correct(ctx: MockContext, req: MockRequest, type: GuestType) {
   payment.status = 'PENDING';
   payment.rejectionReason = null;
   payment.submittedAt = nowInstant();
+  proofSubmitted(ctx.db, payment);
   return ok(paymentSummary(ctx.db, payment));
 }
 
@@ -65,6 +67,16 @@ function history(db: MockDb, guestId: string): Schemas['GuestHistoryItem'][] {
   return [...payments, ...refunds].sort((a, b) => b.at.localeCompare(a.at)).map(({ item }) => item);
 }
 
+/** The administrators' bell hears of a proof the guest sent (PAYMENT_PROOF_SUBMITTED). */
+function proofSubmitted(db: MockDb, payment: PaymentRecord): void {
+  notify(db, {
+    audience: 'ADMIN',
+    type: 'PAYMENT_PROOF_SUBMITTED',
+    target: { kind: 'PAYMENT', id: payment.id },
+    guestId: payment.guestId,
+  });
+}
+
 async function uploadForPeriod(req: MockRequest, ctx: MockContext) {
   const { guestId } = ctx.requireGuest('CONTRACT');
   const upload = await readProofsUpload(req.body);
@@ -82,6 +94,7 @@ async function uploadForPeriod(req: MockRequest, ctx: MockContext) {
   }
   const proofs = proofsFrom(ctx.db, upload, 'GUEST');
   const payment = createPayment(ctx.db, guestId, target, proofs, charged.creditApplied);
+  proofSubmitted(ctx.db, payment);
   return ok(paymentSummary(ctx.db, payment), 201);
 }
 
@@ -95,6 +108,7 @@ async function uploadForStay(req: MockRequest, ctx: MockContext) {
   const target = { stayId: stay.id };
   checkTargetFree(ctx.db, target);
   const payment = createPayment(ctx.db, guestId, target, proofsFrom(ctx.db, upload, 'GUEST'));
+  proofSubmitted(ctx.db, payment);
   return ok(paymentSummary(ctx.db, payment), 201);
 }
 

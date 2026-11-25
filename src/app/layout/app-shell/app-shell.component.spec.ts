@@ -13,6 +13,9 @@ import { AppShellComponent } from './app-shell.component';
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
 const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
 const isChange = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/change-password');
+const isBell = (req: HttpRequest<unknown>) =>
+  /\/bff\/(admin|guest|temporary-guest)\/notifications$/.test(req.url);
+const bellUnread = 2;
 
 @Component({ selector: 'app-page-stub', template: '' })
 class PageStubComponent {}
@@ -68,6 +71,12 @@ async function setup(session: SessionAnswer, url = '/home') {
   await TestBed.inject(Router).navigateByUrl(url);
   const fixture = TestBed.createComponent(AppShellComponent);
   await fixture.whenStable();
+  // The bell of the bar reads its first page; its own spec covers what it shows.
+  for (const bell of TestBed.inject(HttpTestingController).match(isBell)) {
+    bell.flush({ content: [], nextCursor: null, unreadCount: bellUnread });
+  }
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  await fixture.whenStable();
   const root = fixture.nativeElement as HTMLElement;
   return { auth, fixture, root, ui: within(root) };
 }
@@ -101,6 +110,23 @@ describe('AppShellComponent (P-01)', () => {
   afterEach(() => {
     TestBed.inject(MatDialog).closeAll();
     TestBed.inject(HttpTestingController).verify();
+  });
+
+  describe('bell', () => {
+    it.each([
+      ['administrator', ADMIN],
+      ['guest with a contract', CONTRACT],
+      ['temporary guest', TEMPORARY],
+    ])('the %s has the bell with its unread count', async (_who, session) => {
+      const { root } = await setup(session);
+      const bell = root.querySelector('app-notification-bell button');
+      expect(bell?.getAttribute('aria-label')).toBe('Notificaciones, 2 sin leer');
+    });
+
+    it('has no bell without sections', async () => {
+      const { root } = await setup(NO_SECTIONS);
+      expect(root.querySelector('app-notification-bell')).toBeNull();
+    });
   });
 
   describe('menu by role', () => {

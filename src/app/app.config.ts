@@ -11,6 +11,7 @@ import { credentialsInterceptor } from '@core/http/credentials.interceptor';
 import { sessionExpiredInterceptor } from '@core/http/session-expired.interceptor';
 import { sessionRefreshInterceptor } from '@core/http/session-refresh.interceptor';
 import { csrfErrorInterceptor } from '@core/http/csrf-error.interceptor';
+import { serviceBusyInterceptor } from '@core/http/service-busy.interceptor';
 import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 import { routes } from './app.routes';
 
@@ -23,12 +24,14 @@ export const appConfig: ApplicationConfig = {
     provideHttpClient(
       withXsrfConfiguration({ cookieName: 'XSRF-TOKEN', headerName: 'X-XSRF-TOKEN' }),
       // The refresh goes inside the session guard: a 401 is renewed first, and only a session that
-      // cannot be renewed reaches sessionExpiredInterceptor (TAR-360).
+      // cannot be renewed reaches sessionExpiredInterceptor (TAR-360). A read the BFF answers with
+      // 503 SERVICE_BUSY is retried innermost, so the session interceptors never see that wait.
       withInterceptors([
         credentialsInterceptor,
         sessionExpiredInterceptor,
         sessionRefreshInterceptor,
         csrfErrorInterceptor,
+        serviceBusyInterceptor,
       ]),
     ),
     // The screen does not wait for the token: every mutation goes through `protect`, which waits
