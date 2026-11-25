@@ -107,6 +107,23 @@ export type RefundRecord = GuestRefund & {
 };
 
 /** An expense of A6, with the version that A6.1 sends back when it edits it (BE-SPR-DAT-13). */
+/**
+ * A bell notification (contract v0.27.0). The text is not stored: like the BFF, the mock words it
+ * when it is read, from the current data. `audience` is ADMIN (the inbox all administrators share)
+ * or the id of the guest it belongs to; `readBy` keeps when each account read it, by document.
+ */
+export interface NotificationRecord {
+  readonly id: string;
+  /** `ADMIN` or the id of a guest. */
+  readonly audience: string;
+  readonly type: Schemas['NotificationType'];
+  readonly createdAt: string;
+  readonly target: Schemas['NotificationTarget'] | null;
+  /** The guest the notification is about, to name it in the text of the administrators. */
+  readonly guestId: string | null;
+  readonly readBy: Map<string, string>;
+}
+
 export type ExpenseRecord = Omit<Schemas['Expense'], 'version'> & { version: number };
 
 /** A fine of A6 without what the BFF derives from its guest (its name and environment). */
@@ -137,6 +154,7 @@ export interface MockDbData {
   readonly documentActions: DocumentActionRecord[];
   readonly expenses: ExpenseRecord[];
   readonly fines: FineRecord[];
+  readonly notifications: NotificationRecord[];
 }
 
 /** The kinds of record, used in the opaque ids so a mixed-up id never finds the wrong record. */
@@ -153,6 +171,7 @@ export const ID_KIND = {
   documentAction: 10,
   expense: 11,
   fine: 12,
+  notification: 13,
 } as const;
 
 /** An opaque id shaped like the uuids of the BFF, stable for the seeded data. */

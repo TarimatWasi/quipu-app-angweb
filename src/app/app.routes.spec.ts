@@ -52,9 +52,11 @@ async function setup() {
 describe('routes', () => {
   afterEach(() => {
     const http = TestBed.inject(HttpTestingController);
-    // The home of the administrator (A1) asks its summary; these tests are about the routes.
-    // A page that is gone already cancelled its read (a resource does): only the open ones answer.
-    for (const request of http.match((req) => req.url.endsWith('/bff/admin/dashboard'))) {
+    // The home of the administrator (A1) asks its summary and the bell of the bar its first page;
+    // these tests are about the routes. A page that is gone already cancelled its read (a resource
+    // does): only the open ones answer.
+    const background = /\/bff\/(admin\/dashboard|(admin|guest)\/notifications)$/;
+    for (const request of http.match((req) => background.test(req.url))) {
       if (!request.cancelled) request.error(new ProgressEvent('error'));
     }
     http.verify();
@@ -423,7 +425,10 @@ describe('routes', () => {
 
       expect(address()).toBe('/temporary-guest/payment');
       expect(heading()).toBe('Esta página no es para tu cuenta');
-      TestBed.inject(HttpTestingController).expectNone((req) => req.url.includes('/bff/'));
+      // The page asks nothing; only the bell of the bar reads its own inbox.
+      TestBed.inject(HttpTestingController).expectNone(
+        (req) => req.url.includes('/bff/') && !req.url.endsWith('/notifications'),
+      );
     });
 
     it('opens T2 for a temporary guest and keeps it away from H3 and H4', async () => {

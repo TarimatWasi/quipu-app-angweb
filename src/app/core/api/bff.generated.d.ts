@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract f2f99ed9b7671eb346ce85aa2d3cd636b5e98003 (TarimatWasi/quipu-lib-contracts), spec sha256 2614f8505eed54a499daa8f565d61c932912c51653d4404549a94eb5d98324d9.
+ * Generated from the BFF contract v0.29.0 (TarimatWasi/quipu-lib-contracts), spec sha256 6925632e2e9247c8f91f364ce09f9534334650fef22068f70a7f8c4d095cd4de.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -13,7 +13,7 @@ export interface paths {
         };
         /**
          * Stream admin resource invalidations (TAR-370)
-         * @description ADR-SSE-01 (TAR-369/TAR-370). UTF-8 SSE byte stream, not a JSON document/array. A blank line terminates a frame. Named events carry JSON data; the media-type x-sse-events map selects its component schema. The first event is ready after subscription registration. Always synchronize visible authorized resources after ready/reconnection, even when epoch/version did not change. Preserve dirty drafts/files; mark edited forms stale instead of rebuilding them. Keep invalidations received during a GET for a subsequent grouped reload. Restart lists from the first page, preserving filters/month. ALL affects mounted, authorized resources only; no background GET fanout or toast per event. No durable delivery, replay, id field or Last-Event-ID recovery. Version gaps do not prove lost changes or order HTTP responses. Server-selected recipients only: no user/session/resource selectors. Resource ids are masked for the receiving session, never the actor. Cookies, role, session/account security version, edge gate and origin are checked before opening. This safe GET does not require CSRF. Idle heartbeats are comments every 20 seconds, with no database query or version increment. Initially four streams per account, 64 globally; one connection per visible browser tab shared by mounted resources. Each frame is at most 8192 UTF-8 bytes; excessive keys/bytes collapse to ALL rather than truncating a frame. Lifetime is min(access-token expiry, opening + 15 minutes). Logout, revocation and security-version changes close affected streams. closing is best-effort; disconnects may happen without it. On access-token-expired or session-updated, close the old EventSource and check/renew through the shared HttpClient refresh path before reopening. session-updated preserves the current sid after password change; other sessions are revoked. session-revoked ends the session. max-duration/server-shutdown may retry. EventSource bypasses HttpClient interceptors and cannot inspect status/headers: close it on error before controlled recovery. A successful /auth/me probe does not prove permission to open this stream. After five consecutive attempts without ready, stop automatic attempts and require an explicit user retry; reset that budget only after ready, not merely the HTTP open event. Network/5xx preserves the session, with capped exponential backoff/jitter (1 to 30 seconds); definitive auth/refresh rejection ends it. A 403 must not create a refresh loop. Respect Retry-After when observable; otherwise wait at least 30 seconds if connection-limit rejection cannot be distinguished. Close when hidden/logout and synchronize on return. Once HTTP 200 is committed, no new status or JSON error replaces the stream: close it, optionally with closing. Existing GETs remain the source of truth. No inbox, polling, bus or scheduler is introduced. Administrators only receive keys they are authorized to query. Producers cover payments/contracts and, with TAR-376, guest/access, profile/document, stay, environment, expense and fine mutations after commit. Passage of time does not independently emit invalidations. Deploy compatible consumers before enabling new resource keys.
+         * @description ADR-SSE-01 (TAR-369/TAR-370). UTF-8 SSE byte stream, not a JSON document/array. A blank line terminates a frame. Named events carry JSON data; the media-type x-sse-events map selects its component schema. The first event is ready after subscription registration. Always synchronize visible authorized resources after ready/reconnection, even when epoch/version did not change. Preserve dirty drafts/files; mark edited forms stale instead of rebuilding them. Keep invalidations received during a GET for a subsequent grouped reload. Restart lists from the first page, preserving filters/month. ALL affects mounted, authorized resources only; no background GET fanout or toast per event. No durable delivery, replay, id field or Last-Event-ID recovery. Version gaps do not prove lost changes or order HTTP responses. Server-selected recipients only: no user/session/resource selectors. Resource ids are masked for the receiving session, never the actor. Cookies, role, session/account security version, edge gate and origin are checked before opening. This safe GET does not require CSRF. Idle heartbeats are comments every 20 seconds, with no database query or version increment. Initially four streams per account, 64 globally; one connection per visible browser tab shared by mounted resources. Each frame is at most 8192 UTF-8 bytes; excessive keys/bytes collapse to ALL rather than truncating a frame. Lifetime is min(access-token expiry, opening + 15 minutes). Logout, revocation and security-version changes close affected streams. closing is best-effort; disconnects may happen without it. On access-token-expired or session-updated, close the old EventSource and check/renew through the shared HttpClient refresh path before reopening. session-updated preserves the current sid after password change; other sessions are revoked. session-revoked ends the session. max-duration/server-shutdown may retry. EventSource bypasses HttpClient interceptors and cannot inspect status/headers: close it on error before controlled recovery. A successful /auth/me probe does not prove permission to open this stream. After five consecutive attempts without ready, stop automatic attempts and require an explicit user retry; reset that budget only after ready, not merely the HTTP open event. Network/5xx preserves the session, with capped exponential backoff/jitter (1 to 30 seconds); definitive auth/refresh rejection ends it. A 403 must not create a refresh loop. Respect Retry-After when observable; otherwise wait at least 30 seconds if connection-limit rejection cannot be distinguished. Close when hidden/logout and synchronize on return. Once HTTP 200 is committed, no new status or JSON error replaces the stream: close it, optionally with closing. Existing GETs remain the source of truth. No polling or scheduler is introduced; the bell (notifications tag) is the only inbox. Administrators only receive keys they are authorized to query. Producers are the confirmed domain events of the backend: payments, contracts, guest/access, profile/document, stay, environment, expense, fine and bell mutations, after commit. The start of a business day of Lima (the first request of the day) sends ALL to every open stream: what the date derives (dues, arrears, terms) is reloaded. Deploy compatible consumers before enabling new resource keys.
          */
         get: operations["streamAdminChanges"];
         put?: never;
@@ -38,6 +38,126 @@ export interface paths {
         get: operations["streamGuestChanges"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own bell notifications, newest first
+         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens with its existing GET. The live key `admin.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         */
+        get: operations["listAdminNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark one own notification as read
+         * @description Idempotent — an already read notification answers 204 and keeps its first readAt
+         */
+        post: operations["readAdminNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/admin/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark every own notification as read
+         * @description Idempotent; notifications that arrive later stay unread
+         */
+        post: operations["readAllAdminNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own bell notifications, newest first
+         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens with its existing GET. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         */
+        get: operations["listGuestNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark one own notification as read
+         * @description Idempotent — an already read notification answers 204 and keeps its first readAt
+         */
+        post: operations["readGuestNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/guest/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark every own notification as read
+         * @description Idempotent; notifications that arrive later stay unread
+         */
+        post: operations["readAllGuestNotifications"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1483,7 +1603,7 @@ export interface components {
             version: components["schemas"]["ChangeVersion"];
         };
         /** @description ADR-SSE-01 administrative groups. admin.guest:<id> groups visible guest detail, history, account-status, payable-periods and stays. admin.contracts groups contract lists/details. admin.environments includes availability filtered by freeFrom/freeTo. admin.environment:<id> groups detail/account-status, the latter only if mounted (no current frontend consumer). No entity data in keys; permission still applies. */
-        AdminChangeKey: ("admin.dashboard" | "admin.payments.queue" | "admin.guests" | "admin.contracts" | "admin.environments" | "admin.finance" | "admin.credits" | "admin.refunds") | string;
+        AdminChangeKey: ("admin.dashboard" | "admin.payments.queue" | "admin.guests" | "admin.contracts" | "admin.environments" | "admin.finance" | "admin.credits" | "admin.refunds" | "admin.notifications") | string;
         /**
          * @example {
          *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
@@ -1501,7 +1621,7 @@ export interface components {
             invalidate: "ALL" | components["schemas"]["AdminChangeKey"][];
         };
         /** @description ADR-SSE-01 own groups. guest.home groups account-status and credit; guest.payments is paginated history; guest.contract is /guest/contract (singular); guest.stay is /temporary-guest/payment-status. guest.payment:<id> is the own payment detail for either guest type. guest.profile is /guest/profile or /temporary-guest/profile according to the authenticated guest type, including document metadata. Preserve dirty contact fields and selected files; signal stale data and reload only on explicit choice. It does not imply a notification or file transfer. */
-        GuestChangeKey: ("guest.home" | "guest.payments" | "guest.contract" | "guest.stay" | "guest.profile") | string;
+        GuestChangeKey: ("guest.home" | "guest.payments" | "guest.contract" | "guest.stay" | "guest.profile" | "guest.notifications") | string;
         /**
          * @example {
          *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
@@ -1561,6 +1681,39 @@ export interface components {
             nextCursor: components["schemas"]["NextCursor"];
             /** @description Expenses of the month, for «Mostrando X de Y» (A6, TAR-240) */
             totalCount: number;
+        };
+        /** @description What happened. Administrators receive PAYMENT_PROOF_SUBMITTED, ONBOARDING_COMPLETED, GUEST_DOCUMENT_UPLOADED, CONTRACT_EXPIRING, PAYMENT_OVERDUE, STAY_ENDING (a one-time stay ends soon) and ACCESS_EXPIRED (an access expired unused: the guest cannot activate until a new one is handed); guests receive PAYMENT_APPROVED, PAYMENT_REJECTED, REFUND_CREATED, FINE_APPLIED, CONTRACT_SIGNED, CONTRACT_TERMINATED and PAYMENT_DUE. Clients show an unknown value with its title and body (forward compatible) instead of failing: the set grows without a new major version (x-extensible-enum). */
+        NotificationType: string;
+        /** @description The resource to open; its id is masked for the session like any other */
+        NotificationTarget: {
+            /** @enum {string} */
+            kind: "PAYMENT" | "GUEST" | "CONTRACT" | "FINE" | "REFUND" | "DOCUMENT";
+            /** Format: uuid */
+            id: string;
+        };
+        Notification: {
+            /**
+             * Format: uuid
+             * @description Masked for the session
+             */
+            id: string;
+            type: components["schemas"]["NotificationType"];
+            /** @description Spanish, rendered when read */
+            title: string;
+            /** @description Spanish, rendered when read */
+            body: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: string | null;
+            /** @description Null when the resource no longer exists */
+            target: components["schemas"]["NotificationTarget"] | null;
+        };
+        PagedNotifications: {
+            content: components["schemas"]["Notification"][];
+            nextCursor: components["schemas"]["NextCursor"];
+            /** @description Unread notifications of the account, for the bell badge */
+            unreadCount: number;
         };
         /** @description Value for `after` to get the next page; `null` when this is the last one */
         NextCursor: string | null;
@@ -3775,6 +3928,17 @@ export interface components {
                 "application/json": components["schemas"]["Error"];
             };
         };
+        /** @description `SERVICE_BUSY`: the database could not serve the request in time (no free connection within 5 s, or a statement past its 30 s limit); nothing was saved. Any operation can answer it (OpenAPI 3.0 has no global responses, so none references it): retry after `Retry-After` */
+        ServiceBusy: {
+            headers: {
+                /** @description Seconds until the client may retry */
+                "Retry-After"?: number;
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["Error"];
+            };
+        };
         /** @description The file storage (R2) is not configured or failed; nothing was saved — retry later (`FILE_STORAGE_UNAVAILABLE`) */
         FileStorageUnavailable: {
             headers: {
@@ -3914,6 +4078,170 @@ export interface operations {
             401: components["responses"]["NoSession"];
             403: components["responses"]["ChangeStreamForbidden"];
             429: components["responses"]["ChangeStreamLimited"];
+        };
+    };
+    listAdminNotifications: {
+        parameters: {
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+                /** @description Only unread notifications when true */
+                unread?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of notifications and the unread count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedNotifications"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readAdminNotification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readAllAdminNotifications: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listGuestNotifications: {
+        parameters: {
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+                /** @description Only unread notifications when true */
+                unread?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of notifications and the unread count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedNotifications"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readGuestNotification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readAllGuestNotifications: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
         };
     };
     getCsrfToken: {
