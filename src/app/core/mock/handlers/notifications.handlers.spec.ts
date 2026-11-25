@@ -57,13 +57,15 @@ describe('bell of the simulated BFF (contract v0.27.0)', () => {
     expect(error.status).toBe(404);
   });
 
-  it('gives each guest its own bell, with a type this client may not know', async () => {
+  it('gives the guest with a contract its own bell, with a type this client may not know', async () => {
     const mock = await signedIn('contract-guest');
     const own = await mock.get<Paged>('/bff/guest/notifications');
     expect(own.content.map((item) => item.type)).toContain('HOUSE_ANNOUNCEMENT');
-    await mock.signIn('temporary-guest');
-    const other = await mock.get<Paged>('/bff/guest/notifications');
-    expect(other.content.map((item) => item.type)).toEqual(['PAYMENT_DUE']);
+  });
+
+  it('keeps the temporary guest out of /bff/guest/**, as the BFF does', async () => {
+    const mock = await signedIn('temporary-guest');
+    expect((await mock.fail(mock.get('/bff/guest/notifications'))).status).toBe(403);
   });
 
   it('keeps the bell of the guests out of the administration and the other way around', async () => {

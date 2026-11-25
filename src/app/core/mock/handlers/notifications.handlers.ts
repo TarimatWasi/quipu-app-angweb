@@ -18,10 +18,9 @@ function adminInbox(ctx: MockContext): Inbox {
   return { audience: 'ADMIN', reader: ctx.requireAdmin().documentNumber };
 }
 
+/** /bff/guest/** is the area of the guest with a contract: the temporary guest gets a 403, as in the BFF. */
 function guestInbox(ctx: MockContext): Inbox {
-  const session = ctx.user()?.session;
-  const type = session?.role === 'GUEST' ? session.guestType : 'CONTRACT';
-  const guest = ctx.requireGuest(type);
+  const guest = ctx.requireGuest('CONTRACT');
   return { audience: guest.guestId, reader: guest.documentNumber };
 }
 

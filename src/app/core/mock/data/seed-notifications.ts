@@ -92,13 +92,6 @@ function guestNotifications(payments: readonly PaymentRecord[]): NotificationRec
       target: null,
       guestId: GUEST_IDS.luis,
     }),
-    notification({
-      audience: GUEST_IDS.ana,
-      type: 'PAYMENT_DUE',
-      createdAt: instantOn(day, 7),
-      target: { kind: 'GUEST', id: GUEST_IDS.ana },
-      guestId: GUEST_IDS.ana,
-    }),
   ];
 }
 
