@@ -197,6 +197,17 @@ describe('temporary guest in the simulated BFF', () => {
 });
 
 describe('credit of the guest in the simulated BFF (RN-38)', () => {
+  // The current month is UNPAID only until its due date (day 10); from the 11th the mock says
+  // OVERDUE. The date is fixed before the seed is built so the period does not depend on the day.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-11-02T17:00:00Z'));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   afterEach(() => {
     resetMockSettings();
   });
