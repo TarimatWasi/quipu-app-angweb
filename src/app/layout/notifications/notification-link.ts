@@ -18,7 +18,7 @@ function adminLink(target: Target): string | null {
     case 'DOCUMENT':
       return target.guestId === undefined
         ? null
-        : `/admin/guests/${escaped(target.guestId)}/documents`;
+        : `/admin/guests/${escaped(target.guestId)}/documents?document=${escaped(target.id)}`;
     default:
       return null;
   }
@@ -58,7 +58,7 @@ const LINKS: Readonly<Record<NotificationAudience, (target: Target) => string | 
  * The page a notification opens (its `target`), or null when it has none: then it is shown without
  * a link and the notification is the whole content. What contract v0.30.0 documents, by audience:
  * - administrator: the payment, the guest, the contract, and for a DOCUMENT the documents of its
- *   guest (`target.guestId`, only with DOCUMENT).
+ *   guest (`target.guestId`, only with DOCUMENT) with that document marked (`?document=`).
  * - guest with a contract: its payment, its contract, and for a REFUND its home, where its credit
  *   is (GET /guest/credit is read by the home). A FINE opens nothing.
  * - temporary guest: its payment, and GUEST its payment status (T1, at /home).

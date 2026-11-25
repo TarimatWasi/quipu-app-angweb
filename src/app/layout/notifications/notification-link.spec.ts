@@ -9,7 +9,7 @@ describe('notificationLink (contract v0.30.0)', () => {
     expect(notificationLink('ADMIN', { kind: 'GUEST', id: ID })).toBe(`/admin/guests/${ID}`);
     expect(notificationLink('ADMIN', { kind: 'CONTRACT', id: ID })).toBe(`/admin/contracts/${ID}`);
     expect(notificationLink('ADMIN', { kind: 'DOCUMENT', id: ID, guestId: GUEST })).toBe(
-      `/admin/guests/${GUEST}/documents`,
+      `/admin/guests/${GUEST}/documents?document=${ID}`,
     );
     expect(notificationLink('ADMIN', { kind: 'DOCUMENT', id: ID })).toBeNull();
   });

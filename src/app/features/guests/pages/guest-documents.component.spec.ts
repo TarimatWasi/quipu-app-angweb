@@ -65,7 +65,7 @@ interface Answers {
   actions?: GuestDocumentAction[];
 }
 
-async function setup(answers: Answers = {}) {
+async function setup(answers: Answers = {}, url = '/admin/guests/g1/documents') {
   const guests = {
     get: vi.fn<(id: string) => Observable<GuestDetail>>(() => answers.guest ?? of(guestOf())),
   };
@@ -101,7 +101,7 @@ async function setup(answers: Answers = {}) {
     ],
   });
   const harness = await RouterTestingHarness.create();
-  await TestBed.inject(Router).navigateByUrl('/admin/guests/g1/documents');
+  await TestBed.inject(Router).navigateByUrl(url);
   await settle(harness);
   const page = () => within(harness.routeNativeElement ?? document.body);
   const click = async (element: HTMLElement) => {
@@ -151,6 +151,29 @@ describe('GuestDocumentsComponent (A3.8)', () => {
     expect(ui.documents.list).toHaveBeenCalledTimes(2);
     expect(ui.dialog().getAllByText('seleccionado.png').length).toBeGreaterThan(0);
     expect(ui.page().getByText('Hay cambios en la información de esta pantalla.')).toBeTruthy();
+  });
+
+  it('marks, shows and focuses the document a notification points to (?document=)', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const ui = await setup({}, '/admin/guests/g1/documents?document=d2');
+    const rows = ui
+      .page()
+      .getAllByRole('listitem')
+      .filter((li) => li.hasAttribute('data-document'));
+    const marked = rows.filter((li) => li.getAttribute('aria-current') === 'true');
+    expect(marked.map((li) => li.dataset['document'])).toEqual(['d2']);
+    expect(document.activeElement).toBe(marked[0]);
+    expect(scroll).toHaveBeenCalledOnce();
+  });
+
+  it('shows the list as it is when the document of the notification is gone', async () => {
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    const ui = await setup({}, '/admin/guests/g1/documents?document=gone');
+    expect(ui.page().getByRole('region', { name: 'Sus documentos' })).toBeTruthy();
+    expect(document.querySelector('[aria-current="true"]')).toBeNull();
+    expect(scroll).not.toHaveBeenCalled();
   });
 
   it('shows the documents, the evidence and who they belong to', async () => {

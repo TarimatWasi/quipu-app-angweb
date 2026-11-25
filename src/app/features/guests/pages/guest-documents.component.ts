@@ -3,7 +3,7 @@ import { watchChanges } from '@core/changes/change-resources.service';
 import { ChangesNoticeComponent } from '@shared/ui/changes-notice/changes-notice.component';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, computed, DestroyRef, inject, signal } from '@angular/core';
-import { rxResource, takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { rxResource, takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { MatDialog, MatDialogRef } from '@angular/material/dialog';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { forkJoin, map } from 'rxjs';
@@ -100,6 +100,14 @@ export class GuestDocumentsComponent {
   protected readonly title = DOCUMENTS_TITLE;
   protected readonly whoNote = DOCUMENTS_WHO_NOTE;
   protected readonly loadErrorText = LOAD_DOCUMENTS_TEXT;
+  /**
+   * The document a notification points to (`?document=<id>`, GUEST_DOCUMENT_UPLOADED): the list
+   * brings its row into view and focuses it. One that is gone leaves the list as it is.
+   */
+  protected readonly highlighted = toSignal(
+    this.route.queryParamMap.pipe(map((params) => params.get('document'))),
+    { initialValue: null },
+  );
 
   private readonly currentId = signal('');
   /** The guest, its documents and their actions, read again for another guest (the :id). */

@@ -11,7 +11,8 @@ import {
   viewChild,
 } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import type { UrlTree } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import { watchChanges } from '@core/changes/change-resources.service';
 import type { ChangeKey } from '@core/changes/change-events';
@@ -51,7 +52,7 @@ const SKELETON_ROWS = 3;
 interface NotificationRow {
   readonly notification: Notification;
   readonly unread: boolean;
-  readonly link: string | null;
+  readonly link: UrlTree | null;
   readonly when: string;
 }
 
@@ -85,6 +86,7 @@ export class NotificationBellComponent {
 
   private readonly client = inject(NotificationsClient);
   private readonly toasts = inject(ToastService);
+  private readonly router = inject(Router);
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly button = viewChild<ElementRef<HTMLButtonElement>>('bellButton');
 
@@ -116,7 +118,7 @@ export class NotificationBellComponent {
     return this.list.items().map((notification) => ({
       notification,
       unread: notification.readAt === null && !allRead && !readHere.has(notification.id),
-      link: notificationLink(this.audience(), notification.target),
+      link: this.linkTo(notificationLink(this.audience(), notification.target)),
       when: formatDateTime(notification.createdAt),
     }));
   });
@@ -160,6 +162,11 @@ export class NotificationBellComponent {
     inject(DestroyRef).onDestroy(() => {
       this.list.dispose();
     });
+  }
+
+  /** A link may carry a query (`?document=`): parsed, so the router keeps it as one. */
+  private linkTo(url: string | null): UrlTree | null {
+    return url === null ? null : this.router.parseUrl(url);
   }
 
   protected toggle(): void {
