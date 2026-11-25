@@ -340,6 +340,10 @@ export const createConfig = (features) =>
         '@angular-eslint/prefer-inject': 'error',
         // Angular components and services are decorated classes that may legitimately be empty.
         '@typescript-eslint/no-extraneous-class': ['error', { allowWithDecorator: true }],
+        // typescript-eslint 8.73 adds it to strict-type-checked. Angular types as classes what its
+        // own API documents as plain objects (MatDialogConfig in every dialog, the router snapshots
+        // and DestroyRef in tests); satisfying it would mean casts, which hide more than they show.
+        '@typescript-eslint/no-unsafe-class-instance-assignment': 'off',
         'no-console': 'error',
         'no-debugger': 'error',
         'no-alert': 'error',
