@@ -5,11 +5,27 @@ updates:
     target-branch: development
     schedule:
       interval: weekly
+    groups:
+      # @angular/* comparten versión exacta entre sí (compiler y compiler-cli, core y sus peers):
+      # por separado no instalan.
+      angular:
+        patterns:
+          - '@angular/*'
+          - '@angular-devkit/*'
+      typescript-eslint:
+        patterns:
+          - 'typescript-eslint'
+          - '@typescript-eslint/*'
   - package-ecosystem: github-actions
     directory: /
     target-branch: development
     schedule:
       interval: weekly
+    groups:
+      # init y analyze de CodeQL tienen que ir en la misma versión.
+      codeql:
+        patterns:
+          - 'github/codeql-action*'
   - package-ecosystem: docker
     directory: /
     target-branch: development
