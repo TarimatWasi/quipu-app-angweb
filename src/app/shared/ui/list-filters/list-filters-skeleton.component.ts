@@ -26,8 +26,7 @@ import { SkeletonBlockComponent } from '../skeleton/skeleton-block.component';
       }
       @for (label of fields(); track label) {
         <div class="quipu-field">
-          <span class="quipu-label">{{ label }}</span
-          ><app-skeleton-block shape="rectangle" />
+          <span class="quipu-label">{{ label }}</span><app-skeleton-block shape="rectangle" />
         </div>
       }
       @if (phoneSort()) {

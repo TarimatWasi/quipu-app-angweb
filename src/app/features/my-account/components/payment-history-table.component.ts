@@ -79,8 +79,7 @@ const COLUMNS: readonly DataColumn<Column>[] = [
           <ol class="events">
             @for (event of row.events; track $index) {
               <li>
-                <span class="when">{{ event.date }}</span
-                ><span>{{ event.text }}</span>
+                <span class="when">{{ event.date }}</span><span>{{ event.text }}</span>
               </li>
             }
           </ol>
