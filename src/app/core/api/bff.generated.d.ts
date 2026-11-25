@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.30.0 (TarimatWasi/quipu-lib-contracts), spec sha256 071e4cc90b267934b753ed5b64f7221fef2edbf93b4d681ca53c73f4ef4bbc8b.
+ * Generated from the BFF contract v0.30.1 (TarimatWasi/quipu-lib-contracts), spec sha256 a2c1aa3897ef7ccf8f75e3a24242a1e807ab3a896f76bd129cac80dc5f8fd61a.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -173,7 +173,7 @@ export interface paths {
         };
         /**
          * Own bell notifications of a temporary guest, newest first
-         * @description The bell of a temporary guest, the same as /guest/notifications in its own area (a guest only reaches the area of its type): PAYMENT_APPROVED and PAYMENT_REJECTED of its payments and PAYMENT_DUE of its stay. Text is rendered in Spanish by the server when read. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         * @description The bell of a temporary guest, the same as /guest/notifications in its own area (a guest only reaches the area of its type): PAYMENT_APPROVED and PAYMENT_REJECTED of its payments, PAYMENT_DUE of its stay and REFUND_CREATED when the surplus of its stay is returned. Text is rendered in Spanish by the server when read. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
          */
         get: operations["listTemporaryGuestNotifications"];
         put?: never;
@@ -1744,7 +1744,7 @@ export interface components {
         };
         /** @description What happened. Administrators receive PAYMENT_PROOF_SUBMITTED, ONBOARDING_COMPLETED, GUEST_DOCUMENT_UPLOADED, CONTRACT_EXPIRING, PAYMENT_OVERDUE, STAY_ENDING (a one-time stay ends soon) and ACCESS_EXPIRED (an access expired unused: the guest cannot activate until a new one is handed); guests receive PAYMENT_APPROVED, PAYMENT_REJECTED, REFUND_CREATED, FINE_APPLIED, CONTRACT_SIGNED, CONTRACT_TERMINATED and PAYMENT_DUE. Clients show an unknown value with its title and body (forward compatible) instead of failing: the set grows without a new major version (x-extensible-enum). */
         NotificationType: string;
-        /** @description The resource the notification is about; ids are masked for the session like any other. Where the client takes each kind: Administrators — PAYMENT: GET /admin/payments/{id}; GUEST: GET /admin/guests/{id}; CONTRACT: GET /admin/contracts/{id}; DOCUMENT: the documents of its guest, GET /admin/guests/{guestId}/documents, where `id` is the document (`guestId` is present only for this kind). Guest with a contract — PAYMENT: GET /guest/payments/{id}; CONTRACT: GET /guest/contract (singular; `id` names it, no path takes it); REFUND: GET /guest/credit, where refunds of the credit show; FINE: no guest resource shows fines (they are income of the administration, not part of the guest's debt), so the notification is the whole content and opens nothing. Temporary guest — PAYMENT: GET /temporary-guest/payments/{id}; GUEST (PAYMENT_DUE of a stay): GET /temporary-guest/payment-status. A kind the client does not know opens nothing (x-extensible-enum). */
+        /** @description The resource the notification is about; ids are masked for the session like any other. Where the client takes each kind: Administrators — PAYMENT: GET /admin/payments/{id}; GUEST: GET /admin/guests/{id}; CONTRACT: GET /admin/contracts/{id}; DOCUMENT: the documents of its guest, GET /admin/guests/{guestId}/documents, where `id` is the document (`guestId` is present only for this kind). Guest with a contract — PAYMENT: GET /guest/payments/{id}; CONTRACT: GET /guest/contract (singular; `id` names it, no path takes it); REFUND: GET /guest/credit, where refunds of the credit show; FINE: no guest resource shows fines (they are income of the administration, not part of the guest's debt), so the notification is the whole content and opens nothing. Temporary guest — PAYMENT: GET /temporary-guest/payments/{id}; GUEST (PAYMENT_DUE of a stay): GET /temporary-guest/payment-status; REFUND: GET /temporary-guest/payment-status, whose `surplus` shows the refund (a stay keeps no credit: what was paid over is returned, RN-38, RN-39). A kind the client does not know opens nothing (x-extensible-enum). */
         NotificationTarget: {
             kind: string;
             /** Format: uuid */
