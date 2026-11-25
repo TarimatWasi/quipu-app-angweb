@@ -91,10 +91,16 @@ export class NotificationBellComponent {
   private readonly button = viewChild<ElementRef<HTMLButtonElement>>('bellButton');
 
   protected readonly area = computed<NotificationArea>(() => AREAS[this.audience()]);
+  /**
+   * The unread count of the account: the last page's, minus each read this tab confirmed after it.
+   * A later page already counts those reads, so it simply replaces this number.
+   */
   private readonly serverUnread = signal(0);
   /** Ids this tab marked read, and whether it marked every one, since the last first page. */
   private readonly readHere = signal<ReadonlySet<string>>(new Set());
   private readonly allReadHere = signal(false);
+  /** Reads on their way to the BFF: the badge already counts them as read. */
+  private readonly pendingReads = signal<ReadonlySet<string>>(new Set());
 
   protected readonly list = new PagedList<NotificationArea, Notification, PagedNotifications>(
     (area, after) => this.client.page(area, after),
@@ -123,13 +129,9 @@ export class NotificationBellComponent {
     }));
   });
 
-  protected readonly unreadCount = computed(() => {
-    if (this.allReadHere()) return 0;
-    const markedHere = this.list
-      .items()
-      .filter((item) => item.readAt === null && this.readHere().has(item.id)).length;
-    return Math.max(this.serverUnread() - markedHere, 0);
-  });
+  protected readonly unreadCount = computed(() =>
+    this.allReadHere() ? 0 : Math.max(this.serverUnread() - this.pendingReads().size, 0),
+  );
 
   protected readonly badge = computed(() => {
     const count = this.unreadCount();
@@ -186,19 +188,31 @@ export class NotificationBellComponent {
     if (row.link !== null) this.open.set(false);
     if (!row.unread) return;
     const id = row.notification.id;
+    const without = (ids: ReadonlySet<string>) => new Set([...ids].filter((item) => item !== id));
     this.readHere.update((ids) => new Set([...ids, id]));
-    firstValueFrom(this.client.read(this.area(), id)).catch((error: unknown) => {
-      this.readHere.update((ids) => new Set([...ids].filter((item) => item !== id)));
-      this.toasts.show(toBffError(error).message);
-    });
+    this.pendingReads.update((ids) => new Set([...ids, id]));
+    firstValueFrom(this.client.read(this.area(), id))
+      .then(() => {
+        this.pendingReads.update(without);
+        this.serverUnread.update((count) => Math.max(count - 1, 0));
+      })
+      .catch((error: unknown) => {
+        this.pendingReads.update(without);
+        this.readHere.update(without);
+        this.toasts.show(toBffError(error).message);
+      });
   }
 
   protected readAll(): void {
     this.allReadHere.set(true);
-    firstValueFrom(this.client.readAll(this.area())).catch((error: unknown) => {
-      this.allReadHere.set(false);
-      this.toasts.show(toBffError(error).message);
-    });
+    firstValueFrom(this.client.readAll(this.area()))
+      .then(() => {
+        this.serverUnread.set(0);
+      })
+      .catch((error: unknown) => {
+        this.allReadHere.set(false);
+        this.toasts.show(toBffError(error).message);
+      });
   }
 
   protected closeWithEscape(): void {

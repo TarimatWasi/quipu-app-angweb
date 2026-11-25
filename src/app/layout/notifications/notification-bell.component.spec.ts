@@ -141,6 +141,28 @@ describe('NotificationBellComponent (contract v0.27.0)', () => {
     expect(TestBed.inject(Router).url).toBe(`/admin/payments/${PAYMENT}`);
   });
 
+  it('does not count a confirmed read twice when the next page already counts it', async () => {
+    const { http, root, ui, stable } = await setup();
+    http.expectOne(`${BFF}/admin/notifications`).flush(FIRST);
+    await stable();
+    openBell(root);
+    await stable();
+    fireEvent.click(ui.getByRole('button', { name: /Aviso de la casa/ }));
+    await stable();
+    http
+      .expectOne(`${BFF}/admin/notifications/n2/read`)
+      .flush(null, { status: 204, statusText: 'No Content' });
+    await stable();
+    expect(bellLabel(root)).toBe('Notificaciones, 4 sin leer');
+    fireEvent.click(ui.getByRole('button', { name: 'Mostrar más' }));
+    await stable();
+    http
+      .expectOne(`${BFF}/admin/notifications?after=c2`)
+      .flush({ content: [notification({ id: 'n4' })], nextCursor: null, unreadCount: 4 });
+    await stable();
+    expect(bellLabel(root)).toBe('Notificaciones, 4 sin leer');
+  });
+
   it('puts the mark back and says why when the BFF cannot mark it', async () => {
     const { http, root, ui, stable } = await setup();
     http.expectOne(`${BFF}/admin/notifications`).flush(FIRST);
