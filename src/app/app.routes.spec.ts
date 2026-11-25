@@ -55,7 +55,7 @@ describe('routes', () => {
     // The home of the administrator (A1) asks its summary and the bell of the bar its first page;
     // these tests are about the routes. A page that is gone already cancelled its read (a resource
     // does): only the open ones answer.
-    const background = /\/bff\/(admin\/dashboard|(admin|guest)\/notifications)$/;
+    const background = /\/bff\/(admin\/dashboard|(admin|guest|temporary-guest)\/notifications)$/;
     for (const request of http.match((req) => background.test(req.url))) {
       if (!request.cancelled) request.error(new ProgressEvent('error'));
     }

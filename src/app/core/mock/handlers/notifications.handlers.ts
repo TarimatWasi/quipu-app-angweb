@@ -3,7 +3,7 @@ import { nowInstant } from '../data/mock-dates';
 import { ID_KIND } from '../data/mock-db';
 import type { MockDb, NotificationRecord } from '../data/mock-db';
 import { noContent, notFound, ok, paginate } from '../mock-reply';
-import type { MockContext, MockRequest, MockRoute } from '../mock-types';
+import type { GuestType, MockContext, MockRequest, MockRoute } from '../mock-types';
 
 type Schemas = components['schemas'];
 
@@ -18,9 +18,9 @@ function adminInbox(ctx: MockContext): Inbox {
   return { audience: 'ADMIN', reader: ctx.requireAdmin().documentNumber };
 }
 
-/** /bff/guest/** is the area of the guest with a contract: the temporary guest gets a 403, as in the BFF. */
-function guestInbox(ctx: MockContext): Inbox {
-  const guest = ctx.requireGuest('CONTRACT');
+/** Each type of guest reads its own area; the other one answers 403, as in the BFF. */
+function guestInbox(ctx: MockContext, type: GuestType): Inbox {
+  const guest = ctx.requireGuest(type);
   return { audience: guest.guestId, reader: guest.documentNumber };
 }
 
@@ -128,7 +128,10 @@ export function notify(
   });
 }
 
-function routesOf(area: 'admin' | 'guest', inboxFor: (ctx: MockContext) => Inbox): MockRoute[] {
+function routesOf(
+  area: 'admin' | 'guest' | 'temporary-guest',
+  inboxFor: (ctx: MockContext) => Inbox,
+): MockRoute[] {
   return [
     {
       key: `GET /bff/${area}/notifications`,
@@ -151,8 +154,9 @@ function routesOf(area: 'admin' | 'guest', inboxFor: (ctx: MockContext) => Inbox
   ];
 }
 
-/** The bell of contract v0.27.0: the shared inbox of the administrators and the guest's own. */
+/** The bells (contract v0.30.0): the administrators' shared inbox and each guest's own, by area. */
 export const NOTIFICATION_ROUTES: readonly MockRoute[] = [
   ...routesOf('admin', adminInbox),
-  ...routesOf('guest', guestInbox),
+  ...routesOf('guest', (ctx) => guestInbox(ctx, 'CONTRACT')),
+  ...routesOf('temporary-guest', (ctx) => guestInbox(ctx, 'TEMPORARY')),
 ];

@@ -1,5 +1,5 @@
 /**
- * Generated from the BFF contract v0.29.0 (TarimatWasi/quipu-lib-contracts), spec sha256 6925632e2e9247c8f91f364ce09f9534334650fef22068f70a7f8c4d095cd4de.
+ * Generated from the BFF contract v0.30.0 (TarimatWasi/quipu-lib-contracts), spec sha256 071e4cc90b267934b753ed5b64f7221fef2edbf93b4d681ca53c73f4ef4bbc8b.
  * Do not edit by hand: run `npm run contract:sync`.
  */
 
@@ -53,7 +53,7 @@ export interface paths {
         };
         /**
          * Own bell notifications, newest first
-         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens with its existing GET. The live key `admin.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens as `NotificationTarget` says for its kind and role. The live key `admin.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
          */
         get: operations["listAdminNotifications"];
         put?: never;
@@ -113,7 +113,7 @@ export interface paths {
         };
         /**
          * Own bell notifications, newest first
-         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens with its existing GET. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         * @description The notifications of the authenticated account, newest first, with the unread count for the bell badge. Text is rendered in Spanish by the server when read, from the current data: it is never stored, so a corrected name or label shows corrected. A notification points to the resource it is about (`target`), which the client opens as `NotificationTarget` says for its kind and role. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
          */
         get: operations["listGuestNotifications"];
         put?: never;
@@ -158,6 +158,66 @@ export interface paths {
          * @description Idempotent; notifications that arrive later stay unread
          */
         post: operations["readAllGuestNotifications"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Own bell notifications of a temporary guest, newest first
+         * @description The bell of a temporary guest, the same as /guest/notifications in its own area (a guest only reaches the area of its type): PAYMENT_APPROVED and PAYMENT_REJECTED of its payments and PAYMENT_DUE of its stay. Text is rendered in Spanish by the server when read. The live key `guest.notifications` invalidates this list and the count when a new notification arrives; reading updates the current tab only. Retention: 90 days.
+         */
+        get: operations["listTemporaryGuestNotifications"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/notifications/{id}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark one own notification of a temporary guest as read
+         * @description Idempotent — an already read notification answers 204 and keeps its first readAt
+         */
+        post: operations["readTemporaryGuestNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/temporary-guest/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mark every own notification of a temporary guest as read
+         * @description Idempotent; notifications that arrive later stay unread
+         */
+        post: operations["readAllTemporaryGuestNotifications"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1602,8 +1662,8 @@ export interface components {
             epoch: components["schemas"]["ChangeEpoch"];
             version: components["schemas"]["ChangeVersion"];
         };
-        /** @description ADR-SSE-01 administrative groups. admin.guest:<id> groups visible guest detail, history, account-status, payable-periods and stays. admin.contracts groups contract lists/details. admin.environments includes availability filtered by freeFrom/freeTo. admin.environment:<id> groups detail/account-status, the latter only if mounted (no current frontend consumer). No entity data in keys; permission still applies. */
-        AdminChangeKey: ("admin.dashboard" | "admin.payments.queue" | "admin.guests" | "admin.contracts" | "admin.environments" | "admin.finance" | "admin.credits" | "admin.refunds" | "admin.notifications") | string;
+        /** @description ADR-SSE-01 administrative groups. admin.guest:<id> groups visible guest detail, history, account-status, payable-periods and stays. admin.contracts groups contract lists/details. admin.environments includes availability filtered by freeFrom/freeTo. admin.environment:<id> groups detail/account-status, the latter only if mounted (no current frontend consumer). No entity data in keys; permission still applies. The set grows without a new major version (x-extensible-enum): a client ignores a key it does not know and keeps the others of the frame; a frame left with no known key is ignored. */
+        AdminChangeKey: string;
         /**
          * @example {
          *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
@@ -1620,8 +1680,8 @@ export interface components {
             /** @description Distinct resource keys or literal ALL, never an array containing ALL. Over 64 keys or 8192 UTF-8 frame bytes collapses to ALL. Reload mounted authorized resources only; preserve dirty forms/files. */
             invalidate: "ALL" | components["schemas"]["AdminChangeKey"][];
         };
-        /** @description ADR-SSE-01 own groups. guest.home groups account-status and credit; guest.payments is paginated history; guest.contract is /guest/contract (singular); guest.stay is /temporary-guest/payment-status. guest.payment:<id> is the own payment detail for either guest type. guest.profile is /guest/profile or /temporary-guest/profile according to the authenticated guest type, including document metadata. Preserve dirty contact fields and selected files; signal stale data and reload only on explicit choice. It does not imply a notification or file transfer. */
-        GuestChangeKey: ("guest.home" | "guest.payments" | "guest.contract" | "guest.stay" | "guest.profile" | "guest.notifications") | string;
+        /** @description ADR-SSE-01 own groups. guest.home groups account-status and credit; guest.payments is paginated history; guest.contract is /guest/contract (singular); guest.stay is /temporary-guest/payment-status. guest.payment:<id> is the own payment detail for either guest type. guest.profile is /guest/profile or /temporary-guest/profile according to the authenticated guest type, including document metadata. Preserve dirty contact fields and selected files; signal stale data and reload only on explicit choice. It does not imply a notification or file transfer. guest.notifications is /guest/notifications or /temporary-guest/notifications according to the authenticated guest type. The set grows without a new major version (x-extensible-enum): a client ignores a key it does not know and keeps the others of the frame; a frame left with no known key is ignored. */
+        GuestChangeKey: string;
         /**
          * @example {
          *       "epoch": "f18a40da-6ddf-4ab4-a75b-f4ad8de2d615",
@@ -1684,12 +1744,16 @@ export interface components {
         };
         /** @description What happened. Administrators receive PAYMENT_PROOF_SUBMITTED, ONBOARDING_COMPLETED, GUEST_DOCUMENT_UPLOADED, CONTRACT_EXPIRING, PAYMENT_OVERDUE, STAY_ENDING (a one-time stay ends soon) and ACCESS_EXPIRED (an access expired unused: the guest cannot activate until a new one is handed); guests receive PAYMENT_APPROVED, PAYMENT_REJECTED, REFUND_CREATED, FINE_APPLIED, CONTRACT_SIGNED, CONTRACT_TERMINATED and PAYMENT_DUE. Clients show an unknown value with its title and body (forward compatible) instead of failing: the set grows without a new major version (x-extensible-enum). */
         NotificationType: string;
-        /** @description The resource to open; its id is masked for the session like any other */
+        /** @description The resource the notification is about; ids are masked for the session like any other. Where the client takes each kind: Administrators — PAYMENT: GET /admin/payments/{id}; GUEST: GET /admin/guests/{id}; CONTRACT: GET /admin/contracts/{id}; DOCUMENT: the documents of its guest, GET /admin/guests/{guestId}/documents, where `id` is the document (`guestId` is present only for this kind). Guest with a contract — PAYMENT: GET /guest/payments/{id}; CONTRACT: GET /guest/contract (singular; `id` names it, no path takes it); REFUND: GET /guest/credit, where refunds of the credit show; FINE: no guest resource shows fines (they are income of the administration, not part of the guest's debt), so the notification is the whole content and opens nothing. Temporary guest — PAYMENT: GET /temporary-guest/payments/{id}; GUEST (PAYMENT_DUE of a stay): GET /temporary-guest/payment-status. A kind the client does not know opens nothing (x-extensible-enum). */
         NotificationTarget: {
-            /** @enum {string} */
-            kind: "PAYMENT" | "GUEST" | "CONTRACT" | "FINE" | "REFUND" | "DOCUMENT";
+            kind: string;
             /** Format: uuid */
             id: string;
+            /**
+             * Format: uuid
+             * @description The guest the document belongs to; only with kind DOCUMENT
+             */
+            guestId?: string;
         };
         Notification: {
             /**
@@ -4241,6 +4305,88 @@ export interface operations {
             };
             401: components["responses"]["NoSession"];
             403: components["responses"]["Forbidden"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    listTemporaryGuestNotifications: {
+        parameters: {
+            query?: {
+                /** @description Items per page, from 1 to 100. A value out of range is a 400 */
+                limit?: components["parameters"]["Limit"];
+                /** @description Opaque cursor: the `nextCursor` of the previous page. Absent for the first page. Do not build or edit it; a cursor that is not valid is a 400. Keyset pagination: the list keeps its order and the page starts right after the last item seen, so it costs the same on any page. */
+                after?: components["parameters"]["After"];
+                /** @description Only unread notifications when true */
+                unread?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One page of notifications and the unread count */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PagedNotifications"];
+                };
+            };
+            400: components["responses"]["ValidationFailed"];
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readTemporaryGuestNotification: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path: {
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notification read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
+            404: components["responses"]["NotFound"];
+            429: components["responses"]["TooManyRequests"];
+        };
+    };
+    readAllTemporaryGuestNotifications: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description CSRF token read from the XSRF-TOKEN cookie by Angular HttpClient. Obtain the cookie via GET /auth/csrf before an unsafe request. Cookie and header must match. Read the current cookie for every request; do not persist or cache the token across authentication transitions. The token does not authenticate the caller. */
+                "X-XSRF-TOKEN": components["parameters"]["XsrfToken"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Notifications read */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["NoSession"];
+            403: components["responses"]["GuestAccessDenied"];
             429: components["responses"]["TooManyRequests"];
         };
     };

@@ -32,6 +32,18 @@ export const NOTIFICATIONS_LOAD_ERROR = 'No se pudieron cargar tus notificacione
 /** The list when there is nothing in the bell (the BFF keeps 90 days). */
 export const NOTIFICATIONS_EMPTY = 'No tienes notificaciones.';
 
+/** Where each bell reads, and its live key: both guests hear `guest.notifications`. */
+const AREAS: Readonly<Record<NotificationAudience, NotificationArea>> = {
+  ADMIN: 'admin',
+  CONTRACT: 'guest',
+  TEMPORARY: 'temporary-guest',
+};
+const LIVE_KEYS: Readonly<Record<NotificationAudience, ChangeKey>> = {
+  ADMIN: 'admin.notifications',
+  CONTRACT: 'guest.notifications',
+  TEMPORARY: 'guest.notifications',
+};
+
 /** How many rows the skeleton of the list shows while its first page arrives. */
 const SKELETON_ROWS = 3;
 
@@ -48,7 +60,7 @@ interface NotificationRow {
  * notifications newest first with the server's own title and body (an unknown `type` shows the
  * same way), «Marcar todas como leídas» and «Mostrar más». A row with a target opens its page
  * and is marked read; one without a target is marked read when pressed. The live key
- * `<area>.notifications` (and ALL, the start of the business day) reads the first page again;
+ * `admin.notifications` or `guest.notifications` (and ALL, the start of the business day) reads the first page again;
  * marking read only changes this tab, as the contract says, so the marks of this tab are kept
  * over what the server answered until the next read.
  */
@@ -76,9 +88,7 @@ export class NotificationBellComponent {
   private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
   private readonly button = viewChild<ElementRef<HTMLButtonElement>>('bellButton');
 
-  protected readonly area = computed<NotificationArea>(() =>
-    this.audience() === 'ADMIN' ? 'admin' : 'guest',
-  );
+  protected readonly area = computed<NotificationArea>(() => AREAS[this.audience()]);
   private readonly serverUnread = signal(0);
   /** Ids this tab marked read, and whether it marked every one, since the last first page. */
   private readonly readHere = signal<ReadonlySet<string>>(new Set());
@@ -131,7 +141,7 @@ export class NotificationBellComponent {
   });
 
   protected readonly watching = watchChanges({
-    keys: () => [`${this.area()}.notifications` as ChangeKey],
+    keys: () => [LIVE_KEYS[this.audience()]],
     reload: () => {
       this.list.reload(this.area());
     },

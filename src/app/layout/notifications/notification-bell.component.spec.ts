@@ -99,6 +99,17 @@ describe('NotificationBellComponent (contract v0.27.0)', () => {
     expect(root.querySelector('.count')?.textContent.trim()).toBe('9+');
   });
 
+  it('reads the temporary guest inbox in its own area and hears guest.notifications', async () => {
+    const { http, root, stable } = await setup('TEMPORARY');
+    http.expectOne(`${BFF}/temporary-guest/notifications`).flush({ ...FIRST, unreadCount: 1 });
+    await stable();
+    expect(bellLabel(root)).toBe('Notificaciones, 1 sin leer');
+    TestBed.inject(ChangeResourcesService).changed(['guest.notifications']);
+    await stable();
+    http.expectOne(`${BFF}/temporary-guest/notifications`).flush(FIRST);
+    await stable();
+  });
+
   it('shows the server text, also of a type it does not know, and only links rows with a page', async () => {
     const { http, root, ui, stable } = await setup();
     http.expectOne(`${BFF}/admin/notifications`).flush(FIRST);

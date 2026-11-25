@@ -67,14 +67,9 @@ export function sectionsFor(session: Session | null): readonly NavEntry[] {
   return audience ? SECTIONS[audience] : [];
 }
 
-/**
- * The audience of the bell: only a session with sections (not onboarding) has one. The temporary
- * guest has none yet: /bff/guest/** is the area of the guest with a contract and the contract has
- * no /temporary-guest/notifications (agreed with the BFF 2026-11-25; it comes in a later version).
- */
+/** The audience of the bell: only a session with sections (not onboarding) has one. */
 export function bellAudienceFor(session: Session | null): Audience | null {
-  const audience = session && sectionsFor(session).length > 0 ? audienceOf(session) : null;
-  return audience === 'TEMPORARY' ? null : audience;
+  return session && sectionsFor(session).length > 0 ? audienceOf(session) : null;
 }
 
 /** The account menu without «Salir», which is always last and is a button. */

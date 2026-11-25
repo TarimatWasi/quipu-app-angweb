@@ -7,11 +7,12 @@ import { CsrfBootstrapService } from '@core/http/csrf-bootstrap.service';
 
 export type Notification = components['schemas']['Notification'];
 export type PagedNotifications = components['schemas']['PagedNotifications'];
-export type NotificationArea = 'admin' | 'guest';
+/** The area of the BFF each bell lives in: the guest with a contract and the temporary one differ. */
+export type NotificationArea = 'admin' | 'guest' | 'temporary-guest';
 
 /**
- * The bell of contract v0.27.0: the administrators share one inbox (each account keeps its own
- * read marks) and each guest has its own. The server words `title` and `body`; the client never
+ * The bell (contract v0.27.0; the temporary guest's since v0.30.0): the administrators share one
+ * inbox (each account keeps its own read marks) and each guest has its own, in its own area. The server words `title` and `body`; the client never
  * composes them. Ids are opaque and only escaped for the URL.
  */
 @Injectable({ providedIn: 'root' })

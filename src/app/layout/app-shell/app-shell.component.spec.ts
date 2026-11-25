@@ -13,7 +13,8 @@ import { AppShellComponent } from './app-shell.component';
 const isLogin = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/login');
 const isLogout = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/logout');
 const isChange = (req: HttpRequest<unknown>) => req.url.endsWith('/bff/auth/change-password');
-const isBell = (req: HttpRequest<unknown>) => /\/bff\/(admin|guest)\/notifications$/.test(req.url);
+const isBell = (req: HttpRequest<unknown>) =>
+  /\/bff\/(admin|guest|temporary-guest)\/notifications$/.test(req.url);
 const bellUnread = 2;
 
 @Component({ selector: 'app-page-stub', template: '' })
@@ -115,17 +116,15 @@ describe('AppShellComponent (P-01)', () => {
     it.each([
       ['administrator', ADMIN],
       ['guest with a contract', CONTRACT],
+      ['temporary guest', TEMPORARY],
     ])('the %s has the bell with its unread count', async (_who, session) => {
       const { root } = await setup(session);
       const bell = root.querySelector('app-notification-bell button');
       expect(bell?.getAttribute('aria-label')).toBe('Notificaciones, 2 sin leer');
     });
 
-    it.each([
-      ['without sections', NO_SECTIONS],
-      ['for the temporary guest, whose area has no bell in the contract yet', TEMPORARY],
-    ])('has no bell %s', async (_why, session) => {
-      const { root } = await setup(session);
+    it('has no bell without sections', async () => {
+      const { root } = await setup(NO_SECTIONS);
       expect(root.querySelector('app-notification-bell')).toBeNull();
     });
   });

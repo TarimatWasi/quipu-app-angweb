@@ -5,47 +5,68 @@ type Target = components['schemas']['NotificationTarget'];
 /** Whose bell it is: the administration, or a guest of each type (their pages differ). */
 export type NotificationAudience = 'ADMIN' | 'CONTRACT' | 'TEMPORARY';
 
-const id = (target: Target) => encodeURIComponent(target.id);
+const escaped = (id: string) => encodeURIComponent(id);
 
-/**
- * The page a notification opens (its `target`), or null when it has none: then it is shown without
- * a link. What the BFF agreed (2026-11-25):
- * - the administrator opens the payment, the guest or the contract. A DOCUMENT has no page of its
- *   own yet (the contract only reads the documents of a guest by the guest's id): no link until
- *   the contract says how. FINE and REFUND never reach the administrator.
- * - the guest opens its payment and its contract; GUEST (itself, a stay's PAYMENT_DUE), FINE and
- *   REFUND have no page by id and open its home, where its account, debt and credit are.
- * - an unknown kind, or none (`target: null`, which the contract allows), has no link.
- */
-export function notificationLink(
-  audience: NotificationAudience,
-  target: Target | null,
-): string | null {
-  if (target === null) return null;
-  if (audience === 'ADMIN') {
-    switch (target.kind) {
-      case 'PAYMENT':
-        return `/admin/payments/${id(target)}`;
-      case 'GUEST':
-        return `/admin/guests/${id(target)}`;
-      case 'CONTRACT':
-        return `/admin/contracts/${id(target)}`;
-      default:
-        return null;
-    }
-  }
+function adminLink(target: Target): string | null {
   switch (target.kind) {
     case 'PAYMENT':
-      return audience === 'CONTRACT'
-        ? `/guest/payments/${id(target)}`
-        : `/temporary-guest/payment/${id(target)}`;
-    case 'CONTRACT':
-      return audience === 'CONTRACT' ? '/guest/contract' : '/home';
+      return `/admin/payments/${escaped(target.id)}`;
     case 'GUEST':
-    case 'FINE':
+      return `/admin/guests/${escaped(target.id)}`;
+    case 'CONTRACT':
+      return `/admin/contracts/${escaped(target.id)}`;
+    case 'DOCUMENT':
+      return target.guestId === undefined
+        ? null
+        : `/admin/guests/${escaped(target.guestId)}/documents`;
+    default:
+      return null;
+  }
+}
+
+function contractGuestLink(target: Target): string | null {
+  switch (target.kind) {
+    case 'PAYMENT':
+      return `/guest/payments/${escaped(target.id)}`;
+    case 'CONTRACT':
+      return '/guest/contract';
     case 'REFUND':
       return '/home';
     default:
       return null;
   }
+}
+
+function temporaryGuestLink(target: Target): string | null {
+  switch (target.kind) {
+    case 'PAYMENT':
+      return `/temporary-guest/payment/${escaped(target.id)}`;
+    case 'GUEST':
+      return '/home';
+    default:
+      return null;
+  }
+}
+
+const LINKS: Readonly<Record<NotificationAudience, (target: Target) => string | null>> = {
+  ADMIN: adminLink,
+  CONTRACT: contractGuestLink,
+  TEMPORARY: temporaryGuestLink,
+};
+
+/**
+ * The page a notification opens (its `target`), or null when it has none: then it is shown without
+ * a link and the notification is the whole content. What contract v0.30.0 documents, by audience:
+ * - administrator: the payment, the guest, the contract, and for a DOCUMENT the documents of its
+ *   guest (`target.guestId`, only with DOCUMENT).
+ * - guest with a contract: its payment, its contract, and for a REFUND its home, where its credit
+ *   is (GET /guest/credit is read by the home). A FINE opens nothing.
+ * - temporary guest: its payment, and GUEST its payment status (T1, at /home).
+ * - an unknown kind (target.kind is extensible), or `target: null`, opens nothing.
+ */
+export function notificationLink(
+  audience: NotificationAudience,
+  target: Target | null,
+): string | null {
+  return target === null ? null : LINKS[audience](target);
 }

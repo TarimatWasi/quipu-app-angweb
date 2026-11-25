@@ -63,9 +63,15 @@ describe('bell of the simulated BFF (contract v0.27.0)', () => {
     expect(own.content.map((item) => item.type)).toContain('HOUSE_ANNOUNCEMENT');
   });
 
-  it('keeps the temporary guest out of /bff/guest/**, as the BFF does', async () => {
+  it('gives the temporary guest its bell in its own area, and each guest a 403 in the other', async () => {
     const mock = await signedIn('temporary-guest');
+    const own = await mock.get<Paged>('/bff/temporary-guest/notifications');
+    expect(own.content.map((item) => item.type)).toEqual(['PAYMENT_DUE']);
+    await mock.send('POST', '/bff/temporary-guest/notifications/read-all', null);
+    expect((await mock.get<Paged>('/bff/temporary-guest/notifications')).unreadCount).toBe(0);
     expect((await mock.fail(mock.get('/bff/guest/notifications'))).status).toBe(403);
+    await mock.signIn('contract-guest');
+    expect((await mock.fail(mock.get('/bff/temporary-guest/notifications'))).status).toBe(403);
   });
 
   it('keeps the bell of the guests out of the administration and the other way around', async () => {
