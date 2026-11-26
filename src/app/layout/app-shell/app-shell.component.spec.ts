@@ -394,6 +394,19 @@ describe('AppShellComponent (P-01)', () => {
   });
 
   describe('on a phone', () => {
+    // jsdom 31 applies the component's @media at its fixed width of 1024 px, so «Menú» (.narrow)
+    // would be hidden. The phone layout is what the media query does below 48 rem.
+    let phone: HTMLStyleElement | null = null;
+    beforeEach(() => {
+      phone = document.createElement('style');
+      phone.textContent =
+        '.narrow { display: block !important; } .wide { display: none !important; }';
+      document.head.append(phone);
+    });
+    afterEach(() => {
+      phone?.remove();
+    });
+
     it('«Menú» (48 px) opens a panel with the sections and then the account', async () => {
       const { fixture, root, ui } = await setup(ADMIN, '/home');
 
