@@ -1,0 +1,109 @@
+<button
+  #bellButton
+  class="bell"
+  type="button"
+  [attr.aria-label]="buttonLabel()"
+  [attr.aria-controls]="open() ? 'notifications-panel' : null"
+  [attr.aria-expanded]="open()"
+  (click)="toggle()"
+>
+  <svg
+    aria-hidden="true"
+    width="22"
+    height="22"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  >
+    <path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+    <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+  </svg>
+  @if (unreadCount() > 0) {
+    <span class="count" aria-hidden="true">{{ badge() }}</span>
+  }
+</button>
+
+@if (open()) {
+  <section id="notifications-panel" class="pop" aria-labelledby="notifications-heading">
+    <header class="head">
+      <h2 id="notifications-heading" class="title">Notificaciones</h2>
+      @if (unreadCount() > 0) {
+        <button
+          class="quipu-button quipu-button--tertiary read-all"
+          type="button"
+          (click)="readAll()"
+        >
+          Marcar todas como leídas
+        </button>
+      }
+    </header>
+
+    @if (list.loading() && list.items().length === 0) {
+      <ul class="rows" aria-busy="true">
+        @for (row of skeletonRows; track row) {
+          <li class="row">
+            <span class="entry">
+              <app-skeleton-block class="line" width="60%" />
+              <app-skeleton-block class="line" width="90%" />
+              <app-skeleton-block class="line" width="35%" />
+            </span>
+          </li>
+        }
+      </ul>
+    } @else {
+      @if (rows().length > 0) {
+        <ul class="rows">
+          @for (row of rows(); track row.notification.id) {
+            <li class="row" [class.unread]="row.unread">
+              @if (row.link; as link) {
+                <a class="entry" [routerLink]="link" (click)="choose(row)">
+                  <ng-container [ngTemplateOutlet]="text" [ngTemplateOutletContext]="{ row }" />
+                </a>
+              } @else {
+                <button class="entry" type="button" (click)="choose(row)">
+                  <ng-container [ngTemplateOutlet]="text" [ngTemplateOutletContext]="{ row }" />
+                </button>
+              }
+            </li>
+          }
+        </ul>
+      } @else if (!list.firstFailed()) {
+        <p class="state empty">{{ empty }}</p>
+      }
+      @if (list.firstFailed() || list.moreFailed()) {
+        <app-load-error
+          class="state"
+          [message]="loadError"
+          [retrying]="list.retrying()"
+          (retry)="retry()"
+        />
+      }
+      @if (rows().length > 0) {
+        <app-show-more
+          class="more"
+          [summary]="false"
+          [shown]="rows().length"
+          [loaded]="rows().length"
+          [hasMore]="list.nextCursor() !== null"
+          [loading]="list.loadingMore()"
+          (more)="more()"
+        />
+      }
+    }
+  </section>
+}
+
+<ng-template #text let-row="row">
+  <span class="entry-title">
+    @if (row.unread) {
+      <span class="cdk-visually-hidden">Sin leer:</span>
+      <span class="dot" aria-hidden="true"></span>
+    }
+    {{ row.notification.title }}
+  </span>
+  <span class="entry-body">{{ row.notification.body }}</span>
+  <span class="entry-when">{{ row.when }}</span>
+</ng-template>

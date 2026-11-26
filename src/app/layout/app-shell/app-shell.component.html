@@ -58,6 +58,9 @@
         [ngTemplateOutletContext]="{ place: 'in-bar' }"
       />
     </nav>
+    @if (bellAudience(); as audience) {
+      <app-notification-bell class="bell-slot" [audience]="audience" />
+    }
     <div class="account wide">
       <button
         #accountButton

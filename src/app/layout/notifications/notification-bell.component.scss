@@ -1,0 +1,176 @@
+// The bell of the bar (P-01): an icon button over the obsidian, like «Menú», with the unread count
+// in cochinilla; its panel is alpaca, like the account menu, and so the ring is chilca again there.
+:host {
+  position: relative;
+  display: block;
+}
+
+.bell {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--quipu-toque);
+  min-height: var(--quipu-toque);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--quipu-radio);
+  background: transparent;
+  color: var(--quipu-alpaca);
+  cursor: pointer;
+  transition:
+    transform var(--quipu-duracion-presion) var(--quipu-ease-presion),
+    border-color var(--quipu-duracion-hover) var(--quipu-ease-hover);
+
+  &:hover {
+    border-color: var(--quipu-alpaca);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline-color: var(--quipu-foco-sobre-oscuro);
+  }
+}
+
+.count {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  min-width: 1.125rem;
+  padding: 0 0.25rem;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: var(--quipu-cochinilla);
+  color: var(--quipu-alpaca);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.pop {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  z-index: 20;
+  width: min(24rem, calc(100vw - 2rem));
+  max-height: min(32rem, calc(100dvh - 6rem));
+  overflow-y: auto;
+  border-radius: var(--quipu-radio);
+  background: var(--quipu-alpaca);
+  color: var(--quipu-tinta);
+  box-shadow: var(--quipu-sombra-flotante);
+  animation: enter var(--quipu-duracion-presion) var(--quipu-ease-presion);
+
+  :focus-visible {
+    outline-color: var(--quipu-chilca);
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  padding: 0.75rem 1.125rem;
+  border-bottom: 1px solid var(--quipu-borde-suave);
+}
+
+.title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row + .row {
+  border-top: 1px solid var(--quipu-borde-suave);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--quipu-toque);
+  padding: 0.75rem 1.125rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+:is(a, button).entry {
+  cursor: pointer;
+
+  &:hover {
+    background: var(--quipu-hover-fila);
+  }
+}
+
+.line {
+  height: 1lh;
+}
+
+.entry-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+.unread .entry-title {
+  font-weight: 700;
+}
+
+.dot {
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--quipu-cochinilla);
+}
+
+.entry-body {
+  font-size: 0.9375rem;
+  line-height: 1.4;
+}
+
+.entry-when {
+  font-size: 0.8125rem;
+  color: var(--quipu-tinta-secundaria);
+  font-variant-numeric: tabular-nums;
+}
+
+.state {
+  display: block;
+  margin: 0.75rem 1.125rem;
+}
+
+.empty {
+  color: var(--quipu-tinta-secundaria);
+}
+
+.more {
+  margin: 0.5rem 1.125rem 1rem;
+}

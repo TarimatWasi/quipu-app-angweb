@@ -31,14 +31,37 @@ describe('SSE contract messages (QP-SPRMONO-SSE-04)', () => {
       [],
       ['ALL'],
       ['guest.home'],
-      ['admin.dashboard', 'admin.dashboard'],
       ['admin.payment:unmasked'],
+      [1],
+      ['admin.dashboard', 1],
       Array(65).fill('admin.dashboard'),
     ])
       expect(parseChange(payload(keys), 'ADMIN')).toBeNull();
     expect(parseChange(payload(['admin.dashboard']), 'GUEST')).toBeNull();
     expect(parseChange('{', 'GUEST')).toBeNull();
   });
+
+  it('keeps the known keys of a frame and drops the unknown ones (tolerant reader, v0.29.0)', () => {
+    expect(
+      parseChange(payload(['admin.future', 'admin.payments.queue', 'guest.home']), 'ADMIN')
+        ?.invalidate,
+    ).toEqual(['admin.payments.queue']);
+    expect(
+      parseChange(payload(['admin.dashboard', 'admin.dashboard']), 'ADMIN')?.invalidate,
+    ).toEqual(['admin.dashboard']);
+    expect(parseChange(payload(['guest.future']), 'GUEST')).toBeNull();
+  });
+
+  it('knows the bell keys of each area (v0.27.0)', () => {
+    expect(parseChange(payload(['admin.notifications']), 'ADMIN')?.invalidate).toEqual([
+      'admin.notifications',
+    ]);
+    expect(parseChange(payload(['guest.notifications']), 'GUEST')?.invalidate).toEqual([
+      'guest.notifications',
+    ]);
+    expect(parseChange(payload(['guest.notifications']), 'ADMIN')).toBeNull();
+  });
+
   it('accepts opaque masked ids without imposing RFC version or variant bits', () => {
     const masked = '00000000-0000-f000-c000-000000000001';
     const adminKeys = [

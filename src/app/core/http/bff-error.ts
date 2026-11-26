@@ -48,6 +48,8 @@ const KNOWN_TEXTS = new Map<string, string>([
   ['ADMIN_SELF_DEACTIVATION', 'No puedes desactivar tu propia cuenta.'],
   ['LAST_ACTIVE_ADMIN', 'No puedes desactivar al último administrador activo.'],
   ['ADMIN_NOT_FOUND', 'Ese administrador no existe.'],
+  // Contract v0.29.0: any call may answer it; nothing was saved and it can be sent again.
+  ['SERVICE_BUSY', 'El servicio está ocupado. Inténtalo de nuevo en unos segundos.'],
   ['NETWORK_ERROR', 'No se pudo conectar con el servidor. Inténtalo de nuevo.'],
   ['TIMEOUT', 'El servidor tardó demasiado en responder. Inténtalo de nuevo.'],
   ['UNEXPECTED_ERROR', 'Ocurrió un error inesperado. Inténtalo de nuevo.'],

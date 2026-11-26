@@ -10,6 +10,7 @@ export type AdminChangeKey =
   | 'admin.finance'
   | 'admin.credits'
   | 'admin.refunds'
+  | 'admin.notifications'
   | `admin.payment:${string}`
   | `admin.guest:${string}`
   | `admin.environment:${string}`;
@@ -19,6 +20,7 @@ export type GuestChangeKey =
   | 'guest.contract'
   | 'guest.stay'
   | 'guest.profile'
+  | 'guest.notifications'
   | `guest.payment:${string}`;
 export type ChangeKey = AdminChangeKey | GuestChangeKey;
 export type ChangePayload = Omit<components['schemas']['AdminChange'], 'invalidate'> & {
@@ -38,6 +40,7 @@ const ADMIN_STATIC = new Set([
   'admin.finance',
   'admin.credits',
   'admin.refunds',
+  'admin.notifications',
 ]);
 const GUEST_STATIC = new Set([
   'guest.home',
@@ -45,6 +48,7 @@ const GUEST_STATIC = new Set([
   'guest.contract',
   'guest.stay',
   'guest.profile',
+  'guest.notifications',
 ]);
 
 function record(value: unknown): value is Record<string, unknown> {
@@ -68,15 +72,25 @@ function key(value: unknown, role: ChangeRole): value is ChangeKey {
   );
 }
 
-function invalidations(value: unknown, role: ChangeRole): value is ChangePayload['invalidate'] {
-  return (
-    value === 'ALL' ||
-    (Array.isArray(value) &&
-      value.length > 0 &&
-      value.length <= 64 &&
-      value.every((item) => key(item, role)) &&
-      new Set(value).size === value.length)
-  );
+const MAX_KEYS = 64;
+
+/**
+ * Tolerant reader (v0.29.0): the keys this client does not know, or that belong to the other area,
+ * are dropped and the known ones kept, so a key the BFF adds later does not hide the others of the
+ * same frame. A frame with no known key left changes nothing and is ignored, as is one that breaks
+ * the shape of the contract (not a list of strings, empty or past its 64 keys).
+ */
+function invalidations(value: unknown, role: ChangeRole): ChangePayload['invalidate'] | null {
+  if (value === 'ALL') return 'ALL';
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    value.length > MAX_KEYS ||
+    !value.every((item) => typeof item === 'string')
+  )
+    return null;
+  const known = [...new Set(value.filter((item): item is ChangeKey => key(item, role)))];
+  return known.length > 0 ? known : null;
 }
 
 export function parseReady(data: string): ReadyPayload | null {
@@ -104,9 +118,8 @@ export function parseChange(data: string, role: ChangeRole): ChangePayload | nul
       !version(value['version'])
     )
       return null;
-    const invalidate = value['invalidate'];
-    if (!invalidations(invalidate, role)) return null;
-    if (Object.keys(value).length !== 3) return null;
+    const invalidate = invalidations(value['invalidate'], role);
+    if (invalidate === null || Object.keys(value).length !== 3) return null;
     return { epoch: value['epoch'], version: value['version'], invalidate };
   } catch {
     return null;

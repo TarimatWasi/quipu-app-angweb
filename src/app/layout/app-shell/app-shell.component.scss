@@ -302,3 +302,8 @@ $side: var(--quipu-contenido-relleno-lados);
     transform: rotate(180deg);
   }
 }
+
+// The bell sits right before the account (and «Menú» on a phone), closer than the sections.
+.bell-slot {
+  margin: 0 -1.75rem 0 auto;
+}

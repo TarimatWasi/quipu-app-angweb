@@ -12,7 +12,7 @@ export interface NavEntry {
   readonly matches?: readonly string[];
 }
 
-type Audience = 'ADMIN' | 'CONTRACT' | 'TEMPORARY';
+export type Audience = 'ADMIN' | 'CONTRACT' | 'TEMPORARY';
 
 // The menus of the Estándar UI (P-01), in order. Inicio, Estado de cuenta and Estado de pago are the
 // home of each role (/home shows A1, H1 or T1).
@@ -51,7 +51,8 @@ const ACCOUNT_LINKS: Readonly<Record<'administrators', string | null>> = {
   administrators: '/admin/administrators',
 };
 
-function audienceOf(session: Session): Audience | null {
+/** Whose menus (and bell) the bar shows: the administration or the type of the guest. */
+export function audienceOf(session: Session): Audience | null {
   if (session.role === 'ADMIN') return 'ADMIN';
   return session.guestType ?? null;
 }
@@ -64,6 +65,11 @@ export function sectionsFor(session: Session | null): readonly NavEntry[] {
   if (isRegistering(session)) return [];
   const audience = session && audienceOf(session);
   return audience ? SECTIONS[audience] : [];
+}
+
+/** The audience of the bell: only a session with sections (not onboarding) has one. */
+export function bellAudienceFor(session: Session | null): Audience | null {
+  return session && sectionsFor(session).length > 0 ? audienceOf(session) : null;
 }
 
 /** The account menu without «Salir», which is always last and is a button. */

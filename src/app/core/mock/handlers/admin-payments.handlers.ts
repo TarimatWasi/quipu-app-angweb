@@ -7,6 +7,7 @@ import { paymentDetail, paymentSummary, queueItem } from '../data/payment-views'
 import { readProofsUpload } from '../mock-multipart';
 import { invalid, notFound, ok, paginate, raise } from '../mock-reply';
 import type { MockRequest, MockRoute } from '../mock-types';
+import { notify } from './notifications.handlers';
 import {
   approve,
   checkTargetFree,
@@ -152,6 +153,14 @@ export const ADMIN_PAYMENT_ROUTES: readonly MockRoute[] = [
       ctx.requireAdmin();
       const payment = paymentOf(ctx.db, req);
       resolve(ctx.db, payment, req.body ?? {});
+      if (payment.status === 'APPROVED' || payment.status === 'REJECTED') {
+        notify(ctx.db, {
+          audience: payment.guestId,
+          type: payment.status === 'APPROVED' ? 'PAYMENT_APPROVED' : 'PAYMENT_REJECTED',
+          target: { kind: 'PAYMENT', id: payment.id },
+          guestId: payment.guestId,
+        });
+      }
       return ok(paymentSummary(ctx.db, payment));
     },
   },
