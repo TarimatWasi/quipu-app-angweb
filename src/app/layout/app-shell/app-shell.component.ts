@@ -17,7 +17,15 @@ import { filter, firstValueFrom, map } from 'rxjs';
 import { AuthService } from '@core/auth/auth.service';
 import { ToastComponent } from '@shared/ui/toast/toast.component';
 import { toBffError } from '@core/http/bff-error';
-import { accountEntriesFor, isCurrent, NavEntry, roleLabelFor, sectionsFor } from './app-nav';
+import {
+  accountEntriesFor,
+  bellAudienceFor,
+  isCurrent,
+  NavEntry,
+  roleLabelFor,
+  sectionsFor,
+} from './app-nav';
+import { NotificationBellComponent } from '@layout/notifications/notification-bell.component';
 import { CHANGE_PASSWORD_ACTION } from '@shared/ui/account-actions/change-password-action';
 import type { ChangePasswordAction } from '@shared/ui/account-actions/change-password-action';
 import { ToastService } from '@shared/ui/toast/toast.service';
@@ -65,6 +73,7 @@ function changePasswordAction(): ChangePasswordAction {
     RouterOutlet,
     ToastComponent,
     PageNoticeComponent,
+    NotificationBellComponent,
   ],
   templateUrl: './app-shell.component.html',
   styleUrl: './app-shell.component.scss',
@@ -99,6 +108,7 @@ export class AppShellComponent {
   protected readonly sections = computed(() => sectionsFor(this.session()));
   protected readonly accountEntries = computed(() => accountEntriesFor(this.session()));
   protected readonly roleLabel = computed(() => roleLabelFor(this.session()));
+  protected readonly bellAudience = computed(() => bellAudienceFor(this.session()));
   protected readonly accountOpen = signal(false);
   protected readonly panelOpen = signal(false);
   protected readonly leaving = signal(false);

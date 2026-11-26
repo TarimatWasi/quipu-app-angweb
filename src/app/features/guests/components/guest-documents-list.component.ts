@@ -1,4 +1,4 @@
-import { Component, input, output } from '@angular/core';
+import { afterRenderEffect, Component, ElementRef, inject, input, output } from '@angular/core';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import {
   DOCUMENTS_TITLE,
@@ -28,7 +28,13 @@ export interface OpenRequest {
       @if (rows().length > 0) {
         <ul class="quipu-card-list" [attr.aria-label]="title">
           @for (row of rows(); track row.id) {
-            <li class="quipu-card item">
+            <li
+              class="quipu-card item"
+              tabindex="-1"
+              [attr.data-document]="row.id"
+              [class.is-highlighted]="row.id === highlight()"
+              [attr.aria-current]="row.id === highlight() ? 'true' : null"
+            >
               <span class="what">
                 <strong>{{ row.name }}</strong>
                 <span class="meta">{{ row.meta }}</span>
@@ -75,6 +81,12 @@ export interface OpenRequest {
     h2 {
       margin: 0 0 0.875rem;
     }
+    .item.is-highlighted {
+      box-shadow: inset 4px 0 0 var(--quipu-chilca);
+    }
+    .item:focus-visible {
+      outline-offset: 2px;
+    }
     .item {
       display: flex;
       flex-wrap: wrap;
@@ -109,6 +121,25 @@ export class GuestDocumentsListComponent {
   readonly open = output<OpenRequest>();
   readonly replace = output<DocumentRow>();
   readonly remove = output<DocumentRow>();
+  /** The id of the document a notification points to: its row is marked, shown and focused. */
+  readonly highlight = input<string | null>(null);
+
+  private readonly host = inject<ElementRef<HTMLElement>>(ElementRef);
+  private focusedFor: string | null = null;
+
+  /** Once per id: a reload of the list does not take the focus back to it. */
+  protected readonly bringIntoView = afterRenderEffect(() => {
+    const id = this.highlight();
+    this.rows();
+    if (id === null || id === this.focusedFor) return;
+    const row = [...this.host.nativeElement.querySelectorAll<HTMLElement>('[data-document]')].find(
+      (item) => item.dataset['document'] === id,
+    );
+    if (row === undefined) return;
+    this.focusedFor = id;
+    row.scrollIntoView({ block: 'center' });
+    row.focus({ preventScroll: true });
+  });
 
   protected readonly title = DOCUMENTS_TITLE;
   protected readonly linkNote = LINK_NOTE;
