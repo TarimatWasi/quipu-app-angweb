@@ -1,3 +1,4 @@
+import { pendingTimers } from '../skeleton/fake-timers.testing';
 import { SkeletonBlockComponent } from '@shared/ui/skeleton/skeleton-block.component';
 import { DataSkeletonCellDirective } from './data-skeleton-cell.directive';
 import { DataSkeletonCardDirective } from './data-skeleton-card.directive';
@@ -175,7 +176,7 @@ describe('DataTableComponent (P-08)', () => {
       expect(ui.getByRole('table', { name: 'Pagos' })).toBeTruthy();
       expect(ui.getByRole('link', { name: 'Ver 1' })).toBeTruthy();
       expect(root.querySelector('app-skeleton-block')).toBeNull();
-      expect(vi.getTimerCount()).toBe(0);
+      expect(pendingTimers()).toBe(0);
     } finally {
       vi.useRealTimers();
     }
@@ -196,7 +197,7 @@ describe('DataTableComponent (P-08)', () => {
       fixture.detectChanges();
       expect(root.querySelector('tbody')).not.toBeNull();
       fixture.destroy();
-      expect(vi.getTimerCount()).toBe(0);
+      expect(pendingTimers()).toBe(0);
     } finally {
       vi.useRealTimers();
     }

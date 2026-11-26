@@ -1,3 +1,4 @@
+import { pendingTimers } from './fake-timers.testing';
 import { Component, signal } from '@angular/core';
 import { render, screen } from '@testing-library/angular';
 import { SkeletonComponent, SKELETON_TIMING, SLOW_SERVER_NOTICE } from './skeleton.component';
@@ -71,7 +72,7 @@ describe('Skeleton loading region and patterns', () => {
     fixture.detectChanges();
     expect(screen.getByText(SLOW_SERVER_NOTICE)).toBeTruthy();
     fixture.destroy();
-    expect(vi.getTimerCount()).toBe(0);
+    expect(pendingTimers()).toBe(0);
   });
   it('allows a sibling region of the same request to own the slow announcement', async () => {
     const { fixture, container } = await render(HostComponent);
